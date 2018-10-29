@@ -188,9 +188,10 @@ private:
     generate_active_haplotypes(const GenomicRegion& call_region, HaplotypeGenerator& haplotype_generator,
                                GenomicRegion& active_region, boost::optional<GenomicRegion>& next_active_region,
                                std::vector<Haplotype>& haplotypes, std::vector<Haplotype>& next_haplotypes) const;
-    boost::optional<GenomicRegion>
+    GeneratorStatus
     generate_next_active_haplotypes(std::vector<Haplotype>& next_haplotypes,
                                     boost::optional<GenomicRegion>& next_active_region,
+                                    boost::optional<GenomicRegion>& backtrack_region,
                                     HaplotypeGenerator& haplotype_generator) const;
     void remove_duplicates(std::vector<Haplotype>& haplotypes) const;
     bool filter_haplotypes(std::vector<Haplotype>& haplotypes, HaplotypeGenerator& haplotype_generator,

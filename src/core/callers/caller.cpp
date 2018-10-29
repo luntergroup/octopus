@@ -311,7 +311,7 @@ Caller::call_variants(const GenomicRegion& call_region, const MappableFlatSet<Va
     GeneratorStatus status;
     std::vector<Haplotype> haplotypes {}, next_haplotypes {};
     GenomicRegion active_region;
-    boost::optional<GenomicRegion> next_active_region {}, prev_called_region {};
+    boost::optional<GenomicRegion> next_active_region {}, prev_called_region {}, backtrack_region {};
     auto completed_region = head_region(call_region);
     std::deque<Haplotype> protected_haplotypes {};
     while (true) {
@@ -374,7 +374,7 @@ Caller::call_variants(const GenomicRegion& call_region, const MappableFlatSet<Va
             }
             haplotype_generator.clear_progress();
         }
-        const auto backtrack_region = generate_next_active_haplotypes(next_haplotypes, next_active_region, haplotype_generator);
+        status = generate_next_active_haplotypes(next_haplotypes, next_active_region, backtrack_region, haplotype_generator);
         if (backtrack_region) {
             // Only protect haplotypes in backtrack - or holdout - regions as these are more likely
             // to suffer from window artifacts.
@@ -382,9 +382,11 @@ Caller::call_variants(const GenomicRegion& call_region, const MappableFlatSet<Va
         } else {
             protected_haplotypes.clear();
         }
-        call_variants(active_region, call_region, next_active_region, backtrack_region,
-                      candidates, haplotypes, haplotype_likelihoods, active_reads, *caller_latents,
-                      result, prev_called_region, completed_region);
+        if (status != GeneratorStatus::skipped) {
+            call_variants(active_region, call_region, next_active_region, backtrack_region,
+                          candidates, haplotypes, haplotype_likelihoods, active_reads, *caller_latents,
+                          result, prev_called_region, completed_region);
+        }
         haplotype_likelihoods.clear();
         progress_meter.log_completed(completed_region);
     }
@@ -487,20 +489,21 @@ bool Caller::filter_haplotypes(std::vector<Haplotype>& haplotypes,
     return has_removal_impact;
 }
 
-boost::optional<GenomicRegion>
+Caller::GeneratorStatus
 Caller::generate_next_active_haplotypes(std::vector<Haplotype>& next_haplotypes,
                                         boost::optional<GenomicRegion>& next_active_region,
+                                        boost::optional<GenomicRegion>& backtrack_region,
                                         HaplotypeGenerator& haplotype_generator) const
 {
-    boost::optional<GenomicRegion> backtrack_region {};
     try {
         std::tie(next_haplotypes, next_active_region, backtrack_region) = haplotype_generator.generate();
     } catch (const HaplotypeGenerator::HaplotypeOverflow& e) {
         logging::WarningLogger warn_log {};
         stream(warn_log) << "Skipping region " << e.region() << " as there are too many haplotypes";
         haplotype_generator.clear_progress();
+        return GeneratorStatus::skipped;
     }
-    return backtrack_region;
+    return GeneratorStatus::good;
 }
 
 bool Caller::is_saturated(const std::vector<Haplotype>& haplotypes, const Latents& latents) const
