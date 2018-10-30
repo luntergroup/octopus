@@ -351,7 +351,7 @@ Daniel Cooke and Gerton Lunter
 
 ## Citing
 
-TBA
+Please cite the preprint: [A unified haplotype-based method for accurate and comprehensive variant calling](https://www.biorxiv.org/content/early/2018/10/29/456103).
 
 ## License
 
