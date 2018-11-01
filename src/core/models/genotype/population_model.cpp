@@ -12,7 +12,7 @@
 
 #include "utils/maths.hpp"
 #include "utils/select_top_k.hpp"
-#include "germline_likelihood_model.hpp"
+#include "constant_mixture_genotype_likelihood_model.hpp"
 #include "hardy_weinberg_model.hpp"
 
 namespace octopus { namespace model {
@@ -151,7 +151,7 @@ compute_genotype_log_likelihoods(const std::vector<SampleName>& samples,
                                  const HaplotypeLikelihoodArray& haplotype_likelihoods)
 {
     assert(!genotypes.empty());
-    GermlineLikelihoodModel likelihood_model {haplotype_likelihoods};
+    ConstantMixtureGenotypeLikelihoodModel likelihood_model {haplotype_likelihoods};
     GenotypeLogLikelihoodMatrix result {};
     result.reserve(samples.size());
     std::transform(std::cbegin(samples), std::cend(samples), std::back_inserter(result),

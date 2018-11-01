@@ -382,8 +382,8 @@ set(CORE_SOURCES
 
     core/models/genotype/subclone_model.hpp
     core/models/genotype/subclone_model.cpp
-    core/models/genotype/germline_likelihood_model.hpp
-    core/models/genotype/germline_likelihood_model.cpp
+    core/models/genotype/constant_mixture_genotype_likelihood_model.hpp
+    core/models/genotype/constant_mixture_genotype_likelihood_model.cpp
     core/models/genotype/individual_model.hpp
     core/models/genotype/individual_model.cpp
     core/models/genotype/independent_population_model.hpp
@@ -404,8 +404,8 @@ set(CORE_SOURCES
     core/models/genotype/coalescent_population_prior_model.cpp
     core/models/genotype/hardy_weinberg_model.hpp
     core/models/genotype/hardy_weinberg_model.cpp
-    core/models/genotype/fixed_mixture_genotype_likelihood_model.hpp
-    core/models/genotype/fixed_mixture_genotype_likelihood_model.cpp
+    core/models/genotype/variable_mixture_genotype_likelihood_model.hpp
+    core/models/genotype/variable_mixture_genotype_likelihood_model.cpp
 
     core/models/pairhmm/pair_hmm.hpp
     core/models/pairhmm/pair_hmm.cpp
