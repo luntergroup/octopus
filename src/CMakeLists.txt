@@ -408,6 +408,8 @@ set(CORE_SOURCES
     core/models/genotype/variable_mixture_genotype_likelihood_model.cpp
     core/models/genotype/variational_bayes_mixture_mixture_model.hpp
     core/models/genotype/variational_bayes_mixture_mixture_model.cpp
+    core/models/genotype/single_cell_prior_model.hpp
+    core/models/genotype/single_cell_prior_model.cpp
 
     core/models/pairhmm/pair_hmm.hpp
     core/models/pairhmm/pair_hmm.cpp
