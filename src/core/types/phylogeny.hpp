@@ -4,30 +4,31 @@
 #ifndef phylogeny_hpp
 #define phylogeny_hpp
 
-#include <vector>
 #include <unordered_map>
 #include <memory>
 #include <cstddef>
+#include <stack>
+
+#include <boost/optional.hpp>
 
 namespace octopus {
 
-template <typename Label, typename T>
+template <typename Label, typename T = boost::optional<int>>
 class Phylogeny
 {
 public:
     struct Group
     {
-        using MemberArray = std::vector<T>;
         Label id;
-        MemberArray members;
+        T value = boost::none;
     };
     
     Phylogeny() = default;
     
     Phylogeny(Group founder);
     
-    Phylogeny(const Phylogeny&)            = default;
-    Phylogeny& operator=(const Phylogeny&) = default;
+    Phylogeny(const Phylogeny&);
+    Phylogeny& operator=(Phylogeny);
     Phylogeny(Phylogeny&&)                 = default;
     Phylogeny& operator=(Phylogeny&&)      = default;
     
@@ -63,6 +64,41 @@ private:
     std::unique_ptr<TreeNode> tree_;
     std::unordered_map<Label, TreeNode*> nodes_;
 };
+
+template <typename Label, typename T>
+Phylogeny<Label, T>::Phylogeny(Group founder)
+{
+    set_founder(std::move(founder));
+}
+
+template <typename Label, typename T>
+Phylogeny<Label, T>::Phylogeny(const Phylogeny& other)
+{
+    if (other.tree_) {
+        std::stack<TreeNode*> to_visit {};
+        to_visit.push(other.tree_->descendant2.get());
+        to_visit.push(other.tree_->descendant1.get());
+        set_founder(other.tree_->group);
+        while (!to_visit.empty()) {
+            if (to_visit.top() != nullptr) {
+                const TreeNode* visted {to_visit.top()};
+                to_visit.pop();
+                add_descendant(visted->group, visted->ancestor->group.id);
+                to_visit.push(visted->descendant2.get());
+                to_visit.push(visted->descendant1.get());
+            } else {
+                to_visit.pop();
+            }
+        }
+    }
+}
+
+template <typename Label, typename T>
+Phylogeny<Label, T>& Phylogeny<Label, T>::operator=(Phylogeny other)
+{
+    std::swap(*this, other);
+    return *this;
+}
 
 template <typename Label, typename T>
 std::size_t Phylogeny<Label, T>::size() const noexcept
@@ -118,25 +154,28 @@ void Phylogeny<Label, T>::clear(const Label& id)
 template <typename Label, typename T>
 typename Phylogeny<Label, T>::Group& Phylogeny<Label, T>::set_founder(Group founder)
 {
-    if (tree_) {
-        tree_ = std::make_unique(std::move(founder));
+    if (!tree_) {
+        TreeNode node {std::move(founder), nullptr, nullptr, nullptr};
+        tree_ = std::make_unique<TreeNode>(std::move(node));
     } else {
         nodes_.erase(founder.id);
         tree_->group = std::move(founder);
     }
-    nodes_.emplace(founder.id, std::addressof(*tree_));
+    return nodes_.emplace(founder.id, std::addressof(*tree_)).first->second->group;
 }
 
 template <typename Label, typename T>
 typename Phylogeny<Label, T>::Group& Phylogeny<Label, T>::add_descendant(Group group, const Label& ancestor_id)
 {
-    const TreeNode* ancestor {nodes_.at(ancestor_id)};
+    TreeNode* ancestor {nodes_.at(ancestor_id)};
     if (ancestor->descendant1) {
-        ancestor->descendant2 = std::make_unique(std::move(group));
-        nodes_.emplace(ancestor->descendant2->group.id, std::addressof(*ancestor->descendant2));
+        TreeNode node {std::move(group), ancestor, nullptr, nullptr};
+        ancestor->descendant2 = std::make_unique<TreeNode>(std::move(node));
+        return nodes_.emplace(ancestor->descendant2->group.id, std::addressof(*ancestor->descendant2)).first->second->group;
     } else {
-        ancestor->descendant1 = std::make_unique(std::move(group));
-        nodes_.emplace(ancestor->descendant1->group.id, std::addressof(*ancestor->descendant1));
+        TreeNode node {std::move(group), ancestor, nullptr, nullptr};
+        ancestor->descendant1 = std::make_unique<TreeNode>(std::move(node));
+        return nodes_.emplace(ancestor->descendant1->group.id, std::addressof(*ancestor->descendant1)).first->second->group;
     }
 }
 
@@ -155,7 +194,7 @@ typename Phylogeny<Label, T>::Group& Phylogeny<Label, T>::group(const Label& id)
 template <typename Label, typename T>
 const typename Phylogeny<Label, T>::Group& Phylogeny<Label, T>::founder() const noexcept
 {
-    tree_->group;
+    return tree_->group;
 }
 
 template <typename Label, typename T>
