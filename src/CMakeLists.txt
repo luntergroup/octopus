@@ -406,8 +406,8 @@ set(CORE_SOURCES
     core/models/genotype/hardy_weinberg_model.cpp
     core/models/genotype/variable_mixture_genotype_likelihood_model.hpp
     core/models/genotype/variable_mixture_genotype_likelihood_model.cpp
-    core/models/genotype/allelic_dropout_genotype_likelihood_model.hpp
-    core/models/genotype/allelic_dropout_genotype_likelihood_model.cpp
+    core/models/genotype/variational_bayes_mixture_mixture_model.hpp
+    core/models/genotype/variational_bayes_mixture_mixture_model.cpp
 
     core/models/pairhmm/pair_hmm.hpp
     core/models/pairhmm/pair_hmm.cpp
