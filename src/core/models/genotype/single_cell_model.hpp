@@ -44,8 +44,10 @@ public:
     
     SingleCellModel() = delete;
     
-    SingleCellModel(std::vector<SampleName> samples, SingleCellPriorModel prior_model,
-                    Parameters parameters, AlgorithmParameters config);
+    SingleCellModel(std::vector<SampleName> samples,
+                    SingleCellPriorModel prior_model,
+                    Parameters parameters,
+                    AlgorithmParameters config);
     
     SingleCellModel(const SingleCellModel&)            = default;
     SingleCellModel& operator=(const SingleCellModel&) = default;
@@ -76,6 +78,8 @@ private:
     GenotypeCombinationVector
     propose_genotype_combinations(const std::vector<Genotype<Haplotype>>& genotypes,
                                   const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
+    GenotypeCombinationVector
+    propose_all_genotype_combinations(const std::vector<Genotype<Haplotype>>& genotypes) const;
     VariationalBayesMixtureMixtureModel::LogProbabilityVector
     calculate_genotype_priors(const GenotypeCombinationVector& genotype_combinations,
                               const std::vector<Genotype<Haplotype>>& genotypes) const;
