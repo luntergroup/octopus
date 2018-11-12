@@ -15,6 +15,7 @@ There are currently five calling models implemented:
 - **cancer**: call germline and somatic mutations tumour samples.
 - **trio**: call germline and _de novo_ mutations in a parent-offspring trio.
 - **polyclone**: call variants in samples with an unknown mixture of haploid clones, such a bacteria or viral samples.
+- **cell**: call variants in a set of single cell samples from the same individual.
 
 Octopus is currently able to call SNVs, small-medium sized indels, small complex rearrangements, and micro-inversions.
 
@@ -253,6 +254,14 @@ $ octopus -R H37Rv.fa -I mycobacterium_tuberculosis.bam -C polyclone
 ```
 
 This model will automatically detect the number of subclones in your sample (up to the maximum given by `--max-clones`).
+
+#### Calling variants in single cell samples (experimental)
+
+Single cell samples can be called with the `cell` calling model. Allelic dropout and cell phylogeny are considered by the model to improve variant calls. 
+
+```shell
+$ octopus -R H37Rv.fa -I cellA.bam cellB.bam cellC.bam -C cell
+```
 
 #### HLA genotyping
 
