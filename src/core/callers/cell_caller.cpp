@@ -21,7 +21,7 @@
 #include "core/types/allele.hpp"
 #include "core/types/variant.hpp"
 #include "core/types/phylogeny.hpp"
-#include "core/types/calls/germline_variant_call.hpp"
+#include "core/types/calls/cell_variant_call.hpp"
 #include "core/types/calls/reference_call.hpp"
 #include "core/models/genotype/uniform_genotype_prior_model.hpp"
 #include "core/models/genotype/coalescent_genotype_prior_model.hpp"
@@ -46,7 +46,7 @@ std::string CellCaller::do_name() const
 
 CellCaller::CallTypeSet CellCaller::do_call_types() const
 {
-    return {std::type_index(typeid(GermlineVariantCall))};
+    return {std::type_index(typeid(CellVariantCall))};
 }
 
 unsigned CellCaller::do_min_callable_ploidy() const
@@ -233,6 +233,7 @@ CellCaller::infer_latents(const std::vector<Haplotype>& haplotypes, const Haplot
     model_parameters.dropout_concentration = parameters_.dropout_concentration;
     model_parameters.group_concentration = 1.0;
     model::SingleCellModel::AlgorithmParameters config {};
+    config.max_genotype_combinations = parameters_.max_joint_genotypes;
     
     using CellPhylogeny =  model::SingleCellPriorModel::CellPhylogeny;
     CellPhylogeny single_group_phylogeny {CellPhylogeny::Group {0}};
@@ -596,7 +597,7 @@ transform_call(const std::vector<SampleName>& samples,
                    });
     auto p = std::accumulate(std::cbegin(variant_call.posteriors), std::cend(variant_call.posteriors), 0.0,
                              [] (auto curr, auto x) { return curr + x.score(); });
-    return std::make_unique<GermlineVariantCall>(variant_call.variant.get(), std::move(tmp), Phred<> {p});
+    return std::make_unique<CellVariantCall>(variant_call.variant.get(), std::move(tmp), Phred<> {p});
 }
 
 auto transform_calls(const std::vector<SampleName>& samples,
