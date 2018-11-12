@@ -220,6 +220,8 @@ set(CORE_SOURCES
     core/types/calls/denovo_call.cpp
     core/types/calls/denovo_reference_reversion_call.hpp
     core/types/calls/denovo_reference_reversion_call.cpp
+    core/types/calls/cell_variant_call.hpp
+    core/types/calls/cell_variant_call.cpp
     core/types/calls/call_wrapper.hpp
     core/types/calls/call_wrapper.cpp
     core/tools/vcf_header_factory.hpp
