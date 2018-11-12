@@ -456,7 +456,7 @@ CallerBuilder::CallerFactoryMap CallerBuilder::generate_factory() const
                                                     params_.max_genotypes,
                                                     params_.max_joint_genotypes,
                                                     params_.dropout_concentration,
-                                                    {*params_.snv_denovo_mutation_rate, *params_.indel_denovo_mutation_rate}});
+                                                    {params_.somatic_snv_mutation_rate, params_.somatic_indel_mutation_rate}});
         }}
     };
 }
