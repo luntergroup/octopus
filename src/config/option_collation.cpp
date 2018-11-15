@@ -861,6 +861,11 @@ bool is_polyclone_calling(const OptionMap& options)
     return options.at("caller").as<std::string>() == "polyclone";
 }
 
+bool is_single_cell_calling(const OptionMap& options)
+{
+    return options.at("caller").as<std::string>() == "cell";
+}
+
 double get_min_somatic_vaf(const OptionMap& options)
 {
     const auto min_credible_frequency = options.at("min-credible-somatic-frequency").as<float>();
@@ -893,6 +898,11 @@ auto get_default_polyclone_inclusion_predicate(const OptionMap& options)
     return coretools::DefaultSomaticInclusionPredicate {min_vaf};
 }
 
+auto get_default_single_cell_inclusion_predicate(const OptionMap& options)
+{
+    return coretools::CellInclusionPredicate {};
+}
+
 auto get_default_inclusion_predicate(const OptionMap& options) noexcept
 {
     using namespace coretools;
@@ -905,6 +915,8 @@ auto get_default_inclusion_predicate(const OptionMap& options) noexcept
         return InclusionPredicate {get_default_somatic_inclusion_predicate(options, normal)};
     } else if (is_polyclone_calling(options)) {
         return InclusionPredicate {get_default_somatic_inclusion_predicate(options)};
+    } else if (is_single_cell_calling(options)) {
+        return InclusionPredicate {get_default_single_cell_inclusion_predicate(options)};
     } else {
         return InclusionPredicate {get_default_germline_inclusion_predicate()};
     }

@@ -245,25 +245,7 @@ CellCaller::infer_latents(const std::vector<Haplotype>& haplotypes, const Haplot
     two_group_phylogeny.add_descendant(CellPhylogeny::Group {1}, 0);
     model::SingleCellPriorModel two_group_prior_model {std::move(two_group_phylogeny), *genotype_prior_model, mutation_model, cell_prior_params};
     model::SingleCellModel two_group_model {samples_, std::move(two_group_prior_model), model_parameters, config};
-    
     auto two_group_inferences = two_group_model.evaluate(genotypes, haplotype_likelihoods);
-    
-//    std::cout << single_group_inferences.log_evidence << " " << two_group_inferences.log_evidence << std::endl;
-//
-//    const auto& founder = two_group_inferences.phylogeny.founder().value;
-//    auto map_founder_itr = std::max_element(std::cbegin(founder.genotype_posteriors), std::cend(founder.genotype_posteriors));
-//    const auto map_founder_idx = static_cast<std::size_t>(std::distance(std::cbegin(founder.genotype_posteriors), map_founder_itr));
-//    std::cout << "MAP founder genotype: "; debug::print_variant_alleles(genotypes[map_founder_idx]); std::cout << std::endl;
-//
-//    const auto& descendant = two_group_inferences.phylogeny.group(1).value;
-//    auto map_descendant_itr = std::max_element(std::cbegin(descendant.genotype_posteriors), std::cend(descendant.genotype_posteriors));
-//    const auto map_descendant_idx = static_cast<std::size_t>(std::distance(std::cbegin(descendant.genotype_posteriors), map_descendant_itr));
-//    std::cout << "MAP descendant genotype: "; debug::print_variant_alleles(genotypes[map_descendant_idx]); std::cout << std::endl;
-//
-//    std::cout << "Samples assignments:" << std::endl;
-//    for (std::size_t s {0}; s < samples_.size(); ++s) {
-//        std::cout << samples_[s] << " " << founder.sample_attachment_posteriors[s] << " " << descendant.sample_attachment_posteriors[s] << std::endl;
-//    }
     
     std::vector<model::SingleCellModel::Inferences> inferences {std::move(single_group_inferences), std::move(two_group_inferences)};
     return std::make_unique<Latents>(*this, haplotypes, std::move(genotypes), std::move(inferences));
@@ -377,12 +359,14 @@ auto get_contained_alleles(const PopulationGenotypeProbabilityMap& genotype_post
     return result;
 }
 
+using AllelePosteriorMatrix = std::vector<std::vector<Phred<double>>>;
+
 auto compute_posteriors(const std::vector<SampleName>& samples,
                         const std::vector<Allele>& alleles,
                         const PopulationGenotypeProbabilityMap& genotype_posteriors)
 {
     const auto contained_alleles = get_contained_alleles(genotype_posteriors, alleles);
-    std::vector<std::vector<Phred<double>>> result {};
+    AllelePosteriorMatrix result {};
     result.reserve(genotype_posteriors.size1());
     for (const auto& sample : samples) {
         result.emplace_back(compute_sample_allele_posteriors(genotype_posteriors[sample], contained_alleles));
@@ -474,71 +458,6 @@ VariantCalls call_candidates(const VariantPosteriorVector& candidate_posteriors,
     return result;
 }
 
-// polymorphism calculations
-
-auto get_homozygous_alleles(const PopulationGenotypeProbabilityMap& genotype_posteriors,
-                            const std::vector<Allele>& alleles)
-{
-    const auto num_genotypes = genotype_posteriors.size2();
-    GenotypePropertyBools result {};
-    if (num_genotypes == 0 || genotype_posteriors.empty1() || alleles.empty()) {
-        return result;
-    }
-    result.reserve(alleles.size());
-    const auto& test_sample   = genotype_posteriors.begin()->first;
-    const auto genotype_begin = genotype_posteriors.begin(test_sample);
-    const auto genotype_end   = genotype_posteriors.end(test_sample);
-    for (const auto& allele : alleles) {
-        result.emplace_back(num_genotypes);
-        std::transform(genotype_begin, genotype_end, std::begin(result.back()),
-                       [&] (const auto& p) { return is_homozygous(p.first, allele); });
-    }
-    return result;
-}
-
-auto marginalise_homozygous(const GenotypeProbabilityMap& genotype_posteriors,
-                            const AlleleBools& homozygotes)
-{
-    return std::inner_product(std::cbegin(genotype_posteriors), std::cend(genotype_posteriors),
-                              std::cbegin(homozygotes), 0.0, std::plus<> {},
-                              [] (const auto& p, const bool is_homozygous) {
-                                  return is_homozygous ? p.second : 0.0;
-                              });
-}
-
-auto marginalise_homozygous(const std::vector<SampleName>& samples,
-                            const PopulationGenotypeProbabilityMap& genotype_posteriors,
-                            const AlleleBools& homozygotes)
-{
-    std::vector<double> ps(samples.size());
-    std::transform(std::cbegin(samples), std::cend(samples), std::begin(ps),
-                   [&] (const auto& sample) {
-                       return std::log(marginalise_homozygous(genotype_posteriors[sample], homozygotes));
-                   });
-    const auto p = std::accumulate(std::cbegin(ps), std::cend(ps), 0.0);
-    return probability_to_phred(std::exp(p));
-}
-
-auto compute_homozygous_posteriors(const std::vector<Allele>& alleles,
-                                   const std::vector<SampleName>& samples,
-                                   const PopulationGenotypeProbabilityMap& genotype_posteriors)
-{
-    const auto homozygous_alleles = get_homozygous_alleles(genotype_posteriors, alleles);
-    std::vector<Phred<double>> result(alleles.size());
-    std::transform(std::cbegin(alleles), std::cend(alleles), std::cbegin(homozygous_alleles), std::begin(result),
-                   [&] (const auto& allele, const auto& homozygotes) {
-                       return marginalise_homozygous(samples, genotype_posteriors, homozygotes);
-                   });
-    return result;
-}
-
-auto compute_polymorphism_posteriors(const std::vector<Variant>& variants,
-                                     const std::vector<SampleName>& samples,
-                                     const PopulationGenotypeProbabilityMap& genotype_posteriors)
-{
-    return compute_homozygous_posteriors(extract_ref_alleles(variants), samples, genotype_posteriors);
-}
-
 // allele genotype calling
 
 auto marginalise(const Genotype<Allele>& genotype, const GenotypeProbabilityMap& genotype_posteriors)
@@ -577,11 +496,6 @@ octopus::VariantCall::GenotypeCall convert(GenotypeCall&& call)
     return octopus::VariantCall::GenotypeCall {std::move(call.genotype), call.posterior};
 }
 
-auto max(const std::vector<Phred<double>>& posteriors)
-{
-    return *std::max_element(std::cbegin(posteriors), std::cend(posteriors));
-}
-
 std::unique_ptr<octopus::VariantCall>
 transform_call(const std::vector<SampleName>& samples,
                VariantCall&& variant_call,
@@ -595,9 +509,8 @@ transform_call(const std::vector<SampleName>& samples,
                    [] (const auto& sample, auto&& genotype) {
                        return std::make_pair(sample, convert(std::move(genotype)));
                    });
-    auto p = std::accumulate(std::cbegin(variant_call.posteriors), std::cend(variant_call.posteriors), 0.0,
-                             [] (auto curr, auto x) { return curr + x.score(); });
-    return std::make_unique<CellVariantCall>(variant_call.variant.get(), std::move(tmp), Phred<> {p});
+    auto quality = *std::max_element(std::cbegin(variant_call.posteriors), std::cend(variant_call.posteriors));
+    return std::make_unique<CellVariantCall>(variant_call.variant.get(), std::move(tmp), quality);
 }
 
 auto transform_calls(const std::vector<SampleName>& samples,
@@ -620,9 +533,9 @@ std::vector<std::unique_ptr<octopus::VariantCall>>
 CellCaller::call_variants(const std::vector<Variant>& candidates, const Latents& latents) const
 {
     const auto& genotype_posteriors = *(latents.genotype_posteriors());
-    const auto candidate_posteriors = compute_posteriors(samples_, candidates, genotype_posteriors);
+    const auto sample_candidate_posteriors = compute_posteriors(samples_, candidates, genotype_posteriors);
     const auto genotype_calls = call_genotypes(samples_, genotype_posteriors);
-    auto variant_calls = call_candidates(candidate_posteriors, genotype_calls, parameters_.min_variant_posterior);
+    auto variant_calls = call_candidates(sample_candidate_posteriors, genotype_calls, parameters_.min_variant_posterior);
     const auto called_regions = extract_regions(variant_calls);
     auto allele_genotype_calls = call_genotypes(samples_, genotype_calls, genotype_posteriors, called_regions);
     return transform_calls(samples_, std::move(variant_calls), std::move(allele_genotype_calls));

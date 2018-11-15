@@ -178,6 +178,11 @@ private:
     double min_expected_vaf_ = 0.01;
 };
 
+struct CellInclusionPredicate
+{
+    bool operator()(const CigarScanner::ObservedVariant& candidate);
+};
+
 struct SimpleThresholdInclusionPredicate
 {
     SimpleThresholdInclusionPredicate(std::size_t min_observations) : min_observations_ {min_observations} {}
