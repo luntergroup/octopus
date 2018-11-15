@@ -1083,23 +1083,15 @@ auto make_variant_generator_builder(const OptionMap& options)
         }
     }
     if (is_set("regenotype", options)) {
-        auto regenotype_path = options.at("regenotype").as<fs::path>();
-        if (is_set("source-candidates", options)) {
-            fs::path input_path {options.at("source-candidates").as<std::string>()};
-            if (regenotype_path != input_path) {
-                warning_log << "Running in regenotype mode but given a different source variant file";
-            }
-            return result;
-        }
-        auto resolved_regenotype_path = resolve_path(regenotype_path, options);
-        if (!fs::exists(resolved_regenotype_path)) {
-            throw MissingSourceVariantFile {resolved_regenotype_path};
+        auto regenotype_path = resolve_path(options.at("regenotype").as<fs::path>(), options);
+        if (!fs::exists(regenotype_path)) {
+            throw MissingSourceVariantFile {regenotype_path};
         }
         const auto output_path = get_output_path(options);
-        if (output_path && resolved_regenotype_path == *output_path) {
-            throw ConflictingSourceVariantFile {std::move(resolved_regenotype_path), *output_path};
+        if (output_path && regenotype_path == *output_path) {
+            throw ConflictingSourceVariantFile {std::move(regenotype_path), *output_path};
         }
-        result.add_vcf_extractor(std::move(resolved_regenotype_path));
+        result.add_vcf_extractor(std::move(regenotype_path));
     }
     ActiveRegionGenerator::Options active_region_options {};
     if (is_set("assemble-all", options) && options.at("assemble-all").as<bool>()) {
