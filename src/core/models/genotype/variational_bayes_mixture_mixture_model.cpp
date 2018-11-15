@@ -389,6 +389,19 @@ VariationalBayesMixtureMixtureModel::update_mixture_concentrations(MixtureConcen
     }
 }
 
+namespace {
+
+template <typename Range1, typename Range2>
+auto inner_inner_product(const Range1& lhs, const Range2& rhs) noexcept
+{
+    using T = decltype(inner_product(lhs[0], rhs[0]));
+    const auto k = std::min(lhs.size(), rhs.size());
+    return std::inner_product(std::cbegin(lhs), std::next(std::cbegin(lhs), k), std::cbegin(rhs), T {}, std::plus<> {},
+                              [] (const auto& a, const auto& b) { return inner_product(a, b); });
+}
+
+} // namespace
+
 double
 VariationalBayesMixtureMixtureModel::calculate_evidence(const GroupConcentrationVector& prior_group_concentrations,
                                                         const GroupConcentrationVector& posterior_group_concentrations,
@@ -409,16 +422,8 @@ VariationalBayesMixtureMixtureModel::calculate_evidence(const GroupConcentration
     for (std::size_t g {0}; g < G; ++g) {
         auto w = genotype_log_priors[g] - genotype_log_posteriors[g];
         for (std::size_t s {0}; s < S; ++s) {
-            const auto N = log_likelihoods[s][0][0][0].size();
             for (std::size_t t {0}; t < T; ++t) {
-                auto h = 0;
-                const auto K = posterior_mixture_concentrations[s][t].size();
-                for (std::size_t k {0}; k < K; ++k) {
-                    for (std::size_t n {0}; n < N; ++n) {
-                        h += component_responsabilities[s][k][n] * log_likelihoods[s][g][t][k][n];
-                    }
-                }
-                w += group_responsabilities[s][t] * h;
+                w += group_responsabilities[s][t] * inner_inner_product(component_responsabilities[s], log_likelihoods[s][g][t]);
             }
         }
         result += genotype_posteriors[g] * w;
