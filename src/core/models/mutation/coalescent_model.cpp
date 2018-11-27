@@ -149,8 +149,12 @@ auto coalescent_log_space(const unsigned n, const unsigned k, const T theta)
 template <typename T>
 auto coalescent(const unsigned n, const unsigned k, const T theta)
 {
-    if (k <= 80) {
-        return coalescent_real_space(n, k, theta);
+    if (n < 30 && k <= 80) {
+        auto result = coalescent_real_space(n, k, theta);
+        if (std::isnan(result)) {
+            result = coalescent_log_space(n, k, theta);
+        }
+        return result;
     } else {
         return coalescent_log_space(n, k, theta);
     }
