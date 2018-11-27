@@ -600,6 +600,17 @@ OptionMap parse_options(const int argc, const char** argv)
      "Minimum expected clone frequency in the sample")
     ;
     
+    po::options_description cell("Calling (cell)");
+    cell.add_options()
+    ("max-phylogeny-size",
+    po::value<int>()->default_value(3),
+    "Maximum number of nodes in cell phylogeny to consider")
+
+    ("dropout-concentration",
+    po::value<float>()->default_value(2, "2"),
+    "Allelic dropout concentration paramater")
+    ;
+    
     po::options_description phasing("Phasing");
     phasing.add_options()
     ("phasing-level,l",
@@ -662,7 +673,7 @@ OptionMap parse_options(const int argc, const char** argv)
     po::options_description all("octopus options");
     all.add(general).add(backend).add(input).add(transforms).add(filters)
     .add(variant_generation).add(haplotype_generation).add(caller)
-    .add(cancer).add(trio).add(polyclone).add(phasing).add(call_filtering);
+    .add(cancer).add(trio).add(polyclone).add(cell).add(phasing).add(call_filtering);
     
     OptionMap vm_init;
     po::store(run(po::command_line_parser(argc, argv).options(general).allow_unregistered()), vm_init);
@@ -701,6 +712,12 @@ OptionMap parse_options(const int argc, const char** argv)
                 polyclone_options.add(general).add(backend).add(input).add(transforms).add(filters)
                 .add(variant_generation).add(haplotype_generation).add(caller).add(polyclone)
                 .add(phasing).add(call_filtering);
+                std::cout << polyclone_options << std::endl;
+            } else if (selected_caller == "cell") {
+                po::options_description polyclone_options("octopus polyclone calling options");
+                polyclone_options.add(general).add(backend).add(input).add(transforms).add(filters)
+                                 .add(variant_generation).add(haplotype_generation).add(caller).add(cell)
+                                 .add(phasing).add(call_filtering);
                 std::cout << polyclone_options << std::endl;
             } else {
                 std::cout << all << std::endl;
@@ -995,8 +1012,8 @@ void validate_caller(const OptionMap& vm)
 {
     if (vm.count("caller") == 1) {
         const auto caller = vm.at("caller").as<std::string>();
-        static const std::array<std::string, 5> validCallers {
-            "individual", "population", "cancer", "trio", "polyclone"
+        static const std::array<std::string, 6> validCallers {
+            "individual", "population", "cancer", "trio", "polyclone", "cell"
         };
         if (std::find(std::cbegin(validCallers), std::cend(validCallers), caller) == std::cend(validCallers)) {
             throw po::validation_error {po::validation_error::kind_t::invalid_option_value, caller, "caller"};

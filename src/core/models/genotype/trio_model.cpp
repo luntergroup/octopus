@@ -13,7 +13,7 @@
 #include <iostream>
 
 #include "utils/maths.hpp"
-#include "germline_likelihood_model.hpp"
+#include "constant_mixture_genotype_likelihood_model.hpp"
 
 #include "timers.hpp"
 
@@ -129,7 +129,7 @@ bool operator>(const ParentsProbabilityPair& lhs, const ParentsProbabilityPair& 
 }
 
 auto compute_likelihoods(const std::vector<Genotype<Haplotype>>& genotypes,
-                         const GermlineLikelihoodModel& model)
+                         const ConstantMixtureGenotypeLikelihoodModel& model)
 {
     std::vector<GenotypeRefProbabilityPair> result {};
     result.reserve(genotypes.size());
@@ -744,7 +744,7 @@ TrioModel::evaluate(const GenotypeVector& maternal_genotypes,
         return evaluate_allosome(maternal_genotypes, child_genotypes, haplotype_likelihoods);
     }
     assert(!maternal_genotypes.empty() && !paternal_genotypes.empty() && !child_genotypes.empty());
-    const GermlineLikelihoodModel likelihood_model {haplotype_likelihoods};
+    const ConstantMixtureGenotypeLikelihoodModel likelihood_model {haplotype_likelihoods};
     haplotype_likelihoods.prime(trio_.mother());
     auto maternal_likelihoods = compute_likelihoods(maternal_genotypes, likelihood_model);
     haplotype_likelihoods.prime(trio_.father());
@@ -779,7 +779,7 @@ TrioModel::evaluate(const GenotypeVector& genotypes, std::vector<GenotypeIndex>&
                     const HaplotypeLikelihoodArray& haplotype_likelihoods) const
 {
     assert(prior_model_.is_primed() && mutation_model_.is_primed());
-    const GermlineLikelihoodModel likelihood_model {haplotype_likelihoods};
+    const ConstantMixtureGenotypeLikelihoodModel likelihood_model {haplotype_likelihoods};
     haplotype_likelihoods.prime(trio_.mother());
     auto maternal_likelihoods = compute_likelihoods(genotypes, likelihood_model);
     haplotype_likelihoods.prime(trio_.father());
@@ -856,7 +856,7 @@ TrioModel::evaluate_allosome(const GenotypeVector& parent_genotypes,
                              const HaplotypeLikelihoodArray& haplotype_likelihoods) const
 {
     assert(!parent_genotypes.empty() && !child_genotypes.empty());
-    const GermlineLikelihoodModel likelihood_model {haplotype_likelihoods};
+    const ConstantMixtureGenotypeLikelihoodModel likelihood_model {haplotype_likelihoods};
     assert(haplotype_likelihoods.is_primed());
     auto parent_likelihoods = compute_likelihoods(parent_genotypes, likelihood_model);
     if (debug_log_) debug::print(stream(*debug_log_), "parent", parent_likelihoods);

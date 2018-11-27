@@ -638,6 +638,29 @@ bool DefaultSomaticInclusionPredicate::operator()(const CigarScanner::ObservedVa
                        });
 }
 
+bool is_good_cell(const Variant& v, const CigarScanner::ObservedVariant::SampleObservation& observation)
+{
+    return is_good_somatic(v, observation, 0.25);
+}
+
+bool any_good_cell_samples(const CigarScanner::ObservedVariant& candidate)
+{
+    return std::any_of(std::cbegin(candidate.sample_observations), std::cend(candidate.sample_observations),
+                       [&] (const auto& observation) { return is_good_cell(candidate.variant, observation); });
+}
+
+bool is_good_cell_pooled(const CigarScanner::ObservedVariant& candidate)
+{
+    const auto observed_qualities = concat_observed_base_qualities(candidate);
+    if (observed_qualities.size() < 2) return false;
+    return is_good_germline(candidate.variant, candidate.total_depth, count_forward_observations(candidate), observed_qualities);
+}
+
+bool CellInclusionPredicate::operator()(const CigarScanner::ObservedVariant& candidate)
+{
+    return any_good_cell_samples(candidate) || (candidate.sample_observations.size() > 1 && is_good_cell_pooled(candidate));
+}
+
 namespace {
 
 auto count_observations(const CigarScanner::ObservedVariant& candidate)

@@ -1,7 +1,7 @@
 // Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
-#include "fixed_mixture_genotype_likelihood_model.hpp"
+#include "variable_mixture_genotype_likelihood_model.hpp"
 
 #include <utility>
 #include <cmath>
@@ -16,7 +16,7 @@
 
 namespace octopus { namespace model {
 
-FixedMixtureGenotypeLikelihoodModel::FixedMixtureGenotypeLikelihoodModel(const HaplotypeLikelihoodArray& likelihoods)
+VariableMixtureGenotypeLikelihoodModel::VariableMixtureGenotypeLikelihoodModel(const HaplotypeLikelihoodArray& likelihoods)
 : likelihoods_ {likelihoods}
 , mixtures_ {}
 , indexed_likelihoods_ {}
@@ -24,38 +24,38 @@ FixedMixtureGenotypeLikelihoodModel::FixedMixtureGenotypeLikelihoodModel(const H
 , buffer_ {}
 {}
 
-FixedMixtureGenotypeLikelihoodModel::FixedMixtureGenotypeLikelihoodModel(const HaplotypeLikelihoodArray& likelihoods,
+VariableMixtureGenotypeLikelihoodModel::VariableMixtureGenotypeLikelihoodModel(const HaplotypeLikelihoodArray& likelihoods,
                                                                          const std::vector<Haplotype>& haplotypes)
-: FixedMixtureGenotypeLikelihoodModel {likelihoods}
+: VariableMixtureGenotypeLikelihoodModel {likelihoods}
 {
     this->prime(haplotypes);
 }
 
-FixedMixtureGenotypeLikelihoodModel::FixedMixtureGenotypeLikelihoodModel(const HaplotypeLikelihoodArray& likelihoods, MixtureVector mixtures)
-: FixedMixtureGenotypeLikelihoodModel {likelihoods}
+VariableMixtureGenotypeLikelihoodModel::VariableMixtureGenotypeLikelihoodModel(const HaplotypeLikelihoodArray& likelihoods, MixtureVector mixtures)
+: VariableMixtureGenotypeLikelihoodModel {likelihoods}
 {
     this->set_mixtures(std::move(mixtures));
 }
 
-FixedMixtureGenotypeLikelihoodModel::FixedMixtureGenotypeLikelihoodModel(const HaplotypeLikelihoodArray& likelihoods,
+VariableMixtureGenotypeLikelihoodModel::VariableMixtureGenotypeLikelihoodModel(const HaplotypeLikelihoodArray& likelihoods,
                                                                          MixtureVector mixtures,
                                                                          const std::vector<Haplotype>& haplotypes)
-: FixedMixtureGenotypeLikelihoodModel {likelihoods, std::move(mixtures)}
+: VariableMixtureGenotypeLikelihoodModel {likelihoods, std::move(mixtures)}
 {
     this->prime(haplotypes);
 }
 
-const HaplotypeLikelihoodArray& FixedMixtureGenotypeLikelihoodModel::cache() const noexcept
+const HaplotypeLikelihoodArray& VariableMixtureGenotypeLikelihoodModel::cache() const noexcept
 {
     return likelihoods_;
 }
 
-const FixedMixtureGenotypeLikelihoodModel::MixtureVector& FixedMixtureGenotypeLikelihoodModel::mixtures() const noexcept
+const VariableMixtureGenotypeLikelihoodModel::MixtureVector& VariableMixtureGenotypeLikelihoodModel::mixtures() const noexcept
 {
     return mixtures_;
 }
 
-void FixedMixtureGenotypeLikelihoodModel::prime(const std::vector<Haplotype>& haplotypes)
+void VariableMixtureGenotypeLikelihoodModel::prime(const std::vector<Haplotype>& haplotypes)
 {
     assert(likelihoods_.is_primed());
     indexed_likelihoods_.reserve(haplotypes.size());
@@ -64,18 +64,18 @@ void FixedMixtureGenotypeLikelihoodModel::prime(const std::vector<Haplotype>& ha
                        return likelihoods_[haplotype]; });
 }
 
-void FixedMixtureGenotypeLikelihoodModel::unprime() noexcept
+void VariableMixtureGenotypeLikelihoodModel::unprime() noexcept
 {
     indexed_likelihoods_.clear();
     indexed_likelihoods_.shrink_to_fit();
 }
 
-bool FixedMixtureGenotypeLikelihoodModel::is_primed() const noexcept
+bool VariableMixtureGenotypeLikelihoodModel::is_primed() const noexcept
 {
     return !indexed_likelihoods_.empty();
 }
 
-void FixedMixtureGenotypeLikelihoodModel::set_mixtures(MixtureVector mixtures)
+void VariableMixtureGenotypeLikelihoodModel::set_mixtures(MixtureVector mixtures)
 {
     mixtures_ = std::move(mixtures);
     log_mixtures_ = mixtures_;
@@ -84,8 +84,8 @@ void FixedMixtureGenotypeLikelihoodModel::set_mixtures(MixtureVector mixtures)
     buffer_.resize(mixtures_.size());
 }
 
-FixedMixtureGenotypeLikelihoodModel::LogProbability
-FixedMixtureGenotypeLikelihoodModel::evaluate(const Genotype<Haplotype>& genotype) const
+VariableMixtureGenotypeLikelihoodModel::LogProbability
+VariableMixtureGenotypeLikelihoodModel::evaluate(const Genotype<Haplotype>& genotype) const
 {
     assert(genotype.ploidy() == mixtures_.size());
     assert(buffer_.size() == mixtures_.size());
@@ -105,8 +105,8 @@ FixedMixtureGenotypeLikelihoodModel::evaluate(const Genotype<Haplotype>& genotyp
     return result;
 }
 
-FixedMixtureGenotypeLikelihoodModel::LogProbability
-FixedMixtureGenotypeLikelihoodModel::evaluate(const GenotypeIndex& genotype) const
+VariableMixtureGenotypeLikelihoodModel::LogProbability
+VariableMixtureGenotypeLikelihoodModel::evaluate(const GenotypeIndex& genotype) const
 {
     assert(is_primed());
     assert(genotype.size() == mixtures_.size());
@@ -122,8 +122,8 @@ FixedMixtureGenotypeLikelihoodModel::evaluate(const GenotypeIndex& genotype) con
     return result;
 }
 
-FixedMixtureGenotypeLikelihoodModel::LogProbability
-FixedMixtureGenotypeLikelihoodModel::evaluate(const CancerGenotype<Haplotype>& genotype) const
+VariableMixtureGenotypeLikelihoodModel::LogProbability
+VariableMixtureGenotypeLikelihoodModel::evaluate(const CancerGenotype<Haplotype>& genotype) const
 {
     assert(genotype.ploidy() == mixtures_.size());
     assert(buffer_.size() == mixtures_.size());
@@ -144,8 +144,8 @@ FixedMixtureGenotypeLikelihoodModel::evaluate(const CancerGenotype<Haplotype>& g
     return result;
 }
 
-FixedMixtureGenotypeLikelihoodModel::LogProbability
-FixedMixtureGenotypeLikelihoodModel::evaluate(const CancerGenotypeIndex& genotype) const
+VariableMixtureGenotypeLikelihoodModel::LogProbability
+VariableMixtureGenotypeLikelihoodModel::evaluate(const CancerGenotypeIndex& genotype) const
 {
     assert(is_primed());
     assert((genotype.germline.size() + genotype.somatic.size()) == mixtures_.size());

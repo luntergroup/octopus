@@ -1,8 +1,8 @@
 // Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
-#ifndef fixed_mixture_genotype_likelihood_model_hpp
-#define fixed_mixture_genotype_likelihood_model_hpp
+#ifndef variable_mixture_genotype_likelihood_model_hpp
+#define variable_mixture_genotype_likelihood_model_hpp
 
 #include <vector>
 
@@ -13,27 +13,27 @@
 
 namespace octopus { namespace model {
 
-class FixedMixtureGenotypeLikelihoodModel
+class VariableMixtureGenotypeLikelihoodModel
 {
 public:
     using LogProbability = double;
     using MixtureVector = std::vector<double>;
     
-    FixedMixtureGenotypeLikelihoodModel() = delete;
+    VariableMixtureGenotypeLikelihoodModel() = delete;
     
-    FixedMixtureGenotypeLikelihoodModel(const HaplotypeLikelihoodArray& likelihoods);
-    FixedMixtureGenotypeLikelihoodModel(const HaplotypeLikelihoodArray& likelihoods,
-                                        const std::vector<Haplotype>& haplotypes);
-    FixedMixtureGenotypeLikelihoodModel(const HaplotypeLikelihoodArray& likelihoods, MixtureVector mixtures);
-    FixedMixtureGenotypeLikelihoodModel(const HaplotypeLikelihoodArray& likelihoods, MixtureVector mixtures,
-                                        const std::vector<Haplotype>& haplotypes);
+    VariableMixtureGenotypeLikelihoodModel(const HaplotypeLikelihoodArray& likelihoods);
+    VariableMixtureGenotypeLikelihoodModel(const HaplotypeLikelihoodArray& likelihoods,
+                                           const std::vector<Haplotype>& haplotypes);
+    VariableMixtureGenotypeLikelihoodModel(const HaplotypeLikelihoodArray& likelihoods, MixtureVector mixtures);
+    VariableMixtureGenotypeLikelihoodModel(const HaplotypeLikelihoodArray& likelihoods, MixtureVector mixtures,
+                                           const std::vector<Haplotype>& haplotypes);
     
-    FixedMixtureGenotypeLikelihoodModel(const FixedMixtureGenotypeLikelihoodModel&)            = default;
-    FixedMixtureGenotypeLikelihoodModel& operator=(const FixedMixtureGenotypeLikelihoodModel&) = default;
-    FixedMixtureGenotypeLikelihoodModel(FixedMixtureGenotypeLikelihoodModel&&)                 = default;
-    FixedMixtureGenotypeLikelihoodModel& operator=(FixedMixtureGenotypeLikelihoodModel&&)      = default;
+    VariableMixtureGenotypeLikelihoodModel(const VariableMixtureGenotypeLikelihoodModel&)            = default;
+    VariableMixtureGenotypeLikelihoodModel& operator=(const VariableMixtureGenotypeLikelihoodModel&) = default;
+    VariableMixtureGenotypeLikelihoodModel(VariableMixtureGenotypeLikelihoodModel&&)                 = default;
+    VariableMixtureGenotypeLikelihoodModel& operator=(VariableMixtureGenotypeLikelihoodModel&&)      = default;
     
-    ~FixedMixtureGenotypeLikelihoodModel() = default;
+    ~VariableMixtureGenotypeLikelihoodModel() = default;
     
     const HaplotypeLikelihoodArray& cache() const noexcept;
     const MixtureVector& mixtures() const noexcept;
@@ -59,7 +59,7 @@ private:
 
 template <typename Container1, typename Container2>
 Container2&
-evaluate(const Container1& genotypes, const FixedMixtureGenotypeLikelihoodModel& model, Container2& result,
+evaluate(const Container1& genotypes, const VariableMixtureGenotypeLikelihoodModel& model, Container2& result,
          const bool add = false)
 {
     if (add) {
@@ -75,9 +75,9 @@ evaluate(const Container1& genotypes, const FixedMixtureGenotypeLikelihoodModel&
 }
 
 template <typename Container>
-auto evaluate(const Container& genotypes, const FixedMixtureGenotypeLikelihoodModel& model)
+auto evaluate(const Container& genotypes, const VariableMixtureGenotypeLikelihoodModel& model)
 {
-    std::vector<FixedMixtureGenotypeLikelihoodModel::LogProbability> result {};
+    std::vector<VariableMixtureGenotypeLikelihoodModel::LogProbability> result {};
     evaluate(genotypes, model, result);
     return result;
 }

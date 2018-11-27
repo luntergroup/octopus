@@ -861,6 +861,11 @@ bool is_polyclone_calling(const OptionMap& options)
     return options.at("caller").as<std::string>() == "polyclone";
 }
 
+bool is_single_cell_calling(const OptionMap& options)
+{
+    return options.at("caller").as<std::string>() == "cell";
+}
+
 double get_min_somatic_vaf(const OptionMap& options)
 {
     const auto min_credible_frequency = options.at("min-credible-somatic-frequency").as<float>();
@@ -893,6 +898,11 @@ auto get_default_polyclone_inclusion_predicate(const OptionMap& options)
     return coretools::DefaultSomaticInclusionPredicate {min_vaf};
 }
 
+auto get_default_single_cell_inclusion_predicate(const OptionMap& options)
+{
+    return coretools::CellInclusionPredicate {};
+}
+
 auto get_default_inclusion_predicate(const OptionMap& options) noexcept
 {
     using namespace coretools;
@@ -905,6 +915,8 @@ auto get_default_inclusion_predicate(const OptionMap& options) noexcept
         return InclusionPredicate {get_default_somatic_inclusion_predicate(options, normal)};
     } else if (is_polyclone_calling(options)) {
         return InclusionPredicate {get_default_somatic_inclusion_predicate(options)};
+    } else if (is_single_cell_calling(options)) {
+        return InclusionPredicate {get_default_single_cell_inclusion_predicate(options)};
     } else {
         return InclusionPredicate {get_default_germline_inclusion_predicate()};
     }
@@ -1661,6 +1673,11 @@ auto get_target_working_memory(const OptionMap& options)
     return result;
 }
 
+bool is_experimental_caller(const std::string& caller) noexcept
+{
+    return caller == "population" || caller == "polyclone" || caller == "cell";
+}
+
 CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& read_pipe,
                                   const InputRegionMap& regions, const OptionMap& options,
                                   const boost::optional<ReadSetProfile> read_profile)
@@ -1673,7 +1690,7 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
     check_caller(caller, read_pipe.samples(), options);
     vc_builder.set_caller(caller);
     
-    if (caller == "population" || caller == "polyclone") {
+    if (is_experimental_caller(caller)) {
         logging::WarningLogger log {};
         stream(log) << "The " << caller << " calling model is still in development and may not perform as expected";
     }
@@ -1728,7 +1745,6 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
         vc_builder.set_min_somatic_posterior(min_somatic_posterior);
         vc_builder.set_normal_contamination_risk(get_normal_contamination_risk(options));
         vc_builder.set_tumour_germline_concentration(options.at("tumour-germline-concentration").as<float>());
-        if (is_set("max-vb-seeds", options)) vc_builder.set_max_vb_seeds(as_unsigned("max-vb-seeds", options));
     } else if (caller == "trio") {
         vc_builder.set_trio(make_trio(read_pipe.samples(), options, pedigree));
         vc_builder.set_snv_denovo_mutation_rate(options.at("denovo-snv-mutation-rate").as<float>());
@@ -1736,9 +1752,14 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
         vc_builder.set_min_denovo_posterior(options.at("min-denovo-posterior").as<Phred<double>>());
     } else if (caller == "polyclone") {
         vc_builder.set_max_clones(as_unsigned("max-clones", options));
+    } else if (caller == "cell") {
+        vc_builder.set_dropout_concentration(options.at("dropout-concentration").as<float>());
+        vc_builder.set_somatic_snv_mutation_rate(options.at("somatic-snv-mutation-rate").as<float>());
+        vc_builder.set_somatic_indel_mutation_rate(options.at("somatic-indel-mutation-rate").as<float>());
     }
     vc_builder.set_model_filtering(allow_model_filtering(options));
     vc_builder.set_max_genotypes(as_unsigned("max-genotypes", options));
+    if (is_set("max-vb-seeds", options)) vc_builder.set_max_vb_seeds(as_unsigned("max-vb-seeds", options));
     if (is_fast_mode(options)) {
         vc_builder.set_max_joint_genotypes(10'000);
     } else {

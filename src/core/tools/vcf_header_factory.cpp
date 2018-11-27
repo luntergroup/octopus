@@ -33,6 +33,9 @@ VcfHeaderFactory::AnnotatorMap VcfHeaderFactory::annotators_ =
     }},
     {std::type_index(typeid(DenovoReferenceReversionCall)), [] (auto& hb) {
         hb.add_info("REVERSION", "0", "Flag", "Indicates that the record contains a reference reversion");
+    }},
+    {std::type_index(typeid(CellVariantCall)), [] (auto& hb) {
+        hb.add_info("SOMATIC", "0", "Flag", "Indicates that the record is a somatic mutation, for cancer genomics");
     }}
 };
 
