@@ -219,6 +219,49 @@ CellCaller::Latents::genotype_posteriors() const noexcept
 
 // CellCaller::Latents private methods
 
+template <typename S>
+void log(const model::SingleCellModel::Inferences& inferences,
+         const std::vector<SampleName>& samples,
+         const std::vector<Genotype<Haplotype>>& genotypes,
+         S&& logger)
+{
+    std::vector<std::size_t> map_genotypes {};
+    map_genotypes.reserve(inferences.phylogeny.size());
+    std::vector<std::pair<std::size_t, double>> map_sample_assignments(samples.size());
+    for (std::size_t group_id {0}; group_id < inferences.phylogeny.size(); ++group_id) {
+        const auto& group = inferences.phylogeny.group(group_id).value;
+        auto map_itr = std::max_element(std::cbegin(group.genotype_posteriors), std::cend(group.genotype_posteriors));
+        auto map_idx = static_cast<std::size_t>(std::distance(std::cbegin(group.genotype_posteriors), map_itr));
+        map_genotypes.push_back(map_idx);
+        for (std::size_t sample_idx {0}; sample_idx < samples.size(); ++sample_idx) {
+            if (group.sample_attachment_posteriors[sample_idx] > map_sample_assignments[sample_idx].second) {
+                map_sample_assignments[sample_idx].first = group_id;
+                map_sample_assignments[sample_idx].second = group.sample_attachment_posteriors[sample_idx];
+            }
+        }
+    }
+    logger << "MAP genotypes: " << '\n';
+    for (std::size_t group_id {0}; group_id < map_genotypes.size(); ++group_id) {
+        logger << group_id << ": "; debug::print_variant_alleles(logger, genotypes[map_genotypes[group_id]]); logger << '\n';
+    }
+    logger << "Sample MAP assignments:" << '\n';
+    for (std::size_t sample_idx {0}; sample_idx < samples.size(); ++sample_idx) {
+        logger << samples[sample_idx] << ": " << map_sample_assignments[sample_idx].first
+               << " (" << map_sample_assignments[sample_idx].second << ")\n";
+    }
+    logger << "Evidence: " << inferences.log_evidence << '\n';
+}
+
+void log(const model::SingleCellModel::Inferences& inferences,
+         const std::vector<SampleName>& samples,
+         const std::vector<Genotype<Haplotype>>& genotypes,
+         boost::optional<logging::DebugLogger>& logger)
+{
+    if (logger) {
+        log(inferences, samples, genotypes, stream(*logger));
+    }
+}
+
 std::unique_ptr<CellCaller::Caller::Latents>
 CellCaller::infer_latents(const std::vector<Haplotype>& haplotypes, const HaplotypeLikelihoodArray& haplotype_likelihoods) const
 {
@@ -247,6 +290,9 @@ CellCaller::infer_latents(const std::vector<Haplotype>& haplotypes, const Haplot
     model::SingleCellPriorModel two_group_prior_model {std::move(two_group_phylogeny), *genotype_prior_model, mutation_model, cell_prior_params};
     model::SingleCellModel two_group_model {samples_, std::move(two_group_prior_model), model_parameters, config};
     auto two_group_inferences = two_group_model.evaluate(genotypes, haplotype_likelihoods);
+    
+    log(single_group_inferences, samples_, genotypes, debug_log_);
+    log(two_group_inferences, samples_, genotypes, debug_log_);
     
     std::vector<model::SingleCellModel::Inferences> inferences {std::move(single_group_inferences), std::move(two_group_inferences)};
     return std::make_unique<Latents>(*this, haplotypes, std::move(genotypes), std::move(inferences));
