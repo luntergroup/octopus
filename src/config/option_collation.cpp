@@ -1681,6 +1681,11 @@ auto get_target_working_memory(const OptionMap& options)
     return result;
 }
 
+bool is_experimental_caller(const std::string& caller) noexcept
+{
+    return caller == "population" || caller == "polyclone" || caller == "cell";
+}
+
 CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& read_pipe,
                                   const InputRegionMap& regions, const OptionMap& options,
                                   const boost::optional<ReadSetProfile> read_profile)
@@ -1693,7 +1698,7 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
     check_caller(caller, read_pipe.samples(), options);
     vc_builder.set_caller(caller);
     
-    if (caller == "population" || caller == "polyclone") {
+    if (is_experimental_caller(caller)) {
         logging::WarningLogger log {};
         stream(log) << "The " << caller << " calling model is still in development and may not perform as expected";
     }
