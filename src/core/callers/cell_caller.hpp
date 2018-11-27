@@ -43,6 +43,7 @@ public:
         unsigned max_genotypes, max_joint_genotypes;
         double dropout_concentration;
         DeNovoModel::Parameters mutation_model_parameters;
+        boost::optional<unsigned> max_vb_seeds = boost::none; // Use default if none
     };
     
     CellCaller() = delete;

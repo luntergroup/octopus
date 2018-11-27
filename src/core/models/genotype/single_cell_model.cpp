@@ -309,6 +309,30 @@ SingleCellModel::make_likelihood_matrix(const GenotypeCombinationVector& genotyp
     return result;
 }
 
+namespace {
+
+LogProbabilityVector log_uniform_dist(const std::size_t n)
+{
+    return LogProbabilityVector(n, -std::log(static_cast<double>(n)));
+}
+
+auto make_point_seed(const std::size_t num_genotypes, const std::size_t idx, const double p = 0.9999)
+{
+    LogProbabilityVector result(num_genotypes, num_genotypes > 1 ? std::log((1 - p) / (num_genotypes - 1)) : 0);
+    if (num_genotypes > 1) result[idx] = std::log(p);
+    return result;
+}
+
+void make_point_seeds(const std::size_t num_genotypes, const std::vector<std::size_t>& indices,
+                      std::vector<LogProbabilityVector>& result, const double p = 0.9999)
+{
+    result.reserve(result.size() + indices.size());
+    std::transform(std::cbegin(indices), std::cend(indices), std::back_inserter(result),
+                   [=] (auto idx) { return make_point_seed(num_genotypes, idx, p); });
+}
+
+} // namespace
+
 SingleCellModel::VBSeedVector
 SingleCellModel::propose_seeds(const GenotypeCombinationVector& genotype_combinations,
                                const std::vector<Genotype<Haplotype>>& genotypes,
@@ -316,7 +340,11 @@ SingleCellModel::propose_seeds(const GenotypeCombinationVector& genotype_combina
                                const HaplotypeLikelihoodArray& haplotype_likelihoods) const
 {
     VBSeedVector result {};
-    result.emplace_back(genotype_combinations.size(), -std::log(genotype_combinations.size())); // Uniform
+    result.push_back(log_uniform_dist(genotype_combinations.size()));
+    const auto k = std::min(std::size_t {config_.max_seeds}, genotype_combinations.size());
+    std::vector<std::size_t> top_indices(k);
+    std::iota(std::begin(top_indices), std::end(top_indices), 0u);
+    make_point_seeds(genotype_combinations.size(), top_indices, result);
     return result;
 }
 

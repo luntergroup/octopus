@@ -1748,7 +1748,6 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
         vc_builder.set_min_somatic_posterior(min_somatic_posterior);
         vc_builder.set_normal_contamination_risk(get_normal_contamination_risk(options));
         vc_builder.set_tumour_germline_concentration(options.at("tumour-germline-concentration").as<float>());
-        if (is_set("max-vb-seeds", options)) vc_builder.set_max_vb_seeds(as_unsigned("max-vb-seeds", options));
     } else if (caller == "trio") {
         vc_builder.set_trio(make_trio(read_pipe.samples(), options, pedigree));
         vc_builder.set_snv_denovo_mutation_rate(options.at("denovo-snv-mutation-rate").as<float>());
@@ -1763,6 +1762,7 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
     }
     vc_builder.set_model_filtering(allow_model_filtering(options));
     vc_builder.set_max_genotypes(as_unsigned("max-genotypes", options));
+    if (is_set("max-vb-seeds", options)) vc_builder.set_max_vb_seeds(as_unsigned("max-vb-seeds", options));
     if (is_fast_mode(options)) {
         vc_builder.set_max_joint_genotypes(10'000);
     } else {

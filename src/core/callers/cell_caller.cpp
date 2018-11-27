@@ -234,6 +234,7 @@ CellCaller::infer_latents(const std::vector<Haplotype>& haplotypes, const Haplot
     model_parameters.group_concentration = 1.0;
     model::SingleCellModel::AlgorithmParameters config {};
     config.max_genotype_combinations = parameters_.max_joint_genotypes;
+    if (parameters_.max_vb_seeds) config.max_seeds = *parameters_.max_vb_seeds;
     
     using CellPhylogeny =  model::SingleCellPriorModel::CellPhylogeny;
     CellPhylogeny single_group_phylogeny {CellPhylogeny::Group {0}};

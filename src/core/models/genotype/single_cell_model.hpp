@@ -40,6 +40,7 @@ public:
     struct AlgorithmParameters
     {
         std::size_t max_genotype_combinations;
+        unsigned max_seeds = 5;
     };
     
     SingleCellModel() = delete;
