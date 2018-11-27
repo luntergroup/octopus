@@ -607,7 +607,7 @@ OptionMap parse_options(const int argc, const char** argv)
     "Maximum number of nodes in cell phylogeny to consider")
 
     ("dropout-concentration",
-    po::value<float>()->default_value(1.5, "1.5"),
+    po::value<float>()->default_value(2, "2"),
     "Allelic dropout concentration paramater")
     ;
     
