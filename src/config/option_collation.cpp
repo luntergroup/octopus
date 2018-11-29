@@ -942,6 +942,18 @@ auto get_assembler_region_generator_frequency_trigger(const OptionMap& options)
     }
 }
 
+coretools::LocalReassembler::BubbleScoreSetter
+get_assembler_bubble_score_setter(const OptionMap& options) noexcept
+{
+    using namespace octopus::coretools;
+    if (is_cancer_calling(options)) {
+        return DepthBasedBubbleScoreSetter {options.at("min-bubble-score").as<double>(),
+                                            options.at("min-expected-somatic-frequency").as<float>()};
+    } else {
+        return ConstantBubbleScoreSetter {options.at("min-bubble-score").as<double>()};
+    }
+}
+
 class MissingSourceVariantFile : public MissingFileError
 {
     std::string do_where() const override
@@ -1051,7 +1063,7 @@ auto make_variant_generator_builder(const OptionMap& options)
         reassembler_options.bin_overlap = as_unsigned("max-assemble-region-overlap", options);
         reassembler_options.min_kmer_observations = as_unsigned("min-kmer-prune", options);
         reassembler_options.max_bubbles = as_unsigned("max-bubbles", options);
-        reassembler_options.min_bubble_score = options.at("min-bubble-score").as<double>();
+        reassembler_options.min_bubble_score = get_assembler_bubble_score_setter(options);
         reassembler_options.max_variant_size = as_unsigned("max-variant-size", options);
         result.set_local_reassembler(std::move(reassembler_options));
     }

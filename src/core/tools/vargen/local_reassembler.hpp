@@ -31,6 +31,9 @@ namespace coretools {
 class LocalReassembler : public VariantGenerator
 {
 public:
+    using ReadBaseCountMap = std::unordered_map<SampleName, unsigned>;
+    using BubbleScoreSetter = std::function<double(const GenomicRegion&, const ReadBaseCountMap&)>;
+    
     struct Options
     {
         ExecutionPolicy execution_policy              = ExecutionPolicy::seq;
@@ -42,7 +45,7 @@ public:
         AlignedRead::BaseQuality mask_threshold       = 0;
         unsigned min_kmer_observations                = 1;
         unsigned max_bubbles                          = 10;
-        double min_bubble_score                       = 2.0;
+        BubbleScoreSetter min_bubble_score            = [] (const GenomicRegion&, const ReadBaseCountMap&) { return 2.0; };
         Variant::MappingDomain::Size max_variant_size = 5000;
     };
     
@@ -113,7 +116,7 @@ private:
     AlignedRead::BaseQuality mask_threshold_;
     unsigned min_kmer_observations_;
     unsigned max_bubbles_;
-    double min_bubble_score_;
+    BubbleScoreSetter min_bubble_score_;
     Variant::MappingDomain::Size max_variant_size_;
     
     void prepare_bins(const GenomicRegion& active_region, BinList& bins) const;
@@ -126,6 +129,24 @@ private:
     AssemblerStatus assemble_bin(unsigned kmer_size, const Bin& bin, std::deque<Variant>& result) const;
     AssemblerStatus try_assemble_region(Assembler& assembler, const NucleotideSequence& reference_sequence,
                                         const GenomicRegion& reference_region, std::deque<Variant>& result) const;
+    double calculate_min_bubble_score(const GenomicRegion& assemble_region) const;
+};
+
+struct ConstantBubbleScoreSetter
+{
+    double operator()(const GenomicRegion&, const LocalReassembler::ReadBaseCountMap&) const noexcept { return min_score_; }
+    ConstantBubbleScoreSetter(double min_score) : min_score_ {min_score} {}
+private:
+    double min_score_;
+};
+
+struct DepthBasedBubbleScoreSetter
+{
+    double operator()(const GenomicRegion& region, const LocalReassembler::ReadBaseCountMap& read_counts) const;
+    DepthBasedBubbleScoreSetter(double min_score, double min_allele_frequency);
+private:
+    
+    double min_score_, min_allele_frequency_;
 };
 
 } // namespace coretools
