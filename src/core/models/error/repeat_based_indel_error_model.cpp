@@ -37,8 +37,7 @@ auto fill_n_if_less(FordwardIt first, std::size_t n, const Tp& value)
 
 } // namespace
 
-RepeatBasedIndelErrorModel::PenaltyType
-RepeatBasedIndelErrorModel::do_evaluate(const Haplotype& haplotype, PenaltyVector& gap_open_penalities) const
+void RepeatBasedIndelErrorModel::do_set_penalties(const Haplotype& haplotype, PenaltyVector& gap_open_penalities, PenaltyType& gap_extend_penalty) const
 {
     gap_open_penalities.assign(sequence_size(haplotype), get_default_open_penalty());
     const auto repeats = extract_repeats(haplotype);
@@ -54,9 +53,9 @@ RepeatBasedIndelErrorModel::do_evaluate(const Haplotype& haplotype, PenaltyVecto
             }
         }
         set_motif(haplotype, max_repeat, motif);
-        return get_extension_penalty(motif, max_repeat.length);
+        gap_extend_penalty = get_extension_penalty(motif, max_repeat.length);
     } else {
-        return get_default_extension_penalty();
+        gap_extend_penalty = get_default_extension_penalty();
     }
 }
     

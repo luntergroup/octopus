@@ -55,7 +55,7 @@ void HaplotypeLikelihoodModel::reset(const Haplotype& haplotype, boost::optional
         haplotype_snv_reverse_mask_.assign(std::cbegin(haplotype.sequence()), std::cend(haplotype.sequence()));
     }
     if (indel_error_model_) {
-        haplotype_gap_extension_penalty_ = indel_error_model_->evaluate(haplotype, haplotype_gap_open_penalities_);
+        indel_error_model_->set_penalties(haplotype, haplotype_gap_open_penalities_, haplotype_gap_extension_penalty_);
     }
 }
 

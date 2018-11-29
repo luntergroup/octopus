@@ -12,10 +12,9 @@ std::unique_ptr<IndelErrorModel> IndelErrorModel::clone() const
     return do_clone();
 }
 
-IndelErrorModel::PenaltyType
-IndelErrorModel::evaluate(const Haplotype& haplotype, PenaltyVector& gap_open_penalities) const
+void IndelErrorModel::set_penalties(const Haplotype& haplotype, PenaltyVector& gap_open_penalities, PenaltyType& gap_extend_penalty) const
 {
-    return do_evaluate(haplotype, gap_open_penalities);
+    do_set_penalties(haplotype, gap_open_penalities, gap_extend_penalty);
 }
 
 } // namespace octopus

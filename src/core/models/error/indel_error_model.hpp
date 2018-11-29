@@ -22,11 +22,11 @@ public:
     virtual ~IndelErrorModel() = default;
     
     std::unique_ptr<IndelErrorModel> clone() const;
-    PenaltyType evaluate(const Haplotype& haplotype, PenaltyVector& gap_open_penalties) const;
+    void set_penalties(const Haplotype& haplotype, PenaltyVector& gap_open_penalties, PenaltyType& gap_extend_penalty) const;
     
 private:
     virtual std::unique_ptr<IndelErrorModel> do_clone() const = 0;
-    virtual PenaltyType do_evaluate(const Haplotype& haplotype, PenaltyVector& gap_open_penalties) const = 0;
+    virtual void do_set_penalties(const Haplotype& haplotype, PenaltyVector& gap_open_penalties, PenaltyType& gap_extend_penalty) const = 0;
 };
 
 } // namespace octopus
