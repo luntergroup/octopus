@@ -13,7 +13,7 @@ default_measures = "AC AD AF ARF BQ CC CRF DP FRF GC GQ GQD NC MC MF MP MRC MQ M
 
 def run_octopus(octopus, ref_path, bam_path, regions_bed, measures, threads, out_path):
     call([octopus, '-R', ref_path, '-I', bam_path, '-t', regions_bed, '-o', out_path, '--threads', str(threads),
-          '--legacy', '--csr-train'] + measures)
+          '--legacy', '--training-annotations'] + measures)
 
 def get_reference_id(ref_path):
     return basename(ref_path).replace(".fasta", "")
