@@ -95,13 +95,7 @@ NovaSeqIndelErrorModel::get_default_extension_penalty() const noexcept
 NovaSeqIndelErrorModel::PenaltyType
 NovaSeqIndelErrorModel::get_extension_penalty(const Sequence& motif, const unsigned length) const noexcept
 {
-    switch (motif.size()) {
-        case 1: return 3;
-        case 2:
-        case 3:
-        case 4: return 2;
-        default: return get_default_extension_penalty();
-    }
+    return get_default_extension_penalty();
 }
 
 } // namespace octopus
