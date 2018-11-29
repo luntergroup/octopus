@@ -430,6 +430,8 @@ set(CORE_SOURCES
     core/models/error/umi_indel_error_model.cpp
     core/models/error/indel_error_model.hpp
     core/models/error/indel_error_model.cpp
+    core/models/error/repeat_based_indel_error_model.hpp
+    core/models/error/repeat_based_indel_error_model.cpp
     core/models/error/snv_error_model.hpp
     core/models/error/snv_error_model.cpp
     core/models/error/hiseq_snv_error_model.hpp
