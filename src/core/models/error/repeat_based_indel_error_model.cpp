@@ -46,8 +46,8 @@ void RepeatBasedIndelErrorModel::do_set_penalties(const Haplotype& haplotype, Pe
         Sequence motif(3, 'N');
         for (const auto& repeat : repeats) {
             set_motif(haplotype, repeat, motif);
-            const auto penalty = get_open_penalty(motif, repeat.length);
-            fill_n_if_less(std::next(std::begin(gap_open_penalities), repeat.pos), repeat.length, penalty);
+            const auto open_penalty = get_open_penalty(motif, repeat.length);
+            fill_n_if_less(std::next(std::begin(gap_open_penalities), repeat.pos), repeat.length, open_penalty);
             if (repeat.length > max_repeat.length) {
                 max_repeat = repeat;
             }
@@ -56,6 +56,23 @@ void RepeatBasedIndelErrorModel::do_set_penalties(const Haplotype& haplotype, Pe
         gap_extend_penalty = get_extension_penalty(motif, max_repeat.length);
     } else {
         gap_extend_penalty = get_default_extension_penalty();
+    }
+}
+
+void RepeatBasedIndelErrorModel::do_set_penalties(const Haplotype& haplotype, PenaltyVector& gap_open_penalities, PenaltyVector& gap_extend_penalties) const
+{
+    gap_open_penalities.assign(sequence_size(haplotype), get_default_open_penalty());
+    gap_extend_penalties.assign(sequence_size(haplotype), get_default_extension_penalty());
+    const auto repeats = extract_repeats(haplotype);
+    if (!repeats.empty()) {
+        Sequence motif(3, 'N');
+        for (const auto& repeat : repeats) {
+            set_motif(haplotype, repeat, motif);
+            const auto open_penalty = get_open_penalty(motif, repeat.length);
+            fill_n_if_less(std::next(std::begin(gap_open_penalities), repeat.pos), repeat.length, open_penalty);
+            const auto extension_penalty = get_extension_penalty(motif, repeat.length);
+            fill_n_if_less(std::next(std::begin(gap_extend_penalties), repeat.pos), repeat.length, extension_penalty);
+        }
     }
 }
     

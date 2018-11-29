@@ -17,4 +17,9 @@ void IndelErrorModel::set_penalties(const Haplotype& haplotype, PenaltyVector& g
     do_set_penalties(haplotype, gap_open_penalities, gap_extend_penalty);
 }
 
+void IndelErrorModel::set_penalties(const Haplotype& haplotype, PenaltyVector& gap_open_penalities, PenaltyVector& gap_extend_penalties) const
+{
+    do_set_penalties(haplotype, gap_open_penalities, gap_extend_penalties);
+}
+
 } // namespace octopus
