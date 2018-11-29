@@ -20,7 +20,7 @@ auto extract_repeats(const Haplotype& haplotype)
 void set_motif(const Haplotype& haplotype, const tandem::Repeat& repeat, Haplotype::NucleotideSequence& result)
 {
     const auto motif_itr = std::next(std::cbegin(haplotype.sequence()), repeat.pos);
-    result.assign(motif_itr, std::next(motif_itr, repeat.length));
+    result.assign(motif_itr, std::next(motif_itr, repeat.period));
 }
 
 template <typename FordwardIt, typename Tp>
