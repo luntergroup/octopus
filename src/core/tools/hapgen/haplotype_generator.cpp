@@ -1267,7 +1267,6 @@ GenomicRegion HaplotypeGenerator::calculate_haplotype_region() const
         const auto& rhs_read = *rightmost_overlapped(reads_.get(), active_region_);
         const auto read_region = closed_region(lhs_read, rhs_read);
         GenomicRegion::Size lhs_expansion {}, rhs_expansion {};
-        
         if (begins_before(read_region, active_region_)) {
             lhs_expansion = begin_distance(read_region, active_region_) + min_flank_padding;
         } else {
@@ -1290,7 +1289,7 @@ GenomicRegion HaplotypeGenerator::calculate_haplotype_region() const
         }
         return expand(active_region_, lhs_expansion, rhs_expansion);
     }
-    return active_region_;
+    return expand(active_region_, 1);
 }
 
 // Builder
