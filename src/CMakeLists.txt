@@ -426,6 +426,8 @@ set(CORE_SOURCES
     core/models/error/hiseq_indel_error_model.cpp
     core/models/error/x10_indel_error_model.hpp
     core/models/error/x10_indel_error_model.cpp
+    core/models/error/bgiseq_indel_error_model.hpp
+    core/models/error/bgiseq_indel_error_model.cpp
     core/models/error/novaseq_indel_error_model.hpp
     core/models/error/novaseq_indel_error_model.cpp
     core/models/error/indel_error_model.hpp

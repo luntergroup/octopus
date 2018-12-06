@@ -3,11 +3,13 @@
 
 #include "error_model_factory.hpp"
 
+#include "utils/string_utils.hpp"
 #include "hiseq_snv_error_model.hpp"
 #include "x10_snv_error_model.hpp"
 #include "hiseq_indel_error_model.hpp"
 #include "x10_indel_error_model.hpp"
 #include "novaseq_indel_error_model.hpp"
+#include "bgiseq_indel_error_model.hpp"
 
 namespace octopus {
 
@@ -23,16 +25,22 @@ std::unique_ptr<IndelErrorModel> make_indel_error_model()
 
 bool is_xten(const std::string& sequencer) noexcept
 {
-    return sequencer == "xten" || sequencer == "x10";
+    return sequencer == "XTEN" || sequencer == "X10";
 }
 
 bool is_novaseq(const std::string& sequencer) noexcept
 {
-    return sequencer == "novaseq";
+    return sequencer == "NOVASEQ";
 }
 
-std::unique_ptr<SnvErrorModel> make_snv_error_model(const std::string& sequencer)
+bool is_bgiseq(const std::string& sequencer) noexcept
 {
+    return sequencer == "BGISEQ" || sequencer == "BGISEQ-500" || sequencer == "BGISEQ500";
+}
+
+std::unique_ptr<SnvErrorModel> make_snv_error_model(std::string sequencer)
+{
+    sequencer = utils::capitalise(sequencer);
     if (is_xten(sequencer)) {
         return std::make_unique<X10SnvErrorModel>();
     } else {
@@ -40,12 +48,15 @@ std::unique_ptr<SnvErrorModel> make_snv_error_model(const std::string& sequencer
     }
 }
 
-std::unique_ptr<IndelErrorModel> make_indel_error_model(const std::string& sequencer)
+std::unique_ptr<IndelErrorModel> make_indel_error_model(std::string sequencer)
 {
+    sequencer = utils::capitalise(sequencer);
     if (is_xten(sequencer)) {
         return std::make_unique<X10IndelErrorModel>();
     } else if (is_novaseq(sequencer)) {
         return std::make_unique<NovaSeqIndelErrorModel>();
+    } else if (is_bgiseq(sequencer)) {
+        return std::make_unique<BGISeqIndelErrorModel>();
     } else {
         return std::make_unique<HiSeqIndelErrorModel>();
     }
