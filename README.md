@@ -19,6 +19,24 @@ There are currently five calling models implemented:
 
 Octopus is currently able to call SNVs, small-medium sized indels, small complex rearrangements, and micro-inversions.
 
+## Quick start
+
+Install Octopus (dependencies will be installed into `octopus/build`):
+
+```shell
+$ git clone -b develop https://github.com/luntergroup/octopus.git
+$ octopus/scripts/install.py --install-dependencies --download-forests
+$ echo "export PATH=$PATH:$(pwd)/octopus/bin" >> ~/.bashrc
+$ source ~/.bashrc
+```
+
+Call some variants:
+
+```shell
+$ FOREST="$(pwd)/octopus/resources/forests/germline.v0.5.2-beta.forest"
+$ octopus -R hs37d5.fa -I NA12878.bam -T 1 to MT -o NA12878.octopus.vcf.gz --forest $FOREST --threads 8
+```
+
 ## Requirements
 * A C++14 compiler with SSE2 support
 * A C++14 standard library implementation
