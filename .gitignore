@@ -41,6 +41,7 @@ CTestTestfile.cmake
 build/src
 build/test
 build/homebrew
+build/brew
 resources/forests
 
 ## Core latex/pdflatex auxiliary files:
