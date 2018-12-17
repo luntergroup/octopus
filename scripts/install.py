@@ -53,7 +53,7 @@ def install_homebrew():
     call([brew_bin, 'update'])
     return brew_bin
 
-def get_required_prerequisites():
+def get_required_dependencies():
     result = ['cmake']
     if is_osx():
         result.append(latest_llvm)
@@ -77,16 +77,16 @@ def get_brewed_compiler_binaries(homebrew_dir):
         gxx_bin_name =  gcc_bin_name.replace('cc', '++')
         return os.path.join(gcc_bin_dir, gcc_bin_name), os.path.join(gcc_bin_dir, gxx_bin_name)
 
-def install_prerequisites(build_dir):
+def install_dependencies(build_dir):
     brew_bin = install_homebrew()
-    prerequisites = get_required_prerequisites()
-    brew_command = [brew_bin, 'install'] + prerequisites
+    dependencies = get_required_dependencies()
+    brew_command = [brew_bin, 'install'] + dependencies
     if call(brew_command) == 0:
-        prerequisites_dir = os.path.join(build_dir, get_homebrew_name())
-        cc, cxx = get_brewed_compiler_binaries(prerequisites_dir)
-        binaries = {'cmake': os.path.join(prerequisites_dir, 'bin/cmake'),
+        dependencies_dir = os.path.join(build_dir, get_homebrew_name())
+        cc, cxx = get_brewed_compiler_binaries(dependencies_dir)
+        binaries = {'cmake': os.path.join(dependencies_dir, 'bin/cmake'),
                     'c_compiler': cc, 'cxx_compiler': cxx}
-        return prerequisites_dir, binaries
+        return dependencies_dir, binaries
     else:
         return None, None
 
@@ -141,9 +141,9 @@ def main(args):
     if not args["keep_cache"] and os.path.exists(cmake_cache_file):
         os.remove(cmake_cache_file)
 
-    prerequisites_dir, prerequisites_binaries = None, None
-    if args["install_prerequisites"]:
-        prerequisites_dir, prerequisites_binaries = install_prerequisites(octopus_build_dir)
+    dependencies_dir, dependencies_binaries = None, None
+    if args["install_dependencies"]:
+        dependencies_dir, dependencies_binaries = install_dependencies(octopus_build_dir)
 
     cmake_options = []
     if args["prefix"]:
@@ -158,31 +158,31 @@ def main(args):
         cmake_options.append("-DBUILD_SHARED_LIBS=OFF")
     if args["verbose"]:
         cmake_options.append("CMAKE_VERBOSE_MAKEFILE:BOOL=ON")
-    if prerequisites_dir is not None:
+    if dependencies_dir is not None:
         if args["c_compiler"]:
             cmake_options.append("-DCMAKE_C_COMPILER=" + args["c_compiler"])
         else:
-            cmake_options.append("-DCMAKE_C_COMPILER=" + prerequisites_binaries["c_compiler"])
+            cmake_options.append("-DCMAKE_C_COMPILER=" + dependencies_binaries["c_compiler"])
         if args["cxx_compiler"]:
             cmake_options.append("-DCMAKE_CXX_COMPILER=" + args["cxx_compiler"])
         else:
-            cmake_options.append("-DCMAKE_CXX_COMPILER=" + prerequisites_binaries["cxx_compiler"])
+            cmake_options.append("-DCMAKE_CXX_COMPILER=" + dependencies_binaries["cxx_compiler"])
         if args["boost"]:
             cmake_options.append("-DBOOST_ROOT=" + args["boost"])
             cmake_options.append("-DBoost_NO_BOOST_CMAKE=TRUE")
             cmake_options.append("-DBoost_NO_SYSTEM_PATHS=TRUE")
         else:
-            cmake_options.append("-DBOOST_ROOT=" + prerequisites_dir)
+            cmake_options.append("-DBOOST_ROOT=" + dependencies_dir)
             cmake_options.append("-DBoost_NO_BOOST_CMAKE=TRUE")
             cmake_options.append("-DBoost_NO_SYSTEM_PATHS=TRUE")
         if args["htslib"]:
             cmake_options.append("-DHTSLIB_ROOT=" + args["htslib"])
             cmake_options.append("-DHTSlib_NO_SYSTEM_PATHS=TRUE")
         else:
-            cmake_options.append("-DHTSLIB_ROOT=" + prerequisites_dir)
+            cmake_options.append("-DHTSLIB_ROOT=" + dependencies_dir)
             cmake_options.append("-DHTSlib_NO_SYSTEM_PATHS=TRUE")
 
-        ret = call([prerequisites_binaries['cmake']] + cmake_options + [".."])
+        ret = call([dependencies_binaries['cmake']] + cmake_options + [".."])
     else:
         if args["c_compiler"]:
             cmake_options.append("-DCMAKE_C_COMPILER=" + args["c_compiler"])
@@ -228,9 +228,9 @@ if __name__ == '__main__':
                         required=False,
                         type=str,
                         help='Install into given location')
-    parser.add_argument('--install-prerequisites',
+    parser.add_argument('--install-dependencies',
                         default=False,
-                        help='Install all prerequisites locally into build directory',
+                        help='Install all dependencies locally into build directory',
                         action='store_true')
     parser.add_argument('--clean',
                         default=False,
