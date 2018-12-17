@@ -383,7 +383,7 @@ std::vector<Variant> unique_left_align(std::vector<Variant>&& variants,
     std::sort(it, std::end(variants));
     variants.erase(std::unique(it, std::end(variants)), std::end(variants));
     std::inplace_merge(std::begin(variants), it, std::end(variants));
-    return variants;
+    return std::move(variants);
 }
 
 std::vector<Variant> parsimonise_each(const std::vector<Variant>& variants,
@@ -408,7 +408,7 @@ std::vector<Variant> parsimonise_each(std::vector<Variant>&& variants,
                        if (!is_parsimonious(variant)) {
                            return make_parsimonious(std::move(variant), reference);
                        }
-                       return variant;
+                       return std::move(variant);
                    });
     return result;
 }
