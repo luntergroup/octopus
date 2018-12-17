@@ -215,7 +215,7 @@ def main(args):
         else:
             print("Windows make files not supported. Build files have been written to " + octopus_build_dir)
 
-    if args["download"]:
+    if args["download_forests"]:
         if len(forests) > 0:
             forest_dir = os.path.join(octopus_dir, "resources/forests")
             download_forests(forest_dir, octopus_version)
@@ -271,7 +271,7 @@ if __name__ == '__main__':
                         required=False,
                         type=str,
                         help='The HTSlib library root')
-    parser.add_argument('--download',
+    parser.add_argument('--download-forests',
                         default=False,
                         help='Try to download pre-trained random forests for filtering',
                         action='store_true')
