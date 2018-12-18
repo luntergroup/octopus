@@ -365,7 +365,7 @@ CigarScanner::make_observation(const CandidateIterator first_match, const Candid
         const auto& origin = observation_itr->origin;
         auto next_itr = std::find_if_not(next(observation_itr), end(observations),
                                          [&] (const Candidate& c) { return c.origin.get() == origin.get(); });
-        const auto num_observations = static_cast<std::size_t>(std::distance(observation_itr, next_itr));
+        const auto num_observations = static_cast<unsigned>(std::distance(observation_itr, next_itr));
         std::vector<unsigned> observed_base_qualities(num_observations);
         std::transform(observation_itr, next_itr, begin(observed_base_qualities),
                        [this] (const Candidate& c) noexcept { return sum_base_qualities(c); });
@@ -386,7 +386,7 @@ CigarScanner::make_observation(const CandidateIterator first_match, const Candid
                                                           }
                                                           return curr;
                                                       });
-        const auto depth = get_min_depth(candidate.variant, sample_read_coverage_tracker_.at(origin));
+        const auto depth = std::max(get_min_depth(candidate.variant, sample_read_coverage_tracker_.at(origin)), num_observations);
         result.sample_observations.push_back({origin, depth, std::move(observed_base_qualities),
                                               std::move(observed_mapping_qualities),
                                               num_fwd_support, num_edge_support});
