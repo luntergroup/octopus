@@ -567,11 +567,18 @@ set(WarningIgnores
     -Wno-unused-parameter
     -Wno-unused-function
     -Wno-missing-braces
-    -Wno-maybe-uninitialized
 )
+
+set(GCCWarningIgnores
+    -Wno-maybe-uninitialized
+    )
 
 # Compile options for all builds
 add_compile_options(-Wall -Wextra -Werror ${WarningIgnores})
+
+if(CMAKE_COMPILER_IS_GNUCXX)
+    add_compile_options(${GCCWarningIgnores})
+endif()
 
 set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
 set(THREADS_PREFER_PTHREAD_FLAG TRUE)
