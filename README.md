@@ -27,7 +27,7 @@ Install Octopus (dependencies will be installed into `octopus/build`):
 $ git clone -b develop https://github.com/luntergroup/octopus.git
 $ octopus/scripts/install.py --install-dependencies --download-forests
 $ echo 'export PATH='$(pwd)'/octopus/bin:$PATH' >> ~/.bash_profile
-$ source ~/.bashrc
+$ source ~/.bash_profile
 ```
 
 Call some variants:
