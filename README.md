@@ -26,7 +26,7 @@ Install Octopus (dependencies will be installed into `octopus/build`):
 ```shell
 $ git clone -b develop https://github.com/luntergroup/octopus.git
 $ octopus/scripts/install.py --install-dependencies --download-forests
-$ echo "export PATH=$PATH:$(pwd)/octopus/bin" >> ~/.bashrc
+$ echo 'export PATH='$(pwd)'/octopus/bin:$PATH' >> ~/.bashrc
 $ source ~/.bashrc
 ```
 
