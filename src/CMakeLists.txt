@@ -567,6 +567,7 @@ set(WarningIgnores
     -Wno-unused-parameter
     -Wno-unused-function
     -Wno-missing-braces
+    -Wno-maybe-uninitialized
 )
 
 # Compile options for all builds
