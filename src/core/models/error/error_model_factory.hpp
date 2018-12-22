@@ -14,8 +14,8 @@ namespace octopus {
 
 std::unique_ptr<SnvErrorModel> make_snv_error_model();
 std::unique_ptr<IndelErrorModel> make_indel_error_model();
-std::unique_ptr<SnvErrorModel> make_snv_error_model(std::string model_name);
-std::unique_ptr<IndelErrorModel> make_indel_error_model(std::string model_name);
+std::unique_ptr<SnvErrorModel> make_snv_error_model(const std::string& model_name);
+std::unique_ptr<IndelErrorModel> make_indel_error_model(const std::string& model_name);
 
 } // namespace octopus
 

@@ -11,8 +11,6 @@
 #include <boost/numeric/conversion/cast.hpp>
 #include <boost/lexical_cast.hpp>
 
-#include <iostream>
-
 namespace octopus {
 
 std::unique_ptr<IndelErrorModel> CustomRepeatBasedIndelErrorModel::do_clone() const

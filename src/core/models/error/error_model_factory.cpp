@@ -47,17 +47,17 @@ bool is_hiseq(const std::string& model_name) noexcept
     return model_name == "HISEQ";
 }
 
-std::unique_ptr<SnvErrorModel> make_snv_error_model(std::string model_name)
+std::unique_ptr<SnvErrorModel> make_snv_error_model(const std::string& model_name)
 {
-    model_name = utils::capitalise(model_name);
-    if (is_xten(model_name)) {
+    auto model_code_name = utils::capitalise(model_name);
+    if (is_xten(model_code_name)) {
         return std::make_unique<X10SnvErrorModel>();
     } else {
         return std::make_unique<HiSeqSnvErrorModel>();
     }
 }
 
-std::unique_ptr<IndelErrorModel> make_indel_error_model(std::string model_name)
+std::unique_ptr<IndelErrorModel> make_indel_error_model(const std::string& model_name)
 {
     auto model_code_name = utils::capitalise(model_name);
     if (is_xten(model_code_name)) {
