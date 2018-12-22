@@ -442,6 +442,8 @@ set(CORE_SOURCES
     core/models/error/x10_snv_error_model.cpp
     core/models/error/error_model_factory.hpp
     core/models/error/error_model_factory.cpp
+    core/models/error/custom_repeat_based_indel_error_model.hpp
+    core/models/error/custom_repeat_based_indel_error_model.cpp
 
     core/models/mutation/somatic_mutation_model.hpp
     core/models/mutation/somatic_mutation_model.cpp
