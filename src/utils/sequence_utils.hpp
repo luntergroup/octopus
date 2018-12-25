@@ -29,29 +29,81 @@ namespace detail {
 static constexpr std::array<char, 4> dnaBases {'A', 'C', 'G', 'T'};
 static constexpr std::array<char, 4> rnaBases {'A', 'C', 'G', 'U'};
 
-static const std::unordered_map<char, std::vector<char>> aminoAcidCodes {
-    {'A', {'A'}},                    // Adenine
-    {'C', {'C'}},                    // Cytosine
-    {'G', {'G'}},                    // Guanine
-    {'T', {'T'}},                    // Thymine
-    {'U', {'U'}},                    // Uracil
-    {'R', {'A', 'G'}},               // puRine
-    {'Y', {'C', 'T', 'U'}},          // pYrimidines
-    {'K', {'G', 'T', 'U'}},          // Ketones
-    {'M', {'A', 'C'}},               // aMino groups
-    {'S', {'C', 'G'}},               // Strong interaction
-    {'W', {'A', 'T', 'U'}},          // Weak interaction
-    {'B', {'C', 'G', 'T', 'U'}},     // not A
-    {'D', {'A', 'G', 'T', 'U'}},     // not C
-    {'H', {'A', 'C', 'T', 'U'}},     // not G
-    {'V', {'A', 'C', 'G'}},          // not T/U
-    {'N', {'A', 'C', 'G', 'T', 'U'}} // Nucleic acid
-};
+static const std::array<std::vector<char>, 128> iupac_symbols
+{{
+ {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {},
+ {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {},
+ {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {},
+ {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {},
+ {},
+ {'A'}, // Adenine
+ {'C', 'G', 'T', 'U'}, // B (not A)
+ {'C'}, // Cytosine
+ {'A', 'G', 'T', 'U'}, // D (not C)
+ {}, {},
+ {'G'}, // Guanine
+ {'A', 'C', 'T', 'U'}, // H (not G)
+ {}, {},
+ {'G', 'T', 'U'}, // Ketones
+ {},
+ {'A', 'C'}, // aMino groups
+ {'A', 'C', 'G', 'T', 'U'}, // Nucleic acid
+ {}, {}, {},
+ {'A', 'G'}, // puRine
+ {'C', 'G'}, // Strong interaction
+ {'T'}, // Thymine
+ {'U'}, // Uracil
+ {'A', 'C', 'G'}, // V (not T/U)
+ {'A', 'T', 'U'}, // Weak interaction
+ {},
+ {'C', 'T', 'U'}, // pYrimidines
+ {}, {}, {}, {}, {}, {}, {},
+ {'a'}, // adenine
+ {'c', 'g', 't', 'u'}, // B (not a)
+ {'c'}, // cytosine
+ {'a', 'g', 't', 'u'}, // D (not c)
+ {}, {},
+ {'g'}, // guanine
+ {'a', 'c', 't', 'u'}, // H (not g)
+ {}, {},
+ {'g', 't', 'u'}, // Ketones
+ {},
+ {'a', 'c'}, // aMino groups
+ {'a', 'c', 'g', 't', 'u'}, // Nucleic acid
+ {}, {}, {},
+ {'a', 'g'}, // puRine
+ {'c', 'g'}, // Strong interaction
+ {'t'}, // thymine
+ {'u'}, // uracil
+ {'a', 'c', 'g'}, // v (not t/u)
+ {'a', 't', 'u'}, // Weak interaction
+ {},
+ {'c', 't', 'u'}, // pYrimidines
+ {}, {}, {}, {}, {}, {}
+ }};
 
-static constexpr std::array<char, 11> ambiguousCodes
+inline constexpr char capitalise_base(const char base) noexcept
 {
-    'N', 'R', 'Y', 'K', 'M', 'S', 'W', 'B', 'D', 'H', 'V'
-};
+    switch (base) {
+        case 'a': return 'A';
+        case 'b': return 'B';
+        case 'c': return 'C';
+        case 'd': return 'C';
+        case 'g': return 'G';
+        case 'h': return 'H';
+        case 'k': return 'K';
+        case 't': return 'T';
+        case 'u': return 'U';
+        case 'm': return 'M';
+        case 'n': return 'N';
+        case 'r': return 'R';
+        case 's': return 'S';
+        case 'v': return 'V';
+        case 'w': return 'W';
+        case 'y': return 'Y';
+        default : return base;
+    }
+}
 
 inline bool is_dna_nucleotide(const char b) noexcept
 {
@@ -68,6 +120,16 @@ inline bool is_dna_or_rna_nucleotide(const char b) noexcept
     return b == 'A' || b == 'C' || b == 'G' || b == 'T' || b == 'U';
 }
 
+inline bool is_iupac_ambiguous_base(const char base) noexcept
+{
+    return iupac_symbols[base].size() > 1;
+}
+
+inline char disambiguate_iupac_base(const char base)
+{
+    return iupac_symbols[base].front();
+}
+
 } // namespace detail
 
 template <typename SequenceType>
@@ -80,9 +142,7 @@ template <typename SequenceType>
 bool is_dna(const SequenceType& sequence) noexcept
 {
     return std::all_of(std::cbegin(sequence), std::cend(sequence),
-                       [] (const auto c) noexcept {
-                           return detail::is_dna_nucleotide(c) || c == 'N';
-                       });
+                       [] (const auto c) noexcept { return detail::is_dna_nucleotide(c) || c == 'N'; });
 }
 
 template <typename SequenceType>
@@ -95,9 +155,7 @@ template <typename SequenceType>
 bool is_rna(const SequenceType& sequence) noexcept
 {
     return std::all_of(std::cbegin(sequence), std::cend(sequence),
-                       [] (const auto c) noexcept {
-                           return detail::is_rna_nucleotide(c) || c == 'N';
-                       });
+                       [] (const auto c) noexcept { return detail::is_rna_nucleotide(c) || c == 'N'; });
 }
 
 template <typename SequenceType>
@@ -145,36 +203,10 @@ SequenceType reverse_transcribe_copy(SequenceType rna_sequence)
 }
 
 template <typename SequenceType>
-bool has_mixed_case(SequenceType& sequence)
-{
-    return false;
-}
-
-namespace detail {
-
-struct CapitaliseBase
-{
-    auto operator()(const char base) const noexcept
-    {
-        switch (base) {
-            case 'a': return 'A';
-            case 'c': return 'C';
-            case 'g': return 'G';
-            case 't': return 'T';
-            case 'u': return 'U';
-            case 'n': return 'N';
-            default : return base;
-        }
-    }
-};
-
-} // namespace detail
-
-template <typename SequenceType>
 void capitalise(SequenceType& sequence)
 {
     std::transform(std::begin(sequence), std::end(sequence), std::begin(sequence),
-                   detail::CapitaliseBase {});
+                   [] (auto base) { return detail::capitalise_base(base); });
 }
 
 template <typename SequenceType>
@@ -186,37 +218,48 @@ SequenceType capitalise_copy(const SequenceType& sequence)
 }
 
 namespace detail {
-    template <typename Container>
-    typename Container::value_type random_member(const Container& values)
-    {
-        static std::default_random_engine generator {};
-        if (values.empty()) throw std::runtime_error {"cannot sample from empty container"};
-        if (values.size() == 1) return *std::cbegin(values);
-        std::uniform_int_distribution<size_t> distribution {0, values.size() - 1};
-        return *std::next(std::cbegin(values), distribution(generator));
-    }
+
+template <typename Container>
+typename Container::value_type random_member(const Container& values)
+{
+    static std::default_random_engine generator {};
+    if (values.empty()) throw std::runtime_error {"cannot sample from empty container"};
+    if (values.size() == 1) return *std::cbegin(values);
+    std::uniform_int_distribution<size_t> distribution {0, values.size() - 1};
+    return *std::next(std::cbegin(values), distribution(generator));
+}
+
 } // namespace detail
 
 template <typename SequenceType>
-static void randomise(SequenceType& sequence)
+void disambiguate_iupac_bases(SequenceType& sequence)
 {
-    for (auto& base : sequence) {
-        base = detail::random_member(detail::aminoAcidCodes.at(base));
-    }
+    std::transform(std::begin(sequence), std::end(sequence), std::begin(sequence),
+                   [] (auto base) { return detail::disambiguate_iupac_base(base); });
+}
+
+template <typename SequenceType>
+SequenceType disambiguate_iupac_bases_copy(const SequenceType& sequence)
+{
+    auto result = sequence;
+    disambiguate_iupac_bases(result);
+    return result;
 }
 
 namespace detail {
-    static constexpr std::array<char, 128> complementTable
-    {
-        4, 4,  4, 4,  4,  4,  4, 4,  4, 4, 4, 4,  4, 4, 4,  4,
-        4, 4,  4, 4,  4,  4,  4, 4,  4, 4, 4, 4,  4, 4, 4,  4,
-        4, 4,  4, 4,  4,  4,  4, 4,  4, 4, 4, 4,  4, 4, 4,  4,
-        4, 4,  4, 4,  4,  4,  4, 4,  4, 4, 4, 4,  4, 4, 4,  4,
-        4, 84, 4, 71, 4,  4,  4, 67, 4, 4, 4, 4,  4, 4, 78, 4,
-        4, 4,  4, 4,  65, 65, 4, 4,  4, 4, 4, 4,  4, 4, 4,  4,
-        4, 84, 4, 71, 4,  4,  4, 67, 4, 4, 4, 4,  4, 4, 4,  4,
-        4, 4,  4, 4,  65, 65, 4, 4,  4, 4, 4, 4,  4, 4, 4,  4
-    };
+
+static constexpr std::array<char, 128> complementTable
+{
+    4, 4,  4, 4,  4,  4,  4, 4,  4, 4, 4, 4,  4, 4, 4,  4,
+    4, 4,  4, 4,  4,  4,  4, 4,  4, 4, 4, 4,  4, 4, 4,  4,
+    4, 4,  4, 4,  4,  4,  4, 4,  4, 4, 4, 4,  4, 4, 4,  4,
+    4, 4,  4, 4,  4,  4,  4, 4,  4, 4, 4, 4,  4, 4, 4,  4,
+    4, 84, 4, 71, 4,  4,  4, 67, 4, 4, 4, 4,  4, 4, 78, 4,
+    4, 4,  4, 4,  65, 65, 4, 4,  4, 4, 4, 4,  4, 4, 4,  4,
+    4, 84, 4, 71, 4,  4,  4, 67, 4, 4, 4, 4,  4, 4, 4,  4,
+    4, 4,  4, 4,  65, 65, 4, 4,  4, 4, 4, 4,  4, 4, 4,  4
+};
+
 } // namespace detail
 
 static inline constexpr char complement(const char base) noexcept
