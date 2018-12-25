@@ -97,13 +97,17 @@ ReferenceGenome::GeneticSequence ReferenceGenome::fetch_sequence(const GenomicRe
 ReferenceGenome make_reference(boost::filesystem::path reference_path,
                                const MemoryFootprint max_cache_size,
                                const bool is_threaded,
-                               bool capitalise_bases)
+                               const bool capitalise_bases,
+                               const bool disambiguate_iupac_ambiguity_symbols)
 {
     using namespace io;
     std::unique_ptr<ReferenceReader> impl_ {};
     Fasta::Options options {};
     if (capitalise_bases) {
-        options.base_transform_policy = Fasta::Options::BaseTransformPolicy::capitalise;
+        options.base_transform_policy = Fasta::Options::CapitalisationPolicy::capitalise;
+    }
+    if (disambiguate_iupac_ambiguity_symbols) {
+        options.iupac_ambiguity_symbol_policy = Fasta::Options::IUPACAmbiguitySymbolPolicy::disambiguate;
     }
     options.base_fill_policy = Fasta::Options::BaseFillPolicy::fill_with_ns;
     if (is_threaded) {

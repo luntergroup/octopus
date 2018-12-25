@@ -33,9 +33,11 @@ public:
     
     struct Options
     {
-        enum class BaseTransformPolicy { original, capitalise };
+        enum class CapitalisationPolicy { maintain, capitalise };
+        enum class IUPACAmbiguitySymbolPolicy { maintain, disambiguate };
         enum class BaseFillPolicy { ignore, throw_exception, fill_with_ns };
-        BaseTransformPolicy base_transform_policy = BaseTransformPolicy::original;
+        CapitalisationPolicy base_transform_policy = CapitalisationPolicy::maintain;
+        IUPACAmbiguitySymbolPolicy iupac_ambiguity_symbol_policy = IUPACAmbiguitySymbolPolicy::maintain;
         BaseFillPolicy base_fill_policy = BaseFillPolicy::ignore;
     };
     

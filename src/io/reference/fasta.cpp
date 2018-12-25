@@ -181,6 +181,9 @@ Fasta::GeneticSequence Fasta::do_fetch_sequence(const GenomicRegion& region) con
         if (is_capitalisation_requested()) {
             utils::capitalise(result);
         }
+        if (options_.iupac_ambiguity_symbol_policy == Options::IUPACAmbiguitySymbolPolicy::disambiguate) {
+            utils::disambiguate_iupac_bases(result);
+        }
         if (result.size() < size(region)) {
             if (options_.base_fill_policy == Options::BaseFillPolicy::throw_exception) {
                 throw BadReferenceRequestRegion {region};
@@ -219,7 +222,7 @@ bool Fasta::is_valid_fasta_index() const noexcept
 
 bool Fasta::is_capitalisation_requested() const noexcept
 {
-    return options_.base_transform_policy == Options::BaseTransformPolicy::capitalise;
+    return options_.base_transform_policy == Options::CapitalisationPolicy::capitalise;
 }
 
 } // namespace io

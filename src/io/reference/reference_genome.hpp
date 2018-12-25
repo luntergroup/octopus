@@ -59,7 +59,8 @@ private:
 ReferenceGenome make_reference(boost::filesystem::path reference_path,
                                MemoryFootprint max_cache_size = 0,
                                bool is_threaded = false,
-                               bool capitalise_bases = true);
+                               bool capitalise_bases = true,
+                               bool disambiguate_iupac_ambiguity_symbols = true);
 
 std::vector<GenomicRegion> get_all_contig_regions(const ReferenceGenome& reference);
 
