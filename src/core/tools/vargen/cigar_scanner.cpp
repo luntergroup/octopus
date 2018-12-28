@@ -36,8 +36,10 @@ CigarScanner::CigarScanner(const ReferenceGenome& reference, Options options)
 , candidates_ {}
 , likely_misaligned_candidates_ {}
 , max_seen_candidate_size_ {}
-, read_coverage_tracker_ {}
-, misaligned_tracker_ {}
+, combined_read_coverage_tracker_ {}
+, misaligned_read_coverage_tracker_ {}
+, sample_read_coverage_tracker_ {}
+, sample_forward_strand_coverage_tracker_ {}
 {
     buffer_.reserve(100);
 }
@@ -75,11 +77,12 @@ double ln_probability_read_correctly_aligned(const double misalign_penalty, cons
 
 void CigarScanner::do_add_read(const SampleName& sample, const AlignedRead& read)
 {
-    add_read(sample, read, sample_read_coverage_tracker_[sample]);
+    add_read(sample, read, sample_read_coverage_tracker_[sample], sample_forward_strand_coverage_tracker_[sample]);
 }
 
 void CigarScanner::add_read(const SampleName& sample, const AlignedRead& read,
-                            CoverageTracker<GenomicRegion>& sample_coverage_tracker)
+                            CoverageTracker<GenomicRegion>& coverage_tracker,
+                            CoverageTracker<GenomicRegion>& forward_strand_coverage_tracker)
 {
     using std::cbegin; using std::next; using std::move;
     using Flag = CigarOperation::Flag;
@@ -162,30 +165,34 @@ void CigarScanner::add_read(const SampleName& sample, const AlignedRead& read,
     }
     if (options_.use_clipped_coverage_tracking) {
         const auto clipped_region = clipped_mapped_region(read);
-        read_coverage_tracker_.add(clipped_region);
-        sample_coverage_tracker.add(clipped_region);
+        combined_read_coverage_tracker_.add(clipped_region);
+        coverage_tracker.add(clipped_region);
+        if (is_forward_strand(read)) forward_strand_coverage_tracker.add(clipped_region);
     } else {
-        read_coverage_tracker_.add(read);
-        sample_coverage_tracker.add(read);
+        combined_read_coverage_tracker_.add(read);
+        coverage_tracker.add(read);
+        if (is_forward_strand(read)) forward_strand_coverage_tracker.add(read);
     }
     if (!is_likely_misaligned(read, misalignment_penalty)) {
         utils::append(std::move(buffer_), candidates_);
     } else {
         utils::append(std::move(buffer_), likely_misaligned_candidates_);
-        misaligned_tracker_.add(clipped_mapped_region(read));
+        misaligned_read_coverage_tracker_.add(clipped_mapped_region(read));
     }
 }
 
 void CigarScanner::do_add_reads(const SampleName& sample, ReadVectorIterator first, ReadVectorIterator last)
 {
-    auto& sample_coverage_tracker = sample_read_coverage_tracker_[sample];
-    std::for_each(first, last, [&] (const AlignedRead& read) { add_read(sample, read, sample_coverage_tracker); });
+    auto& coverage_tracker = sample_read_coverage_tracker_[sample];
+    auto& forward_strand_coverage_tracker = sample_forward_strand_coverage_tracker_[sample];
+    std::for_each(first, last, [&] (const AlignedRead& read) { add_read(sample, read, coverage_tracker, forward_strand_coverage_tracker); });
 }
 
 void CigarScanner::do_add_reads(const SampleName& sample, ReadFlatSetIterator first, ReadFlatSetIterator last)
 {
-    auto& sample_coverage_tracker = sample_read_coverage_tracker_[sample];
-    std::for_each(first, last, [&] (const AlignedRead& read) { add_read(sample, read, sample_coverage_tracker); });
+    auto& coverage_tracker = sample_read_coverage_tracker_[sample];
+    auto& forward_strand_coverage_tracker = sample_forward_strand_coverage_tracker_[sample];
+    std::for_each(first, last, [&] (const AlignedRead& read) { add_read(sample, read, coverage_tracker, forward_strand_coverage_tracker); });
 }
 
 unsigned get_min_depth(const Variant& v, const CoverageTracker<GenomicRegion>& tracker)
@@ -262,8 +269,10 @@ void CigarScanner::do_clear() noexcept
     candidates_.shrink_to_fit();
     likely_misaligned_candidates_.clear();
     likely_misaligned_candidates_.shrink_to_fit();
-    read_coverage_tracker_.clear();
-    misaligned_tracker_.clear();
+    combined_read_coverage_tracker_.clear();
+    misaligned_read_coverage_tracker_.clear();
+    sample_read_coverage_tracker_.clear();
+    sample_forward_strand_coverage_tracker_.clear();
     max_seen_candidate_size_ = 0;
 }
 
@@ -350,14 +359,14 @@ bool CigarScanner::is_likely_misaligned(const AlignedRead& read, const double pe
     return ln_prob_misaligned < min_ln_prob_misaligned;
 }
 
-CigarScanner::ObservedVariant
+CigarScanner::VariantObservation
 CigarScanner::make_observation(const CandidateIterator first_match, const CandidateIterator last_match) const
 {
     assert(first_match != last_match);
     const Candidate& candidate {*first_match};
-    ObservedVariant result {};
+    VariantObservation result {};
     result.variant = candidate.variant;
-    result.total_depth = get_min_depth(candidate.variant, read_coverage_tracker_);
+    result.total_depth = get_min_depth(candidate.variant, combined_read_coverage_tracker_);
     std::vector<Candidate> observations {first_match, last_match};
     std::sort(begin(observations), end(observations),
               [] (const Candidate& lhs, const Candidate& rhs) { return lhs.origin.get() < rhs.origin.get(); });
@@ -372,14 +381,14 @@ CigarScanner::make_observation(const CandidateIterator first_match, const Candid
         std::vector<AlignedRead::MappingQuality> observed_mapping_qualities(num_observations);
         std::transform(observation_itr, next_itr, begin(observed_mapping_qualities),
                        [] (const Candidate& c) noexcept { return c.source.get().mapping_quality(); });
-        const auto num_fwd_support = std::accumulate(observation_itr, next_itr, 0u,
+        const auto forward_strand_support = std::accumulate(observation_itr, next_itr, 0u,
                                                      [] (unsigned curr, const Candidate& c) noexcept {
                                                          if (is_forward_strand(c.source.get())) {
                                                              ++curr;
                                                          }
                                                          return curr;
                                                      });
-        const auto num_edge_support = std::accumulate(observation_itr, next_itr, 0u,
+        const auto edge_support = std::accumulate(observation_itr, next_itr, 0u,
                                                       [] (unsigned curr, const Candidate& c) noexcept {
                                                           if (begins_equal(c, c.source.get()) || ends_equal(c, c.source.get())) {
                                                               ++curr;
@@ -387,9 +396,11 @@ CigarScanner::make_observation(const CandidateIterator first_match, const Candid
                                                           return curr;
                                                       });
         const auto depth = std::max(get_min_depth(candidate.variant, sample_read_coverage_tracker_.at(origin)), num_observations);
-        result.sample_observations.push_back({origin, depth, std::move(observed_base_qualities),
+        const auto forward_depth = get_min_depth(candidate.variant, sample_forward_strand_coverage_tracker_.at(origin));
+        result.sample_observations.push_back({origin, depth, forward_depth,
+                                              std::move(observed_base_qualities),
                                               std::move(observed_mapping_qualities),
-                                              num_fwd_support, num_edge_support});
+                                              forward_strand_support, edge_support});
         observation_itr = next_itr;
     }
     return result;
@@ -435,42 +446,42 @@ void erase_below(std::vector<unsigned>& observed_qualities, const unsigned min)
 
 void partial_sort(std::vector<unsigned>& observed_qualities, const unsigned n)
 {
-    std::partial_sort(std::begin(observed_qualities), std::next(std::begin(observed_qualities), 2),
+    std::partial_sort(std::begin(observed_qualities), std::next(std::begin(observed_qualities), n),
                       std::end(observed_qualities), std::greater<> {});
 }
 
-bool is_completely_strand_biased(const unsigned num_fwd_observations, const unsigned num_rev_observations) noexcept
+bool is_completely_strand_biased(const unsigned forward_strand_depth, const unsigned reverse_strand_support) noexcept
 {
-    const auto num_observations = num_fwd_observations + num_rev_observations;
-    return num_observations > 0 && (num_fwd_observations == 0 || num_fwd_observations == num_observations);
+    const auto support = forward_strand_depth + reverse_strand_support;
+    return support > 0 && (forward_strand_depth == 0 || forward_strand_depth == support);
 }
 
-bool is_almost_completely_strand_biased(const unsigned num_fwd_observations, const unsigned num_rev_observations) noexcept
+bool is_almost_completely_strand_biased(const unsigned forward_strand_depth, const unsigned reverse_strand_support) noexcept
 {
-    const auto num_observations = num_fwd_observations + num_rev_observations;
-    return num_observations > 0 && (num_fwd_observations <= 1 || num_fwd_observations >= (num_observations - 1));
+    const auto support = forward_strand_depth + reverse_strand_support;
+    return support > 0 && (forward_strand_depth <= 1 || forward_strand_depth >= (support - 1));
 }
 
-bool is_strand_biased(const unsigned num_fwd_observations, const unsigned num_rev_observations, const double tail_mass) noexcept
+bool is_strand_biased(const unsigned forward_strand_depth, const unsigned reverse_strand_support, const double tail_mass) noexcept
 {
-    return maths::beta_tail_probability(num_fwd_observations + 0.5, num_rev_observations + 0.5, tail_mass) >= 0.99;
+    return maths::beta_tail_probability(forward_strand_depth + 0.5, reverse_strand_support + 0.5, tail_mass) >= 0.99;
 }
 
-bool is_strongly_strand_biased(const unsigned num_fwd_observations, const unsigned num_rev_observations) noexcept
+bool is_strongly_strand_biased(const unsigned forward_strand_support, const unsigned reverse_strand_support) noexcept
 {
-    return is_strand_biased(num_fwd_observations, num_rev_observations, 0.01);
+    return is_strand_biased(forward_strand_support, reverse_strand_support, 0.01);
 }
 
-bool is_weakly_strand_biased(const unsigned num_fwd_observations, const unsigned num_rev_observations) noexcept
+bool is_weakly_strand_biased(const unsigned forward_strand_support, const unsigned reverse_strand_support) noexcept
 {
-    return is_strand_biased(num_fwd_observations, num_rev_observations, 0.05);
+    return is_strand_biased(forward_strand_support, reverse_strand_support, 0.05);
 }
 
-bool is_likely_runthrough_artifact(const unsigned num_fwd_observations, const unsigned num_rev_observations,
+bool is_likely_runthrough_artifact(const unsigned forward_strand_depth, const unsigned reverse_strand_support,
                                    std::vector<unsigned>& observed_qualities)
 {
-    const auto num_observations = num_fwd_observations + num_rev_observations;
-    if (num_observations < 10 || !is_completely_strand_biased(num_fwd_observations, num_rev_observations)) return false;
+    const auto num_observations = forward_strand_depth + reverse_strand_support;
+    if (num_observations < 10 || !is_completely_strand_biased(forward_strand_depth, reverse_strand_support)) return false;
     assert(!observed_qualities.empty());
     const auto median_bq = maths::median(observed_qualities);
     return median_bq < 15;
@@ -484,39 +495,41 @@ bool is_tandem_repeat(const Allele& allele, const unsigned max_period = 4)
     return false;
 }
 
-bool is_good_germline(const Variant& variant, const unsigned depth, const unsigned num_fwd_observations,
-                      std::vector<unsigned> observed_qualities)
+bool is_good_germline(const Variant& variant, const unsigned depth, const unsigned forward_strand_depth,
+                      const unsigned forward_strand_support, std::vector<unsigned> observed_qualities)
 {
-    const auto num_observations = observed_qualities.size();
+    const auto support = observed_qualities.size();
     if (depth < 4) {
-        return num_observations > 1 || sum(observed_qualities) >= 30 || is_deletion(variant);
+        return support > 1 || sum(observed_qualities) >= 30 || is_deletion(variant);
     }
-    const auto num_rev_observations = num_observations - num_fwd_observations;
-    if (num_observations > 20 && is_completely_strand_biased(num_fwd_observations, num_rev_observations)) {
+    const auto reverse_strand_depth = depth - forward_strand_depth;
+    const auto reverse_strand_support = support - forward_strand_support;
+    if (support > 20 && std::min(forward_strand_depth, reverse_strand_depth) > 1
+        && is_completely_strand_biased(forward_strand_support, reverse_strand_support)) {
         return false;
     }
     if (is_snv(variant)) {
-        if (is_likely_runthrough_artifact(num_fwd_observations, num_rev_observations, observed_qualities)) return false;
+        if (is_likely_runthrough_artifact(forward_strand_support, reverse_strand_support, observed_qualities)) return false;
         erase_below(observed_qualities, 20);
         if (depth <= 10) return observed_qualities.size() > 1;
         return observed_qualities.size() > 2 && static_cast<double>(observed_qualities.size()) / depth > 0.1;
     } else if (is_insertion(variant)) {
-        if (num_observations == 1 && alt_sequence_size(variant) > 10) return false;
+        if (support == 1 && alt_sequence_size(variant) > 10) return false;
         if (depth < 10) {
-            return num_observations > 1 || (alt_sequence_size(variant) > 3 && is_tandem_repeat(variant.alt_allele()));
+            return support > 1 || (alt_sequence_size(variant) > 3 && is_tandem_repeat(variant.alt_allele()));
         } else if (depth <= 30) {
-            return num_observations > 1;
+            return support > 1;
         } else if (depth <= 60) {
-            if (num_observations == 1) return false;
-            if (static_cast<double>(num_observations) / depth > 0.3) return true;
+            if (support == 1) return false;
+            if (static_cast<double>(support) / depth > 0.3) return true;
             erase_below(observed_qualities, 25);
             if (observed_qualities.size() <= 1) return false;
             if (observed_qualities.size() > 2) return true;
             partial_sort(observed_qualities, 2);
             return static_cast<double>(observed_qualities[0]) / alt_sequence_size(variant) > 20;
         } else {
-            if (num_observations == 1) return false;
-            if (static_cast<double>(num_observations) / depth > 0.35) return true;
+            if (support == 1) return false;
+            if (static_cast<double>(support) / depth > 0.35) return true;
             erase_below(observed_qualities, 20);
             if (observed_qualities.size() <= 1) return false;
             if (observed_qualities.size() > 3) return true;
@@ -525,41 +538,41 @@ bool is_good_germline(const Variant& variant, const unsigned depth, const unsign
     } else {
         // deletion or mnv
         if (region_size(variant) < 10) {
-            return num_observations > 1 && static_cast<double>(num_observations) / depth > 0.05;
+            return support > 1 && static_cast<double>(support) / depth > 0.05;
         } else {
-            return static_cast<double>(num_observations) / (depth - std::sqrt(depth)) > 0.1;
+            return static_cast<double>(support) / (depth - std::sqrt(depth)) > 0.1;
         }
     }
 }
 
-bool is_good_somatic(const Variant& variant, const unsigned depth, const unsigned num_fwd_observations,
-                     const unsigned num_edge_observations, std::vector<unsigned> observed_qualities,
-                     const double min_expected_vaf)
+bool is_good_somatic(const Variant& variant, const unsigned depth, const unsigned forward_strand_depth,
+                     const unsigned forward_strand_support, const unsigned num_edge_observations,
+                     std::vector<unsigned> observed_qualities, const double min_expected_vaf)
 {
     assert(depth > 0);
-    const auto num_observations = observed_qualities.size();
-    const auto num_rev_observations = num_observations - num_fwd_observations;
-    if (num_observations > 15 && is_completely_strand_biased(num_fwd_observations, num_rev_observations)) {
+    const auto support = observed_qualities.size();
+    const auto reverse_strand_support = support - forward_strand_support;
+    if (support > 15 && is_completely_strand_biased(forward_strand_support, reverse_strand_support)) {
         return false;
     }
-    if (num_observations > 25 && is_almost_completely_strand_biased(num_fwd_observations, num_rev_observations)) {
+    if (support > 25 && is_almost_completely_strand_biased(forward_strand_support, reverse_strand_support)) {
         return false;
     }
-    if (num_observations > 50 && is_strongly_strand_biased(num_fwd_observations, num_rev_observations)) {
+    if (support > 50 && is_strongly_strand_biased(forward_strand_support, reverse_strand_support)) {
         return false;
     }
     const auto adjusted_depth = depth - std::min(static_cast<unsigned>(std::sqrt(depth)), depth - 1);
     const auto approx_vaf = static_cast<double>(observed_qualities.size()) / adjusted_depth;
     if (is_snv(variant)) {
-        if (is_likely_runthrough_artifact(num_fwd_observations, num_rev_observations, observed_qualities)) return false;
+        if (is_likely_runthrough_artifact(forward_strand_support, reverse_strand_support, observed_qualities)) return false;
         erase_below(observed_qualities, 15);
-        if (observed_qualities.size() >= 2 && approx_vaf >= min_expected_vaf && num_edge_observations < num_observations) {
-            return approx_vaf >= 0.01 || !is_completely_strand_biased(num_fwd_observations, num_rev_observations);
+        if (observed_qualities.size() >= 2 && approx_vaf >= min_expected_vaf && num_edge_observations < support) {
+            return approx_vaf >= 0.01 || !is_completely_strand_biased(forward_strand_support, reverse_strand_support);
         } else {
             return false;
         }
     } else if (is_insertion(variant)) {
-        if (num_observations == 1 && alt_sequence_size(variant) > 8) return false;
+        if (support == 1 && alt_sequence_size(variant) > 8) return false;
         erase_below(observed_qualities, 15);
         if (alt_sequence_size(variant) < 10) {
             return observed_qualities.size() >= 2 &&approx_vaf >= min_expected_vaf;
@@ -569,31 +582,38 @@ bool is_good_somatic(const Variant& variant, const unsigned depth, const unsigne
     } else {
         // deletion or mnv
         if (region_size(variant) < 10) {
-            return num_observations > 1 && approx_vaf >= min_expected_vaf;
+            return support > 1 && approx_vaf >= min_expected_vaf;
         } else {
-            return static_cast<double>(num_observations) / approx_vaf >= min_expected_vaf / 3;
+            return static_cast<double>(support) / approx_vaf >= min_expected_vaf / 3;
         }
     }
 }
 
-bool is_good_germline(const Variant& v, const CigarScanner::ObservedVariant::SampleObservation& observation)
+bool is_good_germline(const Variant& v, const CigarScanner::VariantObservation::SampleObservationStats& observation)
 {
-    return is_good_germline(v, observation.depth, observation.num_fwd_observations, observation.observed_base_qualities);
+    return is_good_germline(v, observation.depth, observation.forward_strand_depth,
+                            observation.forward_strand_support, observation.observed_base_qualities);
 }
 
-bool any_good_germline_samples(const CigarScanner::ObservedVariant& candidate)
+bool any_good_germline_samples(const CigarScanner::VariantObservation& candidate)
 {
     return std::any_of(std::cbegin(candidate.sample_observations), std::cend(candidate.sample_observations),
                        [&] (const auto& observation) { return is_good_germline(candidate.variant, observation); });
 }
 
-auto count_forward_observations(const CigarScanner::ObservedVariant& candidate)
+auto count_forward_strand_depth(const CigarScanner::VariantObservation& candidate)
 {
     return std::accumulate(std::cbegin(candidate.sample_observations), std::cend(candidate.sample_observations), 0u,
-                           [&] (auto curr, const auto& observation) { return curr + observation.num_fwd_observations; });
+                           [&] (auto curr, const auto& observation) { return curr + observation.forward_strand_depth; });
 }
 
-auto concat_observed_base_qualities(const CigarScanner::ObservedVariant& candidate)
+auto count_forward_strand_support(const CigarScanner::VariantObservation& candidate)
+{
+    return std::accumulate(std::cbegin(candidate.sample_observations), std::cend(candidate.sample_observations), 0u,
+                           [&] (auto curr, const auto& observation) { return curr + observation.forward_strand_support; });
+}
+
+auto concat_observed_base_qualities(const CigarScanner::VariantObservation& candidate)
 {
     std::size_t num_base_qualities {0};
     for (const auto& observation : candidate.sample_observations) {
@@ -607,26 +627,26 @@ auto concat_observed_base_qualities(const CigarScanner::ObservedVariant& candida
     return result;
 }
 
-bool is_good_germline_pooled(const CigarScanner::ObservedVariant& candidate)
+bool is_good_germline_pooled(const CigarScanner::VariantObservation& candidate)
 {
-    return is_good_germline(candidate.variant, candidate.total_depth, count_forward_observations(candidate),
-                            concat_observed_base_qualities(candidate));
+    return is_good_germline(candidate.variant, candidate.total_depth, count_forward_strand_depth(candidate),
+                            count_forward_strand_support(candidate), concat_observed_base_qualities(candidate));
 }
 
-bool is_good_somatic(const Variant& v, const CigarScanner::ObservedVariant::SampleObservation& observation, double min_expected_vaf)
+bool is_good_somatic(const Variant& v, const CigarScanner::VariantObservation::SampleObservationStats& observation, double min_expected_vaf)
 {
-    return is_good_somatic(v, observation.depth, observation.num_fwd_observations, observation.num_edge_observations,
-                           observation.observed_base_qualities, min_expected_vaf);
+    return is_good_somatic(v, observation.depth, observation.forward_strand_depth, observation.forward_strand_support,
+                           observation.edge_support, observation.observed_base_qualities, min_expected_vaf);
 }
 
 } // namespace
 
-bool DefaultInclusionPredicate::operator()(const CigarScanner::ObservedVariant& candidate)
+bool DefaultInclusionPredicate::operator()(const CigarScanner::VariantObservation& candidate)
 {
     return any_good_germline_samples(candidate) || (candidate.sample_observations.size() > 1 && is_good_germline_pooled(candidate));
 }
 
-bool DefaultSomaticInclusionPredicate::operator()(const CigarScanner::ObservedVariant& candidate)
+bool DefaultSomaticInclusionPredicate::operator()(const CigarScanner::VariantObservation& candidate)
 {
     return std::any_of(std::cbegin(candidate.sample_observations), std::cend(candidate.sample_observations),
                        [&] (const auto& observation) {
@@ -638,32 +658,33 @@ bool DefaultSomaticInclusionPredicate::operator()(const CigarScanner::ObservedVa
                        });
 }
 
-bool is_good_cell(const Variant& v, const CigarScanner::ObservedVariant::SampleObservation& observation)
+bool is_good_cell(const Variant& v, const CigarScanner::VariantObservation::SampleObservationStats& observation)
 {
     return is_good_somatic(v, observation, 0.25);
 }
 
-bool any_good_cell_samples(const CigarScanner::ObservedVariant& candidate)
+bool any_good_cell_samples(const CigarScanner::VariantObservation& candidate)
 {
     return std::any_of(std::cbegin(candidate.sample_observations), std::cend(candidate.sample_observations),
                        [&] (const auto& observation) { return is_good_cell(candidate.variant, observation); });
 }
 
-bool is_good_cell_pooled(const CigarScanner::ObservedVariant& candidate)
+bool is_good_cell_pooled(const CigarScanner::VariantObservation& candidate)
 {
     const auto observed_qualities = concat_observed_base_qualities(candidate);
     if (observed_qualities.size() < 2) return false;
-    return is_good_germline(candidate.variant, candidate.total_depth, count_forward_observations(candidate), observed_qualities);
+    return is_good_germline(candidate.variant, candidate.total_depth, count_forward_strand_depth(candidate),
+                            count_forward_strand_support(candidate), observed_qualities);
 }
 
-bool CellInclusionPredicate::operator()(const CigarScanner::ObservedVariant& candidate)
+bool CellInclusionPredicate::operator()(const CigarScanner::VariantObservation& candidate)
 {
     return any_good_cell_samples(candidate) || (candidate.sample_observations.size() > 1 && is_good_cell_pooled(candidate));
 }
 
 namespace {
 
-auto count_observations(const CigarScanner::ObservedVariant& candidate)
+auto count_observations(const CigarScanner::VariantObservation& candidate)
 {
     return std::accumulate(std::cbegin(candidate.sample_observations), std::cend(candidate.sample_observations), std::size_t {0},
                            [] (auto curr, const auto& sample) { return curr + sample.observed_base_qualities.size(); });
@@ -671,7 +692,7 @@ auto count_observations(const CigarScanner::ObservedVariant& candidate)
 
 } // namespace
 
-bool SimpleThresholdInclusionPredicate::operator()(const CigarScanner::ObservedVariant& candidate) noexcept
+bool SimpleThresholdInclusionPredicate::operator()(const CigarScanner::VariantObservation& candidate) noexcept
 {
     return count_observations(candidate) >= min_observations_;
 }
