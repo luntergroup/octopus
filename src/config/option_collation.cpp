@@ -950,7 +950,7 @@ get_assembler_bubble_score_setter(const OptionMap& options) noexcept
         return DepthBasedBubbleScoreSetter {options.at("min-bubble-score").as<double>(),
                                             options.at("min-expected-somatic-frequency").as<float>()};
     } else {
-        return ConstantBubbleScoreSetter {options.at("min-bubble-score").as<double>()};
+        return DepthBasedBubbleScoreSetter {options.at("min-bubble-score").as<double>(), 0.05};
     }
 }
 
