@@ -1972,7 +1972,7 @@ boost::optional<fs::path> create_temp_file_directory(const OptionMap& options)
 {
     const auto working_directory = get_working_directory(options);
     auto result = working_directory;
-    const fs::path temp_dir_base_name {"octopus-temp"};
+    const fs::path temp_dir_base_name {options.at("temp-directory-prefix").as<fs::path>()};
     result /= temp_dir_base_name;
     constexpr unsigned temp_dir_name_count_limit {10000};
     unsigned temp_dir_counter {2};
