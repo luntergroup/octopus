@@ -286,7 +286,7 @@ bool is_very_fast_mode(const OptionMap& options)
 
 ReferenceGenome make_reference(const OptionMap& options)
 {
-    const fs::path input_path {options.at("reference").as<std::string>()};
+    const fs::path input_path {options.at("reference").as<fs::path>()};
     auto resolved_path = resolve_path(input_path, options);
     auto ref_cache_size = options.at("max-reference-cache-footprint").as<MemoryFootprint>();
     static constexpr MemoryFootprint min_non_zero_reference_cache_size {1'000}; // 1Kb
@@ -1972,7 +1972,7 @@ boost::optional<fs::path> create_temp_file_directory(const OptionMap& options)
 {
     const auto working_directory = get_working_directory(options);
     auto result = working_directory;
-    const fs::path temp_dir_base_name {"octopus-temp"};
+    const fs::path temp_dir_base_name {options.at("temp-directory-prefix").as<fs::path>()};
     result /= temp_dir_base_name;
     constexpr unsigned temp_dir_name_count_limit {10000};
     unsigned temp_dir_counter {2};

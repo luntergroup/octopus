@@ -98,12 +98,16 @@ OptionMap parse_options(const int argc, const char** argv)
      ("target-working-memory",
      po::value<MemoryFootprint>(),
      "Target working memory footprint for analysis not including read or reference footprint")
+     
+     ("temp-directory-prefix",
+     po::value<fs::path>()->default_value("octopus-temp"),
+     "File name prefix of temporary directory for calling")
     ;
     
     po::options_description input("I/O");
     input.add_options()
     ("reference,R",
-     po::value<std::string>()->required(),
+     po::value<fs::path>()->required(),
      "FASTA format reference genome file to be analysed. Target regions"
      " will be extracted from the reference index if not provded explicitly")
     
