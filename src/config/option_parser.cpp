@@ -107,7 +107,7 @@ OptionMap parse_options(const int argc, const char** argv)
     po::options_description input("I/O");
     input.add_options()
     ("reference,R",
-     po::value<std::string>()->required(),
+     po::value<fs::path>()->required(),
      "FASTA format reference genome file to be analysed. Target regions"
      " will be extracted from the reference index if not provded explicitly")
     
