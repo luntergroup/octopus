@@ -18,7 +18,7 @@ latest_llvm = 'llvm'
 latest_gcc = 'gcc@8'
 
 def get_octopus_version():
-    return "0.5.2-beta"
+    return "0.5.3-beta"
 
 def is_unix():
     system = platform.system()
