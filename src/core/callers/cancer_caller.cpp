@@ -25,7 +25,7 @@
 #include "core/types/genotype.hpp"
 #include "core/models/genotype/uniform_genotype_prior_model.hpp"
 #include "core/models/genotype/coalescent_genotype_prior_model.hpp"
-#include "core/models/genotype/germline_likelihood_model.hpp"
+#include "core/models/genotype/constant_mixture_genotype_likelihood_model.hpp"
 #include "utils/read_stats.hpp"
 #include "utils/sequence_utils.hpp"
 #include "utils/merge_transform.hpp"
@@ -375,7 +375,7 @@ auto copy_greatest_probability_genotypes(const std::vector<G>& genotypes,
 auto calculate_posteriors_with_germline_likelihood_model(const std::vector<CancerGenotype<Haplotype>>& genotypes,
                                                          const std::vector<CancerGenotypeIndex>& indices,
                                                          const CancerGenotypePriorModel& prior_model,
-                                                         const model::GermlineLikelihoodModel likelihood_model,
+                                                         const model::ConstantMixtureGenotypeLikelihoodModel likelihood_model,
                                                          const std::vector<SampleName>& samples)
 {
     auto result = evaluate(indices, prior_model);
@@ -396,7 +396,7 @@ auto calculate_posteriors_with_germline_likelihood_model(const std::vector<Cance
 void filter_with_germline_model(std::vector<CancerGenotype<Haplotype>>& genotypes,
                                 std::vector<CancerGenotypeIndex>& indices,
                                 const CancerGenotypePriorModel& prior_model,
-                                const model::GermlineLikelihoodModel likelihood_model,
+                                const model::ConstantMixtureGenotypeLikelihoodModel likelihood_model,
                                 const std::vector<SampleName>& samples,
                                 const std::size_t n)
 {
@@ -483,7 +483,7 @@ void CancerCaller::generate_cancer_genotypes_with_clean_normal(Latents& latents,
                 if (!latents.cancer_genotype_prior_model_->mutation_model().is_primed()) {
                     latents.cancer_genotype_prior_model_->mutation_model().prime(haplotypes);
                 }
-                const model::GermlineLikelihoodModel likelihood_model {haplotype_likelihoods, haplotypes};
+                const model::ConstantMixtureGenotypeLikelihoodModel likelihood_model {haplotype_likelihoods, haplotypes};
                 filter_with_germline_model(latents.cancer_genotypes_, cancer_genotype_indices, *latents.cancer_genotype_prior_model_,
                                            likelihood_model, samples_, max_allowed_cancer_genotypes);
             }
@@ -607,7 +607,7 @@ void CancerCaller::generate_cancer_genotypes_with_no_normal(Latents& latents, co
                 if (!latents.cancer_genotype_prior_model_->mutation_model().is_primed()) {
                     latents.cancer_genotype_prior_model_->mutation_model().prime(latents.haplotypes_);
                 }
-                const model::GermlineLikelihoodModel likelihood_model {haplotype_likelihoods, latents.haplotypes_};
+                const model::ConstantMixtureGenotypeLikelihoodModel likelihood_model {haplotype_likelihoods, latents.haplotypes_};
                 filter_with_germline_model(latents.cancer_genotypes_, cancer_genotype_indices, *latents.cancer_genotype_prior_model_,
                                            likelihood_model, samples_, max_allowed_cancer_genotypes);
             }

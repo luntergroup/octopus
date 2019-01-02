@@ -1,7 +1,7 @@
 // Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
-#include "germline_likelihood_model.hpp"
+#include "constant_mixture_genotype_likelihood_model.hpp"
 
 #include <cmath>
 #include <iterator>
@@ -15,22 +15,22 @@
 
 namespace octopus { namespace model {
 
-GermlineLikelihoodModel::GermlineLikelihoodModel(const HaplotypeLikelihoodArray& likelihoods)
+ConstantMixtureGenotypeLikelihoodModel::ConstantMixtureGenotypeLikelihoodModel(const HaplotypeLikelihoodArray& likelihoods)
 : likelihoods_ {likelihoods}
 {}
 
-GermlineLikelihoodModel::GermlineLikelihoodModel(const HaplotypeLikelihoodArray& likelihoods, const std::vector<Haplotype>& haplotypes)
-: GermlineLikelihoodModel {likelihoods}
+ConstantMixtureGenotypeLikelihoodModel::ConstantMixtureGenotypeLikelihoodModel(const HaplotypeLikelihoodArray& likelihoods, const std::vector<Haplotype>& haplotypes)
+: ConstantMixtureGenotypeLikelihoodModel {likelihoods}
 {
     this->prime(haplotypes);
 }
 
-const HaplotypeLikelihoodArray& GermlineLikelihoodModel::cache() const noexcept
+const HaplotypeLikelihoodArray& ConstantMixtureGenotypeLikelihoodModel::cache() const noexcept
 {
     return likelihoods_;
 }
 
-void GermlineLikelihoodModel::prime(const std::vector<Haplotype>& haplotypes)
+void ConstantMixtureGenotypeLikelihoodModel::prime(const std::vector<Haplotype>& haplotypes)
 {
     assert(likelihoods_.is_primed());
     indexed_likelihoods_.reserve(haplotypes.size());
@@ -39,20 +39,20 @@ void GermlineLikelihoodModel::prime(const std::vector<Haplotype>& haplotypes)
                        return likelihoods_[haplotype]; });
 }
 
-void GermlineLikelihoodModel::unprime() noexcept
+void ConstantMixtureGenotypeLikelihoodModel::unprime() noexcept
 {
     indexed_likelihoods_.clear();
     indexed_likelihoods_.shrink_to_fit();
 }
 
-bool GermlineLikelihoodModel::is_primed() const noexcept
+bool ConstantMixtureGenotypeLikelihoodModel::is_primed() const noexcept
 {
     return !indexed_likelihoods_.empty();
 }
 
 // ln p(read | genotype)  = ln sum {haplotype in genotype} p(read | haplotype) - ln ploidy
 // ln p(reads | genotype) = sum {read in reads} ln p(read | genotype)
-GermlineLikelihoodModel::LogProbability GermlineLikelihoodModel::evaluate(const Genotype<Haplotype>& genotype) const
+ConstantMixtureGenotypeLikelihoodModel::LogProbability ConstantMixtureGenotypeLikelihoodModel::evaluate(const Genotype<Haplotype>& genotype) const
 {
     assert(likelihoods_.is_primed());
     // These cases are just for optimisation
@@ -96,7 +96,7 @@ static constexpr auto ln(const unsigned n)
 
 } // namespace
 
-GermlineLikelihoodModel::LogProbability GermlineLikelihoodModel::evaluate(const GenotypeIndex& genotype) const
+ConstantMixtureGenotypeLikelihoodModel::LogProbability ConstantMixtureGenotypeLikelihoodModel::evaluate(const GenotypeIndex& genotype) const
 {
     assert(is_primed());
     const auto ploidy = static_cast<unsigned>(genotype.size());
@@ -113,13 +113,13 @@ GermlineLikelihoodModel::LogProbability GermlineLikelihoodModel::evaluate(const 
 
 // private methods
 
-GermlineLikelihoodModel::LogProbability GermlineLikelihoodModel::evaluate_haploid(const Genotype<Haplotype>& genotype) const
+ConstantMixtureGenotypeLikelihoodModel::LogProbability ConstantMixtureGenotypeLikelihoodModel::evaluate_haploid(const Genotype<Haplotype>& genotype) const
 {
     const auto& log_likelihoods = likelihoods_[genotype[0]];
     return std::accumulate(std::cbegin(log_likelihoods), std::cend(log_likelihoods), 0.0);
 }
 
-GermlineLikelihoodModel::LogProbability GermlineLikelihoodModel::evaluate_diploid(const Genotype<Haplotype>& genotype) const
+ConstantMixtureGenotypeLikelihoodModel::LogProbability ConstantMixtureGenotypeLikelihoodModel::evaluate_diploid(const Genotype<Haplotype>& genotype) const
 {
     const auto& log_likelihoods1 = likelihoods_[genotype[0]];
     if (genotype.is_homozygous()) {
@@ -133,7 +133,7 @@ GermlineLikelihoodModel::LogProbability GermlineLikelihoodModel::evaluate_diploi
                               });
 }
 
-GermlineLikelihoodModel::LogProbability GermlineLikelihoodModel::evaluate_triploid(const Genotype<Haplotype>& genotype) const
+ConstantMixtureGenotypeLikelihoodModel::LogProbability ConstantMixtureGenotypeLikelihoodModel::evaluate_triploid(const Genotype<Haplotype>& genotype) const
 {
     using std::cbegin; using std::cend;
     const auto& log_likelihoods1 = likelihoods_[genotype[0]];
@@ -166,7 +166,7 @@ GermlineLikelihoodModel::LogProbability GermlineLikelihoodModel::evaluate_triplo
                               });
 }
 
-GermlineLikelihoodModel::LogProbability GermlineLikelihoodModel::evaluate_tetraploid(const Genotype<Haplotype>& genotype) const
+ConstantMixtureGenotypeLikelihoodModel::LogProbability ConstantMixtureGenotypeLikelihoodModel::evaluate_tetraploid(const Genotype<Haplotype>& genotype) const
 {
     const auto z = genotype.zygosity();
     const auto& log_likelihoods1 = likelihoods_[genotype[0]];
@@ -190,7 +190,7 @@ GermlineLikelihoodModel::LogProbability GermlineLikelihoodModel::evaluate_tetrap
     return 0;
 }
 
-GermlineLikelihoodModel::LogProbability GermlineLikelihoodModel::evaluate_polyploid(const Genotype<Haplotype>& genotype) const
+ConstantMixtureGenotypeLikelihoodModel::LogProbability ConstantMixtureGenotypeLikelihoodModel::evaluate_polyploid(const Genotype<Haplotype>& genotype) const
 {
     const auto ploidy = genotype.ploidy();
     const auto z = genotype.zygosity();

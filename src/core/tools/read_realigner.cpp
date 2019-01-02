@@ -18,19 +18,19 @@ namespace octopus {
 
 namespace {
 
-auto deletion_length(const AlignedRead& read) noexcept
+GenomicRegion::Size estimate_max_indel_size(const AlignedRead& read)
 {
-    return region_size(read) > sequence_size(read) ? sequence_size(read) - region_size(read) : 0;
+    const auto p = std::minmax({region_size(read), static_cast<GenomicRegion::Size>(sequence_size(read))});
+    return p.second - p.first;
 }
 
-GenomicRegion::Size max_deletion_length(const std::vector<AlignedRead>& reads) noexcept
+auto estimate_max_indel_size(const std::vector<AlignedRead>& reads)
 {
-    if (reads.empty()) return 0;
-    auto max_itr = std::max_element(std::cbegin(reads), std::cend(reads),
-                                    [] (const auto& lhs, const auto& rhs) {
-                                        return deletion_length(lhs) < deletion_length(rhs);
-                                    });
-    return deletion_length(*max_itr);
+    GenomicRegion::Size result {0};
+    for (const auto& read : reads) {
+        result = std::max(result, estimate_max_indel_size(read));
+    }
+    return result;
 }
 
 auto safe_expand(const GenomicRegion& region, const GenomicRegion::Size n)
@@ -51,6 +51,7 @@ Haplotype expand_for_realignment(const Haplotype& haplotype, const std::vector<A
     if (region_size(haplotype) > sequence_size(haplotype)) {
         required_flank_pad += region_size(haplotype) - sequence_size(haplotype);
     }
+    required_flank_pad += estimate_max_indel_size(reads);
     const auto required_haplotype_region = safe_expand(reads_region, required_flank_pad);
     if (contains(haplotype, required_haplotype_region)) {
         return haplotype;

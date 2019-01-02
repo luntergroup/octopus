@@ -134,17 +134,19 @@ auto calculate_support(const std::vector<Haplotype>& haplotypes,
     return result;
 }
 
-GenomicRegion::Size estimate_max_indel_size(const Haplotype& haplotype)
+template <typename MappableTp>
+GenomicRegion::Size estimate_max_indel_size(const MappableTp& mappable)
 {
-    const auto p = std::minmax({region_size(haplotype), static_cast<GenomicRegion::Size>(sequence_size(haplotype))});
+    const auto p = std::minmax({region_size(mappable), static_cast<GenomicRegion::Size>(sequence_size(mappable))});
     return p.second - p.first;
 }
 
-auto estimate_max_indel_size(const std::vector<Haplotype>& haplotypes)
+template <typename MappableTp>
+auto estimate_max_indel_size(const std::vector<MappableTp>& mappables)
 {
     GenomicRegion::Size result {0};
-    for (const auto& haplotype : haplotypes) {
-        result = std::max(result, estimate_max_indel_size(haplotype));
+    for (const auto& mappable : mappables) {
+        result = std::max(result, estimate_max_indel_size(mappable));
     }
     return result;
 }
@@ -161,7 +163,7 @@ auto compute_read_hashes(const Container& reads)
 }
 
 auto expand_for_alignment(const Haplotype& haplotype, const GenomicRegion& reads_region,
-                          const GenomicRegion::Size max_indel_size)
+                          const GenomicRegion::Size indel_factor)
 {
     const auto min_flank_pad = 2 * HaplotypeLikelihoodModel::pad_requirement();
     const auto& haplotype_region = mapped_region(haplotype);
@@ -172,7 +174,7 @@ auto expand_for_alignment(const Haplotype& haplotype, const GenomicRegion& reads
     if (ends_before(haplotype_region, reads_region)) {
         min_rhs_expansion += end_distance(haplotype_region, reads_region);
     }
-    const auto min_expansion = std::max(min_lhs_expansion, min_rhs_expansion) + max_indel_size;
+    const auto min_expansion = std::max(min_lhs_expansion, min_rhs_expansion) + indel_factor;
     return expand(haplotype, min_expansion);
 }
 
@@ -187,9 +189,9 @@ auto calculate_likelihoods(const std::vector<Haplotype>& haplotypes, const Conta
     auto haplotype_hashes = init_kmer_hash_table<mapperKmerSize>();
     HaplotypeLikelihoods result {};
     result.reserve(haplotypes.size());
-    const auto max_indel_size = estimate_max_indel_size(haplotypes);
+    const auto indel_factor = estimate_max_indel_size(haplotypes) + estimate_max_indel_size(reads);
     for (const auto& haplotype : haplotypes) {
-        const auto expanded_haplotype = expand_for_alignment(haplotype, reads_region, max_indel_size);
+        const auto expanded_haplotype = expand_for_alignment(haplotype, reads_region, indel_factor);
         populate_kmer_hash_table<mapperKmerSize>(expanded_haplotype.sequence(), haplotype_hashes);
         auto haplotype_mapping_counts = init_mapping_counts(haplotype_hashes);
         model.reset(expanded_haplotype);

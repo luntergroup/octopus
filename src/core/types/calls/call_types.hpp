@@ -11,5 +11,6 @@
 #include "somatic_call.hpp"
 #include "denovo_call.hpp"
 #include "denovo_reference_reversion_call.hpp"
+#include "cell_variant_call.hpp"
 
 #endif

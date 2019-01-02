@@ -10,7 +10,7 @@
 #include <iostream>
 
 #include "utils/maths.hpp"
-#include "germline_likelihood_model.hpp"
+#include "constant_mixture_genotype_likelihood_model.hpp"
 
 namespace octopus { namespace model {
 
@@ -67,7 +67,7 @@ IndividualModel::evaluate(const std::vector<Genotype<Haplotype>>& genotypes,
                           const HaplotypeLikelihoodArray& haplotype_likelihoods) const
 {
     assert(!genotypes.empty());
-    const GermlineLikelihoodModel likelihood_model {haplotype_likelihoods};
+    const ConstantMixtureGenotypeLikelihoodModel likelihood_model {haplotype_likelihoods};
     auto posteriors = octopus::model::evaluate(genotypes, likelihood_model);
     debug::log_genotype_likelihoods(debug_log_, trace_log_, genotypes, posteriors);
     octopus::evaluate(genotypes, genotype_prior_model_, posteriors, false, true);
@@ -82,7 +82,7 @@ IndividualModel::evaluate(const std::vector<Genotype<Haplotype>>& genotypes,
 {
     assert(!genotypes.empty());
     assert(genotypes.size() == genotype_indices.size());
-    GermlineLikelihoodModel likelihood_model {haplotype_likelihoods};
+    ConstantMixtureGenotypeLikelihoodModel likelihood_model {haplotype_likelihoods};
     InferredLatents result {};
     if (is_primed()) {
         likelihood_model.prime(*haplotypes_);

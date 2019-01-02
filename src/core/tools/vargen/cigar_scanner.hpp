@@ -30,20 +30,19 @@ namespace coretools {
 class CigarScanner : public VariantGenerator
 {
 public:
-    struct ObservedVariant
+    struct VariantObservation
     {
         Variant variant;
         unsigned total_depth;
-        struct SampleObservation
+        struct SampleObservationStats
         {
             std::reference_wrapper<const SampleName> sample;
-            unsigned depth;
+            unsigned depth, forward_strand_depth;
             std::vector<unsigned> observed_base_qualities;
             std::vector<AlignedRead::MappingQuality> observed_mapping_qualities;
-            unsigned num_fwd_observations;
-            unsigned num_edge_observations;
+            unsigned forward_strand_support, edge_support;
         };
-        std::vector<SampleObservation> sample_observations;
+        std::vector<SampleObservationStats> sample_observations;
     };
     
     struct Options
@@ -57,7 +56,7 @@ public:
             unsigned max_unpenalised_clip_size = 3;
         };
         
-        using InclusionPredicate = std::function<bool(ObservedVariant)>;
+        using InclusionPredicate = std::function<bool(VariantObservation)>;
         using MatchPredicate = std::function<bool(const Variant&, const Variant&)>;
         
         InclusionPredicate include;
@@ -85,7 +84,8 @@ private:
     bool do_requires_reads() const noexcept override;
     void do_add_read(const SampleName& sample, const AlignedRead& read) override;
     void add_read(const SampleName& sample, const AlignedRead& read,
-                  CoverageTracker<GenomicRegion>& sample_coverage_tracker);
+                  CoverageTracker<GenomicRegion>& coverage_tracker,
+                  CoverageTracker<GenomicRegion>& forward_strand_coverage_tracker);
     void do_add_reads(const SampleName& sample, ReadVectorIterator first, ReadVectorIterator last) override;
     void do_add_reads(const SampleName& sample, ReadFlatSetIterator first, ReadFlatSetIterator last) override;
     std::vector<Variant> do_generate(const RegionSet& regions) const override;
@@ -111,15 +111,16 @@ private:
     };
     
     using NucleotideSequence = AlignedRead::NucleotideSequence;
-    using SequenceIterator   = NucleotideSequence::const_iterator;
+    using SequenceIterator = NucleotideSequence::const_iterator;
+    using SampleCoverageTrackerMap = std::unordered_map<SampleName, CoverageTracker<GenomicRegion>>;
     
     std::reference_wrapper<const ReferenceGenome> reference_;
     Options options_;
     std::vector<Candidate> buffer_;
     mutable std::deque<Candidate> candidates_, likely_misaligned_candidates_;
     Variant::MappingDomain::Size max_seen_candidate_size_;
-    CoverageTracker<GenomicRegion> read_coverage_tracker_, misaligned_tracker_;
-    std::unordered_map<SampleName, CoverageTracker<GenomicRegion>> sample_read_coverage_tracker_;
+    CoverageTracker<GenomicRegion> combined_read_coverage_tracker_, misaligned_read_coverage_tracker_;
+    SampleCoverageTrackerMap sample_read_coverage_tracker_, sample_forward_strand_coverage_tracker_;
     
     using CandidateIterator = OverlapIterator<decltype(candidates_)::const_iterator>;
     
@@ -131,7 +132,7 @@ private:
     void generate(const GenomicRegion& region, std::vector<Variant>& result) const;
     unsigned sum_base_qualities(const Candidate& candidate) const noexcept;
     bool is_likely_misaligned(const AlignedRead& read, double penalty) const;
-    ObservedVariant make_observation(CandidateIterator first_match, CandidateIterator last_match) const;
+    VariantObservation make_observation(CandidateIterator first_match, CandidateIterator last_match) const;
     std::vector<Variant> get_novel_likely_misaligned_candidates(const std::vector<Variant>& current_candidates) const;
 };
 
@@ -162,7 +163,7 @@ void CigarScanner::add_candidate(T1&& region, T2&& sequence_removed, T3&& sequen
 
 struct DefaultInclusionPredicate
 {
-    bool operator()(const CigarScanner::ObservedVariant& candidate);
+    bool operator()(const CigarScanner::VariantObservation& candidate);
 };
 
 struct DefaultSomaticInclusionPredicate
@@ -172,16 +173,21 @@ struct DefaultSomaticInclusionPredicate
     : normal_ {}, min_expected_vaf_ {min_expected_vaf} {}
     DefaultSomaticInclusionPredicate(SampleName normal, double min_expected_vaf = 0.01)
     : normal_ {std::move(normal)}, min_expected_vaf_ {min_expected_vaf} {}
-    bool operator()(const CigarScanner::ObservedVariant& candidate);
+    bool operator()(const CigarScanner::VariantObservation& candidate);
 private:
     boost::optional<SampleName> normal_;
     double min_expected_vaf_ = 0.01;
 };
 
+struct CellInclusionPredicate
+{
+    bool operator()(const CigarScanner::VariantObservation& candidate);
+};
+
 struct SimpleThresholdInclusionPredicate
 {
     SimpleThresholdInclusionPredicate(std::size_t min_observations) : min_observations_ {min_observations} {}
-    bool operator()(const CigarScanner::ObservedVariant& candidate) noexcept;
+    bool operator()(const CigarScanner::VariantObservation& candidate) noexcept;
 private:
     std::size_t min_observations_;
 };

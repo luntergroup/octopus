@@ -13,7 +13,7 @@ default_measures = "AC AD AF ARF BQ CC CRF DP FRF GC GQ GQD NC MC MF MP MRC MQ M
 
 def run_octopus(octopus, ref_path, bam_path, regions_bed, measures, threads, out_path):
     call([octopus, '-R', ref_path, '-I', bam_path, '-t', regions_bed, '-o', out_path, '--threads', str(threads),
-          '--legacy', '--csr-train'] + measures)
+          '--legacy', '--training-annotations'] + measures)
 
 def get_reference_id(ref_path):
     return basename(ref_path).replace(".fasta", "")
@@ -63,11 +63,11 @@ def annotation_to_string(x, missing_value):
 def make_ranger_data(octopus_vcf_path, out_path, classifcation, measures, missing_value=-1):
     vcf = VariantFile(octopus_vcf_path)
     with open(out_path, 'w') as ranger_data:
-        datwriter = csv.writer(ranger_dat, delimiter=' ')
+        datawriter = csv.writer(ranger_data, delimiter=' ')
         for rec in vcf:
             row = [annotation_to_string(get_annotation(measure, rec), missing_value) for measure in measures]
             row.append(str(int(classifcation)))
-            datwriter.writerow(row)
+            datawriter.writerow(row)
 
 def concat(filenames, outpath):
     with open(outpath, 'w') as outfile:

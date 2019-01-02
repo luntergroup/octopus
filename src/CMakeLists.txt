@@ -202,6 +202,8 @@ set(CORE_SOURCES
     core/callers/trio_caller.cpp
     core/callers/polyclone_caller.hpp
     core/callers/polyclone_caller.cpp
+    core/callers/cell_caller.hpp
+    core/callers/cell_caller.cpp
 
     core/types/calls/call_types.hpp
     core/types/calls/call.hpp
@@ -218,6 +220,8 @@ set(CORE_SOURCES
     core/types/calls/denovo_call.cpp
     core/types/calls/denovo_reference_reversion_call.hpp
     core/types/calls/denovo_reference_reversion_call.cpp
+    core/types/calls/cell_variant_call.hpp
+    core/types/calls/cell_variant_call.cpp
     core/types/calls/call_wrapper.hpp
     core/types/calls/call_wrapper.cpp
     core/tools/vcf_header_factory.hpp
@@ -380,8 +384,8 @@ set(CORE_SOURCES
 
     core/models/genotype/subclone_model.hpp
     core/models/genotype/subclone_model.cpp
-    core/models/genotype/germline_likelihood_model.hpp
-    core/models/genotype/germline_likelihood_model.cpp
+    core/models/genotype/constant_mixture_genotype_likelihood_model.hpp
+    core/models/genotype/constant_mixture_genotype_likelihood_model.cpp
     core/models/genotype/individual_model.hpp
     core/models/genotype/individual_model.cpp
     core/models/genotype/independent_population_model.hpp
@@ -402,8 +406,14 @@ set(CORE_SOURCES
     core/models/genotype/coalescent_population_prior_model.cpp
     core/models/genotype/hardy_weinberg_model.hpp
     core/models/genotype/hardy_weinberg_model.cpp
-    core/models/genotype/fixed_mixture_genotype_likelihood_model.hpp
-    core/models/genotype/fixed_mixture_genotype_likelihood_model.cpp
+    core/models/genotype/variable_mixture_genotype_likelihood_model.hpp
+    core/models/genotype/variable_mixture_genotype_likelihood_model.cpp
+    core/models/genotype/variational_bayes_mixture_mixture_model.hpp
+    core/models/genotype/variational_bayes_mixture_mixture_model.cpp
+    core/models/genotype/single_cell_prior_model.hpp
+    core/models/genotype/single_cell_prior_model.cpp
+    core/models/genotype/single_cell_model.hpp
+    core/models/genotype/single_cell_model.cpp
 
     core/models/pairhmm/pair_hmm.hpp
     core/models/pairhmm/pair_hmm.cpp
@@ -504,6 +514,8 @@ set(CORE_SOURCES
     core/types/haplotype.cpp
     core/types/variant.hpp
     core/types/variant.cpp
+    core/types/phylogeny.hpp
+    core/types/phylogeny.cpp
 
     core/calling_components.hpp
     core/calling_components.cpp
@@ -557,8 +569,16 @@ set(WarningIgnores
     -Wno-missing-braces
 )
 
+set(GCCWarningIgnores
+    -Wno-maybe-uninitialized
+    )
+
 # Compile options for all builds
 add_compile_options(-Wall -Wextra -Werror ${WarningIgnores})
+
+if(CMAKE_COMPILER_IS_GNUCXX)
+    add_compile_options(${GCCWarningIgnores})
+endif()
 
 set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
 set(THREADS_PREFER_PTHREAD_FLAG TRUE)
@@ -575,15 +595,13 @@ if (BUILD_TESTING)
     target_link_libraries(Octopus tandem ranger)
     target_compile_definitions(Octopus PRIVATE -DBOOST_LOG_DYN_LINK) # Required for log
     find_package (Boost 1.65 REQUIRED COMPONENTS ${REQUIRED_BOOST_LIBRARIES} REQUIRED)
-    if (Boost_FOUND)
-        target_include_directories (Octopus PUBLIC ${Boost_INCLUDE_DIR})
-        target_link_libraries (Octopus ${Boost_LIBRARIES})
-    endif (Boost_FOUND)
+    message(STATUS "Boost include dir: " ${Boost_INCLUDE_DIR})
+    message(STATUS "Boost libraries: " ${Boost_LIBRARIES})
+    target_include_directories (Octopus PUBLIC ${Boost_INCLUDE_DIR})
+    target_link_libraries (Octopus ${Boost_LIBRARIES})
     find_package (HTSlib 1.4 REQUIRED)
-    if (HTSlib_FOUND)
-        target_include_directories (Octopus PUBLIC ${HTSlib_INCLUDE_DIRS})
-        target_link_libraries (Octopus ${HTSlib_LIBRARIES})
-    endif (HTSlib_FOUND)
+    target_include_directories (Octopus PUBLIC ${HTSlib_INCLUDE_DIRS})
+    target_link_libraries (Octopus ${HTSlib_LIBRARIES})
 elseif (CMAKE_BUILD_TYPE MATCHES Debug)
     add_executable(octopus-debug main.cpp ${OCTOPUS_SOURCES} ${INCLUDE_SOURCES})
     target_compile_features(octopus-debug PRIVATE cxx_thread_local)
@@ -597,15 +615,13 @@ elseif (CMAKE_BUILD_TYPE MATCHES Debug)
         target_compile_definitions(octopus-debug PRIVATE -DBOOST_LOG_DYN_LINK) # Required for log
     endif()
     find_package (Boost 1.65 REQUIRED COMPONENTS ${REQUIRED_BOOST_LIBRARIES} REQUIRED)
-    if (Boost_FOUND)
-        target_include_directories (octopus-debug PUBLIC ${Boost_INCLUDE_DIR})
-        target_link_libraries (octopus-debug ${Boost_LIBRARIES})
-    endif (Boost_FOUND)
+    message(STATUS "Boost include dir: " ${Boost_INCLUDE_DIR})
+    message(STATUS "Boost libraries: " ${Boost_LIBRARIES})
+    target_include_directories (octopus-debug PUBLIC ${Boost_INCLUDE_DIR})
+    target_link_libraries (octopus-debug ${Boost_LIBRARIES})
     find_package (HTSlib 1.4 REQUIRED)
-    if (HTSlib_FOUND)
-        target_include_directories (octopus-debug PUBLIC ${HTSlib_INCLUDE_DIRS})
-        target_link_libraries (octopus-debug ${HTSlib_LIBRARIES})
-    endif (HTSlib_FOUND)
+    target_include_directories (octopus-debug PUBLIC ${HTSlib_INCLUDE_DIRS})
+    target_link_libraries (octopus-debug ${HTSlib_LIBRARIES})
     find_package(Threads REQUIRED)
     target_link_libraries(octopus-debug ${CMAKE_THREAD_LIBS_INIT})
     install(TARGETS octopus-debug DESTINATION ${CMAKE_INSTALL_PREFIX})
@@ -624,15 +640,13 @@ elseif (CMAKE_BUILD_TYPE MATCHES RelWithDebInfo)
         target_compile_definitions(octopus-sanitize PRIVATE -DBOOST_LOG_DYN_LINK) # Required for log
     endif()
     find_package (Boost 1.65 REQUIRED COMPONENTS ${REQUIRED_BOOST_LIBRARIES} REQUIRED)
-    if (Boost_FOUND)
-        target_include_directories (octopus-sanitize PUBLIC ${Boost_INCLUDE_DIR})
-        target_link_libraries (octopus-sanitize ${Boost_LIBRARIES} ${SanitizeFlags})
-    endif (Boost_FOUND)
+    message(STATUS "Boost include dir: " ${Boost_INCLUDE_DIR})
+    message(STATUS "Boost libraries: " ${Boost_LIBRARIES})
+    target_include_directories (octopus-sanitize PUBLIC ${Boost_INCLUDE_DIR})
+    target_link_libraries (octopus-sanitize ${Boost_LIBRARIES} ${SanitizeFlags})
     find_package (HTSlib 1.4 REQUIRED)
-    if (HTSlib_FOUND)
-        target_include_directories (octopus-sanitize PUBLIC ${HTSlib_INCLUDE_DIRS})
-        target_link_libraries (octopus-sanitize ${HTSlib_LIBRARIES} ${SanitizeFlags})
-    endif (HTSlib_FOUND)
+    target_include_directories (octopus-sanitize PUBLIC ${HTSlib_INCLUDE_DIRS})
+    target_link_libraries (octopus-sanitize ${HTSlib_LIBRARIES} ${SanitizeFlags})
     find_package(Threads REQUIRED)
     target_link_libraries(octopus-sanitize ${CMAKE_THREAD_LIBS_INIT} ${SanitizeFlags})
     install(TARGETS octopus-sanitize DESTINATION ${CMAKE_INSTALL_PREFIX})
@@ -650,20 +664,18 @@ else()
         target_compile_definitions(octopus PRIVATE -DBOOST_LOG_DYN_LINK) # Required for log
     endif()
     find_package (Boost 1.65 REQUIRED COMPONENTS ${REQUIRED_BOOST_LIBRARIES} REQUIRED)
-    if (Boost_FOUND)
-        target_include_directories (octopus PUBLIC ${Boost_INCLUDE_DIR})
-        target_link_libraries (octopus ${Boost_LIBRARIES})
-    endif (Boost_FOUND)
+    message(STATUS "Boost include dir: " ${Boost_INCLUDE_DIR})
+    message(STATUS "Boost libraries: " ${Boost_LIBRARIES})
+    target_include_directories (octopus PUBLIC ${Boost_INCLUDE_DIR})
+    target_link_libraries (octopus ${Boost_LIBRARIES})
     find_package (HTSlib 1.4 REQUIRED)
-    if (HTSlib_FOUND)
-        target_include_directories (octopus PUBLIC ${HTSlib_INCLUDE_DIRS})
-        target_link_libraries (octopus ${HTSlib_LIBRARIES})
-    endif (HTSlib_FOUND)
+    target_include_directories (octopus PUBLIC ${HTSlib_INCLUDE_DIRS})
+    target_link_libraries (octopus ${HTSlib_LIBRARIES})
     find_package(Threads REQUIRED)
     target_link_libraries(octopus ${CMAKE_THREAD_LIBS_INIT})
     check_ipo_supported(RESULT ipo_supported OUTPUT output)
     if(ipo_supported)
-        message("-- IPO is supported!")
+        message(STATUS "IPO is supported!")
         set_property(TARGET octopus PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
     else()
         message(WARNING "IPO is not supported: ${output}")

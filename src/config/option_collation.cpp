@@ -286,7 +286,7 @@ bool is_very_fast_mode(const OptionMap& options)
 
 ReferenceGenome make_reference(const OptionMap& options)
 {
-    const fs::path input_path {options.at("reference").as<std::string>()};
+    const fs::path input_path {options.at("reference").as<fs::path>()};
     auto resolved_path = resolve_path(input_path, options);
     auto ref_cache_size = options.at("max-reference-cache-footprint").as<MemoryFootprint>();
     static constexpr MemoryFootprint min_non_zero_reference_cache_size {1'000}; // 1Kb
@@ -861,6 +861,11 @@ bool is_polyclone_calling(const OptionMap& options)
     return options.at("caller").as<std::string>() == "polyclone";
 }
 
+bool is_single_cell_calling(const OptionMap& options)
+{
+    return options.at("caller").as<std::string>() == "cell";
+}
+
 double get_min_somatic_vaf(const OptionMap& options)
 {
     const auto min_credible_frequency = options.at("min-credible-somatic-frequency").as<float>();
@@ -893,6 +898,11 @@ auto get_default_polyclone_inclusion_predicate(const OptionMap& options)
     return coretools::DefaultSomaticInclusionPredicate {min_vaf};
 }
 
+auto get_default_single_cell_inclusion_predicate(const OptionMap& options)
+{
+    return coretools::CellInclusionPredicate {};
+}
+
 auto get_default_inclusion_predicate(const OptionMap& options) noexcept
 {
     using namespace coretools;
@@ -905,6 +915,8 @@ auto get_default_inclusion_predicate(const OptionMap& options) noexcept
         return InclusionPredicate {get_default_somatic_inclusion_predicate(options, normal)};
     } else if (is_polyclone_calling(options)) {
         return InclusionPredicate {get_default_somatic_inclusion_predicate(options)};
+    } else if (is_single_cell_calling(options)) {
+        return InclusionPredicate {get_default_single_cell_inclusion_predicate(options)};
     } else {
         return InclusionPredicate {get_default_germline_inclusion_predicate()};
     }
@@ -927,6 +939,18 @@ auto get_assembler_region_generator_frequency_trigger(const OptionMap& options)
         } else {
             return 0.05;
         }
+    }
+}
+
+coretools::LocalReassembler::BubbleScoreSetter
+get_assembler_bubble_score_setter(const OptionMap& options) noexcept
+{
+    using namespace octopus::coretools;
+    if (is_cancer_calling(options)) {
+        return DepthBasedBubbleScoreSetter {options.at("min-bubble-score").as<double>(),
+                                            options.at("min-expected-somatic-frequency").as<float>()};
+    } else {
+        return DepthBasedBubbleScoreSetter {options.at("min-bubble-score").as<double>(), 0.05};
     }
 }
 
@@ -1039,7 +1063,7 @@ auto make_variant_generator_builder(const OptionMap& options)
         reassembler_options.bin_overlap = as_unsigned("max-assemble-region-overlap", options);
         reassembler_options.min_kmer_observations = as_unsigned("min-kmer-prune", options);
         reassembler_options.max_bubbles = as_unsigned("max-bubbles", options);
-        reassembler_options.min_bubble_score = options.at("min-bubble-score").as<double>();
+        reassembler_options.min_bubble_score = get_assembler_bubble_score_setter(options);
         reassembler_options.max_variant_size = as_unsigned("max-variant-size", options);
         result.set_local_reassembler(std::move(reassembler_options));
     }
@@ -1083,23 +1107,15 @@ auto make_variant_generator_builder(const OptionMap& options)
         }
     }
     if (is_set("regenotype", options)) {
-        auto regenotype_path = options.at("regenotype").as<fs::path>();
-        if (is_set("source-candidates", options)) {
-            fs::path input_path {options.at("source-candidates").as<std::string>()};
-            if (regenotype_path != input_path) {
-                warning_log << "Running in regenotype mode but given a different source variant file";
-            }
-            return result;
-        }
-        auto resolved_regenotype_path = resolve_path(regenotype_path, options);
-        if (!fs::exists(resolved_regenotype_path)) {
-            throw MissingSourceVariantFile {resolved_regenotype_path};
+        auto regenotype_path = resolve_path(options.at("regenotype").as<fs::path>(), options);
+        if (!fs::exists(regenotype_path)) {
+            throw MissingSourceVariantFile {regenotype_path};
         }
         const auto output_path = get_output_path(options);
-        if (output_path && resolved_regenotype_path == *output_path) {
-            throw ConflictingSourceVariantFile {std::move(resolved_regenotype_path), *output_path};
+        if (output_path && regenotype_path == *output_path) {
+            throw ConflictingSourceVariantFile {std::move(regenotype_path), *output_path};
         }
-        result.add_vcf_extractor(std::move(resolved_regenotype_path));
+        result.add_vcf_extractor(std::move(regenotype_path));
     }
     ActiveRegionGenerator::Options active_region_options {};
     if (is_set("assemble-all", options) && options.at("assemble-all").as<bool>()) {
@@ -1669,6 +1685,11 @@ auto get_target_working_memory(const OptionMap& options)
     return result;
 }
 
+bool is_experimental_caller(const std::string& caller) noexcept
+{
+    return caller == "population" || caller == "polyclone" || caller == "cell";
+}
+
 CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& read_pipe,
                                   const InputRegionMap& regions, const OptionMap& options,
                                   const boost::optional<ReadSetProfile> read_profile)
@@ -1681,7 +1702,7 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
     check_caller(caller, read_pipe.samples(), options);
     vc_builder.set_caller(caller);
     
-    if (caller == "population" || caller == "polyclone") {
+    if (is_experimental_caller(caller)) {
         logging::WarningLogger log {};
         stream(log) << "The " << caller << " calling model is still in development and may not perform as expected";
     }
@@ -1736,7 +1757,6 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
         vc_builder.set_min_somatic_posterior(min_somatic_posterior);
         vc_builder.set_normal_contamination_risk(get_normal_contamination_risk(options));
         vc_builder.set_tumour_germline_concentration(options.at("tumour-germline-concentration").as<float>());
-        if (is_set("max-vb-seeds", options)) vc_builder.set_max_vb_seeds(as_unsigned("max-vb-seeds", options));
     } else if (caller == "trio") {
         vc_builder.set_trio(make_trio(read_pipe.samples(), options, pedigree));
         vc_builder.set_snv_denovo_mutation_rate(options.at("denovo-snv-mutation-rate").as<float>());
@@ -1744,9 +1764,14 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
         vc_builder.set_min_denovo_posterior(options.at("min-denovo-posterior").as<Phred<double>>());
     } else if (caller == "polyclone") {
         vc_builder.set_max_clones(as_unsigned("max-clones", options));
+    } else if (caller == "cell") {
+        vc_builder.set_dropout_concentration(options.at("dropout-concentration").as<float>());
+        vc_builder.set_somatic_snv_mutation_rate(options.at("somatic-snv-mutation-rate").as<float>());
+        vc_builder.set_somatic_indel_mutation_rate(options.at("somatic-indel-mutation-rate").as<float>());
     }
     vc_builder.set_model_filtering(allow_model_filtering(options));
     vc_builder.set_max_genotypes(as_unsigned("max-genotypes", options));
+    if (is_set("max-vb-seeds", options)) vc_builder.set_max_vb_seeds(as_unsigned("max-vb-seeds", options));
     if (is_fast_mode(options)) {
         vc_builder.set_max_joint_genotypes(10'000);
     } else {
@@ -1947,7 +1972,7 @@ boost::optional<fs::path> create_temp_file_directory(const OptionMap& options)
 {
     const auto working_directory = get_working_directory(options);
     auto result = working_directory;
-    const fs::path temp_dir_base_name {"octopus-temp"};
+    const fs::path temp_dir_base_name {options.at("temp-directory-prefix").as<fs::path>()};
     result /= temp_dir_base_name;
     constexpr unsigned temp_dir_name_count_limit {10000};
     unsigned temp_dir_counter {2};

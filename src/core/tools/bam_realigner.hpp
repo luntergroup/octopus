@@ -79,6 +79,7 @@ private:
     BatchList read_next_batch(VcfIterator& first, const VcfIterator& last, ReadReader& src,
                               const ReferenceGenome& reference, const SampleList& samples,
                               const boost::optional<GenomicRegion>& prev_batch_region) const;
+    void merge(BatchList& src, BatchList& dst) const;
 };
 
 BAMRealigner::Report realign(io::ReadReader::Path src, VcfReader::Path variants, io::ReadWriter::Path dst,

@@ -15,8 +15,27 @@ There are currently five calling models implemented:
 - **cancer**: call germline and somatic mutations tumour samples.
 - **trio**: call germline and _de novo_ mutations in a parent-offspring trio.
 - **polyclone**: call variants in samples with an unknown mixture of haploid clones, such a bacteria or viral samples.
+- **cell**: call variants in a set of single cell samples from the same individual.
 
 Octopus is currently able to call SNVs, small-medium sized indels, small complex rearrangements, and micro-inversions.
+
+## Quick start
+
+Install Octopus (dependencies will be installed into `octopus/build`):
+
+```shell
+$ git clone -b develop https://github.com/luntergroup/octopus.git
+$ octopus/scripts/install.py --install-dependencies --download-forests
+$ echo 'export PATH='$(pwd)'/octopus/bin:$PATH' >> ~/.bash_profile
+$ source ~/.bash_profile
+```
+
+Call some variants:
+
+```shell
+$ FOREST="$(pwd)/octopus/resources/forests/germline.v0.5.2-beta.forest"
+$ octopus -R hs37d5.fa -I NA12878.bam -T 1 to MT -o NA12878.octopus.vcf.gz --forest $FOREST --threads 8
+```
 
 ## Requirements
 * A C++14 compiler with SSE2 support
@@ -254,6 +273,14 @@ $ octopus -R H37Rv.fa -I mycobacterium_tuberculosis.bam -C polyclone
 
 This model will automatically detect the number of subclones in your sample (up to the maximum given by `--max-clones`).
 
+#### Calling variants in single cell samples (experimental)
+
+Single cell samples can be called with the `cell` calling model. Allelic dropout and cell phylogeny are considered by the model to improve variant calls. 
+
+```shell
+$ octopus -R H37Rv.fa -I cellA.bam cellB.bam cellC.bam -C cell
+```
+
 #### HLA genotyping
 
 To call phased HLA genotypes, increase the default phase level:
@@ -351,7 +378,7 @@ Daniel Cooke and Gerton Lunter
 
 ## Citing
 
-TBA
+Please cite the preprint: [A unified haplotype-based method for accurate and comprehensive variant calling](https://www.biorxiv.org/content/early/2018/10/29/456103).
 
 ## License
 

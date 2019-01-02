@@ -1,8 +1,8 @@
 // Copyright (c) 2015-2018 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
-#ifndef germline_likelihood_model_hpp
-#define germline_likelihood_model_hpp
+#ifndef constant_mixture_genotype_likelihood_model_hpp
+#define constant_mixture_genotype_likelihood_model_hpp
 
 #include <vector>
 
@@ -12,22 +12,23 @@
 
 namespace octopus { namespace model {
 
-class GermlineLikelihoodModel
+class ConstantMixtureGenotypeLikelihoodModel
 {
 public:
     using LogProbability = double;
     
-    GermlineLikelihoodModel() = delete;
+    ConstantMixtureGenotypeLikelihoodModel() = delete;
     
-    GermlineLikelihoodModel(const HaplotypeLikelihoodArray& likelihoods);
-    GermlineLikelihoodModel(const HaplotypeLikelihoodArray& likelihoods, const std::vector<Haplotype>& haplotypes);
+    ConstantMixtureGenotypeLikelihoodModel(const HaplotypeLikelihoodArray& likelihoods);
+    ConstantMixtureGenotypeLikelihoodModel(const HaplotypeLikelihoodArray& likelihoods,
+                                           const std::vector<Haplotype>& haplotypes);
     
-    GermlineLikelihoodModel(const GermlineLikelihoodModel&)            = default;
-    GermlineLikelihoodModel& operator=(const GermlineLikelihoodModel&) = default;
-    GermlineLikelihoodModel(GermlineLikelihoodModel&&)                 = default;
-    GermlineLikelihoodModel& operator=(GermlineLikelihoodModel&&)      = default;
+    ConstantMixtureGenotypeLikelihoodModel(const ConstantMixtureGenotypeLikelihoodModel&)            = default;
+    ConstantMixtureGenotypeLikelihoodModel& operator=(const ConstantMixtureGenotypeLikelihoodModel&) = default;
+    ConstantMixtureGenotypeLikelihoodModel(ConstantMixtureGenotypeLikelihoodModel&&)                 = default;
+    ConstantMixtureGenotypeLikelihoodModel& operator=(ConstantMixtureGenotypeLikelihoodModel&&)      = default;
     
-    ~GermlineLikelihoodModel() = default;
+    ~ConstantMixtureGenotypeLikelihoodModel() = default;
     
     const HaplotypeLikelihoodArray& cache() const noexcept;
     
@@ -54,7 +55,7 @@ private:
 
 template <typename Container1, typename Container2>
 Container2&
-evaluate(const Container1& genotypes, const GermlineLikelihoodModel& model, Container2& result)
+evaluate(const Container1& genotypes, const ConstantMixtureGenotypeLikelihoodModel& model, Container2& result)
 {
     result.resize(genotypes.size());
     std::transform(std::cbegin(genotypes), std::cend(genotypes), std::begin(result),
@@ -63,9 +64,9 @@ evaluate(const Container1& genotypes, const GermlineLikelihoodModel& model, Cont
 }
 
 template <typename Container>
-auto evaluate(const Container& genotypes, const GermlineLikelihoodModel& model)
+auto evaluate(const Container& genotypes, const ConstantMixtureGenotypeLikelihoodModel& model)
 {
-    std::vector<GermlineLikelihoodModel::LogProbability> result {};
+    std::vector<ConstantMixtureGenotypeLikelihoodModel::LogProbability> result {};
     evaluate(genotypes, model, result);
     return result;
 }

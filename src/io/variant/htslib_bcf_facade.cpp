@@ -364,7 +364,9 @@ void HtslibBcfFacade::write(const VcfHeader& header)
     for (const auto& sample : header.samples()) {
         bcf_hdr_add_sample(hdr, sample.c_str());
     }
-    bcf_hdr_write(file_.get(), hdr);
+    if (bcf_hdr_write(file_.get(), hdr) < 0) {
+        throw std::runtime_error {"HtslibBcfFacade: header write failed"};
+    }
     header_.reset(hdr);
     samples_ = extract_samples(header_.get());
 }
@@ -408,7 +410,9 @@ void HtslibBcfFacade::write(const VcfRecord& record)
     if (record.num_samples() > 0) {
         set_samples(header_.get(), hts_record, record, samples_);
     }
-    bcf_write(file_.get(), header_.get(), hts_record);
+    if (bcf_write(file_.get(), header_.get(), hts_record) < 0) {
+        throw std::runtime_error {"HtslibBcfFacade: record write failed"};
+    }
     bcf_destroy(hts_record);
 }
 

@@ -12,10 +12,11 @@
 
 #include "basics/genomic_region.hpp"
 #include "basics/cigar_string.hpp"
-#include "utils/genotype_reader.hpp"
 #include "io/variant/vcf_record.hpp"
 #include "io/variant/vcf_header.hpp"
+#include "utils/genotype_reader.hpp"
 #include "utils/append.hpp"
+#include "utils/read_stats.hpp"
 #include "read_assigner.hpp"
 #include "read_realigner.hpp"
 
@@ -103,8 +104,10 @@ auto assign_and_realign(const std::vector<AlignedRead>& reads, const Genotype<Ha
 }
 
 template <typename Container>
-auto move_merge(Container& src, std::vector<AlignedRead>& dst)
+auto move_merge(Container&& src, std::vector<AlignedRead>& dst)
 {
+    assert(std::is_sorted(std::cbegin(src), std::cend(src)));
+    assert(std::is_sorted(std::cbegin(dst), std::cend(dst)));
     auto itr = utils::append(std::move(src), dst);
     std::inplace_merge(std::begin(dst), itr, std::end(dst));
 }
@@ -116,6 +119,7 @@ BAMRealigner::Report BAMRealigner::realign(ReadReader& src, VcfReader& variants,
 {
     Report report {};
     boost::optional<GenomicRegion> batch_region {};
+    std::vector<AlignedRead> buffer {};
     for (auto p = variants.iterate(); p.first != p.second; ) {
         auto batch = read_next_batch(p.first, p.second, src, reference, samples, batch_region);
         for (auto& sample : batch) {
@@ -131,7 +135,7 @@ BAMRealigner::Report BAMRealigner::realign(ReadReader& src, VcfReader& variants,
                 auto realignments = assign_and_realign(genotype_reads, genotype, report);
                 report.n_reads_unassigned += bad_reads.size();
                 move_merge(bad_reads, realignments);
-                utils::append(std::move(realignments), realigned_reads);
+                move_merge(realignments, realigned_reads);
             }
             move_merge(realigned_reads, sample.reads);
             dst << sample.reads;
@@ -176,7 +180,7 @@ auto split_and_realign(const std::vector<AlignedRead>& reads, const Genotype<Hap
             }
             if (!unassigned_reads.empty()) {
                 report.n_reads_assigned += unassigned_reads.size();
-                utils::append(copy_reads(std::move(unassigned_reads)), result.back());
+                move_merge(copy_reads(std::move(unassigned_reads)), result.back());
             }
         }
         for (auto& set : result) std::sort(std::begin(set), std::end(set));
@@ -210,7 +214,7 @@ BAMRealigner::Report BAMRealigner::realign(ReadReader& src, VcfReader& variants,
                 for (unsigned i {0}; i < realignments.size() - 1; ++i) {
                     dsts[i] <<  realignments[i];
                 }
-                utils::append(std::move(realignments.back()), unassigned_realigned_reads); // end is always unassigned, but ploidy can change
+                move_merge(realignments.back(), unassigned_realigned_reads); // end is always unassigned, but ploidy can change
             }
             move_merge(unassigned_realigned_reads, sample.reads);
             dsts.back() << sample.reads;
@@ -316,21 +320,27 @@ BAMRealigner::read_next_batch(VcfIterator& first, const VcfIterator& last, ReadR
     if (!records.empty()) {
         auto genotypes = extract_genotypes(records, samples, reference);
         result.reserve(samples.size());
-        auto reads_region = encompassing_region(records);
+        auto batch_region = encompassing_region(records);
         if (config_.copy_hom_ref_reads) {
-            if (prev_batch_region && is_same_contig(reads_region, *prev_batch_region)) {
-                reads_region = expand_lhs(reads_region, intervening_region_size(*prev_batch_region, reads_region));
+            if (prev_batch_region && is_same_contig(batch_region, *prev_batch_region)) {
+                batch_region = expand_lhs(batch_region, intervening_region_size(*prev_batch_region, batch_region));
             } else {
-                reads_region = expand_lhs(reads_region, reads_region.begin());
+                batch_region = expand_lhs(batch_region, batch_region.begin());
             }
         }
-        auto reads = src.fetch_reads(samples, expand(reads_region, 1));
+        auto reads = src.fetch_reads(samples, expand(batch_region, 1));
+        boost::optional<GenomicRegion> reads_region {};
+        if (has_coverage(reads)) reads_region = encompassing_region(reads);
         for (const auto& sample : samples) {
             auto& sample_genotypes = genotypes[sample];
             if (prev_batch_region) {
                 erase_overlapped(reads[sample], *prev_batch_region);
             }
             result.push_back({std::move(sample_genotypes), std::move(reads[sample])});
+        }
+        if (first != last && reads_region && overlaps(*first, *reads_region)) {
+            auto next_batch = read_next_batch(first, last, src, reference, samples, batch_region);
+            merge(next_batch, result);
         }
     } else if (prev_batch_region && config_.copy_hom_ref_reads) {
         const auto contig_region = reference.contig_region(prev_batch_region->contig_name());
@@ -344,6 +354,16 @@ BAMRealigner::read_next_batch(VcfIterator& first, const VcfIterator& last, ReadR
         }
     }
     return result;
+}
+
+void BAMRealigner::merge(BatchList& src, BatchList& dst) const
+{
+    assert(src.size() == dst.size());
+    for (std::size_t i {0}; i < src.size(); ++i) {
+        dst[i].genotypes.insert(std::make_move_iterator(std::begin(src[i].genotypes)),
+                                std::make_move_iterator(std::end(src[i].genotypes)));
+        utils::append(std::move(src[i].reads), dst[i].reads);
+    }
 }
 
 // non-member methods

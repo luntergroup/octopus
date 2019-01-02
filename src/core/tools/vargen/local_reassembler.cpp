@@ -20,9 +20,10 @@
 #include "utils/mappable_algorithms.hpp"
 #include "utils/sequence_utils.hpp"
 #include "utils/append.hpp"
+#include "utils/global_aligner.hpp"
+#include "utils/read_stats.hpp"
 #include "io/reference/reference_genome.hpp"
 #include "logging/logging.hpp"
-#include "utils/global_aligner.hpp"
 
 namespace octopus { namespace coretools {
 
@@ -995,7 +996,7 @@ LocalReassembler::try_assemble_region(Assembler& assembler, const NucleotideSequ
     if (assembler.is_empty() || assembler.is_all_reference()) {
         return status;
     }
-    auto variants = assembler.extract_variants(max_bubbles_, min_bubble_score_);
+    auto variants = assembler.extract_variants(max_bubbles_, calculate_min_bubble_score(assemble_region));
     assembler.clear();
     if (!variants.empty()) {
         trim_reference(variants);
@@ -1019,6 +1020,31 @@ LocalReassembler::try_assemble_region(Assembler& assembler, const NucleotideSequ
     }
     return status;
 }
+
+double LocalReassembler::calculate_min_bubble_score(const GenomicRegion& assemble_region) const
+{
+    ReadBaseCountMap read_counts {};
+    read_counts.reserve(read_buffer_.size());
+    for (const auto& p : read_buffer_) {
+        read_counts.emplace(p.first, count_base_pairs(p.second, assemble_region));
+    }
+    return min_bubble_score_(assemble_region, read_counts);
+}
+
+double DepthBasedBubbleScoreSetter::operator()(const GenomicRegion& region, const LocalReassembler::ReadBaseCountMap& read_counts) const
+{
+    auto result = min_score_;
+    for (const auto& p : read_counts) {
+        const auto mean_depth = p.second / size(region);
+        result = std::max(result, std::floor(min_allele_frequency_ * mean_depth));
+    }
+    return result;
+}
+
+DepthBasedBubbleScoreSetter::DepthBasedBubbleScoreSetter(double min_score, double min_allele_frequency)
+: min_score_ {min_score}
+, min_allele_frequency_ {min_allele_frequency}
+{}
 
 } // namespace coretools
 } // namespace octopus

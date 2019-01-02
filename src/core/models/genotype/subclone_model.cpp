@@ -14,9 +14,9 @@
 #include "logging/logging.hpp"
 #include "utils/maths.hpp"
 #include "utils/concat.hpp"
-#include "germline_likelihood_model.hpp"
+#include "constant_mixture_genotype_likelihood_model.hpp"
 #include "individual_model.hpp"
-#include "fixed_mixture_genotype_likelihood_model.hpp"
+#include "variable_mixture_genotype_likelihood_model.hpp"
 
 namespace octopus { namespace model {
 
@@ -122,7 +122,7 @@ compute_genotype_likelihoods_with_fixed_mixture_model(const std::vector<SampleNa
                                                       const SomaticSubcloneModel::Priors::GenotypeMixturesDirichletAlphaMap& priors,
                                                       boost::optional<IndexData<CancerGenotypeIndex>> index_data)
 {
-    FixedMixtureGenotypeLikelihoodModel model {haplotype_log_likelihoods};
+    VariableMixtureGenotypeLikelihoodModel model {haplotype_log_likelihoods};
     const bool use_genotype_indices {index_data && index_data->haplotypes};
     std::vector<LogProbabilityVector> result {};
     result.reserve(samples.size());
@@ -141,18 +141,18 @@ compute_genotype_likelihoods_with_fixed_mixture_model(const std::vector<SampleNa
     return result;
 }
 
-auto evaluate(const CancerGenotype<Haplotype>& genotype, const GermlineLikelihoodModel& model)
+auto evaluate(const CancerGenotype<Haplotype>& genotype, const ConstantMixtureGenotypeLikelihoodModel& model)
 {
     return model.evaluate(demote(genotype));
 }
 
-auto evaluate(const CancerGenotypeIndex& genotype, const GermlineLikelihoodModel& model)
+auto evaluate(const CancerGenotypeIndex& genotype, const ConstantMixtureGenotypeLikelihoodModel& model)
 {
     return model.evaluate(concat(genotype.germline, genotype.somatic));
 }
 
 template <typename G>
-LogProbabilityVector evaluate(const std::vector<G>& genotypes, const GermlineLikelihoodModel& model)
+LogProbabilityVector evaluate(const std::vector<G>& genotypes, const ConstantMixtureGenotypeLikelihoodModel& model)
 {
     LogProbabilityVector result(genotypes.size());
     std::transform(std::cbegin(genotypes), std::cend(genotypes), std::begin(result),
@@ -166,7 +166,7 @@ compute_genotype_likelihoods_with_germline_model(const std::vector<SampleName>& 
                                                  const HaplotypeLikelihoodArray& haplotype_log_likelihoods,
                                                  boost::optional<IndexData<CancerGenotypeIndex>> index_data)
 {
-    GermlineLikelihoodModel model {haplotype_log_likelihoods};
+    ConstantMixtureGenotypeLikelihoodModel model {haplotype_log_likelihoods};
     const bool use_genotype_indices {index_data && index_data->haplotypes};
     std::vector<LogProbabilityVector> result {};
     result.reserve(samples.size());
@@ -183,9 +183,9 @@ compute_genotype_likelihoods_with_germline_model(const std::vector<SampleName>& 
     return result;
 }
 
-LogProbabilityVector evaluate_germlines(const std::vector<CancerGenotype<Haplotype>>& genotypes, const GermlineLikelihoodModel& model)
+LogProbabilityVector evaluate_germlines(const std::vector<CancerGenotype<Haplotype>>& genotypes, const ConstantMixtureGenotypeLikelihoodModel& model)
 {
-    std::unordered_map<Genotype<Haplotype>, GermlineLikelihoodModel::LogProbability> cache {};
+    std::unordered_map<Genotype<Haplotype>, ConstantMixtureGenotypeLikelihoodModel::LogProbability> cache {};
     cache.reserve(genotypes.size());
     LogProbabilityVector result(genotypes.size());
     std::transform(std::cbegin(genotypes), std::cend(genotypes), std::begin(result),
@@ -207,9 +207,9 @@ struct GenotypeIndexHash
     }
 };
 
-LogProbabilityVector evaluate_germlines(const std::vector<CancerGenotypeIndex>& genotypes, const GermlineLikelihoodModel& model)
+LogProbabilityVector evaluate_germlines(const std::vector<CancerGenotypeIndex>& genotypes, const ConstantMixtureGenotypeLikelihoodModel& model)
 {
-    std::unordered_map<GenotypeIndex, GermlineLikelihoodModel::LogProbability, GenotypeIndexHash> cache {};
+    std::unordered_map<GenotypeIndex, ConstantMixtureGenotypeLikelihoodModel::LogProbability, GenotypeIndexHash> cache {};
     cache.reserve(genotypes.size());
     LogProbabilityVector result(genotypes.size());
     std::transform(std::cbegin(genotypes), std::cend(genotypes), std::begin(result),
@@ -229,7 +229,7 @@ compute_germline_genotype_likelihoods_with_germline_model(const std::vector<Samp
                                                           const HaplotypeLikelihoodArray& haplotype_log_likelihoods,
                                                           boost::optional<IndexData<CancerGenotypeIndex>> index_data)
 {
-    GermlineLikelihoodModel model {haplotype_log_likelihoods};
+    ConstantMixtureGenotypeLikelihoodModel model {haplotype_log_likelihoods};
     const bool use_genotype_indices {index_data && index_data->haplotypes};
     std::vector<LogProbabilityVector> result {};
     result.reserve(samples.size());

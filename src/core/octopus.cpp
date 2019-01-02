@@ -430,26 +430,45 @@ void run_octopus_single_threaded(GenomeCallingComponents& components)
     #endif
 }
 
+bool can_use_temp_bcf(const GenomicRegion& region)
+{
+    // htslib cannot parse ':' in contig names.
+    // See https://github.com/samtools/htslib/pull/708
+    return std::find(std::cbegin(region.contig_name()), std::cend(region.contig_name()), ':') == std::cend(region.contig_name());
+}
+
+auto create_unique_temp_output_file_path(const GenomicRegion& region,
+                                         const GenomeCallingComponents& components)
+{
+    auto result = *components.temp_directory();
+    const auto begin   = std::to_string(region.begin());
+    const auto end     = std::to_string(region.end());
+    boost::filesystem::path file_name {region.contig_name() + "_" + begin + "-" + end + "_temp"};
+    
+    // Hack for htslib ':' parsing issues
+    if (can_use_temp_bcf(region)) {
+        file_name += ".bcf";
+    } else {
+        file_name += ".vcf";
+    }
+    
+    result /= file_name;
+    return result;
+}
+
 VcfWriter create_unique_temp_output_file(const GenomicRegion& region,
                                          const GenomeCallingComponents& components)
 {
-    auto path = *components.temp_directory();
-    const auto& contig = region.contig_name();
-    const auto begin   = std::to_string(region.begin());
-    const auto end     = std::to_string(region.end());
-    boost::filesystem::path file_name {contig + "_" + begin + "-" + end + "_temp.bcf"};
-    path /= file_name;
+    auto path = create_unique_temp_output_file_path(region, components);
     const auto call_types = get_call_types(components, {region.contig_name()});
-    auto header = make_vcf_header(components.samples(), contig, components.reference(), call_types,
-                                  "octopus-internal");
+    auto header = make_vcf_header(components.samples(), region.contig_name(), components.reference(), call_types, "octopus-internal");
     return VcfWriter {std::move(path), std::move(header)};
 }
 
 VcfWriter create_unique_temp_output_file(const GenomicRegion::ContigName& contig,
                                          const GenomeCallingComponents& components)
 {
-    return create_unique_temp_output_file(components.reference().contig_region(contig),
-                                          components);
+    return create_unique_temp_output_file(components.reference().contig_region(contig), components);
 }
 
 using TempVcfWriterMap = std::unordered_map<ContigName, VcfWriter>;

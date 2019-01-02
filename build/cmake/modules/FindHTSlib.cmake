@@ -11,71 +11,78 @@
 # A simple wrapper to make pkg-config searches a bit easier.
 # Works the same as CMake's internal pkg_check_modules but is always quiet.
 macro (libfind_pkg_check_modules)
-  find_package(PkgConfig QUIET)
-  if (PKG_CONFIG_FOUND)
-    pkg_check_modules(${ARGN} QUIET)
-  endif()
+    find_package(PkgConfig QUIET)
+    if (PKG_CONFIG_FOUND)
+        pkg_check_modules(${ARGN} QUIET)
+    endif()
 endmacro()
 
 macro (libfind_package PREFIX)
-  set (LIBFIND_PACKAGE_ARGS ${ARGN})
-  if (${PREFIX}_FIND_QUIETLY)
-    set (LIBFIND_PACKAGE_ARGS ${LIBFIND_PACKAGE_ARGS} QUIET)
-  endif (${PREFIX}_FIND_QUIETLY)
-  if (${PREFIX}_FIND_REQUIRED)
-    set (LIBFIND_PACKAGE_ARGS ${LIBFIND_PACKAGE_ARGS} REQUIRED)
-  endif (${PREFIX}_FIND_REQUIRED)
-  find_package(${LIBFIND_PACKAGE_ARGS})
+    set (LIBFIND_PACKAGE_ARGS ${ARGN})
+    if (${PREFIX}_FIND_QUIETLY)
+        set (LIBFIND_PACKAGE_ARGS ${LIBFIND_PACKAGE_ARGS} QUIET)
+    endif (${PREFIX}_FIND_QUIETLY)
+    if (${PREFIX}_FIND_REQUIRED)
+        set (LIBFIND_PACKAGE_ARGS ${LIBFIND_PACKAGE_ARGS} REQUIRED)
+    endif (${PREFIX}_FIND_REQUIRED)
+    find_package(${LIBFIND_PACKAGE_ARGS})
 endmacro (libfind_package)
 
 macro (libfind_process PREFIX)
-  # Skip processing if already processed during this run
-  if (NOT ${PREFIX}_FOUND)
-    # Start with the assumption that the library was found
-    set (${PREFIX}_FOUND TRUE)
+    # Skip processing if already processed during this run
+    if (NOT ${PREFIX}_FOUND)
+        # Start with the assumption that the library was found
+        set (${PREFIX}_FOUND TRUE)
 
-    # Process all includes and set _FOUND to false if any are missing
-    foreach (i ${${PREFIX}_PROCESS_INCLUDES})
-      if (${i})
-        set (${PREFIX}_INCLUDE_DIRS ${${PREFIX}_INCLUDE_DIRS} ${${i}})
-        mark_as_advanced(${i})
-      else (${i})
-        set (${PREFIX}_FOUND FALSE)
-      endif (${i})
-    endforeach (i)
-
-    # Process all libraries and set _FOUND to false if any are missing
-    foreach (i ${${PREFIX}_PROCESS_LIBS})
-      if (${i})
-        set (${PREFIX}_LIBRARIES ${${PREFIX}_LIBRARIES} ${${i}})
-        mark_as_advanced(${i})
-      else (${i})
-        set (${PREFIX}_FOUND FALSE)
-      endif (${i})
-    endforeach (i)
-
-    # Print message and/or exit on fatal error
-    if (${PREFIX}_FOUND)
-      if (NOT ${PREFIX}_FIND_QUIETLY)
-        message (STATUS "Found ${PREFIX} ${${PREFIX}_VERSION}")
-      endif (NOT ${PREFIX}_FIND_QUIETLY)
-    else (${PREFIX}_FOUND)
-      if (${PREFIX}_FIND_REQUIRED)
-        foreach (i ${${PREFIX}_PROCESS_INCLUDES} ${${PREFIX}_PROCESS_LIBS})
-          message("${i}=${${i}}")
+        # Process all includes and set _FOUND to false if any are missing
+        foreach (i ${${PREFIX}_PROCESS_INCLUDES})
+            if (${i})
+                set (${PREFIX}_INCLUDE_DIRS ${${PREFIX}_INCLUDE_DIRS} ${${i}})
+                mark_as_advanced(${i})
+            else (${i})
+                set (${PREFIX}_FOUND FALSE)
+            endif (${i})
         endforeach (i)
-        message (FATAL_ERROR "Required library ${PREFIX} NOT FOUND.\nInstall the library (dev version) and try again. If the library is already installed, use ccmake to set the missing variables manually.")
-      endif (${PREFIX}_FIND_REQUIRED)
-    endif (${PREFIX}_FOUND)
-  endif (NOT ${PREFIX}_FOUND)
+
+        # Process all libraries and set _FOUND to false if any are missing
+        foreach (i ${${PREFIX}_PROCESS_LIBS})
+            if (${i})
+                set (${PREFIX}_LIBRARIES ${${PREFIX}_LIBRARIES} ${${i}})
+                mark_as_advanced(${i})
+            else (${i})
+                set (${PREFIX}_FOUND FALSE)
+            endif (${i})
+        endforeach (i)
+
+        # Print message and/or exit on fatal error
+        if (${PREFIX}_FOUND)
+            if (NOT ${PREFIX}_FIND_QUIETLY)
+                message (STATUS "Found ${PREFIX} ${${PREFIX}_VERSION}")
+            endif (NOT ${PREFIX}_FIND_QUIETLY)
+        else (${PREFIX}_FOUND)
+            if (${PREFIX}_FIND_REQUIRED)
+                foreach (i ${${PREFIX}_PROCESS_INCLUDES} ${${PREFIX}_PROCESS_LIBS})
+                    message("${i}=${${i}}")
+                endforeach (i)
+                message (FATAL_ERROR "Required library ${PREFIX} NOT FOUND.\nInstall the library (dev version) and try again. If the library is already installed, use ccmake to set the missing variables manually.")
+            endif (${PREFIX}_FIND_REQUIRED)
+        endif (${PREFIX}_FOUND)
+    endif (NOT ${PREFIX}_FOUND)
 endmacro (libfind_process)
 
 set(HTSLIB_SEARCH_DIRS
     ${HTSLIB_SEARCH_DIRS}
     $ENV{HTSLIB_ROOT}
-    /usr
-    /usr/local
+    ${HTSLIB_ROOT}
     )
+
+if(NOT HTSlib_NO_SYSTEM_PATHS)
+    set(HTSLIB_SEARCH_DIRS
+        ${HTSLIB_SEARCH_DIRS}
+        /usr
+        /usr/local
+        )
+endif()
 
 set(_htslib_ver_path "htslib-${htslib_FIND_VERSION}")
 
@@ -86,8 +93,8 @@ libfind_pkg_check_modules(HTSLIB_PKGCONF htslib)
 find_path(HTSlib_INCLUDE_DIR
     NAMES ${HTSLIB_ADDITIONAL_HEADERS} htslib/sam.h
     PATHS ${HTSLIB_SEARCH_DIRS} ${HTSLIB_PKGCONF_INCLUDE_DIRS}
-    PATH_SUFFIXES
-    include htslib/${_htslib_ver_path}
+    PATH_SUFFIXES include htslib/${_htslib_ver_path}
+    NO_DEFAULT_PATH
     )
 
 if (HTSlib_USE_STATIC_LIBS)

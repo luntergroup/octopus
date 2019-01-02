@@ -1029,10 +1029,15 @@ bool Caller::done_calling(const GenomicRegion& region) const noexcept
 std::vector<CallWrapper> Caller::call_reference(const GenomicRegion& region, const ReadMap& reads) const
 {
     const auto active_reads = copy_overlapped(reads, region);
-    const auto active_reads_region = encompassing_region(active_reads);
-    const auto haplotype_region = expand(active_reads_region, HaplotypeLikelihoodModel{}.pad_requirement());
-    const std::vector<Haplotype> haplotypes {{haplotype_region, reference_}};
     auto haplotype_likelihoods = make_haplotype_likelihood_cache();
+    std::vector<Haplotype> haplotypes;
+    if (has_coverage(active_reads)) {
+        const auto active_reads_region = encompassing_region(active_reads);
+        const auto haplotype_region = expand(active_reads_region, HaplotypeLikelihoodModel{}.pad_requirement());
+        haplotypes.emplace_back(haplotype_region, reference_);
+    } else {
+        haplotypes.emplace_back(region, reference_);
+    }
     haplotype_likelihoods.populate(active_reads, haplotypes);
     const auto latents = infer_latents(haplotypes, haplotype_likelihoods);
     const auto pileups = make_pileups(active_reads, *latents, region);
