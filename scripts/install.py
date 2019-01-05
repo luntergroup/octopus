@@ -49,6 +49,7 @@ def install_homebrew():
     homebrew = get_homebrew_name()
     if not os.path.exists(homebrew):
         download_homebrew()
+    os.environ['PATH']= os.path.abspath(homebrew+'/bin') + os.pathsep + os.path.abspath(homebrew+'/sbin') + os.pathsep + os.environ['PATH']
     brew_bin = homebrew + '/bin/brew'
     call([brew_bin, 'update'])
     return brew_bin
