@@ -34,7 +34,7 @@ unsigned VcfHeader::num_samples() const noexcept
     return static_cast<unsigned>(samples_.size());
 }
 
-std::vector<std::string> VcfHeader::samples() const
+const std::vector<std::string>& VcfHeader::samples() const noexcept
 {
     return samples_;
 }
