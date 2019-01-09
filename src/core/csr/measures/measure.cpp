@@ -81,13 +81,14 @@ std::string Measure::do_serialise(const ResultType& value) const
 void Measure::annotate(VcfHeader::Builder& header) const
 {
     if (!is_required_vcf_field()) {
+        using namespace vcfspec::header::meta::type;
         using namespace vcfspec::header::meta::number;
         if (this->cardinality() == Measure::ResultCardinality::num_samples) {
-            header.add_format(this->name(), unknown, "String", this->describe());
+            header.add_format(this->name(), one, string, this->describe());
         } else if (this->cardinality() == Measure::ResultCardinality::num_alleles) {
-            header.add_info(this->name(), per_allele, "String", this->describe());
+            header.add_info(this->name(), per_allele, string, this->describe());
         } else {
-            header.add_info(this->name(), "1", "String", this->describe());
+            header.add_info(this->name(), one, string, this->describe());
         }
     }
 }
