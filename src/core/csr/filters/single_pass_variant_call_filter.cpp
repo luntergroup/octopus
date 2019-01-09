@@ -23,7 +23,6 @@ SinglePassVariantCallFilter::SinglePassVariantCallFilter(FacetFactory facet_fact
                                                          boost::optional<ProgressMeter&> progress)
 : VariantCallFilter {std::move(facet_factory), measures, std::move(output_config), threading}
 , progress_ {progress}
-, annotate_measures_ {output_config.annotate_measures}
 {}
 
 void SinglePassVariantCallFilter::filter(const VcfReader& source, VcfWriter& dest, const VcfHeader& header) const
@@ -76,7 +75,7 @@ void SinglePassVariantCallFilter::filter(const VcfRecord& call, const MeasureVec
 {
     const auto sample_classifications = classify(measures, header.samples());
     const auto call_classification = merge(sample_classifications, measures);
-    if (annotate_measures_) {
+    if (measure_annotations_requested()) {
         VcfRecord::Builder annotation_builder {call};
         annotate(annotation_builder, measures, header);
         write(annotation_builder.build_once(), call_classification, header.samples(), sample_classifications, dest);

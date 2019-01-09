@@ -97,6 +97,7 @@ protected:
     void write(const VcfRecord& call, const Classification& classification,
                const SampleList& samples, const ClassificationList& sample_classifications,
                VcfWriter& dest) const;
+    bool measure_annotations_requested() const noexcept;
     void annotate(VcfRecord::Builder& call, const MeasureVector& measures, const VcfHeader& header) const;
     
 private:

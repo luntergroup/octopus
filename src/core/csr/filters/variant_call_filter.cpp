@@ -297,6 +297,11 @@ void VariantCallFilter::write(const VcfRecord& call, const Classification& class
     }
 }
 
+bool VariantCallFilter::measure_annotations_requested() const noexcept
+{
+    return output_config_.annotate_measures;
+}
+
 void VariantCallFilter::annotate(VcfRecord::Builder& call, const MeasureVector& measures, const VcfHeader& header) const
 {
     if (output_config_.clear_info) {

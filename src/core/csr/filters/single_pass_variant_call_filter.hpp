@@ -38,7 +38,6 @@ protected:
 private:
     boost::optional<ProgressMeter&> progress_;
     mutable boost::optional<GenomicRegion::ContigName> current_contig_;
-    bool annotate_measures_;
     
     virtual Classification classify(const MeasureVector& call_measures) const = 0;
     
