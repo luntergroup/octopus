@@ -75,13 +75,24 @@ VariantCallFilter::VariantCallFilter(FacetFactory facet_factory,
     duplicate_measures_.shrink_to_fit();
 }
 
+inline VcfHeader read_header(const VcfWriter& writer)
+{
+    assert(writer.is_header_written());
+    assert(writer.path());
+    VcfReader tmp {*writer.path()};
+    return tmp.fetch_header();
+}
+
 void VariantCallFilter::filter(const VcfReader& source, VcfWriter& dest) const
 {
-    if (!dest.is_header_written()) {
-        dest << make_header(source);
+    if (dest.is_header_written()) {
+        const auto header = read_header(dest);
+        filter(source, dest, header);
+    } else {
+        const auto header = make_header(source);
+        dest << header;
+        filter(source, dest, header);
     }
-    const auto samples = source.fetch_header().samples();
-    filter(source, dest, samples);
 }
 
 // protected methods
@@ -286,7 +297,7 @@ void VariantCallFilter::write(const VcfRecord& call, const Classification& class
     }
 }
 
-void VariantCallFilter::annotate(VcfRecord::Builder& call, const MeasureVector& measures) const
+void VariantCallFilter::annotate(VcfRecord::Builder& call, const MeasureVector& measures, const VcfHeader& header) const
 {
     if (output_config_.clear_info) {
         call.clear_info();
@@ -294,7 +305,7 @@ void VariantCallFilter::annotate(VcfRecord::Builder& call, const MeasureVector& 
     for (auto p : boost::combine(measures_, measures)) {
         const MeasureWrapper& measure {p.get<0>()};
         const Measure::ResultType& measured_value {p.get<1>()};
-        measure.annotate(call, measured_value);
+        measure.annotate(call, measured_value, header);
     }
 }
 

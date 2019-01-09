@@ -49,7 +49,7 @@ private:
     virtual void log_filter_pass_start(Log& log) const;
     virtual Classification classify(std::size_t call_idx, std::size_t sample_idx) const = 0;
     
-    void filter(const VcfReader& source, VcfWriter& dest, const SampleList& samples) const override;
+    void filter(const VcfReader& source, VcfWriter& dest, const VcfHeader& header) const override;
     
     void make_registration_pass(const VcfReader& source, const SampleList& samples) const;
     void record(const VcfRecord& call, std::size_t record_idx, const SampleList& samples) const;

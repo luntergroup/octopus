@@ -81,21 +81,47 @@ std::string Measure::do_serialise(const ResultType& value) const
 void Measure::annotate(VcfHeader::Builder& header) const
 {
     if (!is_required_vcf_field()) {
-        std::string number;
         using namespace vcfspec::header::meta::number;
-        switch (this->cardinality()) {
-            case Measure::ResultCardinality::num_samples: number = unknown; break;
-            case Measure::ResultCardinality::num_alleles: number = per_allele; break;
-            case Measure::ResultCardinality::one: number = "1"; break;
+        if (this->cardinality() == Measure::ResultCardinality::num_samples) {
+            header.add_format(this->name(), unknown, "String", this->describe());
+        } else if (this->cardinality() == Measure::ResultCardinality::num_alleles) {
+            header.add_info(this->name(), per_allele, "String", this->describe());
+        } else {
+            header.add_info(this->name(), "1", "String", this->describe());
         }
-        header.add_info(this->name(), number, "String", this->describe());
     }
 }
 
-void Measure::annotate(VcfRecord::Builder& record, const ResultType& value) const
+struct VectorIndexGetterVisitor : public boost::static_visitor<Measure::ResultType>
+{
+    VectorIndexGetterVisitor(std::size_t idx) : idx_ {idx} {}
+    template <typename T> T operator()(const std::vector<T>& value) const noexcept { return value[idx_]; }
+    template <typename T> boost::optional<T> operator()(const boost::optional<std::vector<T>>& value) const noexcept
+    {
+        if (value) {
+            return (*value)[idx_];
+        } else {
+            return boost::none;
+        }
+    }
+    template <typename T> T operator()(const T& value) const noexcept { return value; }
+private:
+    std::size_t idx_;
+};
+
+void Measure::annotate(VcfRecord::Builder& record, const ResultType& value, const VcfHeader& header) const
 {
     if (!is_required_vcf_field()) {
-        record.set_info(this->name(), this->serialise(value));
+        if (this->cardinality() == Measure::ResultCardinality::num_samples) {
+            record.add_format(this->name());
+            const auto samples = header.samples();
+            for (std::size_t sample_idx {0}; sample_idx < samples.size(); ++sample_idx) {
+                const auto sample_value = boost::apply_visitor(VectorIndexGetterVisitor {sample_idx}, value);
+                record.set_format(samples[sample_idx], this->name(), this->serialise(sample_value));
+            }
+        } else {
+            record.set_info(this->name(), this->serialise(value));
+        }
     }
 }
 
@@ -138,23 +164,6 @@ std::vector<std::string> get_all_requirements(const std::vector<MeasureWrapper>&
     result.erase(std::unique(std::begin(result), std::end(result)), std::end(result));
     return result;
 }
-
-struct VectorIndexGetterVisitor : public boost::static_visitor<Measure::ResultType>
-{
-    VectorIndexGetterVisitor(std::size_t idx) : idx_ {idx} {}
-    template <typename T> T operator()(const std::vector<T>& value) const noexcept { return value[idx_]; }
-    template <typename T> boost::optional<T> operator()(const boost::optional<std::vector<T>>& value) const noexcept
-    {
-        if (value) {
-            return (*value)[idx_];
-        } else {
-            return boost::none;
-        }
-    }
-    template <typename T> T operator()(const T& value) const noexcept { return value; }
-private:
-    std::size_t idx_;
-};
 
 Measure::ResultType get_sample_value(const Measure::ResultType& value, const MeasureWrapper& measure, const std::size_t sample_idx)
 {

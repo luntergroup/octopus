@@ -97,7 +97,7 @@ protected:
     void write(const VcfRecord& call, const Classification& classification,
                const SampleList& samples, const ClassificationList& sample_classifications,
                VcfWriter& dest) const;
-    void annotate(VcfRecord::Builder& call, const MeasureVector& measures) const;
+    void annotate(VcfRecord::Builder& call, const MeasureVector& measures, const VcfHeader& header) const;
     
 private:
     using FacetNameSet = std::vector<std::string>;
@@ -110,7 +110,7 @@ private:
     mutable ThreadPool workers_;
     
     virtual void annotate(VcfHeader::Builder& header) const = 0;
-    virtual void filter(const VcfReader& source, VcfWriter& dest, const SampleList& samples) const = 0;
+    virtual void filter(const VcfReader& source, VcfWriter& dest, const VcfHeader& header) const = 0;
     virtual boost::optional<std::string> call_quality_name() const { return boost::none; }
     virtual boost::optional<std::string> genotype_quality_name() const { return boost::none; }
     virtual bool is_soft_filtered(const ClassificationList& sample_classifications, const MeasureVector& measures) const;

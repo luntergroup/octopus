@@ -26,63 +26,62 @@ SinglePassVariantCallFilter::SinglePassVariantCallFilter(FacetFactory facet_fact
 , annotate_measures_ {output_config.annotate_measures}
 {}
 
-void SinglePassVariantCallFilter::filter(const VcfReader& source, VcfWriter& dest, const SampleList& samples) const
+void SinglePassVariantCallFilter::filter(const VcfReader& source, VcfWriter& dest, const VcfHeader& header) const
 {
     assert(dest.is_header_written());
     if (progress_) progress_->start();
     if (can_measure_multiple_blocks()) {
         for (auto p = source.iterate(); p.first != p.second;) {
-            filter(read_next_blocks(p.first, p.second, samples), dest, samples);
+            filter(read_next_blocks(p.first, p.second, header.samples()), dest, header);
         }
     } else if (can_measure_single_call()) {
         auto p = source.iterate();
-        std::for_each(std::move(p.first), std::move(p.second), [&] (const VcfRecord& call) { filter(call, dest, samples); });
+        std::for_each(std::move(p.first), std::move(p.second), [&] (const VcfRecord& call) { filter(call, dest, header); });
     } else {
         for (auto p = source.iterate(); p.first != p.second;) {
-            filter(read_next_block(p.first, p.second, samples), dest, samples);
+            filter(read_next_block(p.first, p.second, header.samples()), dest, header);
         }
     }
     if (progress_) progress_->stop();
 }
 
-void SinglePassVariantCallFilter::filter(const VcfRecord& call, VcfWriter& dest, const SampleList& samples) const
+void SinglePassVariantCallFilter::filter(const VcfRecord& call, VcfWriter& dest, const VcfHeader& header) const
 {
-    filter(call, measure(call), dest, samples);
+    filter(call, measure(call), dest, header);
 }
 
-void SinglePassVariantCallFilter::filter(const CallBlock& block, VcfWriter& dest, const SampleList& samples) const
+void SinglePassVariantCallFilter::filter(const CallBlock& block, VcfWriter& dest, const VcfHeader& header) const
 {
-    filter(block, measure(block), dest, samples);
+    filter(block, measure(block), dest, header);
 }
 
-void SinglePassVariantCallFilter::filter(const std::vector<CallBlock>& blocks, VcfWriter& dest, const SampleList& samples) const
+void SinglePassVariantCallFilter::filter(const std::vector<CallBlock>& blocks, VcfWriter& dest, const VcfHeader& header) const
 {
     const auto measures = measure(blocks);
     assert(measures.size() == blocks.size());
     for (auto tup : boost::combine(blocks, measures)) {
-        filter(tup.get<0>(), tup.get<1>(), dest, samples);
+        filter(tup.get<0>(), tup.get<1>(), dest, header);
     }
 }
 
-void SinglePassVariantCallFilter::filter(const CallBlock& block, const MeasureBlock& measures, VcfWriter& dest, const SampleList& samples) const
+void SinglePassVariantCallFilter::filter(const CallBlock& block, const MeasureBlock& measures, VcfWriter& dest, const VcfHeader& header) const
 {
     assert(measures.size() == block.size());
     for (auto tup : boost::combine(block, measures)) {
-        filter(tup.get<0>(), tup.get<1>(), dest, samples);
+        filter(tup.get<0>(), tup.get<1>(), dest, header);
     }
 }
 
-void SinglePassVariantCallFilter::filter(const VcfRecord& call, const MeasureVector& measures, VcfWriter& dest, const SampleList& samples) const
+void SinglePassVariantCallFilter::filter(const VcfRecord& call, const MeasureVector& measures, VcfWriter& dest, const VcfHeader& header) const
 {
-    const auto sample_classifications = classify(measures, samples);
+    const auto sample_classifications = classify(measures, header.samples());
     const auto call_classification = merge(sample_classifications, measures);
     if (annotate_measures_) {
-        auto annotation_builder = VcfRecord::Builder {call};
-        annotate(annotation_builder, measures);
-        const auto annotated_call = annotation_builder.build_once();
-        write(annotated_call, call_classification, samples, sample_classifications, dest);
+        VcfRecord::Builder annotation_builder {call};
+        annotate(annotation_builder, measures, header);
+        write(annotation_builder.build_once(), call_classification, header.samples(), sample_classifications, dest);
     } else {
-        write(call, call_classification, samples, sample_classifications, dest);
+        write(call, call_classification, header.samples(), sample_classifications, dest);
     }
     log_progress(mapped_region(call));
 }

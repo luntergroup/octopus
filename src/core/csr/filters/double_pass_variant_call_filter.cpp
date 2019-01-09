@@ -27,9 +27,10 @@ DoublePassVariantCallFilter::DoublePassVariantCallFilter(FacetFactory facet_fact
 , current_contig_ {}
 {}
 
-void DoublePassVariantCallFilter::filter(const VcfReader& source, VcfWriter& dest, const SampleList& samples) const
+void DoublePassVariantCallFilter::filter(const VcfReader& source, VcfWriter& dest, const VcfHeader& header) const
 {
     assert(dest.is_header_written());
+    const auto samples = header.samples();
     make_registration_pass(source, samples);
     prepare_for_classification(info_log_);
     make_filter_pass(source, samples, dest);
