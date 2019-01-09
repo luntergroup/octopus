@@ -33,9 +33,14 @@ void DoublePassVariantCallFilter::filter(const VcfReader& source, VcfWriter& des
 {
     assert(dest.is_header_written());
     const auto samples = header.samples();
-    make_registration_pass(source, samples);
+    const auto annotated_source_path = make_registration_pass(source, header);
     prepare_for_classification(info_log_);
-    make_filter_pass(source, samples, dest);
+    if (annotated_source_path) {
+        const VcfReader annotated_source {*annotated_source_path};
+        make_filter_pass(annotated_source, samples, dest);
+    } else {
+        make_filter_pass(source, samples, dest);
+    }
 }
 
 const DoublePassVariantCallFilter::Path& DoublePassVariantCallFilter::temp_directory() const noexcept
@@ -48,67 +53,80 @@ void DoublePassVariantCallFilter::log_registration_pass(Log& log) const
     log << "CSR: Starting registration pass";
 }
 
-void DoublePassVariantCallFilter::make_registration_pass(const VcfReader& source, const SampleList& samples) const
+boost::optional<DoublePassVariantCallFilter::Path>
+DoublePassVariantCallFilter::make_registration_pass(const VcfReader& source, const VcfHeader& header) const
 {
     if (info_log_) log_registration_pass(*info_log_);
+    const auto samples = header.samples();
     prepare_for_registration(samples);
     if (progress_) progress_->start();
+    auto annotated_vcf = get_temp_measure_annotated_vcf(source, header);
     std::size_t record_idx {0};
     if (can_measure_multiple_blocks()) {
         for (auto p = source.iterate(); p.first != p.second;) {
             const auto blocks = read_next_blocks(p.first, p.second, samples);
-            record(blocks, record_idx, samples);
+            record(blocks, record_idx, header, annotated_vcf);
             for (const auto& block : blocks) record_idx += block.size();
         }
     } else if (can_measure_single_call()) {
         auto p = source.iterate();
-        std::for_each(std::move(p.first), std::move(p.second), [&] (const VcfRecord& call) { record(call, record_idx++, samples); });
+        std::for_each(std::move(p.first), std::move(p.second), [&] (const VcfRecord& call) { record(call, record_idx++, header, annotated_vcf); });
     } else {
         for (auto p = source.iterate(); p.first != p.second;) {
             const auto block = read_next_block(p.first, p.second, samples);
-            record(block, record_idx, samples);
+            record(block, record_idx, header, annotated_vcf);
             record_idx += block.size();
         }
     }
     if (progress_) progress_->stop();
+    if (annotated_vcf) {
+        return annotated_vcf->path();
+    } else {
+        return boost::none;
+    }
 }
 
-void DoublePassVariantCallFilter::record(const VcfRecord& call, const std::size_t record_idx, const SampleList& samples) const
+void DoublePassVariantCallFilter::record(const VcfRecord& call, const std::size_t record_idx, const VcfHeader& header, OptionalVcfWriter& annotated_vcf) const
 {
-    record(call, measure(call), record_idx, samples);
+    record(call, measure(call), record_idx, header, annotated_vcf);
 }
 
-void DoublePassVariantCallFilter::record(const CallBlock& block, const std::size_t record_idx, const SampleList& samples) const
+void DoublePassVariantCallFilter::record(const CallBlock& block, const std::size_t record_idx, const VcfHeader& header, OptionalVcfWriter& annotated_vcf) const
 {
-    record(block, measure(block), record_idx, samples);
+    record(block, measure(block), record_idx, header, annotated_vcf);
 }
 
-void DoublePassVariantCallFilter::record(const std::vector<CallBlock>& blocks, std::size_t record_idx, const SampleList& samples) const
+void DoublePassVariantCallFilter::record(const std::vector<CallBlock>& blocks, std::size_t record_idx, const VcfHeader& header, OptionalVcfWriter& annotated_vcf) const
 {
     const auto measures = measure(blocks);
     assert(measures.size() == blocks.size());
     for (auto tup : boost::combine(blocks, measures)) {
         const auto& block = tup.get<0>();
-        record(block, tup.get<1>(), record_idx, samples);
+        record(block, tup.get<1>(), record_idx, header, annotated_vcf);
         record_idx += block.size();
     }
 }
 
-void DoublePassVariantCallFilter::record(const VcfRecord& call, const MeasureVector& measures,
-                                         const std::size_t record_idx, const SampleList& samples) const
+void DoublePassVariantCallFilter::record(const VcfRecord& call, const MeasureVector& measures, const std::size_t record_idx,
+                                         const VcfHeader& header, OptionalVcfWriter& annotated_vcf) const
 {
-    for (std::size_t sample_idx {0}; sample_idx < samples.size(); ++sample_idx) {
+    for (std::size_t sample_idx {0}; sample_idx < header.samples().size(); ++sample_idx) {
         this->record(record_idx, sample_idx, get_sample_values(measures, measures_, sample_idx));
+    }
+    if (annotated_vcf) {
+        VcfRecord::Builder annotation_builder {call};
+        annotate(annotation_builder, measures, header);
+        *annotated_vcf << annotation_builder.build_once();
     }
     log_progress(mapped_region(call));
 }
 
-void DoublePassVariantCallFilter::record(const CallBlock& block, const MeasureBlock& measures,
-                                         std::size_t record_idx, const SampleList& samples) const
+void DoublePassVariantCallFilter::record(const CallBlock& block, const MeasureBlock& measures, std::size_t record_idx,
+                                         const VcfHeader& header, OptionalVcfWriter& annotated_vcf) const
 {
     assert(measures.size() == block.size());
     for (auto tup : boost::combine(block, measures)) {
-        record(tup.get<0>(), tup.get<1>(), record_idx++, samples);
+        record(tup.get<0>(), tup.get<1>(), record_idx++, header, annotated_vcf);
     }
 }
 
@@ -167,6 +185,19 @@ void DoublePassVariantCallFilter::log_progress(const GenomicRegion& region) cons
             current_contig_ = region.contig_name();
         }
         progress_->log_completed(expand_lhs_to_zero(region));
+    }
+}
+
+boost::optional<VcfWriter>
+DoublePassVariantCallFilter::get_temp_measure_annotated_vcf(const VcfReader& source, const VcfHeader& header) const
+{
+    if (measure_annotations_requested()) {
+        auto path = temp_directory();
+        path /= source.path().filename().stem();
+        path += ".annotated.bcf";
+        return VcfWriter {std::move(path), header};
+    } else {
+        return boost::none;
     }
 }
 

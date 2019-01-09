@@ -43,6 +43,8 @@ protected:
     const Path& temp_directory() const noexcept;
     
 private:
+    using OptionalVcfWriter = boost::optional<VcfWriter>;
+    
     mutable boost::optional<Log> info_log_;
     mutable boost::optional<ProgressMeter&> progress_;
     mutable boost::optional<GenomicRegion::ContigName> current_contig_;
@@ -58,16 +60,17 @@ private:
     
     void filter(const VcfReader& source, VcfWriter& dest, const VcfHeader& header) const override;
     
-    void make_registration_pass(const VcfReader& source, const SampleList& samples) const;
-    void record(const VcfRecord& call, std::size_t record_idx, const SampleList& samples) const;
-    void record(const CallBlock& block, std::size_t record_idx, const SampleList& samples) const;
-    void record(const std::vector<CallBlock>& blocks, std::size_t record_idx, const SampleList& samples) const;
-    void record(const VcfRecord& call, const MeasureVector& measures, std::size_t record_idx, const SampleList& samples) const;
-    void record(const CallBlock& block, const MeasureBlock& measures, std::size_t record_idx, const SampleList& samples) const;
+    boost::optional<Path> make_registration_pass(const VcfReader& source, const VcfHeader& header) const;
+    void record(const VcfRecord& call, std::size_t record_idx, const VcfHeader& header, OptionalVcfWriter& annotated_vcf) const;
+    void record(const CallBlock& block, std::size_t record_idx, const VcfHeader& heade, OptionalVcfWriter& annotated_vcfr) const;
+    void record(const std::vector<CallBlock>& blocks, std::size_t record_idx, const VcfHeader& header, OptionalVcfWriter& annotated_vcf) const;
+    void record(const VcfRecord& call, const MeasureVector& measures, std::size_t record_idx, const VcfHeader& header, OptionalVcfWriter& annotated_vcf) const;
+    void record(const CallBlock& block, const MeasureBlock& measures, std::size_t record_idx, const VcfHeader& header, OptionalVcfWriter& annotated_vcf) const;
     void make_filter_pass(const VcfReader& source, const SampleList& samples, VcfWriter& dest) const;
     std::vector<Classification> classify(std::size_t call_idx, const SampleList& samples) const;
     void filter(const VcfRecord& call, std::size_t idx, const SampleList& samples, VcfWriter& dest) const;
     void log_progress(const GenomicRegion& region) const;
+    boost::optional<VcfWriter> get_temp_measure_annotated_vcf(const VcfReader& source, const VcfHeader& header) const;
 };
 
 } // namespace csr
