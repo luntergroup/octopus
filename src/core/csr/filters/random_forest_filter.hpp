@@ -21,7 +21,7 @@ namespace octopus { namespace csr {
 class RandomForestFilter : public DoublePassVariantCallFilter
 {
 public:
-    using Path = boost::filesystem::path;
+    using DoublePassVariantCallFilter::Path;
     
     RandomForestFilter() = delete;
     

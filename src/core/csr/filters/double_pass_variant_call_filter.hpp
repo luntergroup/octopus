@@ -19,12 +19,15 @@ namespace octopus { namespace csr {
 class DoublePassVariantCallFilter : public VariantCallFilter
 {
 public:
+    using Path = boost::filesystem::path;
+    
     DoublePassVariantCallFilter() = delete;
     
     DoublePassVariantCallFilter(FacetFactory facet_factory,
                                 std::vector<MeasureWrapper> measures,
                                 OutputOptions output_config,
                                 ConcurrencyPolicy threading,
+                                Path temp_directory,
                                 boost::optional<ProgressMeter&> progress);
     
     DoublePassVariantCallFilter(const DoublePassVariantCallFilter&)            = delete;
@@ -37,10 +40,14 @@ public:
 protected:
     using Log = logging::InfoLogger;
     
+    const Path& temp_directory() const noexcept;
+    
 private:
     mutable boost::optional<Log> info_log_;
     mutable boost::optional<ProgressMeter&> progress_;
     mutable boost::optional<GenomicRegion::ContigName> current_contig_;
+    
+    Path temp_directory_;
     
     virtual void log_registration_pass(Log& log) const;
     virtual void prepare_for_registration(const SampleList& samples) const {};

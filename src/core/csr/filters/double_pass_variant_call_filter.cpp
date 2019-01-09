@@ -20,11 +20,13 @@ DoublePassVariantCallFilter::DoublePassVariantCallFilter(FacetFactory facet_fact
                                                          std::vector<MeasureWrapper> measures,
                                                          OutputOptions output_config,
                                                          ConcurrencyPolicy threading,
+                                                         Path temp_directory,
                                                          boost::optional<ProgressMeter&> progress)
 : VariantCallFilter {std::move(facet_factory), std::move(measures), std::move(output_config), threading}
 , info_log_ {logging::InfoLogger {}}
 , progress_ {progress}
 , current_contig_ {}
+, temp_directory_ {std::move(temp_directory)}
 {}
 
 void DoublePassVariantCallFilter::filter(const VcfReader& source, VcfWriter& dest, const VcfHeader& header) const
@@ -34,6 +36,11 @@ void DoublePassVariantCallFilter::filter(const VcfReader& source, VcfWriter& des
     make_registration_pass(source, samples);
     prepare_for_classification(info_log_);
     make_filter_pass(source, samples, dest);
+}
+
+const DoublePassVariantCallFilter::Path& DoublePassVariantCallFilter::temp_directory() const noexcept
+{
+    return temp_directory_;
 }
 
 void DoublePassVariantCallFilter::log_registration_pass(Log& log) const
