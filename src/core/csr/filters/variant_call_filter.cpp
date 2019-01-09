@@ -299,7 +299,7 @@ void VariantCallFilter::write(const VcfRecord& call, const Classification& class
 
 bool VariantCallFilter::measure_annotations_requested() const noexcept
 {
-    return output_config_.annotate_measures;
+    return output_config_.annotate_all_measures || !output_config_.annotations.empty();
 }
 
 void VariantCallFilter::annotate(VcfRecord::Builder& call, const MeasureVector& measures, const VcfHeader& header) const
@@ -309,8 +309,10 @@ void VariantCallFilter::annotate(VcfRecord::Builder& call, const MeasureVector& 
     }
     for (auto p : boost::combine(measures_, measures)) {
         const MeasureWrapper& measure {p.get<0>()};
-        const Measure::ResultType& measured_value {p.get<1>()};
-        measure.annotate(call, measured_value, header);
+        if (is_requested_annotation(measure)) {
+            const Measure::ResultType& measured_value {p.get<1>()};
+            measure.annotate(call, measured_value, header);
+        }
     }
 }
 
@@ -325,16 +327,18 @@ bool VariantCallFilter::is_soft_filtered(const ClassificationList& sample_classi
 VcfHeader VariantCallFilter::make_header(const VcfReader& source) const
 {
     VcfHeader::Builder builder {source.fetch_header()};
-    if (output_config_.emit_sites_only) {
-        builder.clear_format();
-    }
     if (output_config_.clear_info) {
         builder.clear_info();
     }
-    if (output_config_.annotate_measures) {
+    if (measure_annotations_requested()) {
         for (const auto& measure : measures_) {
-            measure.annotate(builder);
+            if (is_requested_annotation(measure)) {
+                measure.annotate(builder);
+            }
         }
+    }
+    if (output_config_.emit_sites_only) {
+        builder.clear_format();
     }
     annotate(builder);
     return builder.build_once();
@@ -350,6 +354,11 @@ VcfRecord::Builder VariantCallFilter::construct_template(const VcfRecord& call) 
         result.clear_filter();
     }
     return result;
+}
+
+bool VariantCallFilter::is_requested_annotation(const MeasureWrapper& measure) const noexcept
+{
+    return output_config_.annotate_all_measures || output_config_.annotations.count(measure.name()) == 1;
 }
 
 bool VariantCallFilter::is_hard_filtered(const Classification& classification) const noexcept

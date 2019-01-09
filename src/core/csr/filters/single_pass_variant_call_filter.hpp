@@ -41,12 +41,12 @@ private:
     
     virtual Classification classify(const MeasureVector& call_measures) const = 0;
     
-    void filter(const VcfReader& source, VcfWriter& dest, const VcfHeader& header) const override;
-    void filter(const VcfRecord& call, VcfWriter& dest, const VcfHeader& header) const;
-    void filter(const CallBlock& block, VcfWriter& dest, const VcfHeader& header) const;
-    void filter(const std::vector<CallBlock>& blocks, VcfWriter& dest, const VcfHeader& header) const;
-    void filter(const CallBlock& block, const MeasureBlock & measures, VcfWriter& dest, const VcfHeader& header) const;
-    void filter(const VcfRecord& call, const MeasureVector& measures, VcfWriter& dest, const VcfHeader& header) const;
+    void filter(const VcfReader& source, VcfWriter& dest, const VcfHeader& dest_header) const override;
+    void filter(const VcfRecord& call, VcfWriter& dest, const VcfHeader& dest_header, const SampleList& samples) const;
+    void filter(const CallBlock& block, VcfWriter& dest, const VcfHeader& dest_header, const SampleList& samples) const;
+    void filter(const std::vector<CallBlock>& blocks, VcfWriter& dest, const VcfHeader& dest_header, const SampleList& samples) const;
+    void filter(const CallBlock& block, const MeasureBlock & measures, VcfWriter& dest, const VcfHeader& dest_header, const SampleList& samples) const;
+    void filter(const VcfRecord& call, const MeasureVector& measures, VcfWriter& dest, const VcfHeader& dest_header, const SampleList& samples) const;
     ClassificationList classify(const MeasureVector& call_measures, const SampleList& samples) const;
     void log_progress(const GenomicRegion& region) const;
 };

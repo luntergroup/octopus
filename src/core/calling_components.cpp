@@ -158,11 +158,6 @@ boost::optional<GenomeCallingComponents::Path> GenomeCallingComponents::filter_r
     return components_.filter_request;
 }
 
-bool GenomeCallingComponents::annotate_filter_output() const noexcept
-{
-    return components_.annotate_filter_output_;
-}
-
 boost::optional<GenomeCallingComponents::Path> GenomeCallingComponents::bamout() const
 {
     return components_.bamout;
@@ -507,7 +502,6 @@ GenomeCallingComponents::Components::Components(ReferenceGenome&& reference, Rea
 , bamout {options::bamout_request(options)}
 , split_bamout {options::split_bamout_request(options)}
 , data_profile {options::data_profile_request(options)}
-, annotate_filter_output_ {options::annotate_filter_output(options)}
 {
     drop_unused_samples(this->samples, this->read_manager);
     setup_progress_meter(options);

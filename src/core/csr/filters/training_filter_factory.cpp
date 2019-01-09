@@ -58,7 +58,9 @@ std::unique_ptr<VariantCallFilter> TrainingFilterFactory::do_make(FacetFactory f
                                                                   boost::optional<ProgressMeter&> progress,
                                                                   VariantCallFilter::ConcurrencyPolicy threading) const
 {
-    output_config.annotate_measures = true;
+    output_config.annotations.clear();
+    output_config.annotations.reserve(measures_.size());
+    for (const auto& measure : measures_) output_config.annotations.insert(measure.name());
     output_config.clear_info = true;
     output_config.clear_existing_filters = true;
     return std::make_unique<PassingVariantCallFilter>(std::move(facet_factory), std::move(measures_),

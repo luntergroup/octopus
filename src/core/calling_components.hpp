@@ -70,7 +70,6 @@ public:
     boost::optional<Pedigree> pedigree() const;
     boost::optional<Path> legacy() const;
     boost::optional<Path> filter_request() const;
-    bool annotate_filter_output() const noexcept;
     boost::optional<Path> bamout() const;
     boost::optional<Path> split_bamout() const;
     boost::optional<Path> data_profile() const;
@@ -114,7 +113,6 @@ private:
         // exception handling easier.
         boost::optional<Path> temp_directory;
         std::unique_ptr<VariantCallFilterFactory> call_filter_factory;
-        bool annotate_filter_output_;
         
         void setup_progress_meter(const options::OptionMap& options);
         void set_read_buffer_size(const options::OptionMap& options);

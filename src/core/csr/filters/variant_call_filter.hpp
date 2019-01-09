@@ -10,6 +10,7 @@
 #include <type_traits>
 #include <functional>
 #include <future>
+#include <unordered_set>
 
 #include <boost/optional.hpp>
 
@@ -40,8 +41,9 @@ public:
     {
         bool emit_sites_only = false;
         bool clear_existing_filters = true;
-        bool annotate_measures = false;
         bool clear_info = false;
+        bool annotate_all_measures = false;
+        std::unordered_set<std::string> annotations = {};
     };
     
     struct ConcurrencyPolicy
@@ -111,7 +113,7 @@ private:
     mutable ThreadPool workers_;
     
     virtual void annotate(VcfHeader::Builder& header) const = 0;
-    virtual void filter(const VcfReader& source, VcfWriter& dest, const VcfHeader& header) const = 0;
+    virtual void filter(const VcfReader& source, VcfWriter& dest, const VcfHeader& dest_header) const = 0;
     virtual boost::optional<std::string> call_quality_name() const { return boost::none; }
     virtual boost::optional<std::string> genotype_quality_name() const { return boost::none; }
     virtual bool is_soft_filtered(const ClassificationList& sample_classifications, const MeasureVector& measures) const;
@@ -122,6 +124,7 @@ private:
     MeasureBlock measure(const CallBlock& block, const Measure::FacetMap& facets) const;
     MeasureVector measure(const VcfRecord& call, const Measure::FacetMap& facets) const;
     VcfRecord::Builder construct_template(const VcfRecord& call) const;
+    bool is_requested_annotation(const MeasureWrapper& measure) const noexcept;
     bool is_hard_filtered(const Classification& classification) const noexcept;
     void annotate(VcfRecord::Builder& call, const SampleList& samples, const ClassificationList& sample_classifications) const;
     void annotate(VcfRecord::Builder& call, const SampleName& sample, Classification status) const;

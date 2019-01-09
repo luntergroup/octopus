@@ -58,14 +58,19 @@ private:
     virtual void log_filter_pass_start(Log& log) const;
     virtual Classification classify(std::size_t call_idx, std::size_t sample_idx) const = 0;
     
-    void filter(const VcfReader& source, VcfWriter& dest, const VcfHeader& header) const override;
+    void filter(const VcfReader& source, VcfWriter& dest, const VcfHeader& dest_header) const override;
     
-    boost::optional<Path> make_registration_pass(const VcfReader& source, const VcfHeader& header) const;
-    void record(const VcfRecord& call, std::size_t record_idx, const VcfHeader& header, OptionalVcfWriter& annotated_vcf) const;
-    void record(const CallBlock& block, std::size_t record_idx, const VcfHeader& heade, OptionalVcfWriter& annotated_vcfr) const;
-    void record(const std::vector<CallBlock>& blocks, std::size_t record_idx, const VcfHeader& header, OptionalVcfWriter& annotated_vcf) const;
-    void record(const VcfRecord& call, const MeasureVector& measures, std::size_t record_idx, const VcfHeader& header, OptionalVcfWriter& annotated_vcf) const;
-    void record(const CallBlock& block, const MeasureBlock& measures, std::size_t record_idx, const VcfHeader& header, OptionalVcfWriter& annotated_vcf) const;
+    boost::optional<Path> make_registration_pass(const VcfReader& source, const VcfHeader& filtered_header) const;
+    void record(const VcfRecord& call, std::size_t record_idx, const VcfHeader& dest_header,
+                const SampleList& samples, OptionalVcfWriter& annotated_vcf) const;
+    void record(const CallBlock& block, std::size_t record_idx, const VcfHeader& dest_header,
+                const SampleList& samples, OptionalVcfWriter& annotated_vcfr) const;
+    void record(const std::vector<CallBlock>& blocks, std::size_t record_idx, const VcfHeader& dest_header,
+                const SampleList& samples, OptionalVcfWriter& annotated_vcf) const;
+    void record(const VcfRecord& call, const MeasureVector& measures, std::size_t record_idx, const VcfHeader& dest_header,
+                const SampleList& samples, OptionalVcfWriter& annotated_vcf) const;
+    void record(const CallBlock& block, const MeasureBlock& measures, std::size_t record_idx, const VcfHeader& dest_header,
+                const SampleList& samples, OptionalVcfWriter& annotated_vcf) const;
     void make_filter_pass(const VcfReader& source, const SampleList& samples, VcfWriter& dest) const;
     std::vector<Classification> classify(std::size_t call_idx, const SampleList& samples) const;
     void filter(const VcfRecord& call, std::size_t idx, const SampleList& samples, VcfWriter& dest) const;
