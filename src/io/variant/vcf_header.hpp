@@ -95,7 +95,7 @@ public:
     
     unsigned num_samples() const noexcept;
     
-    std::vector<std::string> samples() const;
+    const std::vector<std::string>& samples() const noexcept;
     
     bool has(const BasicKey& k) const noexcept;
     bool has(const Tag& t) const noexcept;

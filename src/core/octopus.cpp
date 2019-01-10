@@ -1328,14 +1328,10 @@ void run_csr(GenomeCallingComponents& components)
         } else {
             buffered_rp.hint(flatten(components.search_regions()));
         }
-        VariantCallFilter::OutputOptions output_config {};
-        if (components.sites_only()) {
-            output_config.emit_sites_only = true;
-        }
         const VcfReader in {std::move(*input_path)};
         const auto filter = filter_factory.make(components.reference(), std::move(buffered_rp), in.fetch_header(),
                                                 components.ploidies(), components.pedigree(),
-                                                output_config, progress, components.num_threads());
+                                                progress, components.num_threads());
         assert(filter);
         VcfWriter& out {*components.filtered_output()};
         filter->filter(in, out);

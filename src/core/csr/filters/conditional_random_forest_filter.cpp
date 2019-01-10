@@ -57,9 +57,8 @@ ConditionalRandomForestFilter::ConditionalRandomForestFilter(FacetFactory facet_
                                                              Path temp_directory,
                                                              boost::optional<ProgressMeter&> progress)
 : DoublePassVariantCallFilter {std::move(facet_factory), concat(std::move(measures), chooser_measures),
-                               std::move(output_config), threading, progress}
+                               std::move(output_config), threading, std::move(temp_directory), progress}
 , forest_paths_ {std::move(ranger_forests)}
-, temp_dir_ {std::move(temp_directory)}
 , chooser_ {std::move(chooser)}
 , num_chooser_measures_ {chooser_measures.size()}
 , num_records_ {0}
@@ -109,7 +108,7 @@ void ConditionalRandomForestFilter::prepare_for_registration(const SampleList& s
     for (std::size_t forest_idx {0}; forest_idx < num_forests; ++forest_idx) {
         data_[forest_idx].reserve(samples.size());
         for (const auto& sample : samples) {
-            auto data_path = temp_dir_;
+            auto data_path = temp_directory();
             Path fname {"octopus_ranger_temp_forest_data_" + std::to_string(forest_idx) + "_" + sample + ".dat"};
             data_path /= fname;
             data_[forest_idx].emplace_back(data_path.string(), data_path);
@@ -260,7 +259,7 @@ public:
 void ConditionalRandomForestFilter::prepare_for_classification(boost::optional<Log>& log) const
 {
     close_data_files();
-    const Path ranger_prefix {temp_dir_ / "octopus_ranger_temp"};
+    const Path ranger_prefix {temp_directory() / "octopus_ranger_temp"};
     const Path ranger_prediction_fname {ranger_prefix.string() + ".prediction"};
     data_buffer_.resize(1);
     auto& predictions = data_buffer_[0];

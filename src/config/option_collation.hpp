@@ -84,6 +84,7 @@ bool is_legacy_vcf_requested(const OptionMap& options);
 bool is_filter_training_mode(const OptionMap& options);
 
 boost::optional<fs::path> filter_request(const OptionMap& options);
+bool annotate_filter_output(const OptionMap& options);
 
 boost::optional<fs::path> bamout_request(const OptionMap& options);
 boost::optional<fs::path> split_bamout_request(const OptionMap& options);

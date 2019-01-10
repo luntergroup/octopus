@@ -81,6 +81,7 @@ VCF_SPEC_CONSTANT character {"Character"};
 
 namespace number {
 
+VCF_SPEC_CONSTANT one {"1"};
 VCF_SPEC_CONSTANT per_alt_allele {"A"};
 VCF_SPEC_CONSTANT per_allele {"R"};
 VCF_SPEC_CONSTANT per_genotype {"G"};

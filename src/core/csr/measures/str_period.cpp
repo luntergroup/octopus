@@ -92,7 +92,7 @@ const std::string& STRPeriod::do_name() const
 
 std::string STRPeriod::do_describe() const
 {
-    return "Length of overlapping STR";
+    return "Period of overlapping STR";
 }
 
 std::vector<std::string> STRPeriod::do_requirements() const

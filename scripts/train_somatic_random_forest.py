@@ -37,11 +37,14 @@ def to_float(val):
         except ValueError:
             return val
 
-def get_annotation(field, rec):
+def get_annotation(field, rec, vcf_header):
     if field == 'QUAL':
         return rec.qual
-    elif field == 'GQ':
-        return rec.samples[0]['GQ']
+    elif field in rec.format:
+        if len(vcf_header.samples) > 1:
+            return [rec.samples[sample][field] for sample in vcf_header.samples]
+        else:
+            return rec.samples[samples[0]][field]
     else:
         res = rec.info[field]
         if type(res) == tuple:
@@ -114,12 +117,12 @@ def is_missing(x):
 def annotation_to_string(x, missing_value):
     return str(missing_value) if is_missing(x) else str(x)
 
-def get_annotations(rec, features, n_samples, missing_value):
-    result = [[] for _ in range(n_samples)]
+def get_annotations(rec, features, vcf_header, missing_value):
+    result = [[] for _ in range(len(vcf_header.samples))]
     for feature in features:
-        value = get_annotation(feature, rec)
+        value = get_annotation(feature, rec, vcf_header)
         is_list = type(value) == tuple or type(value) == list
-        if is_list and len(value) == n_samples:
+        if is_list and len(value) == len(vcf_header.samples):
             result = [curr + [annotation_to_string(v, missing_value)] for curr, v in zip(result, value)]
         else:
             if is_list:
@@ -132,12 +135,11 @@ def get_annotations(rec, features, n_samples, missing_value):
 
 def make_ranger_data(octopus_vcf_path, measures, classifcation, out, missing_value):
     vcf = VariantFile(octopus_vcf_path)
-    n_samples = len(vcf.header.samples)
     n_records = 0
     with open(out, 'a') as ranger_dat:
         datwriter = csv.writer(ranger_dat, delimiter=' ')
         for rec in vcf:
-            for row in get_annotations(rec, measures, n_samples, missing_value):
+            for row in get_annotations(rec, measures, vcf.header, missing_value):
                 row.append(str(int(classifcation)))
                 datwriter.writerow(row)
                 n_records += 1

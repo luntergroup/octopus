@@ -609,7 +609,7 @@ OptionMap parse_options(const int argc, const char** argv)
     ("max-phylogeny-size",
     po::value<int>()->default_value(3),
     "Maximum number of nodes in cell phylogeny to consider")
-
+    
     ("dropout-concentration",
     po::value<float>()->default_value(2, "2"),
     "Allelic dropout concentration paramater")
@@ -631,7 +631,7 @@ OptionMap parse_options(const int argc, const char** argv)
     call_filtering.add_options()
     ("call-filtering,f",
      po::value<bool>()->default_value(true),
-     "Enable all variant call filtering")
+     "Turn variant call filtering on or off")
     
     ("filter-expression",
      po::value<std::string>()->default_value("QUAL < 10 | MQ < 10 | MP < 10 | AF < 0.05 | SB > 0.98 | BQ < 15 | DP < 1"),
@@ -656,10 +656,10 @@ OptionMap parse_options(const int argc, const char** argv)
     ("keep-unfiltered-calls",
      po::bool_switch()->default_value(false),
      "Keep a copy of unfiltered calls")
-    
-    ("training-annotations",
-     po::value<std::vector<std::string>>()->multitoken(),
-     "Outputs all calls as PASS and annotates output VCF with the given measures or measure set")
+     
+    ("annotations",
+     po::value<std::vector<std::string>>()->multitoken()->implicit_value(std::vector<std::string> {"active"}, "active")->composing(),
+     "Annotations to write to final VCF")
     
     ("filter-vcf",
      po::value<fs::path>(),
@@ -668,7 +668,7 @@ OptionMap parse_options(const int argc, const char** argv)
     ("forest-file",
      po::value<fs::path>(),
      "Trained Ranger random forest file")
-
+    
     ("somatic-forest-file",
      po::value<fs::path>(),
      "Trained Ranger random forest file for somatic variants")

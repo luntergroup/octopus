@@ -46,8 +46,11 @@ def subset(vcf_in_path, vcf_out_path, bed_regions):
 def get_annotation(field, rec):
     if field == 'QUAL':
         return rec.qual
-    elif field == 'GQ':
-        return rec.samples[0]['GQ']
+    elif field in rec.format:
+        res = rec.samples[list(rec.samples)[0]][field]
+        if type(res) == tuple:
+            res = res[0]
+        return res
     else:
         res = rec.info[field]
         if type(res) == tuple:

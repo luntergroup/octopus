@@ -1788,7 +1788,7 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
 
 bool is_call_filtering_requested(const OptionMap& options) noexcept
 {
-    return options.at("call-filtering").as<bool>();
+    return options.at("call-filtering").as<bool>() || options.count("annotations") > 0;
 }
 
 std::string get_germline_filter_expression(const OptionMap& options)
@@ -1813,14 +1813,24 @@ std::string get_refcall_filter_expression(const OptionMap& options)
 
 bool is_filter_training_mode(const OptionMap& options)
 {
-    return options.count("training-annotations") > 0;
+    return !options.at("call-filtering").as<bool>() && options.count("annotations") > 0;
 }
 
-std::set<std::string> get_training_measures(const OptionMap& options)
+bool all_active_measure_annotations_requested(const OptionMap& options)
+{
+    if (options.count("annotations") == 1) {
+        const auto annotations = options.at("annotations").as<std::vector<std::string>>();
+        return annotations.size() == 1 && annotations.front() == "active";
+    }  else {
+        return false;
+    }
+}
+
+std::set<std::string> get_requested_measure_annotations(const OptionMap& options)
 {
     std::set<std::string> result {};
-    if (is_filter_training_mode(options)) {
-        for (const auto& measure : options.at("training-annotations").as<std::vector<std::string>>()) {
+    if (options.count("annotations") == 1) {
+        for (const auto& measure : options.at("annotations").as<std::vector<std::string>>()) {
             result.insert(measure);
         }
     }
@@ -1846,6 +1856,7 @@ std::unique_ptr<VariantCallFilterFactory>
 make_call_filter_factory(const ReferenceGenome& reference, ReadPipe& read_pipe, const OptionMap& options,
                          boost::optional<fs::path> temp_directory)
 {
+    std::unique_ptr<VariantCallFilterFactory> result {};
     if (is_call_filtering_requested(options)) {
         const auto caller = get_caller_type(options, read_pipe.samples());
         if (is_set("forest-file", options)) {
@@ -1860,24 +1871,23 @@ make_call_filter_factory(const ReferenceGenome& reference, ReadPipe& read_pipe, 
                     if (!fs::exists(somatic_forest_file)) {
                         throw MissingForestFile {somatic_forest_file, "somatic-forest-file"};
                     }
-                    return std::make_unique<RandomForestFilterFactory>(forest_file, somatic_forest_file, *temp_directory);
+                    result = std::make_unique<RandomForestFilterFactory>(forest_file, somatic_forest_file, *temp_directory);
                 } else if (options.at("somatics-only").as<bool>()) {
-                    return std::make_unique<RandomForestFilterFactory>(forest_file, *temp_directory,
-                                                                       RandomForestFilterFactory::ForestType::somatic);
+                    result = std::make_unique<RandomForestFilterFactory>(forest_file, *temp_directory,
+                                                                         RandomForestFilterFactory::ForestType::somatic);
                 } else {
                     logging::WarningLogger log {};
                     log << "Both germline and somatic forests must be provided for random forest cancer variant filtering";
-                    return nullptr;
                 }
             } else if (caller == "trio") {
                 if (options.at("denovos-only").as<bool>()) {
-                    return std::make_unique<RandomForestFilterFactory>(forest_file, *temp_directory,
-                                                                       RandomForestFilterFactory::ForestType::denovo);
+                    result = std::make_unique<RandomForestFilterFactory>(forest_file, *temp_directory,
+                                                                         RandomForestFilterFactory::ForestType::denovo);
                 } else {
-                    return std::make_unique<RandomForestFilterFactory>(forest_file, *temp_directory);
+                    result = std::make_unique<RandomForestFilterFactory>(forest_file, *temp_directory);
                 }
             } else {
-                return std::make_unique<RandomForestFilterFactory>(forest_file, *temp_directory);
+                result = std::make_unique<RandomForestFilterFactory>(forest_file, *temp_directory);
             }
         } else if (is_set("somatic-forest-file", options)) {
             if (options.at("somatics-only").as<bool>()) {
@@ -1885,46 +1895,56 @@ make_call_filter_factory(const ReferenceGenome& reference, ReadPipe& read_pipe, 
                 if (!fs::exists(somatic_forest_file)) {
                     throw MissingForestFile {somatic_forest_file, "somatic-forest-file"};
                 }
-                return std::make_unique<RandomForestFilterFactory>(somatic_forest_file, *temp_directory,
-                                                                   RandomForestFilterFactory::ForestType::somatic);
+                result = std::make_unique<RandomForestFilterFactory>(somatic_forest_file, *temp_directory,
+                                                                     RandomForestFilterFactory::ForestType::somatic);
             } else {
                 logging::WarningLogger log {};
                 log << "Both germline and somatic forests must be provided for random forest cancer variant filtering";
-                return nullptr;
             }
         } else {
             if (is_filter_training_mode(options)) {
-                return std::make_unique<TrainingFilterFactory>(get_training_measures(options));
+                result = std::make_unique<TrainingFilterFactory>(get_requested_measure_annotations(options));
             } else {
                 auto germline_filter_expression = get_germline_filter_expression(options);
                 if (caller == "cancer") {
                     if (options.at("somatics-only").as<bool>()) {
-                        return std::make_unique<ThresholdFilterFactory>("", get_somatic_filter_expression(options),
-                                                                        "", get_refcall_filter_expression(options));
+                        result = std::make_unique<ThresholdFilterFactory>("", get_somatic_filter_expression(options),
+                                                                          "", get_refcall_filter_expression(options));
                     } else {
-                        return std::make_unique<ThresholdFilterFactory>("", germline_filter_expression,
-                                                                        "", get_somatic_filter_expression(options),
-                                                                        "", get_refcall_filter_expression(options));
+                        result = std::make_unique<ThresholdFilterFactory>("", germline_filter_expression,
+                                                                          "", get_somatic_filter_expression(options),
+                                                                          "", get_refcall_filter_expression(options));
                     }
                 } else if (caller == "trio") {
                     auto denovo_filter_expression = get_denovo_filter_expression(options);
                     if (options.at("denovos-only").as<bool>()) {
-                        return std::make_unique<ThresholdFilterFactory>("", denovo_filter_expression,
-                                                                        "", get_refcall_filter_expression(options),
-                                                                        true, ThresholdFilterFactory::Type::denovo);
+                        result = std::make_unique<ThresholdFilterFactory>("", denovo_filter_expression,
+                                                                          "", get_refcall_filter_expression(options),
+                                                                          true, ThresholdFilterFactory::Type::denovo);
                     } else {
-                        return std::make_unique<ThresholdFilterFactory>("", germline_filter_expression,
-                                                                        "", denovo_filter_expression,
-                                                                        "", get_refcall_filter_expression(options),
-                                                                        ThresholdFilterFactory::Type::denovo);
+                        result = std::make_unique<ThresholdFilterFactory>("", germline_filter_expression,
+                                                                          "", denovo_filter_expression,
+                                                                          "", get_refcall_filter_expression(options),
+                                                                          ThresholdFilterFactory::Type::denovo);
                     }
                 } else {
-                    return std::make_unique<ThresholdFilterFactory>(germline_filter_expression);
+                    result = std::make_unique<ThresholdFilterFactory>(germline_filter_expression);
                 }
             }
         }
+        if (result) {
+            VariantCallFilter::OutputOptions output_options {};
+            output_options.emit_sites_only = call_sites_only(options);
+            if (all_active_measure_annotations_requested(options)) {
+                output_options.annotate_all_active_measures = true;
+            } else {
+                auto annotations = get_requested_measure_annotations(options);
+                output_options.annotations.insert(std::begin(annotations), std::end(annotations));
+            }
+            result->set_output_options(std::move(output_options));
+        }
     }
-    return nullptr;
+    return result;
 }
 
 bool use_calling_read_pipe_for_call_filtering(const OptionMap& options) noexcept
@@ -2014,6 +2034,11 @@ boost::optional<fs::path> filter_request(const OptionMap& options)
         return resolve_path(options.at("filter-vcf").as<fs::path>(), options);
     }
     return boost::none;
+}
+
+bool annotate_filter_output(const OptionMap& options)
+{
+    return is_set("annotate-filtered-calls", options);
 }
 
 boost::optional<fs::path> bamout_request(const OptionMap& options)
