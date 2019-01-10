@@ -48,6 +48,12 @@ unsigned get_pool_size(VariantCallFilter::ConcurrencyPolicy policy)
     }
 }
 
+bool contains(const std::vector<MeasureWrapper>& measures, const std::string& name)
+{
+    return std::find_if(std::cbegin(measures), std::cend(measures),
+                        [&] (const auto& measure) { return measure.name() == name; }) != std::cend(measures);
+}
+
 } // namespace
 
 // public methods
@@ -73,6 +79,12 @@ VariantCallFilter::VariantCallFilter(FacetFactory facet_factory,
         }
     }
     duplicate_measures_.shrink_to_fit();
+    logging::WarningLogger warn_log {};
+    for (const auto& annotation : output_config_.annotations) {
+        if (!contains(measures_, annotation)) {
+            stream(warn_log) << "The measure " << annotation << " is not active and will not be reported";
+        }
+    }
 }
 
 inline VcfHeader read_header(const VcfWriter& writer)
@@ -299,7 +311,7 @@ void VariantCallFilter::write(const VcfRecord& call, const Classification& class
 
 bool VariantCallFilter::measure_annotations_requested() const noexcept
 {
-    return output_config_.annotate_all_measures || !output_config_.annotations.empty();
+    return output_config_.annotate_all_active_measures || !output_config_.annotations.empty();
 }
 
 void VariantCallFilter::annotate(VcfRecord::Builder& call, const MeasureVector& measures, const VcfHeader& header) const
@@ -358,7 +370,7 @@ VcfRecord::Builder VariantCallFilter::construct_template(const VcfRecord& call) 
 
 bool VariantCallFilter::is_requested_annotation(const MeasureWrapper& measure) const noexcept
 {
-    return output_config_.annotate_all_measures || output_config_.annotations.count(measure.name()) == 1;
+    return output_config_.annotate_all_active_measures || output_config_.annotations.count(measure.name()) == 1;
 }
 
 bool VariantCallFilter::is_hard_filtered(const Classification& classification) const noexcept

@@ -1936,7 +1936,7 @@ make_call_filter_factory(const ReferenceGenome& reference, ReadPipe& read_pipe, 
             VariantCallFilter::OutputOptions output_options {};
             output_options.emit_sites_only = call_sites_only(options);
             if (all_active_measure_annotations_requested(options)) {
-                output_options.annotate_all_measures = true;
+                output_options.annotate_all_active_measures = true;
             } else {
                 auto annotations = get_requested_measure_annotations(options);
                 output_options.annotations.insert(std::begin(annotations), std::end(annotations));

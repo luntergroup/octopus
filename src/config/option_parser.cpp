@@ -658,7 +658,7 @@ OptionMap parse_options(const int argc, const char** argv)
      "Keep a copy of unfiltered calls")
      
     ("annotations",
-     po::value<std::vector<std::string>>()->multitoken(),
+     po::value<std::vector<std::string>>()->multitoken()->implicit_value(std::vector<std::string> {"active"}, "active")->composing(),
      "Annotations to write to final VCF")
     
     ("filter-vcf",

@@ -42,7 +42,7 @@ public:
         bool emit_sites_only = false;
         bool clear_existing_filters = true;
         bool clear_info = false;
-        bool annotate_all_measures = false;
+        bool annotate_all_active_measures = false;
         std::unordered_set<std::string> annotations = {};
     };
     
