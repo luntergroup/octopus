@@ -1714,6 +1714,10 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
             vc_builder.set_refcall_type(CallerBuilder::RefCallType::positional);
         } else {
             vc_builder.set_refcall_type(CallerBuilder::RefCallType::blocked);
+            auto block_merge_threshold = options.at("refcall-block-merge-threshold").as<Phred<double>>();
+            if (block_merge_threshold.score() > 0) {
+                vc_builder.set_refcall_merge_block_threshold(block_merge_threshold);
+            }
         }
         auto min_refcall_posterior = options.at("min-refcall-posterior").as<Phred<double>>();
         vc_builder.set_min_refcall_posterior(min_refcall_posterior);

@@ -110,6 +110,7 @@ public:
     struct Parameters
     {
         RefCallType refcall_type;
+        boost::optional<Phred<double>> refcall_block_merge_threshold;
         bool call_sites_only;
         unsigned max_haplotypes;
         Phred<double> haplotype_extension_threshold, saturation_limit;
@@ -217,13 +218,18 @@ private:
     void set_phasing(std::vector<CallWrapper>& calls, const Latents& latents,
                      const std::vector<Haplotype>& haplotypes, const GenomicRegion& call_region) const;
     bool done_calling(const GenomicRegion& region) const noexcept;
+    bool is_merge_block_refcalling() const noexcept;
     std::vector<CallWrapper> call_reference(const GenomicRegion& region, const ReadMap& reads) const;
+    std::vector<CallWrapper> call_reference_helper(const std::vector<Allele>& alleles, const Latents& latents,
+                                                   const ReadPileupMap& pileups) const;
     std::vector<Allele>
     generate_reference_alleles(const GenomicRegion& region,
                                const std::vector<Variant>& candidates,
                                const std::vector<CallWrapper>& calls) const;
     std::vector<Allele> generate_reference_alleles(const GenomicRegion& region) const;
     ReadPileupMap make_pileups(const ReadMap& reads, const Latents& latents, const GenomicRegion& region) const;
+    std::vector<std::unique_ptr<ReferenceCall>>
+    squash_reference_calls(std::vector<std::unique_ptr<ReferenceCall>> refcalls) const;
 };
 
 } // namespace octopus

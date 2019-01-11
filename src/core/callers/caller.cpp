@@ -697,7 +697,7 @@ void Caller::call_variants(const GenomicRegion& active_region,
             const auto refcall_region = right_overhang_region(uncalled_region, completed_region);
             const auto pileups = make_pileups(reads, latents, refcall_region);
             auto alleles = generate_reference_alleles(refcall_region, active_candidates, calls);
-            auto reference_calls = wrap(call_reference(alleles, latents, pileups));
+            auto reference_calls = call_reference_helper(alleles, latents, pileups);
             const auto itr = utils::append(std::move(reference_calls), calls);
             std::inplace_merge(std::begin(calls), itr, std::end(calls));
         }
@@ -1026,6 +1026,11 @@ bool Caller::done_calling(const GenomicRegion& region) const noexcept
     return is_empty(region);
 }
 
+bool Caller::is_merge_block_refcalling() const noexcept
+{
+    return parameters_.refcall_type == RefCallType::blocked && parameters_.refcall_block_merge_threshold;
+}
+
 std::vector<CallWrapper> Caller::call_reference(const GenomicRegion& region, const ReadMap& reads) const
 {
     const auto active_reads = copy_overlapped(reads, region);
@@ -1042,7 +1047,17 @@ std::vector<CallWrapper> Caller::call_reference(const GenomicRegion& region, con
     const auto latents = infer_latents(haplotypes, haplotype_likelihoods);
     const auto pileups = make_pileups(active_reads, *latents, region);
     const auto alleles = generate_reference_alleles(region);
-    return wrap(call_reference(alleles, *latents, pileups));
+    return call_reference_helper(alleles, *latents, pileups);
+}
+
+std::vector<CallWrapper>
+Caller::call_reference_helper(const std::vector<Allele>& alleles, const Latents& latents, const ReadPileupMap& pileups) const
+{
+    if (is_merge_block_refcalling()) {
+        return wrap(squash_reference_calls(call_reference(alleles, latents, pileups)));
+    } else {
+        return wrap(call_reference(alleles, latents, pileups));
+    }
 }
 
 namespace {
@@ -1117,7 +1132,7 @@ Caller::generate_reference_alleles(const GenomicRegion& region,
                                    const std::vector<CallWrapper>& calls) const
 {
     auto refcall_regions = extract_uncalled_reference_regions(region, candidates, calls);
-    if (parameters_.refcall_type == RefCallType::positional) {
+    if (parameters_.refcall_type == RefCallType::positional || is_merge_block_refcalling()) {
         return make_positional_reference_alleles(std::move(refcall_regions), reference_);
     } else {
         return make_reference_alleles(std::move(refcall_regions), reference_);
@@ -1169,6 +1184,61 @@ Caller::ReadPileupMap Caller::make_pileups(const ReadMap& reads, const Latents& 
     for (const auto& sample : samples_) {
         const auto called_genotype = call_genotype(latents, sample);
         result.emplace(sample, octopus::make_pileups(reads.at(sample), called_genotype, region));
+    }
+    return result;
+}
+
+namespace {
+
+auto get_min_quality(const std::vector<std::unique_ptr<ReferenceCall>>& refcalls)
+{
+    auto itr = std::min_element(std::cbegin(refcalls), std::cend(refcalls),
+                                [] (const auto& lhs, const auto& rhs) { return lhs->quality() < rhs->quality(); });
+    return (*itr)->quality();
+}
+
+std::unique_ptr<ReferenceCall>
+concat(const std::vector<std::unique_ptr<ReferenceCall>>& refcalls, const std::vector<SampleName>& samples)
+{
+    assert(!refcalls.empty());
+    auto region = encompassing_region(refcalls.front()->mapped_region(), refcalls.back()->mapped_region());
+    Allele::NucleotideSequence sequence {};
+    sequence.reserve(size(region));
+    for (const auto& refcall : refcalls) {
+        sequence.insert(std::cend(sequence), std::cbegin(refcall->reference().sequence()), std::cend(refcall->reference().sequence()));
+    }
+    Allele reference {std::move(region), std::move(sequence)};
+    const auto quality = get_min_quality(refcalls);
+    std::map<SampleName, ReferenceCall::GenotypeCall> genotypes {};
+    for (const auto& sample : samples) {
+        const auto& genotype_call = refcalls.front()->get_genotype_call(sample);
+        genotypes.emplace(sample, ReferenceCall::GenotypeCall {genotype_call.genotype.ploidy(), genotype_call.posterior});
+    }
+    return std::make_unique<ReferenceCall>(std::move(reference), quality, std::move(genotypes));
+}
+
+bool are_similar_quality(const ReferenceCall& lhs, const ReferenceCall& rhs, const Phred<double> threshold) noexcept
+{
+    return std::abs(lhs.quality().score() - rhs.quality().score()) < threshold.score();
+}
+
+} // namespace
+
+std::vector<std::unique_ptr<ReferenceCall>>
+Caller::squash_reference_calls(std::vector<std::unique_ptr<ReferenceCall>> refcalls) const
+{
+    assert(parameters_.refcall_block_merge_threshold);
+    std::vector<std::unique_ptr<ReferenceCall>> result {}, buffer {};
+    result.reserve(refcalls.size());
+    buffer.reserve(refcalls.size());
+    for (auto& refcall : refcalls) {
+        if (buffer.empty() || (are_adjacent(*buffer.back(), *refcall)
+                && are_similar_quality(*buffer.front(), *refcall, *parameters_.refcall_block_merge_threshold))) {
+            buffer.push_back(std::move(refcall));
+        } else {
+            result.push_back(concat(buffer, samples_));
+            buffer.clear();
+        }
     }
     return result;
 }

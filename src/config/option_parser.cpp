@@ -463,7 +463,11 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<RefCallType>()->implicit_value(RefCallType::blocked),
      "Caller will report reference confidence calls for each position (positional),"
      " or in automatically sized blocks (blocked)")
-    
+     
+    ("refcall-block-merge-threshold",
+     po::value<Phred<double>>()->default_value(Phred<double> {10.0}),
+     "Threshold to merge adjacent refcall positions when using blocked refcalling")
+     
     ("min-refcall-posterior",
      po::value<Phred<double>>()->default_value(Phred<double> {2.0}),
      "Report reference alleles with posterior probability (phred scale) greater than this")

@@ -21,6 +21,7 @@ CallerBuilder::CallerBuilder(const ReferenceGenome& reference, const ReadPipe& r
 , factory_ {}
 {
     params_.general.refcall_type = Caller::RefCallType::none;
+    params_.general.refcall_block_merge_threshold = boost::none;
     params_.general.call_sites_only = false;
     params_.general.allow_model_filtering = false;
     params_.general.haplotype_extension_threshold = Phred<> {150.0};
@@ -95,6 +96,12 @@ CallerBuilder& CallerBuilder::set_caller(std::string caller)
 CallerBuilder& CallerBuilder::set_refcall_type(Caller::RefCallType type) noexcept
 {
     params_.general.refcall_type = type;
+    return *this;
+}
+
+CallerBuilder& CallerBuilder::set_refcall_merge_block_threshold(Phred<double> threshold) noexcept
+{
+    params_.general.refcall_block_merge_threshold = threshold;
     return *this;
 }
 
