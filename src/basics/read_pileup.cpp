@@ -6,6 +6,9 @@
 #include <iterator>
 #include <numeric>
 
+#include "utils/map_utils.hpp"
+#include "utils/append.hpp"
+
 namespace octopus {
 
 ReadPileup::ReadPileup(ContigRegion::Position position)
@@ -37,6 +40,11 @@ void ReadPileup::add(const AlignedRead& read)
     summaries_[copy_sequence(read, region)].push_back({copy_base_qualities(read, region), read.mapping_quality()});
 }
 
+std::vector<ReadPileup::NucleotideSequence> ReadPileup::sequences() const
+{
+    return extract_keys(summaries_);
+}
+
 const ReadPileup::ReadSummaries& ReadPileup::summaries(const NucleotideSequence& sequence) const
 {
     const auto itr = summaries_.find(sequence);
@@ -45,6 +53,37 @@ const ReadPileup::ReadSummaries& ReadPileup::summaries(const NucleotideSequence&
     } else {
         return summaries_.at("$");
     }
+}
+
+std::vector<ReadPileup::BaseQuality> ReadPileup::base_qualities() const
+{
+    std::vector<BaseQuality> result {};
+    result.reserve(depth());
+    for (const auto& p : summaries_) {
+        for (const auto& read : p.second) utils::append(read.base_qualities, result);
+    }
+    return result;
+}
+
+std::vector<ReadPileup::BaseQuality> ReadPileup::base_qualities(const NucleotideSequence& sequence) const
+{
+    std::vector<BaseQuality> result {};
+    const auto& summary = this->summaries(sequence);
+    result.reserve(summary.size());
+    for (const auto& read : summary) utils::append(read.base_qualities, result);
+    return result;
+}
+
+std::vector<ReadPileup::BaseQuality> ReadPileup::base_qualities_not(const NucleotideSequence& sequence) const
+{
+    std::vector<BaseQuality> result {};
+    result.reserve(depth());
+    for (const auto& p : summaries_) {
+        if (p.first != sequence && p.first != "$") {
+            for (const auto& read : p.second) utils::append(read.base_qualities, result);
+        }
+    }
+    return result;
 }
 
 unsigned ReadPileup::sum_base_qualities(const NucleotideSequence& sequence) const
