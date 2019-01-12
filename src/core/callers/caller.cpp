@@ -1229,6 +1229,7 @@ Caller::squash_reference_calls(std::vector<std::unique_ptr<ReferenceCall>> refca
 {
     assert(parameters_.refcall_block_merge_threshold);
     std::vector<std::unique_ptr<ReferenceCall>> result {}, buffer {};
+    if (refcalls.empty()) return result;
     result.reserve(refcalls.size());
     buffer.reserve(refcalls.size());
     for (auto& refcall : refcalls) {
@@ -1238,8 +1239,10 @@ Caller::squash_reference_calls(std::vector<std::unique_ptr<ReferenceCall>> refca
         } else {
             result.push_back(concat(buffer, samples_));
             buffer.clear();
+            buffer.push_back(std::move(refcall));
         }
     }
+    result.push_back(concat(buffer, samples_));
     return result;
 }
 
