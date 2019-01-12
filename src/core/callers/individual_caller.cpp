@@ -15,17 +15,18 @@
 #include <iostream>
 
 #include "basics/genomic_region.hpp"
+#include "containers/probability_matrix.hpp"
 #include "core/types/allele.hpp"
 #include "core/types/variant.hpp"
-#include "utils/maths.hpp"
-#include "utils/mappable_algorithms.hpp"
-#include "utils/read_stats.hpp"
-#include "containers/probability_matrix.hpp"
-#include "logging/logging.hpp"
 #include "core/types/calls/germline_variant_call.hpp"
 #include "core/types/calls/reference_call.hpp"
 #include "core/models/genotype/uniform_genotype_prior_model.hpp"
 #include "core/models/genotype/coalescent_genotype_prior_model.hpp"
+#include "utils/maths.hpp"
+#include "utils/mappable_algorithms.hpp"
+#include "utils/read_stats.hpp"
+#include "utils/append.hpp"
+#include "logging/logging.hpp"
 
 namespace octopus {
 
@@ -433,8 +434,35 @@ auto compute_homozygous_posterior(const Allele& allele,
     if (has_variation(allele, genotype_posteriors)) {
         return marginalise_homozygous(allele, genotype_posteriors);
     } else {
-        const auto coverage = mean_depth(pileups, mapped_region(allele));
-        return Phred<double> {2 * static_cast<double>(coverage)};
+        const auto overlapped_pileups = overlap_range(pileups, contig_region(allele));
+        std::vector<AlignedRead::BaseQuality> reference_qualities {}, non_reference_qualities {};
+        Allele::NucleotideSequence reference_sequence {};
+        std::size_t reference_idx {0};
+        for (const ReadPileup& pileup : overlapped_pileups) {
+            reference_sequence.assign(1, allele.sequence()[reference_idx++]);
+            utils::append(pileup.base_qualities(reference_sequence), reference_qualities);
+            utils::append(pileup.base_qualities_not(reference_sequence), non_reference_qualities);
+        }
+        for (auto& q : reference_qualities) q = std::max(q, AlignedRead::BaseQuality {1});
+        for (auto& q : non_reference_qualities) q = std::max(q, AlignedRead::BaseQuality {1});
+        const auto depth = reference_qualities.size() + non_reference_qualities.size();
+        std::vector<double> reference_ln_likelihoods(depth), non_reference_ln_likelihoods(depth);
+        const auto phred_to_ln = [] (auto phred) { return phred * -maths::constants::ln10Div10<>; };
+        const auto phred_to_not_ln = [] (auto phred) { return std::log(1.0 - std::pow(10.0, -phred / 10.0)); };
+        auto itr = std::transform(std::cbegin(reference_qualities), std::cend(reference_qualities),
+                                  std::begin(reference_ln_likelihoods), phred_to_not_ln);
+        std::transform(std::cbegin(non_reference_qualities), std::cend(non_reference_qualities), itr, phred_to_ln);
+        itr = std::transform(std::cbegin(reference_qualities), std::cend(reference_qualities),
+                             std::begin(non_reference_ln_likelihoods), phred_to_ln);
+        std::transform(std::cbegin(non_reference_qualities), std::cend(non_reference_qualities), itr, phred_to_not_ln);
+        
+        auto hom_ref_ln_likelihood = std::accumulate(std::cbegin(reference_ln_likelihoods), std::cend(reference_ln_likelihoods), 0.0);
+        auto het_alt_ln_likelihood = std::inner_product(std::cbegin(reference_ln_likelihoods), std::cend(reference_ln_likelihoods),
+                                                        std::cbegin(non_reference_ln_likelihoods), 0.0, std::plus<> {},
+                                                        [] (auto ref, auto alt) { return maths::log_sum_exp(ref, alt) - std::log(2); });
+        const auto hom_ref_ln_posterior = hom_ref_ln_likelihood - maths::log_sum_exp(hom_ref_ln_likelihood, het_alt_ln_likelihood);
+        
+        return probability_to_phred(1.0 - std::exp(hom_ref_ln_posterior));
     }
 }
 
