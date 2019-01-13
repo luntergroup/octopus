@@ -384,7 +384,7 @@ Caller::call_variants(const GenomicRegion& call_region, const MappableFlatSet<Va
         }
         if (status != GeneratorStatus::skipped) {
             call_variants(active_region, call_region, next_active_region, backtrack_region,
-                          candidates, haplotypes, haplotype_likelihoods, active_reads, *caller_latents,
+                          candidates, haplotypes, haplotype_likelihoods, reads, *caller_latents,
                           result, prev_called_region, completed_region);
         }
         haplotype_likelihoods.clear();
@@ -1171,10 +1171,22 @@ auto make_pileups(const std::vector<AlignedRead>& reads, const Genotype<Haplotyp
     return result;
 }
 
-auto make_pileups(const ReadContainer& reads, const Genotype<Haplotype>& genotype, const GenomicRegion& region)
+ReadPileups make_pileups(const ReadContainer& reads, const Genotype<Haplotype>& genotype, const GenomicRegion& region)
 {
-    const std::vector<AlignedRead> copy {std::cbegin(reads), std::cend(reads)};
-    return make_pileups(copy, genotype, region);
+    const auto overlapped_reads = overlap_range(reads, region);
+    const std::vector<AlignedRead> active_reads {std::cbegin(overlapped_reads), std::cend(overlapped_reads)};
+    if (!active_reads.empty()) {
+        const auto active_reads_region = encompassing_region(active_reads);
+        const auto min_genotype_region = expand(active_reads_region, max_read_length(active_reads));
+        if (contains(genotype, min_genotype_region)) {
+            return make_pileups(active_reads, genotype, region);
+        } else {
+            const auto expanded_genotype = remap(genotype, min_genotype_region);
+            return make_pileups(active_reads, expanded_genotype, region);
+        }
+    } else {
+        return make_pileups(active_reads, genotype, region);
+    }
 }
 
 Caller::ReadPileupMap Caller::make_pileups(const ReadMap& reads, const Latents& latents, const GenomicRegion& region) const
