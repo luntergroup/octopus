@@ -232,17 +232,22 @@ typename Container::value_type random_member(const Container& values)
 } // namespace detail
 
 template <typename SequenceType>
-void disambiguate_iupac_bases(SequenceType& sequence)
+void disambiguate_iupac_bases(SequenceType& sequence, const bool allow_ns = false)
 {
-    std::transform(std::begin(sequence), std::end(sequence), std::begin(sequence),
-                   [] (auto base) { return detail::disambiguate_iupac_base(base); });
+    if (allow_ns) {
+        std::transform(std::begin(sequence), std::end(sequence), std::begin(sequence),
+                       [] (auto base) { return base == 'N' ? base : detail::disambiguate_iupac_base(base); });
+    } else {
+        std::transform(std::begin(sequence), std::end(sequence), std::begin(sequence),
+                       [] (auto base) { return detail::disambiguate_iupac_base(base); });
+    }
 }
 
 template <typename SequenceType>
-SequenceType disambiguate_iupac_bases_copy(const SequenceType& sequence)
+SequenceType disambiguate_iupac_bases_copy(const SequenceType& sequence, const bool allow_ns = false)
 {
     auto result = sequence;
-    disambiguate_iupac_bases(result);
+    disambiguate_iupac_bases(result, allow_ns);
     return result;
 }
 

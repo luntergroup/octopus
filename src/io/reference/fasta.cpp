@@ -182,7 +182,7 @@ Fasta::GeneticSequence Fasta::do_fetch_sequence(const GenomicRegion& region) con
             utils::capitalise(result);
         }
         if (options_.iupac_ambiguity_symbol_policy == Options::IUPACAmbiguitySymbolPolicy::disambiguate) {
-            utils::disambiguate_iupac_bases(result);
+            utils::disambiguate_iupac_bases(result, true);
         }
         if (result.size() < size(region)) {
             if (options_.base_fill_policy == Options::BaseFillPolicy::throw_exception) {
