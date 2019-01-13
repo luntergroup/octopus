@@ -202,6 +202,13 @@ bool is_homozygous(const Genotype<Haplotype>& genotype, const Allele& allele)
     return copy<Allele>(genotype, mapped_region(allele)).count(allele) == genotype.ploidy();
 }
 
+Genotype<Haplotype> remap(const Genotype<Haplotype>& genotype, const GenomicRegion& region)
+{
+    Genotype<Haplotype> result {genotype.ploidy()};
+    for (const auto& haplotype : genotype) result.emplace(remap(haplotype, region));
+    return result;
+}
+
 std::size_t num_genotypes(const unsigned num_elements, const unsigned ploidy)
 {
     return boost::math::binomial_coefficient<double>(num_elements + ploidy - 1, num_elements - 1);

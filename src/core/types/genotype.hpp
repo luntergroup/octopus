@@ -535,6 +535,8 @@ bool is_homozygous(const Genotype<MappableType>& genotype, const MappableType& e
 
 bool is_homozygous(const Genotype<Haplotype>& genotype, const Allele& allele);
 
+Genotype<Haplotype> remap(const Genotype<Haplotype>& genotype, const GenomicRegion& region);
+
 template <typename MappableType>
 bool operator==(const Genotype<MappableType>& lhs, const Genotype<MappableType>& rhs)
 {
