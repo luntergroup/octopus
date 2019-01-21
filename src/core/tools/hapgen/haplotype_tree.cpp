@@ -14,6 +14,7 @@
 #include <boost/graph/depth_first_search.hpp>
 #include <boost/graph/visitors.hpp>
 #include <boost/graph/copy.hpp>
+#include <boost/graph/graphviz.hpp>
 
 #include "io/reference/reference_genome.hpp"
 #include "utils/mappable_algorithms.hpp"
@@ -157,8 +158,8 @@ bool HaplotypeTree::is_unique(const Haplotype& haplotype) const
 
 HaplotypeTree& HaplotypeTree::extend(const ContigAllele& allele)
 {
-    for (auto it = std::cbegin(haplotype_leafs_), end = std::cend(haplotype_leafs_); it != end; ++it) {
-        it = extend_haplotype(it, allele);
+    for (auto leaf_itr = std::cbegin(haplotype_leafs_); leaf_itr != std::cend(haplotype_leafs_); ++leaf_itr) {
+        leaf_itr = extend_haplotype(leaf_itr, allele);
     }
     haplotype_leaf_cache_.clear();
     tree_region_ = boost::none;
@@ -449,10 +450,49 @@ void HaplotypeTree::clear() noexcept
     tree_region_ = boost::none;
 }
 
+void HaplotypeTree::write_dot(std::ostream& out) const
+{
+    const auto vertex_writer = [this] (std::ostream& out, const Vertex v) {
+        const Allele allele {GenomicRegion {contig_, tree_[v].mapped_region()}, tree_[v].sequence()};
+        if (v == root_) {
+            out << " [shape=circle,color=black]" << std::endl;
+        } else {
+            if (is_reference(allele, reference_.get())) {
+                out << " [shape=box,color=gray]" << std::endl;
+            } else {
+                if (is_indel(allele) || allele.sequence().empty()) {
+                    out << " [shape=box,color=purple]" << std::endl;
+                } else {
+                    switch (allele.sequence().front()) {
+                        case 'A':  out << " [shape=box,color=green]" << std::endl; break;
+                        case 'C':  out << " [shape=box,color=blue]" << std::endl; break;
+                        case 'G':  out << " [shape=box,color=brown]" << std::endl; break;
+                        case 'T':  out << " [shape=box,color=red]" << std::endl; break;
+                        default: out << " [shape=box,color=gray]" << std::endl;
+                    }
+                }
+            }
+            out << " [label=\"" << allele << "\"]" << std::endl;
+        }
+    };
+    const auto edge_writer = [] (std::ostream& out, const Edge e) {
+        out << "[color=black]" << std::endl;
+    };
+    const auto graph_writer = [] (std::ostream& out) {
+        out << "rankdir=LR" << std::endl;
+    };
+    std::unordered_map<Vertex, std::size_t> vertex_ids {};
+    vertex_ids.reserve(boost::num_vertices(tree_));
+    const auto p = boost::vertices(tree_); std::size_t idx {0};
+    std::for_each(p.first, p.second, [&] (Vertex v) { vertex_ids.emplace(v, idx++); });
+    boost::write_graphviz(out, tree_, vertex_writer, edge_writer, graph_writer, boost::make_assoc_property_map(vertex_ids));
+}
+
 // Private methods
 
 HaplotypeTree::Vertex HaplotypeTree::get_previous_allele(const Vertex allele) const
 {
+    assert(allele != root_);
     const auto p = boost::inv_adjacent_vertices(allele, tree_);
     assert(std::distance(p.first, p.second) == 1);
     return *p.first;
@@ -481,13 +521,10 @@ HaplotypeTree::Vertex HaplotypeTree::remove_backward(const Vertex v)
     return u;
 }
 
-bool HaplotypeTree::allele_exists(Vertex leaf, const ContigAllele& allele) const
+bool HaplotypeTree::allele_exists(const Vertex leaf, const ContigAllele& allele) const
 {
-    const auto vertex_range = boost::adjacent_vertices(leaf, tree_);
-    return std::any_of(vertex_range.first, vertex_range.second,
-                       [this, &allele] (const Vertex vertex) {
-                           return tree_[vertex] == allele;
-                       });
+    const auto p = boost::adjacent_vertices(leaf, tree_);
+    return std::any_of(p.first, p.second, [this, &allele] (const Vertex v) { return tree_[v] == allele; });
 }
 
 HaplotypeTree::Vertex HaplotypeTree::find_allele_before(Vertex v, const ContigAllele& allele) const
@@ -509,22 +546,23 @@ HaplotypeTree::extend_haplotype(LeafIterator leaf_itr, const ContigAllele& new_a
         const auto new_leaf = boost::add_vertex(new_allele, tree_);
         boost::add_edge(*leaf_itr, new_leaf, tree_);
         leaf_itr = haplotype_leafs_.erase(leaf_itr);
-        return haplotype_leafs_.insert(leaf_itr, new_leaf);
-    }
-    const auto& leaf_allele = tree_[*leaf_itr];
-    if (can_add_to_branch(new_allele, leaf_allele)) {
-        if (is_after(new_allele, leaf_allele)) {
-            const auto new_leaf = boost::add_vertex(new_allele, tree_);
-            boost::add_edge(*leaf_itr, new_leaf, tree_);
-            leaf_itr = haplotype_leafs_.erase(leaf_itr);
-            leaf_itr = haplotype_leafs_.insert(leaf_itr, new_leaf);
-        } else if (overlaps(new_allele, tree_[*leaf_itr])) {
-            const auto branch_point = find_allele_before(*leaf_itr, new_allele);
-            if ((branch_point == root_ || can_add_to_branch(new_allele, tree_[branch_point]))
-                && !allele_exists(branch_point, new_allele)) {
+        leaf_itr = haplotype_leafs_.insert(leaf_itr, new_leaf);
+    } else {
+        const auto& leaf_allele = tree_[*leaf_itr];
+        if (can_add_to_branch(new_allele, leaf_allele)) {
+            if (is_after(new_allele, leaf_allele)) {
                 const auto new_leaf = boost::add_vertex(new_allele, tree_);
-                boost::add_edge(branch_point, new_leaf, tree_);
-                haplotype_leafs_.insert(leaf_itr, new_leaf);
+                boost::add_edge(*leaf_itr, new_leaf, tree_);
+                leaf_itr = haplotype_leafs_.erase(leaf_itr);
+                leaf_itr = haplotype_leafs_.insert(leaf_itr, new_leaf);
+            } else if (overlaps(new_allele, leaf_allele)) {
+                const auto branch_point = find_allele_before(*leaf_itr, new_allele);
+                if ((branch_point == root_ || can_add_to_branch(new_allele, tree_[branch_point]))
+                    && !allele_exists(branch_point, new_allele)) {
+                    const auto new_leaf = boost::add_vertex(new_allele, tree_);
+                    boost::add_edge(branch_point, new_leaf, tree_);
+                    haplotype_leafs_.insert(leaf_itr, new_leaf);
+                }
             }
         }
     }
@@ -794,6 +832,12 @@ minmax_haplotype_lengths(const HaplotypeTree& tree, const GenomicRegion& region)
 }
 
 namespace debug {
+
+void write_dot(const HaplotypeTree& tree, const boost::filesystem::path& dest)
+{
+    std::ofstream file {dest.string()};
+    tree.write_dot(file);
+}
 
 template <typename G, typename V, typename Container>
 bool is_tree(const G& graph, const V& root, const Container& leafs)

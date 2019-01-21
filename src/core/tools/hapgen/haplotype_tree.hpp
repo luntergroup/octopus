@@ -18,6 +18,7 @@
 
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/optional.hpp>
+#include <boost/filesystem.hpp>
 
 #include "basics/genomic_region.hpp"
 #include "core/types/allele.hpp"
@@ -84,6 +85,8 @@ public:
     void clear(const GenomicRegion& region);
     
     void clear() noexcept;
+    
+    void write_dot(std::ostream& out) const;
     
 private:
     using Tree = boost::adjacency_list<
@@ -312,6 +315,12 @@ std::pair<HaplotypeTree::HaplotypeLength, HaplotypeTree::HaplotypeLength>
 minmax_haplotype_lengths(const HaplotypeTree& tree);
 std::pair<HaplotypeTree::HaplotypeLength, HaplotypeTree::HaplotypeLength>
 minmax_haplotype_lengths(const HaplotypeTree& tree, const GenomicRegion& region);
+
+namespace debug {
+
+void write_dot(const HaplotypeTree& tree, const boost::filesystem::path& dest);
+
+} // namespace debug
 
 } // namespace coretools
 } // namespace octopus
