@@ -94,6 +94,7 @@ public:
     
     std::size_t get_hash() const noexcept;
     
+    friend struct StrictLess;
     friend struct HaveSameAlleles;
     friend struct IsLessComplex;
     
@@ -102,7 +103,6 @@ public:
     friend bool is_reference(const Haplotype& haplotype);
     friend Haplotype expand(const Haplotype& haplotype, MappingDomain::Position n);
     friend Haplotype remap(const Haplotype& haplotype, const GenomicRegion& region);
-    friend bool operator<(const Haplotype& lhs, const Haplotype& rhs);
     
     template <typename S> friend void debug::print_alleles(S&&, const Haplotype&);
     template <typename S> friend void debug::print_variant_alleles(S&&, const Haplotype&);
@@ -306,12 +306,17 @@ private:
     boost::optional<Haplotype> reference_;
 };
 
+struct StrictLess
+{
+    bool operator()(const Haplotype& lhs, const Haplotype& rhs) const;
+};
+
 // Removes all duplicates haplotypes (w.r.t operator==) keeping the duplicate which is considered least complex w.r.t cmp.
 template <typename Cmp>
 unsigned remove_duplicates(std::vector<Haplotype>& haplotypes, const Cmp& cmp)
 {
     using std::begin; using std::end;
-    std::sort(begin(haplotypes), end(haplotypes));
+    std::sort(begin(haplotypes), end(haplotypes), StrictLess {});
     auto first_dup_itr  = begin(haplotypes);
     const auto last_itr = end(haplotypes);
     while (true) {

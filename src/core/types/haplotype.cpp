@@ -637,15 +637,7 @@ bool operator==(const Haplotype& lhs, const Haplotype& rhs)
 
 bool operator<(const Haplotype& lhs, const Haplotype& rhs)
 {
-    if (lhs.mapped_region() == rhs.mapped_region()) {
-        if (lhs.sequence() != rhs.sequence()) {
-            return lhs.sequence() < rhs.sequence();
-        } else {
-            return lhs.explicit_alleles_ < rhs.explicit_alleles_;
-        }
-    } else {
-        return lhs.mapped_region() < rhs.mapped_region();
-    }
+    return lhs.mapped_region() == rhs.mapped_region() ? lhs.sequence() < rhs.sequence() : lhs.mapped_region() < rhs.mapped_region();
 }
 
 bool HaveSameAlleles::operator()(const Haplotype &lhs, const Haplotype &rhs) const
@@ -689,6 +681,19 @@ bool IsLessComplex::operator()(const Haplotype& lhs, const Haplotype& rhs) const
     return score >= 0;
 }
 
+bool StrictLess::operator()(const Haplotype& lhs, const Haplotype& rhs) const
+{
+    if (lhs.mapped_region() == rhs.mapped_region()) {
+        if (lhs.sequence() != rhs.sequence()) {
+            return lhs.sequence() < rhs.sequence();
+        } else {
+            return lhs.explicit_alleles_ < rhs.explicit_alleles_;
+        }
+    } else {
+        return lhs.mapped_region() < rhs.mapped_region();
+    }
+}
+
 unsigned remove_duplicates(std::vector<Haplotype>& haplotypes)
 {
     return remove_duplicates(haplotypes, IsLessComplex {});
@@ -703,7 +708,7 @@ unsigned remove_duplicates(std::vector<Haplotype>& haplotypes, Haplotype referen
 unsigned unique_least_complex(std::vector<Haplotype>& haplotypes, boost::optional<Haplotype> reference)
 {
     using std::begin; using std::end;
-    std::sort(begin(haplotypes), end(haplotypes));
+    std::sort(begin(haplotypes), end(haplotypes), StrictLess {});
     auto first_dup  = begin(haplotypes);
     const auto last = end(haplotypes);
     const IsLessComplex cmp {std::move(reference)};
