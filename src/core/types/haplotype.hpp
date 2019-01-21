@@ -102,6 +102,7 @@ public:
     friend bool is_reference(const Haplotype& haplotype);
     friend Haplotype expand(const Haplotype& haplotype, MappingDomain::Position n);
     friend Haplotype remap(const Haplotype& haplotype, const GenomicRegion& region);
+    friend bool operator<(const Haplotype& lhs, const Haplotype& rhs);
     
     template <typename S> friend void debug::print_alleles(S&&, const Haplotype&);
     template <typename S> friend void debug::print_variant_alleles(S&&, const Haplotype&);

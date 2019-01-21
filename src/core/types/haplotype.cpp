@@ -637,8 +637,15 @@ bool operator==(const Haplotype& lhs, const Haplotype& rhs)
 
 bool operator<(const Haplotype& lhs, const Haplotype& rhs)
 {
-    return (lhs.mapped_region() == rhs.mapped_region()) ? lhs.sequence() < rhs.sequence() :
-            lhs.mapped_region() < rhs.mapped_region();
+    if (lhs.mapped_region() == rhs.mapped_region()) {
+        if (lhs.sequence() != rhs.sequence()) {
+            return lhs.sequence() < rhs.sequence();
+        } else {
+            return lhs.explicit_alleles_ < rhs.explicit_alleles_;
+        }
+    } else {
+        return lhs.mapped_region() < rhs.mapped_region();
+    }
 }
 
 bool HaveSameAlleles::operator()(const Haplotype &lhs, const Haplotype &rhs) const
