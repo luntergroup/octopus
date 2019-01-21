@@ -131,7 +131,7 @@ void LocalReassembler::Bin::clear() noexcept
 
 std::size_t LocalReassembler::Bin::size() const noexcept
 {
-    return forward_read_sequences.size() && reverse_read_sequences.size();
+    return forward_read_sequences.size() + reverse_read_sequences.size();
 }
 
 bool LocalReassembler::Bin::empty() const noexcept
