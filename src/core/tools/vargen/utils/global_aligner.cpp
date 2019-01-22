@@ -38,8 +38,8 @@ auto init_dp_matrix(const std::string& target, const std::string& query, const M
     DPMatrix result(target.size() + 1, DPMatrix::value_type(query.size() + 1));
     result[0][0] = Cell {};
     using S = decltype(Cell::match);
-    const auto min_score = std::min({model.mismatch, model.gap_open});
-    const auto inf = min_score * std::max(ncols(result), nrows(result));
+    const S min_score {std::min({model.mismatch, model.gap_open})};
+    const S inf {min_score * static_cast<S>(std::max({ncols(result), nrows(result)}))};
     for (std::size_t i {1}; i < ncols(result); ++i) {
         result[i][0].match     = inf;
         result[i][0].insertion = inf;
