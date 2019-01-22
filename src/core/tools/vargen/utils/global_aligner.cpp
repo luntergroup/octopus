@@ -17,7 +17,8 @@ namespace {
 
 struct Cell
 {
-    int match = 0, insertion = 0, deletion = 0;
+    using ScoreType = int;
+    ScoreType match = 0, insertion = 0, deletion = 0;
 };
 
 using DPMatrix = std::vector<std::vector<Cell>>;
@@ -37,17 +38,17 @@ auto init_dp_matrix(const std::string& target, const std::string& query, const M
     assert(!(target.empty() || query.empty()));
     DPMatrix result(target.size() + 1, DPMatrix::value_type(query.size() + 1));
     result[0][0] = Cell {};
-    using S = decltype(Cell::match);
-    const S min_score {std::min({model.mismatch, model.gap_open})};
-    const S inf {min_score * static_cast<S>(std::max({ncols(result), nrows(result)}))};
+    using ScoreType = Cell::ScoreType;
+    const ScoreType min_score {std::min({model.mismatch, model.gap_open})};
+    const ScoreType inf {min_score * static_cast<ScoreType>(std::max({ncols(result), nrows(result)}))};
     for (std::size_t i {1}; i < ncols(result); ++i) {
         result[i][0].match     = inf;
         result[i][0].insertion = inf;
-        result[i][0].deletion  = model.gap_open + static_cast<S>(i - 1) * model.gap_extend;
+        result[i][0].deletion  = model.gap_open + static_cast<ScoreType>(i - 1) * model.gap_extend;
     }
     for (std::size_t j {1}; j < nrows(result); ++j) {
         result[0][j].match     = inf;
-        result[0][j].insertion = model.gap_open + static_cast<S>(j - 1) * model.gap_extend;
+        result[0][j].insertion = model.gap_open + static_cast<ScoreType>(j - 1) * model.gap_extend;
         result[0][j].deletion  = inf;
     }
     return result;

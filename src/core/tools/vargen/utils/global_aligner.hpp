@@ -12,10 +12,11 @@ namespace octopus { namespace coretools {
 
 struct Model
 {
-    short match      =  2;
-    short mismatch   = -3;
-    short gap_open   = -8;
-    short gap_extend = -1;
+    using ScoreType = short;
+    ScoreType match      =  2;
+    ScoreType mismatch   = -3;
+    ScoreType gap_open   = -8;
+    ScoreType gap_extend = -1;
 };
 
 struct Alignment
