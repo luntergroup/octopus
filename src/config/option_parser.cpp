@@ -184,13 +184,17 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<fs::path>(),
      "Output realigned BAM files")
     
-     ("split-bamout",
-      po::value<fs::path>(),
-      "Output split realigned BAM files")
+    ("split-bamout",
+     po::value<fs::path>(),
+     "Output split realigned BAM files")
     
-     ("data-profile",
-      po::value<fs::path>(),
-      "Output a profile of polymorphisms and errors found in the data")
+    ("full-bamout",
+     po::bool_switch()->default_value(false),
+     "Output all reads when producing realigned bam outputs rather than just variant read minibams")
+     
+    ("data-profile",
+     po::value<fs::path>(),
+     "Output a profile of polymorphisms and errors found in the data")
     ;
     
     po::options_description transforms("Read transformations");

@@ -88,6 +88,7 @@ bool annotate_filter_output(const OptionMap& options);
 
 boost::optional<fs::path> bamout_request(const OptionMap& options);
 boost::optional<fs::path> split_bamout_request(const OptionMap& options);
+bool full_bamouts_requested(const OptionMap& options);
 
 unsigned estimate_max_open_files(const OptionMap& options);
 

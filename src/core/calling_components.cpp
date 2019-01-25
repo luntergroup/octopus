@@ -168,6 +168,11 @@ boost::optional<GenomeCallingComponents::Path> GenomeCallingComponents::split_ba
     return components_.split_bamout;
 }
 
+bool GenomeCallingComponents::write_full_bamouts() const noexcept
+{
+    return components_.write_full_bamouts;
+}
+
 boost::optional<GenomeCallingComponents::Path> GenomeCallingComponents::data_profile() const
 {
     return components_.data_profile;
@@ -501,6 +506,7 @@ GenomeCallingComponents::Components::Components(ReferenceGenome&& reference, Rea
 , filter_request {}
 , bamout {options::bamout_request(options)}
 , split_bamout {options::split_bamout_request(options)}
+, write_full_bamouts {options::full_bamouts_requested(options)}
 , data_profile {options::data_profile_request(options)}
 {
     drop_unused_samples(this->samples, this->read_manager);

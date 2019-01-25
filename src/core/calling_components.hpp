@@ -72,6 +72,7 @@ public:
     boost::optional<Path> filter_request() const;
     boost::optional<Path> bamout() const;
     boost::optional<Path> split_bamout() const;
+    bool write_full_bamouts() const noexcept;
     boost::optional<Path> data_profile() const;
     
 private:
@@ -108,7 +109,9 @@ private:
         bool sites_only;
         boost::optional<Path> legacy;
         boost::optional<Path> filter_request;
-        boost::optional<Path> bamout, split_bamout, data_profile;
+        boost::optional<Path> bamout, split_bamout;
+        bool write_full_bamouts;
+        boost::optional<Path> data_profile;
         // Components that require temporary directory during construction appear last to make
         // exception handling easier.
         boost::optional<Path> temp_directory;
