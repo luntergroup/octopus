@@ -414,7 +414,7 @@ std::size_t calculate_max_num_reads(MemoryFootprint max_buffer_size, const boost
         }
         max_buffer_size = min_buffer_size;
     }
-    return max_buffer_size.num_bytes() / estimate_read_size(profile);
+    return max_buffer_size.bytes() / estimate_read_size(profile);
 }
 
 auto add_identifier(const fs::path& base, const std::string& identifier)

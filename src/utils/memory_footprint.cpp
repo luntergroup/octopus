@@ -18,12 +18,12 @@ namespace octopus {
 
 bool operator==(const MemoryFootprint& lhs, const MemoryFootprint& rhs) noexcept
 {
-    return lhs.num_bytes() == rhs.num_bytes();
+    return lhs.bytes() == rhs.bytes();
 }
 
 bool operator<(const MemoryFootprint& lhs, const MemoryFootprint& rhs) noexcept
 {
-    return lhs.num_bytes() < rhs.num_bytes();
+    return lhs.bytes() < rhs.bytes();
 }
 
 namespace {
@@ -204,10 +204,10 @@ std::ostream& operator<<(std::ostream& os, MemoryFootprint footprint)
 {
     const auto units = get_human_format_units(footprint);
     const auto multiplier = get_multiplier(units);
-    if (footprint.num_bytes() % multiplier == 0) {
-        os << footprint.num_bytes() / multiplier;
+    if (footprint.bytes() % multiplier == 0) {
+        os << footprint.bytes() / multiplier;
     } else {
-        os << static_cast<double>(footprint.num_bytes()) / multiplier;
+        os << static_cast<double>(footprint.bytes()) / multiplier;
     }
     os << to_string(units);
     return os;

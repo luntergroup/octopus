@@ -20,7 +20,7 @@ class MemoryFootprint : public Comparable<MemoryFootprint>
 public:
     MemoryFootprint() = default;
     
-    constexpr MemoryFootprint(std::size_t num_bytes) noexcept : num_bytes_ {num_bytes} {}
+    constexpr MemoryFootprint(std::size_t bytes) noexcept : bytes_ {bytes} {}
     
     MemoryFootprint(const MemoryFootprint&)            = default;
     MemoryFootprint& operator=(const MemoryFootprint&) = default;
@@ -29,7 +29,7 @@ public:
     
     ~MemoryFootprint() = default;
     
-    constexpr std::size_t num_bytes() const noexcept { return num_bytes_; }
+    constexpr std::size_t bytes() const noexcept { return bytes_; }
     
 private:
     std::size_t num_bytes_;
@@ -51,7 +51,7 @@ template <> struct hash<octopus::MemoryFootprint>
 {
     size_t operator()(const octopus::MemoryFootprint& fp) const noexcept
     {
-        return hash<decltype(fp.num_bytes())>()(fp.num_bytes());
+        return hash<decltype(fp.bytes())>()(fp.bytes());
     }
 };
 

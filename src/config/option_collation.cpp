@@ -290,7 +290,7 @@ ReferenceGenome make_reference(const OptionMap& options)
     auto resolved_path = resolve_path(input_path, options);
     auto ref_cache_size = options.at("max-reference-cache-footprint").as<MemoryFootprint>();
     static constexpr MemoryFootprint min_non_zero_reference_cache_size {1'000}; // 1Kb
-    if (ref_cache_size.num_bytes() > 0 && ref_cache_size < min_non_zero_reference_cache_size) {
+    if (ref_cache_size.bytes() > 0 && ref_cache_size < min_non_zero_reference_cache_size) {
         static bool warned {false};
         if (!warned) {
             logging::WarningLogger warn_log {};
@@ -301,7 +301,7 @@ ReferenceGenome make_reference(const OptionMap& options)
         ref_cache_size = 0;
     }
     static constexpr MemoryFootprint min_warn_non_zero_reference_cache_size {1'000'000}; // 1Mb
-    if (ref_cache_size.num_bytes() > 0 && ref_cache_size < min_warn_non_zero_reference_cache_size) {
+    if (ref_cache_size.bytes() > 0 && ref_cache_size < min_warn_non_zero_reference_cache_size) {
         static bool warned {false};
         if (!warned) {
             logging::WarningLogger warn_log {};
@@ -1680,7 +1680,7 @@ auto get_target_working_memory(const OptionMap& options)
         if (!num_threads) {
             num_threads = std::thread::hardware_concurrency();
         }
-        result = MemoryFootprint {std::max(result->num_bytes() / *num_threads, min_target_memory.num_bytes())};
+        result = MemoryFootprint {std::max(result->bytes() / *num_threads, min_target_memory.bytes())};
     }
     return result;
 }
