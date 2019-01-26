@@ -1553,6 +1553,7 @@ void run_bam_realign(GenomeCallingComponents& components)
             components.read_manager().close();
             BAMRealigner::Config config {};
             config.copy_hom_ref_reads = components.write_full_bamouts();
+            config.max_buffer = components.read_buffer_footprint();
             if (components.read_manager().paths().size() == 1) {
                 realign(components.read_manager().paths().front(), get_bam_realignment_vcf(components),
                         *components.bamout(), components.reference(), config);
@@ -1590,6 +1591,7 @@ void run_bam_realign(GenomeCallingComponents& components)
             components.read_manager().close();
             BAMRealigner::Config config {};
             config.copy_hom_ref_reads = components.write_full_bamouts();
+            config.max_buffer = components.read_buffer_footprint();
             if (components.read_manager().paths().size() == 1) {
                 auto out_paths = get_haplotype_bam_paths(*components.split_bamout(), get_max_ploidy(components));
                 realign(components.read_manager().paths().front(), get_bam_realignment_vcf(components),

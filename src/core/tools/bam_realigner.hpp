@@ -17,6 +17,7 @@
 #include "io/read/read_reader.hpp"
 #include "io/read/read_writer.hpp"
 #include "io/variant/vcf_reader.hpp"
+#include "utils/memory_footprint.hpp"
 #include "utils/thread_pool.hpp"
 
 namespace octopus {
@@ -31,8 +32,10 @@ public:
     
     struct Config
     {
+        bool primary_only = true;
         bool copy_hom_ref_reads = false;
         bool simplify_cigars = false;
+        MemoryFootprint max_buffer = *parse_footprint("50M");
         boost::optional<unsigned> max_threads = 1;
     };
     
@@ -71,14 +74,15 @@ private:
         std::vector<AlignedRead> reads;
     };
     using BatchList = std::vector<Batch>;
+    using BatchListRegionPair = std::pair<BatchList, boost::optional<GenomicRegion>>;
     
     Config config_;
     mutable ThreadPool workers_;
     
     CallBlock read_next_block(VcfIterator& first, const VcfIterator& last, const SampleList& samples) const;
-    BatchList read_next_batch(VcfIterator& first, const VcfIterator& last, ReadReader& src,
-                              const ReferenceGenome& reference, const SampleList& samples,
-                              const boost::optional<GenomicRegion>& prev_batch_region) const;
+    BatchListRegionPair read_next_batch(VcfIterator& first, const VcfIterator& last, ReadReader& src,
+                                        const ReferenceGenome& reference, const SampleList& samples,
+                                        const boost::optional<GenomicRegion>& prev_batch_region) const;
     void merge(BatchList& src, BatchList& dst) const;
 };
 
