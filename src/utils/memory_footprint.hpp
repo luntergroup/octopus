@@ -31,12 +31,26 @@ public:
     
     constexpr std::size_t bytes() const noexcept { return bytes_; }
     
+    MemoryFootprint& operator+=(const MemoryFootprint& other) noexcept
+    {
+        bytes_ += other.bytes_;
+        return *this;
+    }
+    MemoryFootprint& operator-=(const MemoryFootprint& other) noexcept
+    {
+        bytes_ -= other.bytes_;
+        return *this;
+    }
+    
 private:
-    std::size_t num_bytes_;
+    std::size_t bytes_;
 };
 
 bool operator==(const MemoryFootprint& lhs, const MemoryFootprint& rhs) noexcept;
 bool operator<(const MemoryFootprint& lhs, const MemoryFootprint& rhs) noexcept;
+
+MemoryFootprint operator+(MemoryFootprint lhs, const MemoryFootprint& rhs) noexcept;
+MemoryFootprint operator-(MemoryFootprint lhs, const MemoryFootprint& rhs) noexcept;
 
 std::ostream& operator<<(std::ostream& os, MemoryFootprint footprint);
 std::istream& operator>>(std::istream& is, MemoryFootprint& result);

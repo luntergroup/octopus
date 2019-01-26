@@ -26,6 +26,18 @@ bool operator<(const MemoryFootprint& lhs, const MemoryFootprint& rhs) noexcept
     return lhs.bytes() < rhs.bytes();
 }
 
+MemoryFootprint operator+(MemoryFootprint lhs, const MemoryFootprint& rhs) noexcept
+{
+    lhs += rhs;
+    return lhs;
+}
+
+MemoryFootprint operator-(MemoryFootprint lhs, const MemoryFootprint& rhs) noexcept
+{
+    lhs -= rhs;
+    return lhs;
+}
+
 namespace {
 
 enum class MemoryUnit { B, kB, KiB, MB, MiB, GB, GiB, TB, TiB, PB, PiB, EB, EiB, ZB, ZiB, YB, YiB, };
@@ -163,7 +175,7 @@ auto get_human_format_units(std::size_t bytes) noexcept
 
 auto get_human_format_units(const MemoryFootprint& footprint) noexcept
 {
-    return get_human_format_units(footprint.num_bytes());
+    return get_human_format_units(footprint.bytes());
 }
 
 } // namespace
