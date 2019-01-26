@@ -23,6 +23,7 @@
 #include "readpipe/read_pipe_fwd.hpp"
 #include "core/callers/caller_factory.hpp"
 #include "core/csr/filters/variant_call_filter_factory.hpp"
+#include "utils/memory_footprint.hpp"
 #include "utils/input_reads_profiler.hpp"
 #include "logging/progress_meter.hpp"
 
@@ -55,6 +56,7 @@ public:
     const std::vector<GenomicRegion::ContigName>& contigs() const noexcept;
     VcfWriter& output() noexcept;
     const VcfWriter& output() const noexcept;
+    MemoryFootprint read_buffer_footprint() const noexcept;
     std::size_t read_buffer_size() const noexcept;
     const boost::optional<Path>& temp_directory() const noexcept;
     boost::optional<unsigned> num_threads() const noexcept;
@@ -102,6 +104,7 @@ private:
         VcfWriter output;
         boost::optional<VcfWriter> filtered_output;
         boost::optional<unsigned> num_threads;
+        MemoryFootprint read_buffer_footprint;
         std::size_t read_buffer_size;
         ProgressMeter progress_meter;
         PloidyMap ploidies;

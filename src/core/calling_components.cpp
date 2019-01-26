@@ -90,6 +90,11 @@ const VcfWriter& GenomeCallingComponents::output() const noexcept
     return components_.output;
 }
 
+MemoryFootprint GenomeCallingComponents::read_buffer_footprint() const noexcept
+{
+    return components_.read_buffer_footprint;
+}
+
 std::size_t GenomeCallingComponents::read_buffer_size() const noexcept
 {
     return components_.read_buffer_size;
@@ -497,6 +502,7 @@ GenomeCallingComponents::Components::Components(ReferenceGenome&& reference, Rea
 , output {std::move(output)}
 , filtered_output {}
 , num_threads {options::get_num_threads(options)}
+, read_buffer_footprint {options::get_target_read_buffer_size(options)}
 , read_buffer_size {}
 , progress_meter {regions}
 , ploidies {options::get_ploidy_map(options)}
