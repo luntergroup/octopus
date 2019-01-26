@@ -36,22 +36,6 @@ ForwardIt random_select(ForwardIt first, ForwardIt last)
     return random_select(first, last, gen);
 }
 
-auto estimate_dynamic_size(const AlignedRead& read) noexcept
-{
-    return read.name().size() * sizeof(char)
-    + read.read_group().size() * sizeof(char)
-    + sequence_size(read) * sizeof(char)
-    + sequence_size(read) * sizeof(AlignedRead::BaseQuality)
-    + read.cigar().size() * sizeof(CigarOperation)
-    + contig_name(read).size() * sizeof(char)
-    + (read.has_other_segment() ? sizeof(AlignedRead::Segment) : 0);
-}
-
-auto estimate_read_size(const AlignedRead& read) noexcept
-{
-    return sizeof(AlignedRead) + estimate_dynamic_size(read);
-}
-
 auto get_covered_sample_regions(const std::vector<SampleName>& samples, const InputRegionMap& input_regions,
                                 const ReadManager& read_manager)
 {
@@ -141,7 +125,8 @@ auto get_read_bytes(const std::vector<ReadSetSamples>& read_sets)
     std::deque<std::size_t> result {};
     for (const auto& set : read_sets) {
         for (const auto& reads : set) {
-            std::transform(std::cbegin(reads), std::cend(reads), std::back_inserter(result), estimate_read_size);
+            std::transform(std::cbegin(reads), std::cend(reads), std::back_inserter(result),
+                           [] (const auto& read) noexcept { return footprint(read).bytes(); });
         }
     }
     return result;
@@ -262,7 +247,7 @@ estimate_mean_read_size(const std::vector<SampleName>& samples,
         }
         const auto reads = read_manager.fetch_reads(sample, test_region);
         std::transform(std::cbegin(reads), std::cend(reads), std::back_inserter(read_size_samples),
-                       estimate_read_size);
+                       [] (const auto& read) noexcept { return footprint(read).bytes(); });
     }
     if (read_size_samples.empty()) return boost::none;
     return static_cast<std::size_t>(maths::mean(read_size_samples) + maths::stdev(read_size_samples));

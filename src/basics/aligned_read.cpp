@@ -269,6 +269,11 @@ bool is_reverse_strand(const AlignedRead& read) noexcept
     return !is_forward_strand(read);
 }
 
+bool is_primary_alignment(const AlignedRead& read) noexcept
+{
+    return !(read.is_marked_secondary_alignment() || read.is_marked_supplementary_alignment());
+}
+
 bool is_soft_clipped(const AlignedRead& read) noexcept
 {
     return is_soft_clipped(read.cigar());
@@ -385,6 +390,26 @@ AlignedRead::NucleotideSequence copy_sequence(const AlignedRead& read, const Gen
 AlignedRead::BaseQualityVector copy_base_qualities(const AlignedRead& read, const GenomicRegion& region)
 {
     return copy_helper(read.base_qualities(), read.cigar(), read.mapped_region(), region);
+}
+
+namespace {
+
+auto calculate_dynamic_bytes(const AlignedRead& read) noexcept
+{
+    return read.name().size() * sizeof(char)
+           + read.read_group().size() * sizeof(char)
+           + sequence_size(read) * sizeof(char)
+           + sequence_size(read) * sizeof(AlignedRead::BaseQuality)
+           + read.cigar().size() * sizeof(CigarOperation)
+           + contig_name(read).size() * sizeof(char)
+           + (read.has_other_segment() ? sizeof(AlignedRead::Segment) : 0);
+}
+
+} // namespace
+
+MemoryFootprint footprint(const AlignedRead& read) noexcept
+{
+    return sizeof(AlignedRead) + calculate_dynamic_bytes(read);
 }
 
 bool operator==(const AlignedRead& lhs, const AlignedRead& rhs) noexcept
