@@ -126,6 +126,8 @@ def make_octopus_indel_error_model(profile_df):
         else:
             for motif in pattern:
                 result[motif] = model
+    if 'N' not in result:
+        result['N'] = result['A']
     return result
 
 def write_error_model(error_model, out_path):
