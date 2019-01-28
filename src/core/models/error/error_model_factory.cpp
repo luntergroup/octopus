@@ -15,6 +15,8 @@
 #include "bgiseq_indel_error_model.hpp"
 #include "custom_repeat_based_indel_error_model.hpp"
 
+#include "exceptions/malformed_file_error.hpp"
+
 namespace octopus {
 
 std::unique_ptr<SnvErrorModel> make_snv_error_model()
@@ -47,6 +49,14 @@ bool is_hiseq(const std::string& model_name) noexcept
     return model_name == "HISEQ";
 }
 
+class MalformedErrorModelFile : public MalformedFileError
+{
+    std::string do_where() const override { return "make_indel_error_model"; }
+    std::string do_help() const override { return "refer to documentation on custom error models or use provided Python script"; }
+public:
+    MalformedErrorModelFile(boost::filesystem::path file) : MalformedFileError {std::move(file), "model"} {}
+};
+
 std::unique_ptr<SnvErrorModel> make_snv_error_model(const std::string& model_name)
 {
     auto model_code_name = utils::capitalise(model_name);
@@ -72,7 +82,10 @@ std::unique_ptr<IndelErrorModel> make_indel_error_model(const std::string& model
         std::ifstream model_file {model_name};
         std::string model_str {static_cast<std::stringstream const&>(std::stringstream() << model_file.rdbuf()).str()};
         auto open_model = make_penalty_map(std::move(model_str));
-        return std::make_unique<CustomRepeatBasedIndelErrorModel>(std::move(open_model), 3);
+        if (!open_model) {
+            throw MalformedErrorModelFile {model_name};
+        }
+        return std::make_unique<CustomRepeatBasedIndelErrorModel>(std::move(*open_model), 3);
     }
 }
 

@@ -85,13 +85,14 @@ CustomRepeatBasedIndelErrorModel::get_extension_penalty(const Sequence& motif, c
     return get_min_penalty(itr->second, length / period);
 }
 
-CustomRepeatBasedIndelErrorModel::MotifPenaltyMap make_penalty_map(std::string model)
+boost::optional<CustomRepeatBasedIndelErrorModel::MotifPenaltyMap> make_penalty_map(std::string model)
 {
     std::string token;
     CustomRepeatBasedIndelErrorModel::MotifPenaltyMap result {};
     for (auto token_itr = std::cbegin(model); token_itr != std::cend(model);) {
         auto motif_end_itr = std::find(token_itr, std::cend(model), ':');
         std::string motif {token_itr, motif_end_itr};
+        if (motif.empty()) return boost::none;
         token_itr = std::next(motif_end_itr);
         CustomRepeatBasedIndelErrorModel::PenaltyVector penalties {};
         penalties.reserve(100);
@@ -102,13 +103,15 @@ CustomRepeatBasedIndelErrorModel::MotifPenaltyMap make_penalty_map(std::string m
             try {
                 penalties.push_back(boost::numeric_cast<CustomRepeatBasedIndelErrorModel::PenaltyType>(boost::lexical_cast<int>(token)));
             } catch (const boost::bad_lexical_cast&) {
-                throw; // TODO: throw meaningful exception
+                return boost::none;
             }
             token_itr = token_end_itr;
             if (token_itr == std::cend(model)) break;
         }
+        if (penalties.empty()) return boost::none;
         result.emplace(std::move(motif), std::move(penalties));
     }
+    if (result.empty()) return boost::none;
     return result;
 }
 
