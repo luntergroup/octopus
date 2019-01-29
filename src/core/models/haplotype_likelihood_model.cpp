@@ -381,11 +381,12 @@ HaplotypeLikelihoodModel::align(const AlignedRead& read, MappingPositionItr firs
     return result;
 }
 
-HaplotypeLikelihoodModel make_haplotype_likelihood_model(const std::string sequencer, bool use_mapping_quality)
+HaplotypeLikelihoodModel make_haplotype_likelihood_model(const std::string label, bool use_mapping_quality)
 {
     HaplotypeLikelihoodModel::Config config {};
     config.use_mapping_quality = use_mapping_quality;
-    return HaplotypeLikelihoodModel {make_snv_error_model(sequencer), make_indel_error_model(sequencer), config};
+    auto error_model = make_error_model(label);
+    return HaplotypeLikelihoodModel {std::move(error_model.snv), std::move(error_model.indel), config};
 }
 
 } // namespace octopus

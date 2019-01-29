@@ -1598,21 +1598,17 @@ bool allow_flank_scoring(const OptionMap& options)
     return options.at("inactive-flank-scoring").as<bool>() && !is_very_fast_mode(options);
 }
 
-auto make_indel_error_model(const OptionMap& options)
+auto make_error_model(const OptionMap& options)
 {
-    if (is_set("sequence-error-model", options)) {
-        return octopus::make_indel_error_model(options.at("sequence-error-model").as<std::string>());
-    } else {
-        return octopus::make_indel_error_model();
-    }
-}
-
-auto make_snv_error_model(const OptionMap& options)
-{
-    if (is_set("sequence-error-model", options)) {
-        return octopus::make_snv_error_model(options.at("sequence-error-model").as<std::string>());
-    } else {
-        return octopus::make_snv_error_model();
+    const auto& model_label = options.at("sequence-error-model").as<std::string>();
+    try {
+        return octopus::make_error_model(model_label);
+    } catch (const UserError& err) {
+        try {
+            const auto model_path = resolve_path(model_label, options);
+            return octopus::make_error_model(model_path);
+        } catch (...) {}
+        throw;
     }
 }
 
@@ -1642,8 +1638,7 @@ AlignedRead::MappingQuality calculate_mapping_quality_cap_trigger(const OptionMa
 
 HaplotypeLikelihoodModel make_likelihood_model(const OptionMap& options, const boost::optional<ReadSetProfile>& read_profile)
 {
-    auto snv_error_model = make_snv_error_model(options);
-    auto indel_error_model = make_indel_error_model(options);
+    auto error_model = make_error_model(options);
     HaplotypeLikelihoodModel::Config config {};
     config.use_mapping_quality = options.at("model-mapping-quality").as<bool>();
     config.use_flank_state = allow_flank_scoring(options);
@@ -1651,7 +1646,7 @@ HaplotypeLikelihoodModel make_likelihood_model(const OptionMap& options, const b
         config.mapping_quality_cap = calculate_mapping_quality_cap(options, read_profile);
         config.mapping_quality_cap_trigger = calculate_mapping_quality_cap_trigger(options, read_profile);
     }
-    return HaplotypeLikelihoodModel {std::move(snv_error_model), std::move(indel_error_model), config};
+    return HaplotypeLikelihoodModel {std::move(error_model.snv), std::move(error_model.indel), config};
 }
 
 bool allow_model_filtering(const OptionMap& options)

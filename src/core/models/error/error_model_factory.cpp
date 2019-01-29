@@ -3,50 +3,404 @@
 
 #include "error_model_factory.hpp"
 
+#include <array>
+#include <unordered_map>
 #include <fstream>
 #include <sstream>
+#include <iostream>
+
+#include <boost/optional.hpp>
+#include <boost/functional/hash.hpp>
 
 #include "utils/string_utils.hpp"
-#include "hiseq_snv_error_model.hpp"
-#include "x10_snv_error_model.hpp"
-#include "hiseq_indel_error_model.hpp"
-#include "x10_indel_error_model.hpp"
-#include "novaseq_indel_error_model.hpp"
-#include "bgiseq_indel_error_model.hpp"
-#include "custom_repeat_based_indel_error_model.hpp"
-
+#include "exceptions/user_error.hpp"
 #include "exceptions/malformed_file_error.hpp"
+
+#include "basic_repeat_based_indel_error_model.hpp"
+#include "repeat_based_snv_error_model.hpp"
+#include "custom_repeat_based_indel_error_model.hpp"
 
 namespace octopus {
 
-std::unique_ptr<SnvErrorModel> make_snv_error_model()
+static constexpr std::array<LibraryPreparation, 3> libraries {
+    LibraryPreparation::pcr, LibraryPreparation::pcr_free, LibraryPreparation::tenx
+};
+static constexpr std::array<Sequencer, 6> sequencers {
+    Sequencer::hiseq_2000, Sequencer::hiseq_2500, Sequencer::hiseq_4000,
+    Sequencer::xten, Sequencer::novaseq, Sequencer::bgiseq_5000
+};
+
+std::ostream& operator<<(std::ostream& out, const LibraryPreparation& library)
 {
-    return std::make_unique<HiSeqSnvErrorModel>();
+    switch (library) {
+        case LibraryPreparation::pcr:
+            out << "PCR";
+            break;
+        case LibraryPreparation::pcr_free:
+            out << "PCR-free";
+            break;
+        case LibraryPreparation::tenx:
+            out << "10X";
+            break;
+    }
+    return out;
 }
 
-std::unique_ptr<IndelErrorModel> make_indel_error_model()
+template <typename Range>
+std::ostream& join(const Range& range, std::ostream& os, const std::string& delim = " ")
 {
-    return std::make_unique<HiSeqIndelErrorModel>();
+    if (std::cbegin(range) != std::cend(range)) {
+        using T = typename std::iterator_traits<decltype(std::cbegin(range))>::value_type;
+        std::copy(std::cbegin(range), std::prev(std::cend(range)), std::ostream_iterator<T> {os, delim.c_str()});
+        os << *std::prev(std::cend(range));
+    }
+    return os;
 }
 
-bool is_xten(const std::string& model_name) noexcept
+class UnknownLibraryPreparation : public UserError
 {
-    return model_name == "XTEN" || model_name == "X10";
+    std::string name_;
+    
+    std::string do_where() const override
+    {
+        return "operator>>(std::istream&, LibraryPreparation&)";
+    }
+    std::string do_why() const override
+    {
+        return "The library preparation name " + name_ + " is unknown";
+    }
+    std::string do_help() const override
+    {
+        std::ostringstream ss {};
+        ss << "Choose a valid library preparation name [";
+        join(libraries, ss, ", ");
+        ss << "]";
+        return ss.str();
+    }
+public:
+    UnknownLibraryPreparation(std::string name) : name_ {std::move(name)} {}
+};
+
+std::istream& operator>>(std::istream& in, LibraryPreparation& result)
+{
+    std::string token;
+    in >> token;
+    utils::capitalise(token);
+    if (token == "PCR")
+        result = LibraryPreparation::pcr;
+    else if (token == "PCR-FREE")
+        result = LibraryPreparation::pcr_free;
+    else if (token == "10X")
+        result = LibraryPreparation::tenx;
+    else throw UnknownLibraryPreparation {token};
+    return in;
 }
 
-bool is_novaseq(const std::string& model_name) noexcept
+std::ostream& operator<<(std::ostream& out, const Sequencer& sequencer)
 {
-    return model_name == "NOVASEQ";
+    switch (sequencer) {
+        case Sequencer::hiseq_2000:
+            out << "HiSeq-2000";
+            break;
+        case Sequencer::hiseq_2500:
+            out << "HiSeq-2500";
+            break;
+        case Sequencer::hiseq_4000:
+            out << "HiSeq-4000";
+            break;
+        case Sequencer::xten:
+            out << "X10";
+            break;
+        case Sequencer::novaseq:
+            out << "NovaSeq";
+            break;
+        case Sequencer::bgiseq_5000:
+            out << "BGISEQ-5000";
+            break;
+    }
+    return out;
 }
 
-bool is_bgiseq(const std::string& model_name) noexcept
+class UnknownSequencer : public UserError
 {
-    return model_name == "BGISEQ" || model_name == "BGISEQ-500" || model_name == "BGISEQ500";
+    std::string name_;
+    
+    std::string do_where() const override
+    {
+        return "operator>>(std::istream&, Sequencer&)";
+    }
+    std::string do_why() const override
+    {
+        return "The sequencer name " + name_ + " is unknown";
+    }
+    std::string do_help() const override
+    {
+        std::ostringstream ss {};
+        ss << "Choose a valid sequencer name [";
+        join(sequencers, ss, ", ");
+        ss << "]";
+        return ss.str();
+    }
+public:
+    UnknownSequencer(std::string name) : name_ {std::move(name)} {}
+};
+
+std::istream& operator>>(std::istream& in, Sequencer& result)
+{
+    std::string token;
+    in >> token;
+    utils::capitalise(token);
+    if (token == "HISEQ-2000")
+        result = Sequencer::hiseq_2000;
+    else if (token == "HISEQ-2500")
+        result = Sequencer::hiseq_2500;
+    else if (token == "HISEQ-4000")
+        result = Sequencer::hiseq_4000;
+    else if (token == "X10")
+        result = Sequencer::xten;
+    else if (token == "NOVASEQ")
+        result = Sequencer::novaseq;
+    else if (token == "BGISEQ-5000")
+        result = Sequencer::bgiseq_5000;
+    else throw UnknownSequencer {token};
+    return in;
 }
 
-bool is_hiseq(const std::string& model_name) noexcept
+LibraryPreparation to_library(const std::string& name)
 {
-    return model_name == "HISEQ";
+    LibraryPreparation result;
+    std::istringstream ss {name};
+    ss >> result;
+    return result;
+}
+
+Sequencer to_sequencer(const std::string& name)
+{
+    Sequencer result;
+    std::istringstream ss {name};
+    ss >> result;
+    return result;
+}
+
+struct ModelConfigHash
+{
+    std::size_t operator()(const ModelConfig& config) const
+    {
+        using boost::hash_combine;
+        std::size_t seed {};
+        hash_combine(seed, config.library);
+        hash_combine(seed, config.sequencer);
+        return seed;
+    }
+};
+
+bool operator==(const ModelConfig& lhs, const ModelConfig& rhs) noexcept
+{
+    return lhs.library == rhs.library && lhs.sequencer == rhs.sequencer;
+}
+
+using RepeatBasedIndelModelParameterMap = std::unordered_map<ModelConfig, BasicRepeatBasedIndelErrorModel::Parameters, ModelConfigHash>;
+
+static const RepeatBasedIndelModelParameterMap builtin_indel_models {{
+    {
+        {LibraryPreparation::pcr_free, Sequencer::hiseq_2000},
+        {
+            {60,60,45,43,41,38,35,32,29,25,21,19,18,18,17,16,16,15,15,14,14,13,12,11,11,10,9,9,8,7,7,7,6,6,6,6,6,6,6,5,4,4,4,4,3},
+            {60,60,45,42,39,34,30,24,21,19,16,13,12,10,8,8,8,7,7,6,6,6,6,6,6,5,5,5,5,5,5,4,4,4,4,3},
+            {60,60,42,40,35,30,26,24,22,21,20,19,18,18,17,17,16,16,15,15,15,14,13,13,12,12,11,10,10,10,9,9,9,7,7,6,4,4,4,4,3},
+            {60,60,40,36,30,28,26,25,23,23,23,22,21,21,20,19,18,17,17,16,15,15,15,14,13,12,11,11,10,8,7,6,5,5,5,5,5,4,4,3}
+        }
+    },
+    {
+        {LibraryPreparation::pcr_free, Sequencer::hiseq_2500},
+        {
+            {60,60,45,43,41,38,35,32,29,25,21,19,18,18,17,16,16,15,15,14,14,13,12,11,11,10,9,9,8,7,7,7,6,6,6,6,6,6,6,5,4,4,4,4,3},
+            {60,60,45,42,39,34,30,24,21,19,16,13,12,10,8,8,8,7,7,6,6,6,6,6,6,5,5,5,5,5,5,4,4,4,4,3},
+            {60,60,42,40,35,30,26,24,22,21,20,19,18,18,17,17,16,16,15,15,15,14,13,13,12,12,11,10,10,10,9,9,9,7,7,6,4,4,4,4,3},
+            {60,60,40,36,30,28,26,25,23,23,23,22,21,21,20,19,18,17,17,16,15,15,15,14,13,12,11,11,10,8,7,6,5,5,5,5,5,4,4,3}
+        }
+    },
+    {
+     	{LibraryPreparation::pcr_free, Sequencer::hiseq_4000},
+        {
+            {60,60,45,43,41,38,35,32,29,25,21,19,18,18,17,16,16,15,15,14,14,13,12,11,11,10,9,9,8,7,7,7,6,6,6,6,6,6,6,5,4,4,4,4,3,3,3,3,3,3},
+            {60,60,45,42,39,34,30,24,21,19,16,13,12,10,8,8,8,7,7,6,6,6,6,6,6,5,5,5,5,5,5,4,4,4,4,3,3,3,3,3,3,3,3,3,3,3,3,3,3},
+            {60,60,42,40,35,30,26,24,22,21,20,19,18,18,17,17,16,16,15,15,15,14,13,13,12,12,11,10,10,10,9,9,9,7,7,6,4,4,4,4,3,3,3,3,3,3,3,3,3,3},
+            {60,60,40,36,30,28,26,25,23,23,23,22,21,21,20,19,18,17,17,16,15,15,15,14,13,12,11,11,10,8,7,6,5,5,5,5,5,4,4,3,3,3,3,3,3,3,3,3,3,3}
+        }
+    },
+    {
+     	{LibraryPreparation::pcr_free, Sequencer::xten},
+        {
+            {60,60,45,43,41,38,35,32,29,25,21,19,18,18,17,16,16,15,15,14,14,13,12,11,11,10,9,9,8,7,7,7,6,6,6,6,6,6,6,5,4,4,4,4,3,3,3,3,3,3},
+            {60,60,45,42,39,34,30,24,21,19,16,13,12,10,8,8,8,7,7,6,6,6,6,6,6,5,5,5,5,5,5,4,4,4,4,3,3,3,3,3,3,3,3,3,3,3,3,3,3},
+            {60,60,42,40,35,30,26,24,22,21,20,19,18,18,17,17,16,16,15,15,15,14,13,13,12,12,11,10,10,10,9,9,9,7,7,6,4,4,4,4,3,3,3,3,3,3,3,3,3,3},
+            {60,60,40,36,30,28,26,25,23,23,23,22,21,21,20,19,18,17,17,16,15,15,15,14,13,12,11,11,10,8,7,6,5,5,5,5,5,4,4,3,3,3,3,3,3,3,3,3,3,3}
+        }
+    },
+    {
+     	{LibraryPreparation::pcr_free, Sequencer::novaseq},
+        {
+            {60,60,45,43,41,38,35,32,29,25,21,19,18,18,17,16,16,15,15,14,14,13,12,11,11,10,9,9,8,7,7,7,6,6,6,6,6,6,6,5,4,4,4,4,3,3,3,3,3,3},
+            {60,60,45,42,39,34,30,24,21,19,16,13,12,10,8,8,8,7,7,6,6,6,6,6,6,5,5,5,5,5,5,4,4,4,4,3,3,3,3,3,3,3,3,3,3,3,3,3,3},
+            {60,60,42,40,35,30,26,24,22,21,20,19,18,18,17,17,16,16,15,15,15,14,13,13,12,12,11,10,10,10,9,9,9,7,7,6,4,4,4,4,3,3,3,3,3,3,3,3,3,3},
+            {60,60,40,36,30,28,26,25,23,23,23,22,21,21,20,19,18,17,17,16,15,15,15,14,13,12,11,11,10,8,7,6,5,5,5,5,5,4,4,3,3,3,3,3,3,3,3,3,3,3}
+        }
+    },
+    {
+     	{LibraryPreparation::pcr_free, Sequencer::bgiseq_5000},
+        {
+            {60,60,45,43,41,38,35,32,29,25,21,19,18,18,17,16,16,15,15,14,14,13,12,11,11,10,9,9,8,7,7,7,6,6,6,6,6,6,6,5,4,4,4,4,3,3,3,3,3,3},
+            {60,60,45,42,39,34,30,24,21,19,16,13,12,10,8,8,8,7,7,6,6,6,6,6,6,5,5,5,5,5,5,4,4,4,4,3,3,3,3,3,3,3,3,3,3,3,3,3,3},
+            {60,60,42,40,35,30,26,24,22,21,20,19,18,18,17,17,16,16,15,15,15,14,13,13,12,12,11,10,10,10,9,9,9,7,7,6,4,4,4,4,3,3,3,3,3,3,3,3,3,3},
+            {60,60,40,36,30,28,26,25,23,23,23,22,21,21,20,19,18,17,17,16,15,15,15,14,13,12,11,11,10,8,7,6,5,5,5,5,5,4,4,3,3,3,3,3,3,3,3,3,3,3}
+        }
+    },
+    {
+        {LibraryPreparation::pcr, Sequencer::hiseq_2000},
+        {
+            {60,60,45,43,41,38,35,32,29,25,21,19,18,18,17,16,16,15,15,14,14,13,12,11,11,10,9,9,8,7,7,7,6,6,6,6,6,6,6,5,4,4,4,4,3},
+            {60,60,45,42,39,34,30,24,21,19,16,13,12,10,8,8,8,7,7,6,6,6,6,6,6,5,5,5,5,5,5,4,4,4,4,3},
+            {60,60,42,40,35,30,26,24,22,21,20,19,18,18,17,17,16,16,15,15,15,14,13,13,12,12,11,10,10,10,9,9,9,7,7,6,4,4,4,4,3},
+            {60,60,40,36,30,28,26,25,23,23,23,22,21,21,20,19,18,17,17,16,15,15,15,14,13,12,11,11,10,8,7,6,5,5,5,5,5,4,4,3}
+        }
+    },
+    {
+        {LibraryPreparation::pcr, Sequencer::hiseq_2500},
+        {
+            {60,60,45,43,41,38,35,32,29,25,21,19,18,18,17,16,16,15,15,14,14,13,12,11,11,10,9,9,8,7,7,7,6,6,6,6,6,6,6,5,4,4,4,4,3},
+            {60,60,45,42,39,34,30,24,21,19,16,13,12,10,8,8,8,7,7,6,6,6,6,6,6,5,5,5,5,5,5,4,4,4,4,3},
+            {60,60,42,40,35,30,26,24,22,21,20,19,18,18,17,17,16,16,15,15,15,14,13,13,12,12,11,10,10,10,9,9,9,7,7,6,4,4,4,4,3},
+            {60,60,40,36,30,28,26,25,23,23,23,22,21,21,20,19,18,17,17,16,15,15,15,14,13,12,11,11,10,8,7,6,5,5,5,5,5,4,4,3}
+        }
+    },
+    {
+     	{LibraryPreparation::pcr, Sequencer::hiseq_4000},
+        {
+            {60,60,45,43,41,38,35,32,29,25,21,19,18,18,17,16,16,15,15,14,14,13,12,11,11,10,9,9,8,7,7,7,6,6,6,6,6,6,6,5,4,4,4,4,3,3,3,3,3,3},
+            {60,60,45,42,39,34,30,24,21,19,16,13,12,10,8,8,8,7,7,6,6,6,6,6,6,5,5,5,5,5,5,4,4,4,4,3,3,3,3,3,3,3,3,3,3,3,3,3,3},
+            {60,60,42,40,35,30,26,24,22,21,20,19,18,18,17,17,16,16,15,15,15,14,13,13,12,12,11,10,10,10,9,9,9,7,7,6,4,4,4,4,3,3,3,3,3,3,3,3,3,3},
+            {60,60,40,36,30,28,26,25,23,23,23,22,21,21,20,19,18,17,17,16,15,15,15,14,13,12,11,11,10,8,7,6,5,5,5,5,5,4,4,3,3,3,3,3,3,3,3,3,3,3}
+        }
+    },
+    {
+     	{LibraryPreparation::pcr, Sequencer::xten},
+        {
+            {60,60,44,42,40,36,34,30,24,20,16,13,12,11,10,9,9,8,8,8,7,7,7,6,6,6,5,5,5,5,5,5,4,4,4,4,4,4,4,4,3,3,3,3,3,3,3,3,3,3},
+            {60,60,42,40,37,35,28,22,18,15,12,10,9,7,6,4,4,5,5,4,4,4,4,4,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3},
+            {60,60,38,37,33,27,21,18,16,15,14,13,13,12,12,12,11,11,10,10,9,9,9,9,8,7,7,6,6,6,5,5,4,4,4,4,4,3,3,3,3,3,3,3,3,3,3,3,3,3},
+            {60,60,38,33,26,22,20,19,18,18,17,16,17,15,14,14,14,14,13,12,12,11,10,10,8,7,7,6,6,5,5,4,4,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3}
+        }
+    },
+    {
+     	{LibraryPreparation::pcr, Sequencer::novaseq},
+        {
+            {60,60,43,41,40,36,34,30,24,20,16,13,12,11,10,10,9,9,8,8,7,7,7,6,6,6,6,5,5,5,4,4,4,4,4,4,4,4,4,4,3,3,3,3,3,3,3,3,3,3},
+            {60,60,42,40,37,33,28,22,18,15,12,10,9,8,6,6,5,5,5,5,5,5,5,4,4,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3},
+            {60,60,38,37,32,26,21,18,16,14,14,13,13,12,12,11,11,11,10,10,10,9,9,9,8,8,7,7,7,7,6,6,6,5,5,4,4,4,4,4,3,3,3,3,3,3,3,3,3,3},
+            {60,60,37,32,26,22,20,19,18,17,17,16,15,15,14,13,13,12,12,11,12,10,9,9,8,8,7,7,7,7,6,6,5,5,4,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3}
+        }
+    },
+    {
+     	{LibraryPreparation::pcr, Sequencer::bgiseq_5000},
+        {
+            {60,60,49,47,43,39,35,31,25,21,17,14,13,12,11,11,10,10,9,9,9,8,8,8,8,8,7,7,7,7,6,6,6,6,6,6,5,5,5,5,5,5,5,5,5,5,5,5,5,4},
+            {60,60,48,45,42,38,32,26,22,17,14,12,10,9,8,7,6,6,6,5,5,5,5,5,4,4,4,4,4,4,4,4,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3},
+            {60,60,44,42,36,29,22,19,17,15,15,14,14,13,13,13,12,12,12,11, 11,10,10,10,9,9,9,8,8,8,8,8,8,7,7,6,6,6,5,4,4,4,4,3,3,3,3,3,3,3},
+            {60,60,41,36,28,23,21,20,19,18,18,17,17,16,15,15,14,13,12,12,12,12,10,9,9,9,9,8,8,7,7,7,7,6,6,6,6,5,5,5,5,4,4,4,4,4,4,4,3,3}
+        }
+    },
+    {
+        {LibraryPreparation::tenx, Sequencer::hiseq_2000},
+        {
+            {60,60,45,43,41,38,35,32,29,25,21,19,18,18,17,16,16,15,15,14,14,13,12,11,11,10,9,9,8,7,7,7,6,6,6,6,6,6,6,5,4,4,4,4,3},
+            {60,60,45,42,39,34,30,24,21,19,16,13,12,10,8,8,8,7,7,6,6,6,6,6,6,5,5,5,5,5,5,4,4,4,4,3},
+            {60,60,42,40,35,30,26,24,22,21,20,19,18,18,17,17,16,16,15,15,15,14,13,13,12,12,11,10,10,10,9,9,9,7,7,6,4,4,4,4,3},
+            {60,60,40,36,30,28,26,25,23,23,23,22,21,21,20,19,18,17,17,16,15,15,15,14,13,12,11,11,10,8,7,6,5,5,5,5,5,4,4,3}
+        }
+    },
+    {
+        {LibraryPreparation::tenx, Sequencer::hiseq_2500},
+        {
+            {60,60,45,43,41,38,35,32,29,25,21,19,18,18,17,16,16,15,15,14,14,13,12,11,11,10,9,9,8,7,7,7,6,6,6,6,6,6,6,5,4,4,4,4,3},
+            {60,60,45,42,39,34,30,24,21,19,16,13,12,10,8,8,8,7,7,6,6,6,6,6,6,5,5,5,5,5,5,4,4,4,4,3},
+            {60,60,42,40,35,30,26,24,22,21,20,19,18,18,17,17,16,16,15,15,15,14,13,13,12,12,11,10,10,10,9,9,9,7,7,6,4,4,4,4,3},
+            {60,60,40,36,30,28,26,25,23,23,23,22,21,21,20,19,18,17,17,16,15,15,15,14,13,12,11,11,10,8,7,6,5,5,5,5,5,4,4,3}
+        }
+    },
+    {
+     	{LibraryPreparation::tenx, Sequencer::hiseq_4000},
+        {
+            {60,60,45,43,41,38,35,32,29,25,21,19,18,18,17,16,16,15,15,14,14,13,12,11,11,10,9,9,8,7,7,7,6,6,6,6,6,6,6,5,4,4,4,4,3,3,3,3,3,3},
+            {60,60,45,42,39,34,30,24,21,19,16,13,12,10,8,8,8,7,7,6,6,6,6,6,6,5,5,5,5,5,5,4,4,4,4,3,3,3,3,3,3,3,3,3,3,3,3,3,3},
+            {60,60,42,40,35,30,26,24,22,21,20,19,18,18,17,17,16,16,15,15,15,14,13,13,12,12,11,10,10,10,9,9,9,7,7,6,4,4,4,4,3,3,3,3,3,3,3,3,3,3},
+            {60,60,40,36,30,28,26,25,23,23,23,22,21,21,20,19,18,17,17,16,15,15,15,14,13,12,11,11,10,8,7,6,5,5,5,5,5,4,4,3,3,3,3,3,3,3,3,3,3,3}
+        }
+    },
+    {
+     	{LibraryPreparation::tenx, Sequencer::xten},
+        {
+            {60,60,45,43,41,38,35,32,29,25,21,19,18,18,17,16,16,15,15,14,14,13,12,11,11,10,9,9,8,7,7,7,6,6,6,6,6,6,6,5,4,4,4,4,3,3,3,3,3,3},
+            {60,60,45,42,39,34,30,24,21,19,16,13,12,10,8,8,8,7,7,6,6,6,6,6,6,5,5,5,5,5,5,4,4,4,4,3,3,3,3,3,3,3,3,3,3,3,3,3,3},
+            {60,60,42,40,35,30,26,24,22,21,20,19,18,18,17,17,16,16,15,15,15,14,13,13,12,12,11,10,10,10,9,9,9,7,7,6,4,4,4,4,3,3,3,3,3,3,3,3,3,3},
+            {60,60,40,36,30,28,26,25,23,23,23,22,21,21,20,19,18,17,17,16,15,15,15,14,13,12,11,11,10,8,7,6,5,5,5,5,5,4,4,3,3,3,3,3,3,3,3,3,3,3}
+        }
+    },
+    {
+     	{LibraryPreparation::tenx, Sequencer::novaseq},
+        {
+            {60,60,45,43,41,38,35,32,29,25,21,19,18,18,17,16,16,15,15,14,14,13,12,11,11,10,9,9,8,7,7,7,6,6,6,6,6,6,6,5,4,4,4,4,3,3,3,3,3,3},
+            {60,60,45,42,39,34,30,24,21,19,16,13,12,10,8,8,8,7,7,6,6,6,6,6,6,5,5,5,5,5,5,4,4,4,4,3,3,3,3,3,3,3,3,3,3,3,3,3,3},
+            {60,60,42,40,35,30,26,24,22,21,20,19,18,18,17,17,16,16,15,15,15,14,13,13,12,12,11,10,10,10,9,9,9,7,7,6,4,4,4,4,3,3,3,3,3,3,3,3,3,3},
+            {60,60,40,36,30,28,26,25,23,23,23,22,21,21,20,19,18,17,17,16,15,15,15,14,13,12,11,11,10,8,7,6,5,5,5,5,5,4,4,3,3,3,3,3,3,3,3,3,3,3}
+        }
+    },
+    {
+     	{LibraryPreparation::tenx, Sequencer::bgiseq_5000},
+        {
+            {60,60,45,43,41,38,35,32,29,25,21,19,18,18,17,16,16,15,15,14,14,13,12,11,11,10,9,9,8,7,7,7,6,6,6,6,6,6,6,5,4,4,4,4,3,3,3,3,3,3},
+            {60,60,45,42,39,34,30,24,21,19,16,13,12,10,8,8,8,7,7,6,6,6,6,6,6,5,5,5,5,5,5,4,4,4,4,3,3,3,3,3,3,3,3,3,3,3,3,3,3},
+            {60,60,42,40,35,30,26,24,22,21,20,19,18,18,17,17,16,16,15,15,15,14,13,13,12,12,11,10,10,10,9,9,9,7,7,6,4,4,4,4,3,3,3,3,3,3,3,3,3,3},
+            {60,60,40,36,30,28,26,25,23,23,23,22,21,21,20,19,18,17,17,16,15,15,15,14,13,12,11,11,10,8,7,6,5,5,5,5,5,4,4,3,3,3,3,3,3,3,3,3,3,3}
+        }
+    }
+ }};
+
+BasicRepeatBasedIndelErrorModel::Parameters lookup_builtin_indel_model(const ModelConfig config)
+{
+    return builtin_indel_models.at(config);
+}
+
+using RepeatBasedSnvModelParameterMap = std::unordered_map<LibraryPreparation, BasicRepeatBasedSNVErrorModel::Parameters>;
+
+static const RepeatBasedSnvModelParameterMap builtin_snv_models {{
+    {
+        LibraryPreparation::pcr_free,
+     {
+        {125,125,60,55,50,30,20,15,12,12,10,10,10,10,8,7,6,6,6,6,6,6,5,5,5,5,5,5,5,5,5,5,5,4,4,4,3,3,3,3,2,2,2,2,2,1,1,1,1,1,1},
+        {125,125,60,60,52,52,38,38,22,22,17,17,15,15,13,13,10,10,10,10,8,8,7,6,6,6,6,6,6,5,5,5,5,4,4,4,3,3,3,3,2,2,2,2,2,1,1,1,1,1,1},
+        {125,125,125,55,55,55,40,40,40,25,25,25,19,19,19,11,11,11,9,9,9,7,7,6,6,6,6,6,6,5,5,5,5,4,4,4,3,3,3,3,2,2,2,2,2,1,1,1,1,1,1}
+     }
+    },
+    {
+        LibraryPreparation::pcr,
+    {
+        {125,125,60,55,38,23,16,14,11,10,9,8,7,7,6,6,6,6,6,6,6,6,5,5,5,5,5,5,5,5,5,5,5,4,4,4,3,3,3,3,2,2,2,2,2,1,1,1,1,1,1},
+        {125,125,60,60,52,52,38,38,22,22,17,17,15,15,13,13,10,10,10,10,8,8,7,6,6,6,6,6,6,5,5,5,5,4,4,4,3,3,3,3,2,2,2,2,2,1,1,1,1,1,1},
+        {125,125,125,55,55,55,40,40,40,25,25,25,19,19,19,11,11,11,9,9,9,7,7,6,6,6,6,6,6,5,5,5,5,4,4,4,3,3,3,3,2,2,2,2,2,1,1,1,1,1,1}
+    }},
+    {
+      LibraryPreparation::tenx,
+    {
+      {125,125,60,55,38,23,16,14,11,10,9,8,7,7,6,6,6,6,6,6,6,6,5,5,5,5,5,5,5,5,5,5,5,4,4,4,3,3,3,3,2,2,2,2,2,1,1,1,1,1,1},
+      {125,125,60,60,52,52,38,38,22,22,17,17,15,15,13,13,10,10,10,10,8,8,7,6,6,6,6,6,6,5,5,5,5,4,4,4,3,3,3,3,2,2,2,2,2,1,1,1,1,1,1},
+      {125,125,125,55,55,55,40,40,40,25,25,25,19,19,19,11,11,11,9,9,9,7,7,6,6,6,6,6,6,5,5,5,5,4,4,4,3,3,3,3,2,2,2,2,2,1,1,1,1,1,1}
+    }}
+}};
+
+BasicRepeatBasedSNVErrorModel::Parameters lookup_builtin_snv_model(const ModelConfig config)
+{
+    return builtin_snv_models.at(config.library);
 }
 
 class MalformedErrorModelFile : public MalformedFileError
@@ -57,36 +411,51 @@ public:
     MalformedErrorModelFile(boost::filesystem::path file) : MalformedFileError {std::move(file), "model"} {}
 };
 
-std::unique_ptr<SnvErrorModel> make_snv_error_model(const std::string& model_name)
+std::unique_ptr<SnvErrorModel> make_snv_error_model(const ModelConfig config)
 {
-    auto model_code_name = utils::capitalise(model_name);
-    if (is_xten(model_code_name)) {
-        return std::make_unique<X10SnvErrorModel>();
-    } else {
-        return std::make_unique<HiSeqSnvErrorModel>();
-    }
+    return std::make_unique<BasicRepeatBasedSNVErrorModel>(lookup_builtin_snv_model(config));
 }
 
-std::unique_ptr<IndelErrorModel> make_indel_error_model(const std::string& model_name)
+std::unique_ptr<IndelErrorModel> make_indel_error_model(const ModelConfig config)
 {
-    auto model_code_name = utils::capitalise(model_name);
-    if (is_xten(model_code_name)) {
-        return std::make_unique<X10IndelErrorModel>();
-    } else if (is_novaseq(model_code_name)) {
-        return std::make_unique<NovaSeqIndelErrorModel>();
-    } else if (is_bgiseq(model_code_name)) {
-        return std::make_unique<BGISeqIndelErrorModel>();
-    } else if (is_hiseq(model_code_name)) {
-        return std::make_unique<HiSeqIndelErrorModel>();
-    } else {
-        std::ifstream model_file {model_name};
-        std::string model_str {static_cast<std::stringstream const&>(std::stringstream() << model_file.rdbuf()).str()};
-        auto open_model = make_penalty_map(std::move(model_str));
-        if (!open_model) {
-            throw MalformedErrorModelFile {model_name};
-        }
-        return std::make_unique<CustomRepeatBasedIndelErrorModel>(std::move(*open_model), 3);
+    return std::make_unique<BasicRepeatBasedIndelErrorModel>(lookup_builtin_indel_model(config));
+}
+
+ModelConfig parse_model_config(const std::string& label)
+{
+    auto result = default_model_config;
+    const auto library_end_pos = label.find('.');
+    const auto library_name = label.substr(0, library_end_pos);
+    if (!library_name.empty()) {
+        result.library = to_library(library_name);
     }
+    if (library_end_pos != std::string::npos) {
+        const auto sequencer_name = label.substr(library_end_pos + 1);
+        if (!sequencer_name.empty()) {
+            result.sequencer = to_sequencer(sequencer_name);
+        }
+    }
+    return result;
+}
+
+ErrorModel make_error_model(const std::string& label)
+{
+    const auto config = parse_model_config(label);
+    return {make_indel_error_model(config), make_snv_error_model(config)};
+}
+
+ErrorModel make_error_model(const boost::filesystem::path& model_file_name)
+{
+    std::ifstream model_file {model_file_name.string()};
+    std::string model_str {static_cast<std::stringstream const&>(std::stringstream() << model_file.rdbuf()).str()};
+    auto open_model = make_penalty_map(std::move(model_str));
+    if (!open_model) {
+        throw MalformedErrorModelFile {model_file_name};
+    }
+    ErrorModel result {};
+    result.indel = std::make_unique<CustomRepeatBasedIndelErrorModel>(std::move(*open_model));
+    result.snv = make_snv_error_model(default_model_config);
+    return result;
 }
 
 } // namespace octopus

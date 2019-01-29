@@ -127,7 +127,7 @@ private:
     Length required_extension_;
 };
 
-HaplotypeLikelihoodModel make_haplotype_likelihood_model(const std::string sequencer, bool use_mapping_quality = true);
+HaplotypeLikelihoodModel make_haplotype_likelihood_model(const std::string label, bool use_mapping_quality = true);
 
 } // namespace octopus
 

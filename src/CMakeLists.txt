@@ -422,26 +422,18 @@ set(CORE_SOURCES
     core/models/pairhmm/simd_pair_hmm.hpp
     core/models/pairhmm/simd_pair_hmm.cpp
 
-    core/models/error/hiseq_indel_error_model.hpp
-    core/models/error/hiseq_indel_error_model.cpp
-    core/models/error/x10_indel_error_model.hpp
-    core/models/error/x10_indel_error_model.cpp
-    core/models/error/bgiseq_indel_error_model.hpp
-    core/models/error/bgiseq_indel_error_model.cpp
-    core/models/error/novaseq_indel_error_model.hpp
-    core/models/error/novaseq_indel_error_model.cpp
     core/models/error/indel_error_model.hpp
     core/models/error/indel_error_model.cpp
     core/models/error/repeat_based_indel_error_model.hpp
     core/models/error/repeat_based_indel_error_model.cpp
+    core/models/error/repeat_based_snv_error_model.hpp
+    core/models/error/repeat_based_snv_error_model.cpp
     core/models/error/snv_error_model.hpp
     core/models/error/snv_error_model.cpp
-    core/models/error/hiseq_snv_error_model.hpp
-    core/models/error/hiseq_snv_error_model.cpp
-    core/models/error/x10_snv_error_model.hpp
-    core/models/error/x10_snv_error_model.cpp
     core/models/error/error_model_factory.hpp
     core/models/error/error_model_factory.cpp
+    core/models/error/basic_repeat_based_indel_error_model.hpp
+    core/models/error/basic_repeat_based_indel_error_model.cpp
     core/models/error/custom_repeat_based_indel_error_model.hpp
     core/models/error/custom_repeat_based_indel_error_model.cpp
 
@@ -453,7 +445,6 @@ set(CORE_SOURCES
     core/models/mutation/denovo_model.cpp
     core/models/mutation/indel_mutation_model.hpp
     core/models/mutation/indel_mutation_model.cpp
-    
 
     core/models/reference/individual_reference_likelihood_model.hpp
     core/models/reference/individual_reference_likelihood_model.cpp

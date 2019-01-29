@@ -25,7 +25,7 @@ public:
     
     CustomRepeatBasedIndelErrorModel() = delete;
     
-    CustomRepeatBasedIndelErrorModel(MotifPenaltyMap gap_open_penalties, PenaltyType extend_penalty);
+    CustomRepeatBasedIndelErrorModel(MotifPenaltyMap gap_open_penalties, PenaltyType extend_penalty = 3);
     CustomRepeatBasedIndelErrorModel(MotifPenaltyMap gap_open_penalties, MotifPenaltyMap gap_extend_penalties);
     
     CustomRepeatBasedIndelErrorModel(const CustomRepeatBasedIndelErrorModel&)            = default;
