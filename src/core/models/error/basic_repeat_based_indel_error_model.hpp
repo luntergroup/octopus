@@ -42,7 +42,8 @@ private:
     
     PenaltyArray AT_homopolymer_open_penalities_, CG_homopolymer_open_penalties_,
                     dinucleotide_repeat_open_penalties_, trinucleotide_repeat_open_penalties_;
-    PenaltyType complex_open_penalty_, extension_penalty_;
+    PenaltyArray homopolymer_extend_penalties_, dinucleotide_repeat_extend_penalties_, trinucleotide_repeat_extend_penalties_;
+    PenaltyType complex_open_penalty_, complex_extend_penalty_;
     
     virtual std::unique_ptr<IndelErrorModel> do_clone() const override;
     virtual PenaltyType get_default_open_penalty() const noexcept override;

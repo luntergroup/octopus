@@ -26,8 +26,16 @@ BasicRepeatBasedIndelErrorModel::BasicRepeatBasedIndelErrorModel(Parameters para
     copy(params.CG_homopolymer_open_penalties, CG_homopolymer_open_penalties_);
     copy(params.dinucleotide_repeat_open_penalties, dinucleotide_repeat_open_penalties_);
     copy(params.trinucleotide_repeat_open_penalties, trinucleotide_repeat_open_penalties_);
+    
+    static const PenaltyVector homopolymer_extend_penalties {10, 10, 4, 4, 6, 6, 7, 8, 11, 13, 12, 11, 10, 9, 8, 7, 6, 6, 6, 5, 5, 5, 5, 5, 5, 4, 4, 4, 4, 4, 4, 3};
+    static const PenaltyVector dinucleotide_extend_penalties {10, 10, 8, 5, 4, 2, 1};
+    static const PenaltyVector trinucleotide_extend_penalties {10, 10, 6, 4, 3, 1};
+    copy(homopolymer_extend_penalties, homopolymer_extend_penalties_);
+    copy(dinucleotide_extend_penalties, dinucleotide_repeat_extend_penalties_);
+    copy(trinucleotide_extend_penalties, trinucleotide_repeat_extend_penalties_);
+    
     complex_open_penalty_ = dinucleotide_repeat_open_penalties_.front();
-    extension_penalty_ = params.extension_penalty;
+    complex_extend_penalty_ = 10;
 }
 
 std::unique_ptr<IndelErrorModel> BasicRepeatBasedIndelErrorModel::do_clone() const
@@ -83,16 +91,19 @@ BasicRepeatBasedIndelErrorModel::get_open_penalty(const Sequence& motif, const u
 BasicRepeatBasedIndelErrorModel::PenaltyType
 BasicRepeatBasedIndelErrorModel::get_default_extension_penalty() const noexcept
 {
-    return extension_penalty_;
+    return complex_extend_penalty_;
 }
 
 BasicRepeatBasedIndelErrorModel::PenaltyType
 BasicRepeatBasedIndelErrorModel::get_extension_penalty(const Sequence& motif, const unsigned length) const noexcept
 {
-    switch (motif.size()) {
-        case 2:
-        case 3: return 2;
-        default: return get_default_extension_penalty();
+    const auto period = motif.size();
+    const auto periodicity = length / period;
+    switch (period) {
+        case 1: return get_min_penalty(homopolymer_extend_penalties_, periodicity);
+        case 2: return get_min_penalty(dinucleotide_repeat_extend_penalties_, periodicity);
+        case 3:
+        default: return get_min_penalty(trinucleotide_repeat_extend_penalties_, periodicity);
     }
 }
     
