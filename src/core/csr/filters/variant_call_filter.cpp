@@ -364,6 +364,7 @@ VcfRecord::Builder VariantCallFilter::construct_template(const VcfRecord& call) 
     }
     if (output_config_.clear_existing_filters) {
         result.clear_filter();
+        result.clear_all_sample_filters();
     }
     return result;
 }
