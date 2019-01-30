@@ -691,6 +691,14 @@ VcfRecord::Builder& VcfRecord::Builder::clear_filter(const SampleName& sample) n
     return this->clear_format(sample, vcfspec::format::filter);
 }
 
+VcfRecord::Builder& VcfRecord::Builder::clear_all_sample_filters() noexcept
+{
+    for (const auto& p : samples_) {
+        this->clear_filter(p.first);
+    }
+    return *this;
+}
+
 VcfRecord::Builder& VcfRecord::Builder::set_refcall()
 {
     return set_alt("<NON_REF>");

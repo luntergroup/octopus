@@ -216,6 +216,7 @@ public:
     Builder& set_filter(const SampleName& sample, std::initializer_list<KeyType> filter);
     Builder& add_filter(const SampleName& sample, KeyType filter);
     Builder& clear_filter(const SampleName& sample) noexcept;
+    Builder& clear_all_sample_filters() noexcept;
     
     Builder& set_refcall();
     Builder& set_somatic();
