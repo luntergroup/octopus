@@ -26,6 +26,7 @@ BasicRepeatBasedIndelErrorModel::BasicRepeatBasedIndelErrorModel(Parameters para
     copy(params.CG_homopolymer_open_penalties, CG_homopolymer_open_penalties_);
     copy(params.dinucleotide_repeat_open_penalties, dinucleotide_repeat_open_penalties_);
     copy(params.trinucleotide_repeat_open_penalties, trinucleotide_repeat_open_penalties_);
+    complex_open_penalty_ = dinucleotide_repeat_open_penalties_.front();
     extension_penalty_ = params.extension_penalty;
 }
 
