@@ -1536,10 +1536,11 @@ int calculate_flank_score(int truth_len, int lhs_flank_len, int rhs_flank_len,
     static constexpr char match {'M'}, insertion {'I'}, deletion {'D'};
     
     auto prev_state = match;
-    int x {first_pos}; // index into haplotype
-    int y {0};         // index into read
+    int x {first_pos}; // index into truth
+    int y {0};         // index into target
     int i {0};         // index into alignment
     int result {0};    // alignment score (within flank)
+    const auto rhs_flank_begin = truth_len - rhs_flank_len;
     target_mask_size = 0;
     
     while (aln1[i]) {
@@ -1552,10 +1553,10 @@ int calculate_flank_score(int truth_len, int lhs_flank_len, int rhs_flank_len,
         switch (new_state) {
             case match:
             {
-                if (x < lhs_flank_len || x >= (truth_len - rhs_flank_len)) {
+                if (x < lhs_flank_len || x >= rhs_flank_begin) {
                     if (aln1[i] != aln2[i]) {
                         if (aln1[i] != 'N') {
-                            result += quals[y];
+                            result += (snv_mask[x] == target[y]) ? std::min(quals[y], snv_prior[x]) : quals[y];
                         } else {
                             result += nScore >> 2;
                         }
@@ -1568,7 +1569,7 @@ int calculate_flank_score(int truth_len, int lhs_flank_len, int rhs_flank_len,
             }
             case insertion:
             {
-                if (x < lhs_flank_len || x >= (truth_len - rhs_flank_len)) {
+                if (x < lhs_flank_len || x >= rhs_flank_begin) {
                     if (prev_state == insertion) {
                         result += gap_extend[x - 1] + nuc_prior;
                     } else {
@@ -1582,7 +1583,7 @@ int calculate_flank_score(int truth_len, int lhs_flank_len, int rhs_flank_len,
             }
             case deletion:
             {
-                if (x < lhs_flank_len || x >= (truth_len - rhs_flank_len)) {
+                if (x < lhs_flank_len || x >= rhs_flank_begin) {
                     if (prev_state == deletion) {
                         result += gap_extend[x];
                     } else {
@@ -1593,7 +1594,6 @@ int calculate_flank_score(int truth_len, int lhs_flank_len, int rhs_flank_len,
                 break;
             }
         }
-        
         ++i;
         prev_state = new_state;
     }
