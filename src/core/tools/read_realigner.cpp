@@ -94,11 +94,6 @@ HaplotypeLikelihoodModel make_default_haplotype_likelihood_model()
 
 } // namespace
 
-void realign(std::vector<AlignedRead>& reads, const Haplotype& haplotype)
-{
-    realign(reads, haplotype, make_default_haplotype_likelihood_model());
-}
-
 void realign(std::vector<AlignedRead>& reads, const Haplotype& haplotype, HaplotypeLikelihoodModel model)
 {
     if (!reads.empty()) {
@@ -116,6 +111,11 @@ void realign(std::vector<AlignedRead>& reads, const Haplotype& haplotype, Haplot
     }
 }
 
+void realign(std::vector<AlignedRead>& reads, const Haplotype& haplotype)
+{
+    realign(reads, haplotype, make_default_haplotype_likelihood_model());
+}
+
 std::vector<AlignedRead> realign(const std::vector<AlignedRead>& reads, const Haplotype& haplotype,
                                  HaplotypeLikelihoodModel model)
 {
@@ -129,12 +129,12 @@ std::vector<AlignedRead> realign(const std::vector<AlignedRead>& reads, const Ha
     return realign(reads, haplotype, make_default_haplotype_likelihood_model());
 }
 
-void safe_realign(std::vector<AlignedRead>& reads, const Haplotype& haplotype)
+void safe_realign(std::vector<AlignedRead>& reads, const Haplotype& haplotype, HaplotypeLikelihoodModel model)
 {
     if (!reads.empty()) {
         auto expanded_haplotype = expand_for_realignment(haplotype, reads);
         try {
-            realign(reads, expanded_haplotype);
+            realign(reads, expanded_haplotype, std::move(model));
         } catch (const HaplotypeLikelihoodModel::ShortHaplotypeError& e) {
             expanded_haplotype = expand(expanded_haplotype, e.required_extension());
             realign(reads, expanded_haplotype);
@@ -142,11 +142,22 @@ void safe_realign(std::vector<AlignedRead>& reads, const Haplotype& haplotype)
     }
 }
 
-std::vector<AlignedRead> safe_realign(const std::vector<AlignedRead>& reads, const Haplotype& haplotype)
+void safe_realign(std::vector<AlignedRead>& reads, const Haplotype& haplotype)
+{
+    safe_realign(reads, haplotype, make_default_haplotype_likelihood_model());
+}
+
+std::vector<AlignedRead>
+safe_realign(const std::vector<AlignedRead>& reads, const Haplotype& haplotype, HaplotypeLikelihoodModel model)
 {
     auto result = reads;
-    safe_realign(result, haplotype);
+    safe_realign(result, haplotype, std::move(model));
     return result;
+}
+
+std::vector<AlignedRead> safe_realign(const std::vector<AlignedRead>& reads, const Haplotype& haplotype)
+{
+    return safe_realign(reads, haplotype, make_default_haplotype_likelihood_model());
 }
 
 namespace {
@@ -476,30 +487,53 @@ void rebase(std::vector<AlignedRead>& reads, const Haplotype& haplotype)
     std::sort(std::begin(reads), std::end(reads));
 }
 
+void realign_to_reference(std::vector<AlignedRead>& reads, const Haplotype& haplotype,
+                          HaplotypeLikelihoodModel model)
+{
+    realign(reads, haplotype, std::move(model));
+    rebase(reads, haplotype);
+}
+
 void realign_to_reference(std::vector<AlignedRead>& reads, const Haplotype& haplotype)
 {
-    realign(reads, haplotype);
-    rebase(reads, haplotype);
+    realign_to_reference(reads, haplotype, make_default_haplotype_likelihood_model());
+}
+
+std::vector<AlignedRead>
+realign_to_reference(const std::vector<AlignedRead>& reads, const Haplotype& haplotype, HaplotypeLikelihoodModel model)
+{
+    auto result = realign(reads, haplotype, std::move(model));
+    rebase(result, haplotype);
+    return result;
 }
 
 std::vector<AlignedRead> realign_to_reference(const std::vector<AlignedRead>& reads, const Haplotype& haplotype)
 {
-    auto result = realign(reads, haplotype);
-    rebase(result, haplotype);
-    return result;
+    return realign_to_reference(reads, haplotype, make_default_haplotype_likelihood_model());
+}
+
+void safe_realign_to_reference(std::vector<AlignedRead>& reads, const Haplotype& haplotype, HaplotypeLikelihoodModel model)
+{
+    safe_realign(reads, haplotype, std::move(model));
+    rebase(reads, haplotype);
 }
 
 void safe_realign_to_reference(std::vector<AlignedRead>& reads, const Haplotype& haplotype)
 {
-    safe_realign(reads, haplotype);
-    rebase(reads, haplotype);
+    safe_realign_to_reference(reads, haplotype, make_default_haplotype_likelihood_model());
+}
+
+std::vector<AlignedRead>
+safe_realign_to_reference(const std::vector<AlignedRead>& reads, const Haplotype& haplotype, HaplotypeLikelihoodModel model)
+{
+    auto result = safe_realign(reads, haplotype, std::move(model));
+    rebase(result, haplotype);
+    return result;
 }
 
 std::vector<AlignedRead> safe_realign_to_reference(const std::vector<AlignedRead>& reads, const Haplotype& haplotype)
 {
-    auto result = safe_realign(reads, haplotype);
-    rebase(result, haplotype);
-    return result;
+    return safe_realign_to_reference(reads, haplotype, make_default_haplotype_likelihood_model());
 }
 
 } // namespace octopus
