@@ -10,6 +10,7 @@
 #include <boost/lexical_cast.hpp>
 
 #include "basics/genomic_region.hpp"
+#include "exceptions/file_open_error.hpp"
 
 namespace octopus {
 
@@ -42,7 +43,11 @@ VcfParser::VcfParser(const fs::path& file_path)
 , header_ {parse_header(file_)}
 , samples_ {header_.samples()}
 , first_record_pos_ {file_.tellg()}
-{}
+{
+    if (!file_.is_open()) {
+        throw FileOpenError {file_path_, "vcf"};
+    }
+}
 
 bool VcfParser::is_header_written() const noexcept
 {

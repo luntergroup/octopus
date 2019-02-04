@@ -20,6 +20,7 @@
 
 #include "basics/genomic_region.hpp"
 #include "utils/string_utils.hpp"
+#include "exceptions/file_open_error.hpp"
 #include "vcf_spec.hpp"
 #include "vcf_header.hpp"
 #include "vcf_record.hpp"
@@ -106,7 +107,9 @@ HtslibBcfFacade::HtslibBcfFacade(Path file_path, Mode mode)
     if (mode == Mode::read) {
         if (boost::filesystem::exists(file_path_)) {
             file_.reset(bcf_open(file_path_.c_str(), hts_mode.c_str()));
-            if (!file_) return;
+            if (!file_) {
+                throw FileOpenError {file_path_};
+            }
             header_.reset(bcf_hdr_read(file_.get()));
             if (!header_) {
                 throw std::runtime_error {"HtslibBcfFacade: could not make header for file " + file_path_.string()};
@@ -117,13 +120,22 @@ HtslibBcfFacade::HtslibBcfFacade(Path file_path, Mode mode)
         }
     } else if (mode == Mode::write) {
         file_.reset(bcf_open(file_path_.c_str(), hts_mode.c_str()));
+        if (!file_) {
+            throw FileOpenError {file_path_};
+        }
         header_.reset(bcf_hdr_init(hts_mode.c_str()));
     } else {
         const auto hts_read_mode = get_hts_mode(file_path_, Mode::read);
         file_.reset(bcf_open(file_path_.c_str(), hts_read_mode.c_str()));
+        if (!file_) {
+            throw FileOpenError {file_path_};
+        }
         header_.reset(bcf_hdr_read(file_.get()));
         file_.reset();
         file_.reset(bcf_open(file_path_.c_str(), hts_mode.c_str()));
+        if (!file_) {
+            throw FileOpenError {file_path_};
+        }
         if (header_) {
             samples_ = extract_samples(header_.get());
         } else {
@@ -943,6 +955,7 @@ void set_samples(const bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source,
 
 bool HtslibBcfFacade::is_bcf() const noexcept
 {
+    assert(file_);
     return file_->format.format == bcf;
 }
 
