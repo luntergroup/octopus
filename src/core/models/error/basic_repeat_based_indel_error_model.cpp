@@ -26,16 +26,11 @@ BasicRepeatBasedIndelErrorModel::BasicRepeatBasedIndelErrorModel(Parameters para
     copy(params.CG_homopolymer_open_penalties, CG_homopolymer_open_penalties_);
     copy(params.dinucleotide_repeat_open_penalties, dinucleotide_repeat_open_penalties_);
     copy(params.trinucleotide_repeat_open_penalties, trinucleotide_repeat_open_penalties_);
-    
-    static const PenaltyVector homopolymer_extend_penalties {10, 10, 4, 4, 6, 6, 7, 8, 11, 13, 12, 11, 10, 9, 8, 7, 6, 6, 6, 5, 5, 5, 5, 5, 5, 4, 4, 4, 4, 4, 4, 3};
-    static const PenaltyVector dinucleotide_extend_penalties {10, 10, 8, 5, 4, 2, 1};
-    static const PenaltyVector trinucleotide_extend_penalties {10, 10, 6, 4, 3, 1};
-    copy(homopolymer_extend_penalties, homopolymer_extend_penalties_);
-    copy(dinucleotide_extend_penalties, dinucleotide_repeat_extend_penalties_);
-    copy(trinucleotide_extend_penalties, trinucleotide_repeat_extend_penalties_);
-    
+    copy(params.homopolymer_extend_penalties, homopolymer_extend_penalties_);
+    copy(params.dinucleotide_repeat_extend_penalties, dinucleotide_repeat_extend_penalties_);
+    copy(params.trinucleotide_repeat_extend_penalties, trinucleotide_repeat_extend_penalties_);
     complex_open_penalty_ = dinucleotide_repeat_open_penalties_.front();
-    complex_extend_penalty_ = 10;
+    complex_extend_penalty_ = dinucleotide_repeat_extend_penalties_.front();
 }
 
 std::unique_ptr<IndelErrorModel> BasicRepeatBasedIndelErrorModel::do_clone() const

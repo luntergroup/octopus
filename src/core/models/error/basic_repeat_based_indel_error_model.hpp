@@ -23,7 +23,9 @@ public:
         PenaltyVector CG_homopolymer_open_penalties;
         PenaltyVector dinucleotide_repeat_open_penalties;
         PenaltyVector trinucleotide_repeat_open_penalties;
-        PenaltyType extension_penalty = 3;
+        PenaltyVector homopolymer_extend_penalties = {3, 3, 3, 3, 3, 3, 4, 5, 6, 6, 8, 8, 7, 6, 5, 4, 3};
+        PenaltyVector dinucleotide_repeat_extend_penalties = {3, 3, 5, 4, 3, 2};
+        PenaltyVector trinucleotide_repeat_extend_penalties = {3, 3, 5, 4, 3, 2};
     };
     
     BasicRepeatBasedIndelErrorModel() = delete;
