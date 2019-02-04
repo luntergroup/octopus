@@ -17,6 +17,11 @@ auto extract_repeats(const Haplotype& haplotype)
     return tandem::extract_exact_tandem_repeats(haplotype.sequence(), 1, 5);
 }
 
+void sort_by_length(std::vector<tandem::Repeat>& repeats)
+{
+    std::sort(std::begin(repeats), std::end(repeats), [] (const auto& lhs, const auto& rhs) { return lhs.length < rhs.length; });
+}
+
 void set_motif(const Haplotype& haplotype, const tandem::Repeat& repeat, Haplotype::NucleotideSequence& result)
 {
     const auto motif_itr = std::next(std::cbegin(haplotype.sequence()), repeat.pos);
@@ -63,15 +68,16 @@ void RepeatBasedIndelErrorModel::do_set_penalties(const Haplotype& haplotype, Pe
 {
     gap_open_penalities.assign(sequence_size(haplotype), get_default_open_penalty());
     gap_extend_penalties.assign(sequence_size(haplotype), get_default_extension_penalty());
-    const auto repeats = extract_repeats(haplotype);
+    auto repeats = extract_repeats(haplotype);
     if (!repeats.empty()) {
+        sort_by_length(repeats);
         Sequence motif(3, 'N');
         for (const auto& repeat : repeats) {
             set_motif(haplotype, repeat, motif);
             const auto open_penalty = get_open_penalty(motif, repeat.length);
             fill_n_if_less(std::next(std::begin(gap_open_penalities), repeat.pos), repeat.length, open_penalty);
             const auto extension_penalty = get_extension_penalty(motif, repeat.length);
-            fill_n_if_less(std::next(std::begin(gap_extend_penalties), repeat.pos), repeat.length, extension_penalty);
+            std::fill_n(std::next(std::begin(gap_extend_penalties), repeat.pos), repeat.length, extension_penalty);
         }
     }
 }
