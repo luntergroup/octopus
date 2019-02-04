@@ -33,7 +33,7 @@ public:
     using IVcfReaderImpl::RecordIteratorPtrPair;
     class RecordIterator;
     
-    enum class Mode { read, write };
+    enum class Mode { read, write, append };
     
     HtslibBcfFacade(); // write only, goes to stdout
     HtslibBcfFacade(Path file_path, Mode mode = Mode::read);
@@ -90,6 +90,7 @@ private:
     std::unique_ptr<bcf_hdr_t, HtsHeaderDeleter> header_;
     std::vector<std::string> samples_;
     
+    bool is_bcf() const noexcept;
     std::size_t count_records(HtsBcfSrPtr& sr) const;
     VcfRecord fetch_record(const bcf_srs_t* sr, UnpackPolicy level) const;
     RecordContainer fetch_records(bcf_srs_t*, UnpackPolicy level, size_t num_records) const;
