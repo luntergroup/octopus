@@ -14,7 +14,7 @@ namespace {
 
 auto extract_repeats(const Haplotype& haplotype)
 {
-    return tandem::extract_exact_tandem_repeats(haplotype.sequence(), 1, 3);
+    return tandem::extract_exact_tandem_repeats(haplotype.sequence(), 1, 5);
 }
 
 void set_motif(const Haplotype& haplotype, const tandem::Repeat& repeat, Haplotype::NucleotideSequence& result)
