@@ -719,7 +719,7 @@ auto rotate_right(Range& range, std::size_t n)
 
 void complete_partial_ref_repeat(Assembler::Variant& v, const Repeat& repeat)
 {
-    assert(v.ref.size() > repeat.period);
+    assert(v.ref.size() >= repeat.period);
     const auto partial_repeat_len = v.ref.size() % repeat.period;
     if (partial_repeat_len > 0) {
         const auto num_remaining_repeat_bases = repeat.period - partial_repeat_len;
@@ -737,7 +737,7 @@ void complete_partial_ref_repeat(Assembler::Variant& v, const Repeat& repeat)
 
 void complete_partial_alt_repeat(Assembler::Variant& v, const Repeat& repeat)
 {
-    assert(v.alt.size() > repeat.period);
+    assert(v.alt.size() >= repeat.period);
     const auto partial_repeat_len = v.alt.size() % repeat.period;
     if (partial_repeat_len > 0) {
         const auto num_remaining_repeat_bases = repeat.period - partial_repeat_len;
