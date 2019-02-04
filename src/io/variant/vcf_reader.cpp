@@ -145,11 +145,7 @@ bool VcfReader::is_open() const noexcept
 void VcfReader::open() noexcept
 {
     std::lock_guard<std::mutex> lock {mutex_};
-    try {
-        reader_ = make_vcf_reader(file_path_);
-    } catch (...) {
-        this->close();
-    }
+    reader_ = make_vcf_reader(file_path_);
 }
 
 void VcfReader::close() noexcept

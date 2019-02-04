@@ -109,21 +109,31 @@ bool operator!=(const VcfReader::RecordIterator& lhs, const VcfReader::RecordIte
 } // namespace octopus
 
 namespace std {
-    template <> struct hash<octopus::VcfReader>
+
+template <> struct hash<octopus::VcfReader>
+{
+    size_t operator()(const octopus::VcfReader& reader) const
     {
-        size_t operator()(const octopus::VcfReader& reader) const
-        {
-            return hash<string>()(reader.path().string());
-        }
-    };
-    
-    template <> struct hash<reference_wrapper<const octopus::VcfReader>>
+        return hash<string>()(reader.path().string());
+    }
+};
+
+template <> struct hash<reference_wrapper<octopus::VcfReader>>
+{
+    size_t operator()(reference_wrapper<octopus::VcfReader> reader) const
     {
-        size_t operator()(reference_wrapper<const octopus::VcfReader> reader) const
-        {
-            return hash<octopus::VcfReader>()(reader);
-        }
-    };
+        return hash<octopus::VcfReader>()(reader);
+    }
+};
+
+template <> struct hash<reference_wrapper<const octopus::VcfReader>>
+{
+    size_t operator()(reference_wrapper<const octopus::VcfReader> reader) const
+    {
+        return hash<octopus::VcfReader>()(reader);
+    }
+};
+
 } // namespace std
 
 #endif
