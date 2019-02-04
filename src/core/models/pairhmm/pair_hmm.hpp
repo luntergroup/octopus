@@ -25,7 +25,7 @@ struct MutationModel
     const std::vector<char>& snv_mask;
     const std::vector<Penalty>& snv_priors;
     const std::vector<Penalty>& gap_open;
-    short gap_extend;
+    const std::vector<Penalty>& gap_extend;
     short nuc_prior = 2;
     std::size_t lhs_flank_size = 0, rhs_flank_size = 0;
 };

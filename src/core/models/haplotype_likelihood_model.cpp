@@ -55,7 +55,7 @@ void HaplotypeLikelihoodModel::reset(const Haplotype& haplotype, boost::optional
         haplotype_snv_reverse_mask_.assign(std::cbegin(haplotype.sequence()), std::cend(haplotype.sequence()));
     }
     if (indel_error_model_) {
-        haplotype_gap_extension_penalty_ = indel_error_model_->evaluate(haplotype, haplotype_gap_open_penalities_);
+        indel_error_model_->set_penalties(haplotype, haplotype_gap_open_penalities_, haplotype_gap_extend_penalities_);
     }
 }
 
@@ -83,7 +83,7 @@ HaplotypeLikelihoodModel::HaplotypeLikelihoodModel(std::unique_ptr<SnvErrorModel
 , haplotype_ {nullptr}
 , haplotype_flank_state_ {}
 , haplotype_gap_open_penalities_ {}
-, haplotype_gap_extension_penalty_ {}
+, haplotype_gap_extend_penalities_ {}
 , config_ {config}
 {
     if (config_.mapping_quality_cap_trigger && *config_.mapping_quality_cap_trigger >= config_.mapping_quality_cap) {
@@ -110,7 +110,7 @@ HaplotypeLikelihoodModel::HaplotypeLikelihoodModel(const HaplotypeLikelihoodMode
     haplotype_snv_forward_priors_ = other.haplotype_snv_forward_priors_;
     haplotype_snv_reverse_priors_ = other.haplotype_snv_reverse_priors_;
     haplotype_gap_open_penalities_ = other.haplotype_gap_open_penalities_;
-    haplotype_gap_extension_penalty_ = other.haplotype_gap_extension_penalty_;
+    haplotype_gap_extend_penalities_ = other.haplotype_gap_extend_penalities_;
     config_ = other.config_;
 }
 
@@ -135,7 +135,7 @@ void swap(HaplotypeLikelihoodModel& lhs, HaplotypeLikelihoodModel& rhs) noexcept
     swap(lhs.haplotype_snv_forward_priors_, rhs.haplotype_snv_forward_priors_);
     swap(lhs.haplotype_snv_reverse_priors_, rhs.haplotype_snv_reverse_priors_);
     swap(lhs.haplotype_gap_open_penalities_, rhs.haplotype_gap_open_penalities_);
-    swap(lhs.haplotype_gap_extension_penalty_, rhs.haplotype_gap_extension_penalty_);
+    swap(lhs.haplotype_gap_extend_penalities_, rhs.haplotype_gap_extend_penalities_);
     swap(lhs.config_, rhs.config_);
 }
 
@@ -240,7 +240,7 @@ double HaplotypeLikelihoodModel::evaluate(const AlignedRead& read,
         is_forward ? haplotype_snv_forward_mask_ : haplotype_snv_reverse_mask_,
         is_forward ? haplotype_snv_forward_priors_ : haplotype_snv_reverse_priors_,
         haplotype_gap_open_penalities_,
-        haplotype_gap_extension_penalty_
+        haplotype_gap_extend_penalities_
     };
     if (haplotype_flank_state_) {
         model.lhs_flank_size = haplotype_flank_state_->lhs_flank;
@@ -356,7 +356,7 @@ HaplotypeLikelihoodModel::align(const AlignedRead& read, MappingPositionItr firs
     const auto is_forward = !read.is_marked_reverse_mapped();
     hmm::MutationModel model {is_forward ? haplotype_snv_forward_mask_ : haplotype_snv_reverse_mask_,
                               is_forward ? haplotype_snv_forward_priors_ : haplotype_snv_reverse_priors_,
-                              haplotype_gap_open_penalities_, haplotype_gap_extension_penalty_};
+                              haplotype_gap_open_penalities_, haplotype_gap_extend_penalities_};
     if (haplotype_flank_state_) {
         model.lhs_flank_size = haplotype_flank_state_->lhs_flank;
         model.rhs_flank_size = haplotype_flank_state_->rhs_flank;
@@ -381,11 +381,12 @@ HaplotypeLikelihoodModel::align(const AlignedRead& read, MappingPositionItr firs
     return result;
 }
 
-HaplotypeLikelihoodModel make_haplotype_likelihood_model(const std::string sequencer, bool use_mapping_quality)
+HaplotypeLikelihoodModel make_haplotype_likelihood_model(const std::string label, bool use_mapping_quality)
 {
     HaplotypeLikelihoodModel::Config config {};
     config.use_mapping_quality = use_mapping_quality;
-    return HaplotypeLikelihoodModel {make_snv_error_model(sequencer), make_indel_error_model(sequencer), config};
+    auto error_model = make_error_model(label);
+    return HaplotypeLikelihoodModel {std::move(error_model.snv), std::move(error_model.indel), config};
 }
 
 } // namespace octopus

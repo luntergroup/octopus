@@ -519,8 +519,8 @@ OptionMap parse_options(const int argc, const char** argv)
      "Include the read mapping quality in the haplotype likelihood calculation")
     
     ("sequence-error-model",
-     po::value<std::string>()->default_value("HiSeq"),
-     "The sequencer error model to use (HiSeq or xTen)")
+     po::value<std::string>()->default_value("PCR-free.HiSeq-2500"),
+     "The sequencer error model to use")
     
     ("max-vb-seeds",
      po::value<int>()->default_value(12),
