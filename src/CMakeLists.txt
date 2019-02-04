@@ -27,6 +27,8 @@ set(EXCEPTIONS_SOURCES
     exceptions/unwritable_file_error.cpp
     exceptions/unimplemented_feature_error.hpp
     exceptions/unimplemented_feature_error.cpp
+    exceptions/file_open_error.hpp
+    exceptions/file_open_error.cpp
 )
 
 set(CONCEPTS_SOURCES
