@@ -105,7 +105,7 @@ def make_empirical_indel_error_model_helper(profile_df, pattern, max_periods=50)
 def max_lt(seq, val):
     return max(v for v in seq if v < val)
 
-def smooth_empirical_model(open_model, extend_model=3):
+def smooth_empirical_model(open_model, extend_model=10):
     # Rules: open[i] <= open[i + 1] + extend[i + 1]
     head_penalties = open_model[:2]
     max_penalty = max_lt(open_model[2:], 50)
