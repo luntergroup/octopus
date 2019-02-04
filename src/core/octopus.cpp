@@ -244,9 +244,13 @@ void log_finish_info(const GenomeCallingComponents& components, const utils::Tim
 
 void write_calls(std::deque<VcfRecord>&& calls, VcfWriter& out)
 {
+    if (calls.empty()) return;
     static auto debug_log = get_debug_log();
     if (debug_log) stream(*debug_log) << "Writing " << calls.size() << " calls to output";
+    const bool was_closed {!out.is_open()};
+    if (was_closed) out.open();
     write(calls, out);
+    if (was_closed) out.close();
     calls.clear();
     calls.shrink_to_fit();
 }
@@ -456,8 +460,7 @@ auto create_unique_temp_output_file_path(const GenomicRegion& region,
     return result;
 }
 
-VcfWriter create_unique_temp_output_file(const GenomicRegion& region,
-                                         const GenomeCallingComponents& components)
+VcfWriter create_unique_temp_output_file(const GenomicRegion& region, const GenomeCallingComponents& components)
 {
     auto path = create_unique_temp_output_file_path(region, components);
     const auto call_types = get_call_types(components, {region.contig_name()});
@@ -465,8 +468,7 @@ VcfWriter create_unique_temp_output_file(const GenomicRegion& region,
     return VcfWriter {std::move(path), std::move(header)};
 }
 
-VcfWriter create_unique_temp_output_file(const GenomicRegion::ContigName& contig,
-                                         const GenomeCallingComponents& components)
+VcfWriter create_unique_temp_output_file(const GenomicRegion::ContigName& contig, const GenomeCallingComponents& components)
 {
     return create_unique_temp_output_file(components.reference().contig_region(contig), components);
 }
@@ -481,7 +483,9 @@ TempVcfWriterMap make_temp_vcf_writers(const GenomeCallingComponents& components
     TempVcfWriterMap result {};
     result.reserve(components.contigs().size());
     for (const auto& contig : components.contigs()) {
-        result.emplace(contig, create_unique_temp_output_file(contig, components));
+        auto contig_writer = create_unique_temp_output_file(contig, components);
+        contig_writer.close();
+        result.emplace(contig, std::move(contig_writer));
     }
     return result;
 }
@@ -1106,7 +1110,7 @@ auto extract_writers(TempVcfWriterMap&& vcfs)
 
 auto extract_as_readers(TempVcfWriterMap&& vcfs)
 {
-    return writers_to_readers(extract_writers(std::move(vcfs)));
+    return writers_to_readers(extract_writers(std::move(vcfs)), false);
 }
 
 void merge(TempVcfWriterMap&& temp_vcf_writers, GenomeCallingComponents& components)
