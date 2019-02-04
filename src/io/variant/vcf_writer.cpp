@@ -123,6 +123,15 @@ bool VcfWriter::is_open() const noexcept
     return writer_ != nullptr;
 }
 
+void VcfWriter::open()
+{
+    if (!file_path_) {
+        throw std::runtime_error {"VcfWriter::open: invalid open request"};
+    }
+    std::lock_guard<std::mutex> lock {mutex_};
+    writer_ = std::make_unique<HtslibBcfFacade>(*file_path_, HtslibBcfFacade::Mode::append);
+}
+
 void VcfWriter::open(Path file_path)
 {
     std::lock_guard<std::mutex> lock {mutex_};
@@ -134,7 +143,7 @@ void VcfWriter::open(Path file_path)
 void VcfWriter::close() noexcept
 {
     std::lock_guard<std::mutex> lock {mutex_};
-    writer_.reset(nullptr);
+    writer_.reset();
 }
 
 bool VcfWriter::is_header_written() const noexcept
