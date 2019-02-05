@@ -337,9 +337,9 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<Phred<double>>()->implicit_value(Phred<double> {2.0}),
      "Only variants with quality above this value are considered for candidate generation")
     
-    ("extract-filtered-source-candidates",
+    ("use-filtered-source-candidates",
      po::value<bool>()->default_value(false),
-     "Extract variants from source VCF records that have been filtered")
+     "Use variants from source VCF records that have been filtered")
     
     ("min-base-quality",
      po::value<int>()->default_value(20),
