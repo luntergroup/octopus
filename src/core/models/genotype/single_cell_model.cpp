@@ -213,14 +213,22 @@ SingleCellModel::propose_genotype_combinations(const std::vector<Genotype<Haplot
             cluster_marginal_genotype_posteriors.push_back(std::move(cluster_inferences.posteriors.genotype_probabilities));
         }
         
-        auto result = select_top_k_tuples(cluster_marginal_genotype_posteriors, config_.max_genotype_combinations);
-        
-        std::vector<int> counts(genotypes.size());
-        result.erase(std::remove_if(std::begin(result), std::end(result), [&counts] (const auto& indices) {
-            std::fill(std::begin(counts), std::end(counts), 0);
-            for (auto idx : indices) ++counts[idx];
-            return std::any_of(std::cbegin(counts), std::cend(counts), [] (auto count) { return count > 1; });
-        }), std::end(result));
+        GenotypeCombinationVector result {};
+        auto k = config_.max_genotype_combinations;
+        while (result.empty()) {
+            result = select_top_k_tuples(cluster_marginal_genotype_posteriors, k);
+            // Remove combinations with duplicate genotypes as these are redundant according to model.
+            std::vector<int> counts(genotypes.size());
+            result.erase(std::remove_if(std::begin(result), std::end(result), [&counts] (const auto& indices) {
+                std::fill(std::begin(counts), std::end(counts), 0);
+                for (auto idx : indices) ++counts[idx];
+                return std::any_of(std::cbegin(counts), std::cend(counts), [] (auto count) { return count > 1; });
+            }), std::end(result));
+            k *= 2;
+        }
+        if (result.size() > config_.max_genotype_combinations) {
+            result.resize(config_.max_genotype_combinations);
+        }
         
         return result;
     }
