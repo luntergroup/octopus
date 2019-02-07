@@ -128,12 +128,56 @@ auto to_md_string(const CigarString& cigar, const Haplotype& haplotype)
     return ss.str();
 }
 
+auto insertion_size_until_span(const CigarString& cigar, int span)
+{
+    unsigned result {0};
+    for (const auto& op : cigar) {
+        if (is_insertion(op)) {
+            result += op.size();
+        } else {
+            span -= op.size();
+            if (span <= 0) break;
+        }
+    }
+    return result;
+}
+
+template <typename Sequence>
+void resize_back(Sequence& sequence, std::size_t n)
+{
+    sequence.erase(std::cbegin(sequence), std::prev(std::cend(sequence), n));
+}
+
+Haplotype get_aligned_part(const Haplotype& inferred_haplotype, const AlignedRead& realigned_read,
+                           const CigarString& inferred_cigar, const ReferenceGenome& reference)
+{
+    if (is_insertion(realigned_read.cigar().front())) {
+        const auto realigned_insertion_size = realigned_read.cigar().front().size();
+        const auto error_insertion_size = insertion_size_until_span(inferred_cigar, realigned_insertion_size);
+        assert(realigned_insertion_size >= error_insertion_size);
+        const auto inferred_insertion_size = realigned_insertion_size - error_insertion_size;
+        if (inferred_insertion_size > 0) {
+            assert(!begins_before(realigned_read, inferred_haplotype));
+            const auto haplotype_head_region = left_overhang_region(inferred_haplotype, realigned_read);
+            auto inserted_sequence = inferred_haplotype.sequence(haplotype_head_region);
+            auto anchor_sequence = remap(inferred_haplotype, expand_rhs(haplotype_head_region, 1)).sequence();
+            resize_back(anchor_sequence, anchor_sequence.size() - inserted_sequence.size());
+            resize_back(inserted_sequence, inferred_insertion_size);
+            const auto tail_region = right_overhang_region(realigned_read, expand_rhs(haplotype_head_region, 1));
+            auto tail_sequence = remap(inferred_haplotype, tail_region).sequence();
+            auto aligned_sequence = inserted_sequence + anchor_sequence + tail_sequence;
+            return Haplotype {mapped_region(realigned_read), std::move(aligned_sequence), reference};
+        }
+    }
+    return remap(inferred_haplotype, mapped_region(realigned_read));
+}
+
 auto realign_and_annotate(const std::vector<AlignedRead>& reads, const Haplotype& haplotype,
                           const ReferenceGenome& reference,
                           boost::optional<int> haplotype_id = boost::none)
 {
     auto realignments = safe_realign(reads, haplotype);
-    const auto cigars = copy_cigars(realignments);
+    const auto inferred_cigars = copy_cigars(realignments);
     rebase(realignments, haplotype);
     std::vector<AnnotatedAlignedRead> result {};
     result.reserve(realignments.size());
@@ -142,9 +186,9 @@ auto realign_and_annotate(const std::vector<AlignedRead>& reads, const Haplotype
         const auto& read = result.back().read();
         const Haplotype reference_haplotype {mapped_region(read), reference};
         result.back().annotate("MD", to_md_string(read.cigar(), reference_haplotype));
-        result.back().annotate("hc", to_string(cigars[n]));
-        const auto local_haplotype = remap(haplotype, mapped_region(read));
-        result.back().annotate("md", to_md_string(cigars[n], local_haplotype));
+        result.back().annotate("hc", to_string(inferred_cigars[n]));
+        const auto inferred_haplotype = get_aligned_part(haplotype, read, inferred_cigars[n], reference);
+        result.back().annotate("md", to_md_string(inferred_cigars[n], inferred_haplotype));
         if (haplotype_id) {
             result.back().annotate("hi", std::to_string(*haplotype_id));
         }
