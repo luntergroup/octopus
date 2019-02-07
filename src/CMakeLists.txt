@@ -105,7 +105,6 @@ set(IO_SOURCES
     io/read/read_writer.hpp
     io/read/read_writer.cpp
     io/read/buffered_read_writer.hpp
-    io/read/buffered_read_writer.cpp
     io/read/annotated_aligned_read.hpp
     io/read/annotated_aligned_read.cpp
     

@@ -119,9 +119,9 @@ BAMRealigner::Report
 BAMRealigner::realign(ReadReader& src, VcfReader& variants, ReadWriter& dst,
                       const ReferenceGenome& reference, SampleList samples) const
 {
-    io::BufferedReadWriter::Config writer_config {};
+    io::BufferedReadWriter<AlignedRead>::Config writer_config {};
     writer_config.max_buffer_footprint = config_.max_buffer;
-    io::BufferedReadWriter writer {dst, writer_config};
+    io::BufferedReadWriter<AlignedRead> writer {dst, writer_config};
     Report report {};
     BatchList batch {};
     boost::optional<GenomicRegion> batch_region {};
@@ -213,9 +213,9 @@ BAMRealigner::realign(ReadReader& src, VcfReader& variants, std::vector<ReadWrit
                       const ReferenceGenome& reference, SampleList samples) const
 {
     if (dsts.size() == 1) return realign(src, variants, dsts.front(), reference, samples);
-    io::BufferedReadWriter::Config writer_config {};
+    io::BufferedReadWriter<AlignedRead>::Config writer_config {};
     writer_config.max_buffer_footprint = config_.max_buffer.bytes() / dsts.size();
-    std::vector<io::BufferedReadWriter> writers {};
+    std::vector<io::BufferedReadWriter<AlignedRead>> writers {};
     writers.reserve(dsts.size());
     for (auto& dst : dsts) writers.emplace_back(dst, writer_config);
     Report report {};
