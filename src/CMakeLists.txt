@@ -571,6 +571,7 @@ set(WarningIgnores
 
 set(GCCWarningIgnores
     -Wno-maybe-uninitialized
+    -Wno-noexcept-type
     )
 
 # Compile options for all builds
