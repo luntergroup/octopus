@@ -68,7 +68,7 @@ private:
     void sort_buffer();
     bool can_buffer(MemoryFootprint footprint, std::size_t reads = 1) const noexcept;
     bool can_buffer(const Read& read) const noexcept;
-    template <typename Range> bool can_buffer(const Range& reads) const noexcept;
+    template <typename Range> bool can_buffer_all(const Range& reads) const noexcept;
     void buffer(Read read);
     template <typename Range> void buffer(Range reads);
 };
@@ -228,7 +228,7 @@ template <typename Range>
 void BufferedReadWriter<Read>::write(Range reads)
 {
     if (reads.empty()) return;
-    if (can_buffer(reads)) {
+    if (can_buffer_all(reads)) {
         buffer(std::move(reads));
     } else if (!buffer_.empty() && !is_same_contig(buffer_.front(), reads.front())) {
         flush();
@@ -239,7 +239,7 @@ void BufferedReadWriter<Read>::write(Range reads)
         auto buffer_flush_end_itr = std::cbegin(buffer_);
         for (auto buffer_itr = std::cbegin(buffer_); buffer_itr != std::cend(buffer_);) {
             buffer_footprint_ = 0;
-            buffer_itr = std::find_if(buffer_itr, std::cend(buffer_), [this] (const AlignedRead& read) {
+            buffer_itr = std::find_if(buffer_itr, std::cend(buffer_), [this] (const auto& read) {
                 if (can_buffer(read)) {
                     buffer_footprint_ += footprint(read);
                     return false;
@@ -259,10 +259,9 @@ void BufferedReadWriter<Read>::write(Range reads)
 
 template <typename Read>
 template <typename Range>
-bool BufferedReadWriter<Read>::can_buffer(const Range& reads) const noexcept
+bool BufferedReadWriter<Read>::can_buffer_all(const Range& reads) const noexcept
 {
-    assert(!reads.empty());
-    return (buffer_.empty() || is_same_contig(buffer_.front(), reads.front())) && can_buffer(footprint(reads), reads.size());
+    return reads.empty() || ((buffer_.empty() || is_same_contig(buffer_.front(), reads.front())) && can_buffer(footprint(reads), reads.size()));
 }
 
 template <typename Read>
