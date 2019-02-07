@@ -139,7 +139,7 @@ auto realign_and_annotate(const std::vector<AlignedRead>& reads, const Haplotype
         const auto& read = result.back().read();
         const Haplotype reference_haplotype {mapped_region(read), reference};
         result.back().annotate("MD", to_md_string(read.cigar(), reference_haplotype));
-        result.back().annotate("cg", to_string(cigars[n]));
+        result.back().annotate("hc", to_string(cigars[n]));
         const auto local_haplotype = remap(haplotype, mapped_region(read));
         result.back().annotate("md", to_md_string(cigars[n], local_haplotype));
         if (haplotype_id) {
