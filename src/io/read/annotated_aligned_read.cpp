@@ -13,6 +13,11 @@ AnnotatedAlignedRead::AnnotatedAlignedRead(AlignedRead read)
 : read_ {std::move(read)}
 {}
 
+const GenomicRegion& AnnotatedAlignedRead::mapped_region() const noexcept
+{
+    return read().mapped_region();
+}
+
 const AlignedRead& AnnotatedAlignedRead::read() const noexcept
 {
     return read_;
@@ -41,6 +46,16 @@ AnnotatedAlignedRead::Annotation& AnnotatedAlignedRead::annotation(Tag& tag)
 void AnnotatedAlignedRead::annotate(Tag tag, Annotation annotation)
 {
     annotations_.emplace(std::move(tag), std::move(annotation));
+}
+
+bool operator==(const AnnotatedAlignedRead& lhs, const AnnotatedAlignedRead& rhs) noexcept
+{
+    return lhs.read() == rhs.read();
+}
+
+bool operator<(const AnnotatedAlignedRead& lhs, const AnnotatedAlignedRead& rhs) noexcept
+{
+    return lhs.read() < rhs.read();
 }
 
 } // namespace octopus

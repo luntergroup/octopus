@@ -8,11 +8,14 @@
 #include <vector>
 #include <unordered_map>
 
+#include "concepts/mappable.hpp"
+#include "concepts/comparable.hpp"
+#include "basics/genomic_region.hpp"
 #include "basics/aligned_read.hpp"
 
 namespace octopus {
 
-class AnnotatedAlignedRead
+class AnnotatedAlignedRead : public Mappable<AnnotatedAlignedRead>
 {
 public:
     using Tag = std::string;
@@ -28,6 +31,8 @@ public:
     AnnotatedAlignedRead& operator=(AnnotatedAlignedRead&&)      = default;
     
     ~AnnotatedAlignedRead() = default;
+    
+    const GenomicRegion& mapped_region() const noexcept;
     
     const AlignedRead& read() const noexcept;
     AlignedRead& read() noexcept;
@@ -45,6 +50,9 @@ private:
     AlignedRead read_;
     AnnotationMap annotations_;
 };
+
+bool operator==(const AnnotatedAlignedRead& lhs, const AnnotatedAlignedRead& rhs) noexcept;
+bool operator<(const AnnotatedAlignedRead& lhs, const AnnotatedAlignedRead& rhs) noexcept;
 
 } // namespace octopus
 
