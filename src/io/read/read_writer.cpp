@@ -55,5 +55,11 @@ ReadWriter& operator<<(ReadWriter& dst, const AlignedRead& read)
     return dst;
 }
 
+ReadWriter& operator<<(ReadWriter& dst, const AnnotatedAlignedRead& read)
+{
+    dst.write(read);
+    return dst;
+}
+
 } // namespace io
 } // namespace octopus
