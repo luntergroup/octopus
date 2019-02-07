@@ -32,8 +32,8 @@ ForwardIt random_select(ForwardIt first, ForwardIt last, RandomGenerator& g)
 template <typename ForwardIt>
 ForwardIt random_select(ForwardIt first, ForwardIt last)
 {
-    static std::default_random_engine gen {};
-    return random_select(first, last, gen);
+    static std::mt19937 generator {42};
+    return random_select(first, last, generator);
 }
 
 auto get_covered_sample_regions(const std::vector<SampleName>& samples, const InputRegionMap& input_regions,
@@ -57,9 +57,9 @@ auto choose_sample_region(const GenomicRegion& from, GenomicRegion::Size max_siz
 {
     if (size(from) <= max_size) return from;
     const auto max_begin = from.end() - max_size;
-    static std::default_random_engine gen {};
+    static std::mt19937 generator {42};
     std::uniform_int_distribution<GenomicRegion::Position> dist {from.begin(), max_begin};
-    return GenomicRegion {from.contig_name(), dist(gen), from.end()};
+    return GenomicRegion {from.contig_name(), dist(generator), from.end()};
 }
 
 auto draw_sample(const SampleName& sample, const InputRegionMap& regions,
