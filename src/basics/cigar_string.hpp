@@ -168,6 +168,8 @@ std::ostream& operator<<(std::ostream& os, const CigarOperation::Flag& flag);
 std::ostream& operator<<(std::ostream& os, const CigarOperation& cigar_operation);
 std::ostream& operator<<(std::ostream& os, const CigarString& cigar);
 
+std::string to_string(const CigarString& cigar);
+
 struct CigarHash
 {
     std::size_t operator()(const CigarOperation& op) const noexcept;
