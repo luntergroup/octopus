@@ -12,6 +12,7 @@
 #include "concepts/comparable.hpp"
 #include "basics/genomic_region.hpp"
 #include "basics/aligned_read.hpp"
+#include "utils/memory_footprint.hpp"
 
 namespace octopus {
 
@@ -50,6 +51,8 @@ private:
     AlignedRead read_;
     AnnotationMap annotations_;
 };
+
+MemoryFootprint footprint(const AnnotatedAlignedRead& read) noexcept;
 
 bool operator==(const AnnotatedAlignedRead& lhs, const AnnotatedAlignedRead& rhs) noexcept;
 bool operator<(const AnnotatedAlignedRead& lhs, const AnnotatedAlignedRead& rhs) noexcept;

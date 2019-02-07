@@ -48,6 +48,12 @@ void AnnotatedAlignedRead::annotate(Tag tag, Annotation annotation)
     annotations_.emplace(std::move(tag), std::move(annotation));
 }
 
+MemoryFootprint footprint(const AnnotatedAlignedRead& read) noexcept
+{
+    // TODO: add annotation foorprint
+    return footprint(read.read());
+}
+
 bool operator==(const AnnotatedAlignedRead& lhs, const AnnotatedAlignedRead& rhs) noexcept
 {
     return lhs.read() == rhs.read();
