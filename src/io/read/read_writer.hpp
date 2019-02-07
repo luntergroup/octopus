@@ -15,6 +15,7 @@
 namespace octopus {
 
 class AlignedRead;
+class AnnotatedAlignedRead;
 
 namespace io {
 
@@ -39,6 +40,7 @@ public:
     const Path& path() const noexcept;
     
     void write(const AlignedRead& read);
+    void write(const AnnotatedAlignedRead& read);
     
 private:
     Path path_;
