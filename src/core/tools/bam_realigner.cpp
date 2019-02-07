@@ -118,8 +118,7 @@ auto to_md_string(const CigarString& cigar, const Haplotype& haplotype)
                 sequence_itr += op.size();
             case Flag::insertion:
             case Flag::hardClipped:
-            default:
-                break;
+            default: break;
         }
     }
     if (match_length > 0) ss << match_length;
@@ -127,6 +126,7 @@ auto to_md_string(const CigarString& cigar, const Haplotype& haplotype)
 }
 
 auto realign_and_annotate(const std::vector<AlignedRead>& reads, const Haplotype& haplotype,
+                          const ReferenceGenome& reference,
                           boost::optional<int> haplotype_id = boost::none)
 {
     auto realignments = safe_realign(reads, haplotype);
@@ -137,9 +137,10 @@ auto realign_and_annotate(const std::vector<AlignedRead>& reads, const Haplotype
     for (std::size_t n {0}; n < realignments.size(); ++n) {
         result.emplace_back(std::move(realignments[n]));
         const auto& read = result.back().read();
-        const auto local_haplotype = remap(haplotype, mapped_region(read));
-        result.back().annotate("MD", to_md_string(read.cigar(), local_haplotype));
+        const Haplotype reference_haplotype {mapped_region(read), reference};
+        result.back().annotate("MD", to_md_string(read.cigar(), reference_haplotype));
         result.back().annotate("cg", to_string(cigars[n]));
+        const auto local_haplotype = remap(haplotype, mapped_region(read));
         result.back().annotate("md", to_md_string(cigars[n], local_haplotype));
         if (haplotype_id) {
             result.back().annotate("hi", std::to_string(*haplotype_id));
@@ -149,13 +150,13 @@ auto realign_and_annotate(const std::vector<AlignedRead>& reads, const Haplotype
 }
 
 auto assign_and_realign(const std::vector<AlignedRead>& reads, const Genotype<Haplotype>& genotype,
-                        BAMRealigner::Report& report)
+                        const ReferenceGenome& reference, BAMRealigner::Report& report)
 {
     std::vector<AnnotatedAlignedRead> result {};
     if (!reads.empty()) {
         result.reserve(reads.size());
         if (is_homozygous_nonreference(genotype)) {
-            utils::append(realign_and_annotate(reads, genotype[0], genotype.ploidy()), result);
+            utils::append(realign_and_annotate(reads, genotype[0], reference, genotype.ploidy()), result);
         } else {
             AmbiguousReadList unassigned_reads {};
             auto support = compute_haplotype_support(genotype, reads, unassigned_reads);
@@ -163,13 +164,13 @@ auto assign_and_realign(const std::vector<AlignedRead>& reads, const Genotype<Ha
             for (auto& p : support) {
                 if (!p.second.empty()) {
                     report.n_reads_assigned += p.second.size();
-                    utils::append(realign_and_annotate(p.second, p.first, haplotype_id), result);
+                    utils::append(realign_and_annotate(p.second, p.first, reference, haplotype_id), result);
                 }
                 ++haplotype_id;
             }
             if (!unassigned_reads.empty()) {
                 report.n_reads_assigned += unassigned_reads.size();
-                utils::append(realign_and_annotate(copy_reads(std::move(unassigned_reads)), genotype[0], genotype.ploidy()), result);
+                utils::append(realign_and_annotate(copy_reads(std::move(unassigned_reads)), genotype[0], reference, genotype.ploidy()), result);
             }
         }
         std::sort(std::begin(result), std::end(result));
@@ -219,7 +220,7 @@ BAMRealigner::realign(ReadReader& src, VcfReader& variants, ReadWriter& dst,
                                       std::make_move_iterator(overlapped_reads.end()));
                 sample_reads_itr = sample.reads.erase(overlapped_reads.begin(), overlapped_reads.end());
                 auto bad_reads = to_annotated(remove_unalignable_reads(genotype_reads));
-                auto realignments = assign_and_realign(genotype_reads, genotype, report);
+                auto realignments = assign_and_realign(genotype_reads, genotype, reference, report);
                 report.n_reads_unassigned += bad_reads.size();
                 move_merge(bad_reads, realignments);
                 move_merge(realignments, realigned_reads);
