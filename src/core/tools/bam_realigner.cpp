@@ -105,19 +105,20 @@ auto to_md_string(const CigarString& cigar, const Haplotype& haplotype)
                     match_length = 0;
                 }
                 ss << '^';
-                // fall through
             }
+            // fall through
             case Flag::substitution: {
                 if (match_length > 0) {
                     ss << match_length;
                     match_length = 0;
                 }
                 std::copy(sequence_itr, sequence_itr + op.size(), std::ostream_iterator<char> {ss});
-                // fall through
             }
+            // fall through
             case Flag::softClipped:
             case Flag::padding:
                 sequence_itr += op.size();
+                // fall through
             case Flag::insertion:
             case Flag::hardClipped:
             default: break;
