@@ -181,7 +181,10 @@ std::vector<VcfRecord> Caller::regenotype(const std::vector<Variant>& variants, 
 auto assign_and_realign(const std::vector<AlignedRead>& reads, const Genotype<Haplotype>& genotype)
 {
     auto result = compute_haplotype_support(genotype, reads, {AssignmentConfig::AmbiguousAction::first});
-    for (auto& p : result) realign_to_reference(p.second, p.first);
+    for (auto& p : result) {
+        realign_to_reference(p.second, p.first);
+        std::sort(std::begin(p.second), std::end(p.second));
+    }
     return result;
 }
 
