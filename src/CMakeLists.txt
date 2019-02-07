@@ -187,6 +187,7 @@ set(UTILS_SOURCES
     utils/select_top_k.hpp
     utils/system_utils.hpp
     utils/system_utils.cpp
+    utils/k_medoids.hpp
 )
 
 set(CORE_SOURCES
