@@ -153,8 +153,7 @@ Haplotype get_aligned_part(const Haplotype& inferred_haplotype, const AlignedRea
 {
     if (is_insertion(realigned_read.cigar().front())) {
         const auto realigned_insertion_size = realigned_read.cigar().front().size();
-        const auto error_insertion_size = insertion_size_until_span(inferred_cigar, realigned_insertion_size);
-        assert(realigned_insertion_size >= error_insertion_size);
+        const auto error_insertion_size = std::min(insertion_size_until_span(inferred_cigar, realigned_insertion_size), realigned_insertion_size);
         const auto inferred_insertion_size = realigned_insertion_size - error_insertion_size;
         if (inferred_insertion_size > 0) {
             assert(!begins_before(realigned_read, inferred_haplotype));
