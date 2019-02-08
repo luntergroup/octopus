@@ -130,7 +130,7 @@ auto to_md_string(const CigarString& cigar, const Haplotype& haplotype)
 
 auto insertion_size_until_span(const CigarString& cigar, int span)
 {
-    unsigned result {0};
+    CigarOperation::Size result {0};
     for (const auto& op : cigar) {
         if (is_insertion(op)) {
             result += op.size();
