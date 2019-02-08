@@ -134,6 +134,12 @@ auto insertion_size_until_span(const CigarString& cigar, int span)
     for (const auto& op : cigar) {
         if (is_insertion(op)) {
             result += op.size();
+        } else if (is_deletion(op)) {
+            if (result > op.size()) {
+                result -= op.size();
+            } else {
+                result = 0;
+            }
         } else {
             span -= op.size();
             if (span <= 0) break;
