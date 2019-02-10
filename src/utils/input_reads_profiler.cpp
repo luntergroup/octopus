@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2018 Daniel Cooke
+// Copyright (c) 2015-2019 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "input_reads_profiler.hpp"
@@ -32,24 +32,8 @@ ForwardIt random_select(ForwardIt first, ForwardIt last, RandomGenerator& g)
 template <typename ForwardIt>
 ForwardIt random_select(ForwardIt first, ForwardIt last)
 {
-    static std::default_random_engine gen {};
-    return random_select(first, last, gen);
-}
-
-auto estimate_dynamic_size(const AlignedRead& read) noexcept
-{
-    return read.name().size() * sizeof(char)
-    + read.read_group().size() * sizeof(char)
-    + sequence_size(read) * sizeof(char)
-    + sequence_size(read) * sizeof(AlignedRead::BaseQuality)
-    + read.cigar().size() * sizeof(CigarOperation)
-    + contig_name(read).size() * sizeof(char)
-    + (read.has_other_segment() ? sizeof(AlignedRead::Segment) : 0);
-}
-
-auto estimate_read_size(const AlignedRead& read) noexcept
-{
-    return sizeof(AlignedRead) + estimate_dynamic_size(read);
+    static std::mt19937 generator {42};
+    return random_select(first, last, generator);
 }
 
 auto get_covered_sample_regions(const std::vector<SampleName>& samples, const InputRegionMap& input_regions,
@@ -73,9 +57,9 @@ auto choose_sample_region(const GenomicRegion& from, GenomicRegion::Size max_siz
 {
     if (size(from) <= max_size) return from;
     const auto max_begin = from.end() - max_size;
-    static std::default_random_engine gen {};
+    static std::mt19937 generator {42};
     std::uniform_int_distribution<GenomicRegion::Position> dist {from.begin(), max_begin};
-    return GenomicRegion {from.contig_name(), dist(gen), from.end()};
+    return GenomicRegion {from.contig_name(), dist(generator), from.end()};
 }
 
 auto draw_sample(const SampleName& sample, const InputRegionMap& regions,
@@ -141,7 +125,8 @@ auto get_read_bytes(const std::vector<ReadSetSamples>& read_sets)
     std::deque<std::size_t> result {};
     for (const auto& set : read_sets) {
         for (const auto& reads : set) {
-            std::transform(std::cbegin(reads), std::cend(reads), std::back_inserter(result), estimate_read_size);
+            std::transform(std::cbegin(reads), std::cend(reads), std::back_inserter(result),
+                           [] (const auto& read) noexcept { return footprint(read).bytes(); });
         }
     }
     return result;
@@ -262,7 +247,7 @@ estimate_mean_read_size(const std::vector<SampleName>& samples,
         }
         const auto reads = read_manager.fetch_reads(sample, test_region);
         std::transform(std::cbegin(reads), std::cend(reads), std::back_inserter(read_size_samples),
-                       estimate_read_size);
+                       [] (const auto& read) noexcept { return footprint(read).bytes(); });
     }
     if (read_size_samples.empty()) return boost::none;
     return static_cast<std::size_t>(maths::mean(read_size_samples) + maths::stdev(read_size_samples));

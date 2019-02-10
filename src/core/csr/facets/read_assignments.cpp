@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2018 Daniel Cooke
+// Copyright (c) 2015-2019 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "read_assignments.hpp"
@@ -53,6 +53,7 @@ ReadAssignments::ReadAssignments(const ReferenceGenome& reference, const Genotyp
                 }
                 for (auto& s : genotype_support) {
                     safe_realign_to_reference(s.second, s.first);
+                    std::sort(std::begin(s.second), std::end(s.second));
                     result_.support[sample][s.first] = std::move(s.second);
                 }
             }

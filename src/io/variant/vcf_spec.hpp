@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2018 Daniel Cooke
+// Copyright (c) 2015-2019 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef vcf_spec_hpp
@@ -81,6 +81,7 @@ VCF_SPEC_CONSTANT character {"Character"};
 
 namespace number {
 
+VCF_SPEC_CONSTANT one {"1"};
 VCF_SPEC_CONSTANT per_alt_allele {"A"};
 VCF_SPEC_CONSTANT per_allele {"R"};
 VCF_SPEC_CONSTANT per_genotype {"G"};

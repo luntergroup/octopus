@@ -176,19 +176,6 @@ IndelProfiler::read_next_block(VcfIterator& first, const VcfIterator& last, cons
     return copy_each_first(block);
 }
 
-namespace {
-
-Genotype<Haplotype> remap(const Genotype<Haplotype>& genotype, const GenomicRegion& region)
-{
-    Genotype<Haplotype> result {genotype.ploidy()};
-    for (const auto& haplotype : genotype) {
-        result.emplace(remap(haplotype, region));
-    }
-    return result;
-}
-
-} // namespace
-
 IndelProfiler::DataBatch
 IndelProfiler::read_next_data_batch(VcfIterator& first, const VcfIterator& last, const ReadPipe& src,
                                     const ReferenceGenome& reference, const SampleList& samples,

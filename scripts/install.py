@@ -18,7 +18,7 @@ latest_llvm = 'llvm'
 latest_gcc = 'gcc@8'
 
 def get_octopus_version():
-    return "0.5.3-beta"
+    return "0.6.0-beta"
 
 def is_unix():
     system = platform.system()
@@ -49,6 +49,7 @@ def install_homebrew():
     homebrew = get_homebrew_name()
     if not os.path.exists(homebrew):
         download_homebrew()
+    os.environ['PATH']= os.path.abspath(homebrew+'/bin') + os.pathsep + os.path.abspath(homebrew+'/sbin') + os.pathsep + os.environ['PATH']
     brew_bin = homebrew + '/bin/brew'
     call([brew_bin, 'update'])
     return brew_bin

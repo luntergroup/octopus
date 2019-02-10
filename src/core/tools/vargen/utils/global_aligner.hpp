@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2018 Daniel Cooke
+// Copyright (c) 2015-2019 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef global_aligner_hpp
@@ -12,10 +12,11 @@ namespace octopus { namespace coretools {
 
 struct Model
 {
-    short match      =  2;
-    short mismatch   = -3;
-    short gap_open   = -8;
-    short gap_extend = -1;
+    using ScoreType = short;
+    ScoreType match      =  2;
+    ScoreType mismatch   = -3;
+    ScoreType gap_open   = -8;
+    ScoreType gap_extend = -1;
 };
 
 struct Alignment

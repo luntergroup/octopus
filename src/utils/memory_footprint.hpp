@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2018 Daniel Cooke
+// Copyright (c) 2015-2019 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef memory_footprint_hpp
@@ -20,7 +20,7 @@ class MemoryFootprint : public Comparable<MemoryFootprint>
 public:
     MemoryFootprint() = default;
     
-    constexpr MemoryFootprint(std::size_t num_bytes) noexcept : num_bytes_ {num_bytes} {}
+    constexpr MemoryFootprint(std::size_t bytes) noexcept : bytes_ {bytes} {}
     
     MemoryFootprint(const MemoryFootprint&)            = default;
     MemoryFootprint& operator=(const MemoryFootprint&) = default;
@@ -29,14 +29,28 @@ public:
     
     ~MemoryFootprint() = default;
     
-    constexpr std::size_t num_bytes() const noexcept { return num_bytes_; }
+    constexpr std::size_t bytes() const noexcept { return bytes_; }
+    
+    MemoryFootprint& operator+=(const MemoryFootprint& other) noexcept
+    {
+        bytes_ += other.bytes_;
+        return *this;
+    }
+    MemoryFootprint& operator-=(const MemoryFootprint& other) noexcept
+    {
+        bytes_ -= other.bytes_;
+        return *this;
+    }
     
 private:
-    std::size_t num_bytes_;
+    std::size_t bytes_;
 };
 
 bool operator==(const MemoryFootprint& lhs, const MemoryFootprint& rhs) noexcept;
 bool operator<(const MemoryFootprint& lhs, const MemoryFootprint& rhs) noexcept;
+
+MemoryFootprint operator+(MemoryFootprint lhs, const MemoryFootprint& rhs) noexcept;
+MemoryFootprint operator-(MemoryFootprint lhs, const MemoryFootprint& rhs) noexcept;
 
 std::ostream& operator<<(std::ostream& os, MemoryFootprint footprint);
 std::istream& operator>>(std::istream& is, MemoryFootprint& result);
@@ -51,7 +65,7 @@ template <> struct hash<octopus::MemoryFootprint>
 {
     size_t operator()(const octopus::MemoryFootprint& fp) const noexcept
     {
-        return hash<decltype(fp.num_bytes())>()(fp.num_bytes());
+        return hash<decltype(fp.bytes())>()(fp.bytes());
     }
 };
 

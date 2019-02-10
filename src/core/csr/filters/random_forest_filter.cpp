@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2018 Daniel Cooke
+// Copyright (c) 2015-2019 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "random_forest_filter.hpp"
@@ -27,10 +27,10 @@ RandomForestFilter::RandomForestFilter(FacetFactory facet_factory,
                                        ConcurrencyPolicy threading,
                                        Path ranger_forest, Path temp_directory,
                                        boost::optional<ProgressMeter&> progress)
-: DoublePassVariantCallFilter {std::move(facet_factory), std::move(measures), std::move(output_config), threading, progress}
+: DoublePassVariantCallFilter {std::move(facet_factory), std::move(measures),
+                               std::move(output_config), threading, std::move(temp_directory), progress}
 , forest_ {std::make_unique<ranger::ForestProbability>()}
 , ranger_forest_ {std::move(ranger_forest)}
-, temp_dir_ {std::move(temp_directory)}
 , num_records_ {0}
 , data_buffer_ {}
 {}
@@ -69,7 +69,7 @@ void RandomForestFilter::prepare_for_registration(const SampleList& samples) con
     data_header.push_back("TP");
     data_.reserve(samples.size());
     for (const auto& sample : samples) {
-        auto data_path = temp_dir_;
+        auto data_path = temp_directory();
         Path fname {"octopus_ranger_temp_forest_data_" + sample + ".dat"};
         data_path /= fname;
         data_.emplace_back(data_path.string(), data_path);
@@ -172,7 +172,7 @@ static double get_prob_false(std::string& prediction_line, const bool tp_first)
 
 void RandomForestFilter::prepare_for_classification(boost::optional<Log>& log) const
 {
-    const Path ranger_prefix {temp_dir_ / "octopus_ranger_temp"};
+    const Path ranger_prefix {temp_directory() / "octopus_ranger_temp"};
     const Path ranger_prediction_fname {ranger_prefix.string() + ".prediction"};
     data_buffer_.resize(num_records_);
     for (auto& file : data_) {

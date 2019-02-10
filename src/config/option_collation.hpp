@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2018 Daniel Cooke
+// Copyright (c) 2015-2019 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef option_collation_hpp
@@ -84,9 +84,10 @@ bool is_legacy_vcf_requested(const OptionMap& options);
 bool is_filter_training_mode(const OptionMap& options);
 
 boost::optional<fs::path> filter_request(const OptionMap& options);
+bool annotate_filter_output(const OptionMap& options);
 
 boost::optional<fs::path> bamout_request(const OptionMap& options);
-boost::optional<fs::path> split_bamout_request(const OptionMap& options);
+bool full_bamouts_requested(const OptionMap& options);
 
 unsigned estimate_max_open_files(const OptionMap& options);
 

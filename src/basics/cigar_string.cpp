@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2018 Daniel Cooke
+// Copyright (c) 2015-2019 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "cigar_string.hpp"
@@ -8,6 +8,7 @@
 #include <array>
 #include <ostream>
 #include <stdexcept>
+#include <sstream>
 
 #include <boost/lexical_cast.hpp>
 
@@ -398,6 +399,13 @@ std::ostream& operator<<(std::ostream& os, const CigarString& cigar)
 {
     std::copy(std::cbegin(cigar), std::cend(cigar), std::ostream_iterator<CigarOperation>(os));
     return os;
+}
+
+std::string to_string(const CigarString& cigar)
+{
+    std::ostringstream ss {};
+    ss << cigar;
+    return ss.str();
 }
 
 std::size_t CigarHash::operator()(const CigarOperation& op) const noexcept

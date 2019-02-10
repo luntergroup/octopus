@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2018 Daniel Cooke
+// Copyright (c) 2015-2019 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef cigar_string_hpp
@@ -167,6 +167,8 @@ bool operator<(const CigarOperation& lhs, const CigarOperation& rhs) noexcept;
 std::ostream& operator<<(std::ostream& os, const CigarOperation::Flag& flag);
 std::ostream& operator<<(std::ostream& os, const CigarOperation& cigar_operation);
 std::ostream& operator<<(std::ostream& os, const CigarString& cigar);
+
+std::string to_string(const CigarString& cigar);
 
 struct CigarHash
 {

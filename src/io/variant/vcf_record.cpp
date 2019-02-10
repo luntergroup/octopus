@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2018 Daniel Cooke
+// Copyright (c) 2015-2019 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "vcf_record.hpp"
@@ -689,6 +689,14 @@ VcfRecord::Builder& VcfRecord::Builder::add_filter(const SampleName& sample, Key
 VcfRecord::Builder& VcfRecord::Builder::clear_filter(const SampleName& sample) noexcept
 {
     return this->clear_format(sample, vcfspec::format::filter);
+}
+
+VcfRecord::Builder& VcfRecord::Builder::clear_all_sample_filters() noexcept
+{
+    for (const auto& p : samples_) {
+        this->clear_filter(p.first);
+    }
+    return *this;
 }
 
 VcfRecord::Builder& VcfRecord::Builder::set_refcall()

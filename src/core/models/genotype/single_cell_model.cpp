@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2018 Daniel Cooke
+// Copyright (c) 2015-2019 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "single_cell_model.hpp"
@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <numeric>
 
+#include "utils/k_medoids.hpp"
 #include "utils/select_top_k.hpp"
 #include "utils/maths.hpp"
 #include "subclone_model.hpp"
@@ -101,6 +102,15 @@ auto num_combinations(const std::size_t num_genotypes, const std::size_t num_sam
     }
 }
 
+template <typename T>
+auto select(const std::vector<std::size_t> indices, const std::vector<T>& data)
+{
+    std::vector<T> result {};
+    result.reserve(indices.size());
+    for (auto idx : indices) result.push_back(data[idx]);
+    return result;
+}
+
 auto pool_likelihood(const std::vector<SampleName>& samples,
                      const std::vector<Haplotype>& haplotypes,
                      const HaplotypeLikelihoodArray& haplotype_likelihoods)
@@ -147,80 +157,36 @@ SingleCellModel::propose_genotype_combinations(const std::vector<Genotype<Haplot
         const auto population_inferences = population_model.evaluate(samples_, genotypes, haplotype_likelihoods);
         const auto& population_genotype_posteriors = population_inferences.posteriors.marginal_genotype_probabilities;
         
-        std::vector<std::vector<double>> kl_divergences(samples_.size(), std::vector<double>(samples_.size()));
-        for (std::size_t lhs_sample_idx {0}; lhs_sample_idx < samples_.size(); ++lhs_sample_idx) {
-            for (std::size_t rhs_sample_idx {lhs_sample_idx + 1}; rhs_sample_idx < samples_.size(); ++rhs_sample_idx) {
-                auto kl = symmetric_kl_divergence(population_genotype_posteriors[lhs_sample_idx], population_genotype_posteriors[rhs_sample_idx]);
-                kl_divergences[lhs_sample_idx][rhs_sample_idx] = kl;
-                kl_divergences[rhs_sample_idx][lhs_sample_idx] = kl;
-            }
-        }
-        
-        std::vector<std::vector<SampleName>> groups(num_groups);
-        for (auto& group : groups) group.reserve(samples_.size());
-        
-        // Pick cluster centres
-        std::size_t max_kl_sample1 {}, max_kl_sample2 {};
-        double max_kl {0};
-        for (std::size_t i {0}; i < num_groups; ++i) {
-            for (std::size_t j {0}; j < i; ++j) {
-                if (kl_divergences[i][j] > max_kl) {
-                    max_kl_sample1 = i;
-                    max_kl_sample2 = j;
-                    max_kl = kl_divergences[i][j];
-                }
-            }
-        }
-        
-        std::vector<bool> unassigned_samples(samples_.size(), false);
-        
-        groups[0].push_back(samples_[max_kl_sample1]);
-        groups[1].push_back(samples_[max_kl_sample2]);
-        
-        unassigned_samples[max_kl_sample1] = true;
-        unassigned_samples[max_kl_sample2] = true;
-        
-        for (std::size_t n {2}; n <= num_groups; ++n) {
-            // TODO
-        }
-        
-        for (std::size_t sample_idx {0}; sample_idx < samples_.size(); ++sample_idx) {
-            if (!unassigned_samples[sample_idx]) {
-                std::size_t best_group_idx {};
-                double best_group_kl {max_kl};
-                for (std::size_t j {0}; j < samples_.size(); ++j) {
-                    if (j != sample_idx && unassigned_samples[j] && kl_divergences[sample_idx][j] < best_group_kl) {
-                        best_group_idx = j;
-                        best_group_kl = kl_divergences[sample_idx][j];
-                    }
-                }
-                for (auto& group : groups) {
-                    if (std::find(std::cbegin(group), std::cend(group), samples_[best_group_idx]) != std::cend(group)) {
-                        group.push_back(samples_[sample_idx]);
-                        break;
-                    }
-                }
-            }
-        }
+        std::vector<std::vector<std::size_t>> clusters {};
+        k_medoids(population_genotype_posteriors, num_groups, clusters, symmetric_kl_divergence);
         
         IndividualModel individual_model {prior_model_.germline_prior_model()};
         std::vector<ProbabilityVector> cluster_marginal_genotype_posteriors {};
         cluster_marginal_genotype_posteriors.reserve(num_groups);
         const auto haplotypes = extract_unique_elements(genotypes);
-        for (const auto& group : groups) {
-            const auto pooled_likelihoods = pool_likelihood(group, haplotypes, haplotype_likelihoods);
+        for (const auto& cluster : clusters) {
+            const auto cluster_samples = select(cluster, samples_);
+            const auto pooled_likelihoods = pool_likelihood(cluster_samples, haplotypes, haplotype_likelihoods);
             auto cluster_inferences = individual_model.evaluate(genotypes, pooled_likelihoods);
             cluster_marginal_genotype_posteriors.push_back(std::move(cluster_inferences.posteriors.genotype_probabilities));
         }
         
-        auto result = select_top_k_tuples(cluster_marginal_genotype_posteriors, config_.max_genotype_combinations);
-        
-        std::vector<int> counts(genotypes.size());
-        result.erase(std::remove_if(std::begin(result), std::end(result), [&counts] (const auto& indices) {
-            std::fill(std::begin(counts), std::end(counts), 0);
-            for (auto idx : indices) ++counts[idx];
-            return std::any_of(std::cbegin(counts), std::cend(counts), [] (auto count) { return count > 1; });
-        }), std::end(result));
+        GenotypeCombinationVector result {};
+        auto k = config_.max_genotype_combinations;
+        while (result.empty()) {
+            result = select_top_k_tuples(cluster_marginal_genotype_posteriors, k);
+            // Remove combinations with duplicate genotypes as these are redundant according to model.
+            std::vector<int> counts(genotypes.size());
+            result.erase(std::remove_if(std::begin(result), std::end(result), [&counts] (const auto& indices) {
+                std::fill(std::begin(counts), std::end(counts), 0);
+                for (auto idx : indices) ++counts[idx];
+                return std::any_of(std::cbegin(counts), std::cend(counts), [] (auto count) { return count > 1; });
+            }), std::end(result));
+            k *= 2;
+        }
+        if (result.size() > config_.max_genotype_combinations) {
+            result.resize(config_.max_genotype_combinations);
+        }
         
         return result;
     }

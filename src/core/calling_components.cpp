@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2018 Daniel Cooke
+// Copyright (c) 2015-2019 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "calling_components.hpp"
@@ -90,6 +90,11 @@ const VcfWriter& GenomeCallingComponents::output() const noexcept
     return components_.output;
 }
 
+MemoryFootprint GenomeCallingComponents::read_buffer_footprint() const noexcept
+{
+    return components_.read_buffer_footprint;
+}
+
 std::size_t GenomeCallingComponents::read_buffer_size() const noexcept
 {
     return components_.read_buffer_size;
@@ -163,9 +168,9 @@ boost::optional<GenomeCallingComponents::Path> GenomeCallingComponents::bamout()
     return components_.bamout;
 }
 
-boost::optional<GenomeCallingComponents::Path> GenomeCallingComponents::split_bamout() const
+BAMRealigner::Config GenomeCallingComponents::bamout_config() const noexcept
 {
-    return components_.split_bamout;
+    return components_.bamout_config;
 }
 
 boost::optional<GenomeCallingComponents::Path> GenomeCallingComponents::data_profile() const
@@ -409,7 +414,7 @@ std::size_t calculate_max_num_reads(MemoryFootprint max_buffer_size, const boost
         }
         max_buffer_size = min_buffer_size;
     }
-    return max_buffer_size.num_bytes() / estimate_read_size(profile);
+    return max_buffer_size.bytes() / estimate_read_size(profile);
 }
 
 auto add_identifier(const fs::path& base, const std::string& identifier)
@@ -492,6 +497,7 @@ GenomeCallingComponents::Components::Components(ReferenceGenome&& reference, Rea
 , output {std::move(output)}
 , filtered_output {}
 , num_threads {options::get_num_threads(options)}
+, read_buffer_footprint {options::get_target_read_buffer_size(options)}
 , read_buffer_size {}
 , progress_meter {regions}
 , ploidies {options::get_ploidy_map(options)}
@@ -500,7 +506,7 @@ GenomeCallingComponents::Components::Components(ReferenceGenome&& reference, Rea
 , legacy {}
 , filter_request {}
 , bamout {options::bamout_request(options)}
-, split_bamout {options::split_bamout_request(options)}
+, bamout_config {}
 , data_profile {options::data_profile_request(options)}
 {
     drop_unused_samples(this->samples, this->read_manager);
@@ -519,6 +525,9 @@ GenomeCallingComponents::Components::Components(ReferenceGenome&& reference, Rea
         if (temp_directory) fs::remove_all(*temp_directory);
         throw;
     }
+    bamout_config.copy_hom_ref_reads = options::full_bamouts_requested(options);
+    bamout_config.max_buffer = read_buffer_footprint;
+    bamout_config.max_threads = num_threads;
 }
 
 void GenomeCallingComponents::Components::setup_progress_meter(const options::OptionMap& options)

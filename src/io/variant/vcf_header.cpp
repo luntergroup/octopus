@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2018 Daniel Cooke
+// Copyright (c) 2015-2019 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "vcf_header.hpp"
@@ -34,7 +34,7 @@ unsigned VcfHeader::num_samples() const noexcept
     return static_cast<unsigned>(samples_.size());
 }
 
-std::vector<std::string> VcfHeader::samples() const
+const std::vector<std::string>& VcfHeader::samples() const noexcept
 {
     return samples_;
 }

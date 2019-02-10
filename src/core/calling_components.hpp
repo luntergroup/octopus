@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2018 Daniel Cooke
+// Copyright (c) 2015-2019 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef calling_components_hpp
@@ -23,6 +23,8 @@
 #include "readpipe/read_pipe_fwd.hpp"
 #include "core/callers/caller_factory.hpp"
 #include "core/csr/filters/variant_call_filter_factory.hpp"
+#include "core/tools/bam_realigner.hpp"
+#include "utils/memory_footprint.hpp"
 #include "utils/input_reads_profiler.hpp"
 #include "logging/progress_meter.hpp"
 
@@ -55,6 +57,7 @@ public:
     const std::vector<GenomicRegion::ContigName>& contigs() const noexcept;
     VcfWriter& output() noexcept;
     const VcfWriter& output() const noexcept;
+    MemoryFootprint read_buffer_footprint() const noexcept;
     std::size_t read_buffer_size() const noexcept;
     const boost::optional<Path>& temp_directory() const noexcept;
     boost::optional<unsigned> num_threads() const noexcept;
@@ -71,7 +74,7 @@ public:
     boost::optional<Path> legacy() const;
     boost::optional<Path> filter_request() const;
     boost::optional<Path> bamout() const;
-    boost::optional<Path> split_bamout() const;
+    BAMRealigner::Config bamout_config() const noexcept;
     boost::optional<Path> data_profile() const;
     
 private:
@@ -101,6 +104,7 @@ private:
         VcfWriter output;
         boost::optional<VcfWriter> filtered_output;
         boost::optional<unsigned> num_threads;
+        MemoryFootprint read_buffer_footprint;
         std::size_t read_buffer_size;
         ProgressMeter progress_meter;
         PloidyMap ploidies;
@@ -108,7 +112,9 @@ private:
         bool sites_only;
         boost::optional<Path> legacy;
         boost::optional<Path> filter_request;
-        boost::optional<Path> bamout, split_bamout, data_profile;
+        boost::optional<Path> bamout;
+        BAMRealigner::Config bamout_config;
+        boost::optional<Path> data_profile;
         // Components that require temporary directory during construction appear last to make
         // exception handling easier.
         boost::optional<Path> temp_directory;

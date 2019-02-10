@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2018 Daniel Cooke
+// Copyright (c) 2015-2019 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "cigar_scanner.hpp"
@@ -562,10 +562,11 @@ bool is_good_somatic(const Variant& variant, const unsigned depth, const unsigne
         return false;
     }
     const auto adjusted_depth = depth - std::min(static_cast<unsigned>(std::sqrt(depth)), depth - 1);
-    const auto approx_vaf = static_cast<double>(observed_qualities.size()) / adjusted_depth;
+    auto approx_vaf = static_cast<double>(observed_qualities.size()) / adjusted_depth;
     if (is_snv(variant)) {
         if (is_likely_runthrough_artifact(forward_strand_support, reverse_strand_support, observed_qualities)) return false;
         erase_below(observed_qualities, 15);
+        approx_vaf = static_cast<double>(observed_qualities.size() - num_edge_observations) / adjusted_depth;
         if (observed_qualities.size() >= 2 && approx_vaf >= min_expected_vaf && num_edge_observations < support) {
             return approx_vaf >= 0.01 || !is_completely_strand_biased(forward_strand_support, reverse_strand_support);
         } else {
@@ -575,7 +576,7 @@ bool is_good_somatic(const Variant& variant, const unsigned depth, const unsigne
         if (support == 1 && alt_sequence_size(variant) > 8) return false;
         erase_below(observed_qualities, 15);
         if (alt_sequence_size(variant) < 10) {
-            return observed_qualities.size() >= 2 &&approx_vaf >= min_expected_vaf;
+            return observed_qualities.size() >= 2 && approx_vaf >= min_expected_vaf;
         } else {
             return observed_qualities.size() >= 2 && approx_vaf >= min_expected_vaf / 3;
         }

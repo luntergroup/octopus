@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2018 Daniel Cooke
+// Copyright (c) 2015-2019 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "option_parser.hpp"
@@ -184,13 +184,13 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<fs::path>(),
      "Output realigned BAM files")
     
-     ("split-bamout",
-      po::value<fs::path>(),
-      "Output split realigned BAM files")
-    
-     ("data-profile",
-      po::value<fs::path>(),
-      "Output a profile of polymorphisms and errors found in the data")
+    ("full-bamout",
+     po::bool_switch()->default_value(false),
+     "Output all reads when producing realigned bam outputs rather than just variant read minibams")
+     
+    ("data-profile",
+     po::value<fs::path>(),
+     "Output a profile of polymorphisms and errors found in the data")
     ;
     
     po::options_description transforms("Read transformations");
@@ -333,9 +333,9 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<Phred<double>>()->implicit_value(Phred<double> {2.0}),
      "Only variants with quality above this value are considered for candidate generation")
     
-    ("extract-filtered-source-candidates",
+    ("use-filtered-source-candidates",
      po::value<bool>()->default_value(false),
-     "Extract variants from source VCF records that have been filtered")
+     "Use variants from source VCF records that have been filtered")
     
     ("min-base-quality",
      po::value<int>()->default_value(20),
@@ -463,7 +463,11 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<RefCallType>()->implicit_value(RefCallType::blocked),
      "Caller will report reference confidence calls for each position (positional),"
      " or in automatically sized blocks (blocked)")
-    
+     
+    ("refcall-block-merge-threshold",
+     po::value<Phred<double>>()->default_value(Phred<double> {10.0}),
+     "Threshold to merge adjacent refcall positions when using blocked refcalling")
+     
     ("min-refcall-posterior",
      po::value<Phred<double>>()->default_value(Phred<double> {2.0}),
      "Report reference alleles with posterior probability (phred scale) greater than this")
@@ -511,8 +515,8 @@ OptionMap parse_options(const int argc, const char** argv)
      "Include the read mapping quality in the haplotype likelihood calculation")
     
     ("sequence-error-model",
-     po::value<std::string>()->default_value("HiSeq"),
-     "The sequencer error model to use (HiSeq or xTen)")
+     po::value<std::string>()->default_value("PCR-free.HiSeq-2500"),
+     "The sequencer error model to use")
     
     ("max-vb-seeds",
      po::value<int>()->default_value(12),
@@ -609,7 +613,7 @@ OptionMap parse_options(const int argc, const char** argv)
     ("max-phylogeny-size",
     po::value<int>()->default_value(3),
     "Maximum number of nodes in cell phylogeny to consider")
-
+    
     ("dropout-concentration",
     po::value<float>()->default_value(2, "2"),
     "Allelic dropout concentration paramater")
@@ -631,7 +635,7 @@ OptionMap parse_options(const int argc, const char** argv)
     call_filtering.add_options()
     ("call-filtering,f",
      po::value<bool>()->default_value(true),
-     "Enable all variant call filtering")
+     "Turn variant call filtering on or off")
     
     ("filter-expression",
      po::value<std::string>()->default_value("QUAL < 10 | MQ < 10 | MP < 10 | AF < 0.05 | SB > 0.98 | BQ < 15 | DP < 1"),
@@ -656,10 +660,10 @@ OptionMap parse_options(const int argc, const char** argv)
     ("keep-unfiltered-calls",
      po::bool_switch()->default_value(false),
      "Keep a copy of unfiltered calls")
-    
-    ("training-annotations",
-     po::value<std::vector<std::string>>()->multitoken(),
-     "Outputs all calls as PASS and annotates output VCF with the given measures or measure set")
+     
+    ("annotations",
+     po::value<std::vector<std::string>>()->multitoken()->implicit_value(std::vector<std::string> {"active"}, "active")->composing(),
+     "Annotations to write to final VCF")
     
     ("filter-vcf",
      po::value<fs::path>(),
@@ -668,7 +672,7 @@ OptionMap parse_options(const int argc, const char** argv)
     ("forest-file",
      po::value<fs::path>(),
      "Trained Ranger random forest file")
-
+    
     ("somatic-forest-file",
      po::value<fs::path>(),
      "Trained Ranger random forest file for somatic variants")

@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2018 Daniel Cooke
+// Copyright (c) 2015-2019 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "fasta.hpp"
@@ -182,7 +182,7 @@ Fasta::GeneticSequence Fasta::do_fetch_sequence(const GenomicRegion& region) con
             utils::capitalise(result);
         }
         if (options_.iupac_ambiguity_symbol_policy == Options::IUPACAmbiguitySymbolPolicy::disambiguate) {
-            utils::disambiguate_iupac_bases(result);
+            utils::disambiguate_iupac_bases(result, true);
         }
         if (result.size() < size(region)) {
             if (options_.base_fill_policy == Options::BaseFillPolicy::throw_exception) {

@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2018 Daniel Cooke
+// Copyright (c) 2015-2019 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "vcf_utils.hpp"
@@ -82,7 +82,7 @@ void index_vcfs(const std::vector<VcfReader>& readers)
     for (const auto& reader : readers) index_vcf(reader);
 }
 
-std::vector<VcfReader> writers_to_readers(std::vector<VcfWriter>&& writers)
+std::vector<VcfReader> writers_to_readers(std::vector<VcfWriter>&& writers, const bool keep_open)
 {
     std::vector<VcfReader> result {};
     result.reserve(writers.size());
@@ -91,10 +91,28 @@ std::vector<VcfReader> writers_to_readers(std::vector<VcfWriter>&& writers)
         writer.close();
         if (path) {
             result.emplace_back(std::move(*path));
+            if (!keep_open) result.back().close();
         }
     }
     writers.clear();
     return result;
+}
+
+void copy(VcfReader& src, VcfWriter& dst)
+{
+    const bool is_closed {!src.is_open()};
+    if (is_closed) src.open();
+    if (!dst.is_header_written()) {
+        dst << src.fetch_header();
+    }
+    constexpr std::size_t maxBufferSize {1000000};
+    if (src.count_records() <= maxBufferSize) {
+        dst << src.fetch_records();
+    } else {
+        auto p = src.iterate();
+        std::copy(std::move(p.first), std::move(p.second), VcfWriterIterator {dst});
+    }
+    if (is_closed) src.close();
 }
 
 void copy(const VcfReader& src, VcfWriter& dst)
@@ -178,34 +196,44 @@ VcfHeader merge(const std::vector<VcfHeader>& headers)
     return hb.build_once();
 }
 
-std::vector<VcfHeader> get_headers(const std::vector<VcfReader>& readers)
+VcfHeader fetch_header(VcfReader& reader)
 {
-    std::vector<VcfHeader> result {};
-    result.reserve(readers.size());
-    std::transform(std::cbegin(readers), std::cend(readers), std::back_inserter(result),
-                   [] (const auto& reader) { return reader.fetch_header(); });
+    const bool is_closed {!reader.is_open()};
+    if (is_closed) reader.open();
+    const auto result = reader.fetch_header();
+    if (is_closed) reader.close();
     return result;
 }
 
-using VcfReaderRef               = std::reference_wrapper<const VcfReader>;
+std::vector<VcfHeader> get_headers(std::vector<VcfReader>& readers)
+{
+    std::vector<VcfHeader> result {};
+    result.reserve(readers.size());
+    std::transform(std::begin(readers), std::end(readers), std::back_inserter(result),
+                   [] (VcfReader& reader) { return fetch_header(reader); });
+    return result;
+}
+
+using VcfReaderRef               = std::reference_wrapper<VcfReader>;
 using ContigRecordCountMap       = std::unordered_map<std::string, std::size_t>;
 using ReaderContigRecordCountMap = std::unordered_map<VcfReaderRef, ContigRecordCountMap>;
 
-ReaderContigRecordCountMap get_contig_count_map(const std::vector<VcfReader>& readers,
-                                                const std::vector<std::string>& contigs)
+ReaderContigRecordCountMap
+get_contig_count_map(std::vector<VcfReader>& readers, const std::vector<std::string>& contigs)
 {
     ReaderContigRecordCountMap result {};
     result.reserve(readers.size());
-    
     for (auto& reader : readers) {
+        const bool is_closed {!reader.is_open()};
+        if (is_closed) reader.open();
         ContigRecordCountMap contig_counts {};
         contig_counts.reserve(contigs.size());
         for (const auto& contig : contigs) {
             contig_counts.emplace(contig, reader.count_records(contig));
         }
+        if (is_closed) reader.close();
         result.emplace(reader, std::move(contig_counts));
     }
-    
     return result;
 }
 
@@ -283,19 +311,6 @@ void merge_contig_unique(const std::vector<VcfReader>& sources, VcfWriter& dst,
     }
 }
 
-auto make_iterator_map(const std::vector<VcfReader>& sources, const std::string& contig,
-                       const ReaderContigRecordCountMap& reader_contig_counts)
-{
-    std::unordered_map<VcfReaderRef, VcfReader::RecordIteratorPair> result {};
-    result.reserve(reader_contig_counts.size());
-    for (const auto& reader : sources) {
-        if (reader_contig_counts.at(reader).count(contig) == 1) {
-            result.emplace(reader, reader.iterate(contig));
-        }
-    }
-    return result;
-}
-
 using VcfRecordQueue = std::priority_queue<VcfRecord, std::deque<VcfRecord>, std::greater<VcfRecord>>;
 
 void write(VcfRecordQueue& records, VcfWriter& dst)
@@ -306,7 +321,7 @@ void write(VcfRecordQueue& records, VcfWriter& dst)
     }
 }
 
-void one_step_merge(const std::vector<VcfReader>& sources, VcfWriter& dst,
+void one_step_merge(std::vector<VcfReader>& sources, VcfWriter& dst,
                     const std::vector<std::string>& contigs,
                     ReaderContigRecordCountMap& reader_contig_counts)
 {
@@ -324,8 +339,8 @@ void one_step_merge(const std::vector<VcfReader>& sources, VcfWriter& dst,
     }
 }
 
-void merge_pair(const VcfReader& first, const VcfReader& second,
-                VcfWriter& dst, const std::vector<std::string>& contigs,
+void merge_pair(VcfReader& first, VcfReader& second, VcfWriter& dst,
+                const std::vector<std::string>& contigs,
                 ReaderContigRecordCountMap& reader_contig_counts)
 {
     VcfWriterIterator out {dst};
@@ -378,8 +393,7 @@ auto make_record_iterator_queue(const std::vector<VcfReader>& sources, const std
     return result;
 }
 
-void merge(const std::vector<VcfReader>& sources, VcfWriter& dst,
-           const std::vector<std::string>& contigs)
+void merge(std::vector<VcfReader>& sources, VcfWriter& dst, const std::vector<std::string>& contigs)
 {
     if (sources.empty()) return;
     if (sources.size() == 1) {
@@ -415,7 +429,7 @@ void merge(const std::vector<VcfReader>& sources, VcfWriter& dst,
     }
 }
 
-void merge(const std::vector<VcfReader>& sources, VcfWriter& dst)
+void merge(std::vector<VcfReader>& sources, VcfWriter& dst)
 {
     if (sources.empty()) return;
     if (sources.size() == 1) {

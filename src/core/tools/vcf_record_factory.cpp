@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2018 Daniel Cooke
+// Copyright (c) 2015-2019 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "vcf_record_factory.hpp"
@@ -85,7 +85,8 @@ private:
     }
 };
 
-void resolve_indel_genotypes(std::vector<CallWrapper>& calls, const std::vector<SampleName>& samples)
+void resolve_indel_genotypes(std::vector<CallWrapper>& calls, const std::vector<SampleName>& samples,
+                             const ReferenceGenome& reference)
 {
     for (auto it = begin(calls); it != end(calls);) {
         if (is_empty(it->mapped_region())) {
@@ -93,7 +94,7 @@ void resolve_indel_genotypes(std::vector<CallWrapper>& calls, const std::vector<
                                               [it] (const auto& call) { return are_adjacent(call, *it); });
             // Now everything between rit and it is adjacent to the insertion at it, and will have inserted sequence
             // we want to remove.
-            for_each(rit.base(), it, [&samples, it] (auto& call) {
+            for_each(rit.base(), it, [&samples, &reference, it] (auto& call) {
                 for (const auto& sample : samples) {
                     const auto& insertion_genotype = (*it)->get_genotype_call(sample).genotype;
                     auto& sample_genotype = call->get_genotype_call(sample).genotype;
@@ -101,8 +102,8 @@ void resolve_indel_genotypes(std::vector<CallWrapper>& calls, const std::vector<
                     resolved_alleles.reserve(sample_genotype.ploidy());
                     transform(std::cbegin(sample_genotype), std::cend(sample_genotype),
                               std::cbegin(insertion_genotype), std::back_inserter(resolved_alleles),
-                              [&sample] (const Allele& allele1, const Allele& allele2) {
-                                  if (is_insertion(allele2)) {
+                              [&sample, &reference] (const Allele& allele1, const Allele& allele2) {
+                                  if (is_insertion(allele2) && !is_reference(allele1, reference)) {
                                       const auto& old_sequence = allele1.sequence();
                                       if (old_sequence.size() <= sequence_size(allele2)) {
                                           throw InconsistentCallError {sample, allele1, allele2};
@@ -134,7 +135,7 @@ void resolve_indel_genotypes(std::vector<CallWrapper>& calls, const std::vector<
             // it2 and it3 is another call which will have inserted sequence we want to remove.
             // Note the genotype calls of all insertions must be the same as they are in the
             // same region
-            for_each(it2, it3, [&samples, it] (auto& call) {
+            for_each(it2, it3, [&samples, &reference, it] (auto& call) {
                 for (const auto& sample : samples) {
                     const auto& insertion_genotype = (*it)->get_genotype_call(sample).genotype;
                     auto& sample_genotype = call->get_genotype_call(sample).genotype;
@@ -142,8 +143,8 @@ void resolve_indel_genotypes(std::vector<CallWrapper>& calls, const std::vector<
                     resolved_alleles.reserve(sample_genotype.ploidy());
                     transform(std::cbegin(sample_genotype), std::cend(sample_genotype),
                               std::cbegin(insertion_genotype), std::back_inserter(resolved_alleles),
-                              [&sample] (const Allele& allele1, const Allele& allele2) {
-                                  if (is_insertion(allele2)) {
+                              [&sample, &reference] (const Allele& allele1, const Allele& allele2) {
+                                  if (is_insertion(allele2) && !is_reference(allele1, reference)) {
                                       const auto& old_sequence = allele1.sequence();
                                       if (old_sequence.size() <= sequence_size(allele2)) {
                                           throw InconsistentCallError {sample, allele1, allele2};
@@ -245,7 +246,7 @@ std::vector<VcfRecord> VcfRecordFactory::make(std::vector<CallWrapper>&& calls) 
     using std::make_reverse_iterator;
     // TODO: refactor this!!!
     assert(std::is_sorted(std::cbegin(calls), std::cend(calls)));
-    resolve_indel_genotypes(calls, samples_);
+    resolve_indel_genotypes(calls, samples_, reference_);
     pad_indels(calls, samples_);
     std::vector<VcfRecord> result {};
     result.reserve(calls.size());

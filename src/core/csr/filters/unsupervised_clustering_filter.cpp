@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2018 Daniel Cooke
+// Copyright (c) 2015-2019 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "unsupervised_clustering_filter.hpp"
@@ -15,7 +15,7 @@ UnsupervisedClusteringFilter::UnsupervisedClusteringFilter(FacetFactory facet_fa
                                                            OutputOptions output_config,
                                                            ConcurrencyPolicy threading,
                                                            boost::optional<ProgressMeter&> progress)
-: DoublePassVariantCallFilter {std::move(facet_factory), std::move(measures), std::move(output_config), threading, progress}
+: DoublePassVariantCallFilter {std::move(facet_factory), std::move(measures), std::move(output_config), threading, "/tmp", progress}
 {}
 
 void UnsupervisedClusteringFilter::annotate(VcfHeader::Builder& header) const

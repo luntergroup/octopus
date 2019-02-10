@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2018 Daniel Cooke
+// Copyright (c) 2015-2019 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "genotype.hpp"
@@ -200,6 +200,13 @@ bool includes(const Genotype<Haplotype>& genotype, const Allele& allele)
 bool is_homozygous(const Genotype<Haplotype>& genotype, const Allele& allele)
 {
     return copy<Allele>(genotype, mapped_region(allele)).count(allele) == genotype.ploidy();
+}
+
+Genotype<Haplotype> remap(const Genotype<Haplotype>& genotype, const GenomicRegion& region)
+{
+    Genotype<Haplotype> result {genotype.ploidy()};
+    for (const auto& haplotype : genotype) result.emplace(remap(haplotype, region));
+    return result;
 }
 
 std::size_t num_genotypes(const unsigned num_elements, const unsigned ploidy)

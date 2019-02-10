@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2018 Daniel Cooke
+// Copyright (c) 2015-2019 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "pair_hmm.hpp"
@@ -140,7 +140,8 @@ auto simd_align(const std::string& truth, const std::string& target,
                                        model.snv_mask.data() + alignment_offset,
                                        model.snv_priors.data() + alignment_offset,
                                        model.gap_open.data() + alignment_offset,
-                                       model.gap_extend, model.nuc_prior);
+                                       model.gap_extend.data() + alignment_offset,
+                                       model.nuc_prior);
         return -ln10Div10<> * static_cast<double>(score);
     } else {
         thread_local std::vector<char> align1 {}, align2 {};
@@ -156,7 +157,8 @@ auto simd_align(const std::string& truth, const std::string& target,
                                        model.snv_mask.data() + alignment_offset,
                                        model.snv_priors.data() + alignment_offset,
                                        model.gap_open.data() + alignment_offset,
-                                       model.gap_extend, model.nuc_prior,
+                                       model.gap_extend.data() + alignment_offset,
+                                       model.nuc_prior,
                                        align1.data(), align2.data(), first_pos);
         if (first_pos == -1) {
             return std::numeric_limits<double>::lowest(); // overflow
@@ -185,7 +187,8 @@ auto simd_align(const std::string& truth, const std::string& target,
                                                        model.snv_mask.data() + alignment_offset,
                                                        model.snv_priors.data() + alignment_offset,
                                                        model.gap_open.data() + alignment_offset,
-                                                       model.gap_extend, model.nuc_prior,
+                                                       model.gap_extend.data() + alignment_offset,
+                                                       model.nuc_prior,
                                                        first_pos,
                                                        align1.data(), align2.data(),
                                                        target_mask_size);
@@ -234,7 +237,8 @@ simd_align(const std::string& truth, const std::string& target,
                              model.snv_mask.data() + alignment_offset,
                              model.snv_priors.data() + alignment_offset,
                              model.gap_open.data() + alignment_offset,
-                             model.gap_extend, model.nuc_prior,
+                             model.gap_extend.data() + alignment_offset,
+                             model.nuc_prior,
                              align1.data(), align2.data(), first_pos);
     if (first_pos == -1) {
         throw HMMOverflow {target, truth};
@@ -264,7 +268,8 @@ simd_align(const std::string& truth, const std::string& target,
                                                        model.snv_mask.data() + alignment_offset,
                                                        model.snv_priors.data() + alignment_offset,
                                                        model.gap_open.data() + alignment_offset,
-                                                       model.gap_extend, model.nuc_prior,
+                                                       model.gap_extend.data() + alignment_offset,
+                                                       model.nuc_prior,
                                                        first_pos,
                                                        align1.data(), align2.data(),
                                                        target_mask_size);
@@ -348,7 +353,7 @@ double evaluate(const std::string& target, const std::string& truth,
                 // target: AAA GGGGG
                 // truth:  AAAAGGGGG
                 return lnProbability[model.gap_open[truth_mismatch_idx]];
-            } else if (mispatch_penalty <= (model.gap_open[truth_mismatch_idx] + model.gap_extend)) {
+            } else if (mispatch_penalty <= (model.gap_open[truth_mismatch_idx] + model.gap_extend[truth_mismatch_idx])) {
                 return lnProbability[mispatch_penalty];
             }
         }

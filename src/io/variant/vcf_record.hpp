@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2018 Daniel Cooke
+// Copyright (c) 2015-2019 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef vcf_record_hpp
@@ -216,6 +216,7 @@ public:
     Builder& set_filter(const SampleName& sample, std::initializer_list<KeyType> filter);
     Builder& add_filter(const SampleName& sample, KeyType filter);
     Builder& clear_filter(const SampleName& sample) noexcept;
+    Builder& clear_all_sample_filters() noexcept;
     
     Builder& set_refcall();
     Builder& set_somatic();

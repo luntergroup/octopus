@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2018 Daniel Cooke
+// Copyright (c) 2015-2019 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "str_period.hpp"
@@ -92,7 +92,7 @@ const std::string& STRPeriod::do_name() const
 
 std::string STRPeriod::do_describe() const
 {
-    return "Length of overlapping STR";
+    return "Period of overlapping STR";
 }
 
 std::vector<std::string> STRPeriod::do_requirements() const

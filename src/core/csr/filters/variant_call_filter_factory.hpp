@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2018 Daniel Cooke
+// Copyright (c) 2015-2019 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef variant_call_filter_factory_hpp
@@ -27,9 +27,20 @@ class FacetFactory;
 class VariantCallFilterFactory
 {
 public:
+    VariantCallFilterFactory() = default;
+    
+    VariantCallFilterFactory(VariantCallFilter::OutputOptions output_options);
+    
+    VariantCallFilterFactory(const VariantCallFilterFactory&)            = default;
+    VariantCallFilterFactory& operator=(const VariantCallFilterFactory&) = default;
+    VariantCallFilterFactory(VariantCallFilterFactory&&)                 = default;
+    VariantCallFilterFactory& operator=(VariantCallFilterFactory&&)      = default;
+    
     virtual ~VariantCallFilterFactory() = default;
     
     std::unique_ptr<VariantCallFilterFactory> clone() const;
+    
+    void set_output_options(VariantCallFilter::OutputOptions output_options);
     
     std::unique_ptr<VariantCallFilter>
     make(const ReferenceGenome& reference,
@@ -41,7 +52,18 @@ public:
          boost::optional<ProgressMeter&> progress = boost::none,
          boost::optional<unsigned> max_threads = 1) const;
     
+    std::unique_ptr<VariantCallFilter>
+    make(const ReferenceGenome& reference,
+         BufferedReadPipe read_pipe,
+         VcfHeader input_header,
+         PloidyMap ploidies,
+         boost::optional<Pedigree> pedigree,
+         boost::optional<ProgressMeter&> progress = boost::none,
+         boost::optional<unsigned> max_threads = 1) const;
+    
 private:
+    VariantCallFilter::OutputOptions output_options_;
+    
     virtual std::unique_ptr<VariantCallFilterFactory> do_clone() const = 0;
     virtual
     std::unique_ptr<VariantCallFilter>

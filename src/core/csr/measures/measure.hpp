@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2018 Daniel Cooke
+// Copyright (c) 2015-2019 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef measure_hpp
@@ -57,7 +57,7 @@ public:
     std::vector<std::string> requirements() const { return do_requirements(); }
     std::string serialise(const ResultType& value) const { return do_serialise(value); }
     void annotate(VcfHeader::Builder& header) const;
-    void annotate(VcfRecord::Builder& record, const ResultType& value) const;
+    void annotate(VcfRecord::Builder& record, const ResultType& value, const VcfHeader& header) const;
     friend bool operator==(const Measure& lhs, const Measure& rhs) noexcept
     {
         return lhs.name() == rhs.name() && lhs.is_equal(rhs);
@@ -107,7 +107,7 @@ public:
     std::vector<std::string> requirements() const { return measure_->requirements(); }
     std::string serialise(const Measure::ResultType& value) const { return measure_->serialise(value); }
     void annotate(VcfHeader::Builder& header) const { measure_->annotate(header); }
-    void annotate(VcfRecord::Builder& record, const Measure::ResultType& value) const { measure_->annotate(record, value); }
+    void annotate(VcfRecord::Builder& record, const Measure::ResultType& value, const VcfHeader& header) const { measure_->annotate(record, value, header); }
     
 private:
     std::unique_ptr<Measure> measure_;

@@ -1,7 +1,7 @@
-// Copyright (c) 2015-2018 Daniel Cooke
+// Copyright (c) 2015-2019 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
-#include "x10_snv_error_model.hpp"
+#include "repeat_based_snv_error_model.hpp"
 
 #include <iterator>
 #include <algorithm>
@@ -13,11 +13,29 @@
 
 namespace octopus {
 
-constexpr decltype(X10SnvErrorModel::maxQualities_) X10SnvErrorModel::maxQualities_;
+constexpr decltype(BasicRepeatBasedSNVErrorModel::max_period_) BasicRepeatBasedSNVErrorModel::max_period_;
 
-std::unique_ptr<SnvErrorModel> X10SnvErrorModel::do_clone() const
+namespace {
+
+template <typename T, std::size_t N>
+void copy(const std::vector<T>& src, std::array<T, N>& dst) noexcept
 {
-    return std::make_unique<X10SnvErrorModel>(*this);
+    auto itr = std::copy(std::cbegin(src), std::next(std::cbegin(src), std::min(src.size(), N)), std::begin(dst));
+    std::fill(itr, std::end(dst), src.back());
+}
+
+} // namespace
+
+BasicRepeatBasedSNVErrorModel::BasicRepeatBasedSNVErrorModel(Parameters params)
+{
+    copy(params.homopolymer_penalty_caps, penalty_caps_[0]);
+    copy(params.dinucleotide_penalty_caps, penalty_caps_[1]);
+    copy(params.trinucleotide_penalty_caps, penalty_caps_[2]);
+}
+
+std::unique_ptr<SnvErrorModel> BasicRepeatBasedSNVErrorModel::do_clone() const
+{
+    return std::make_unique<BasicRepeatBasedSNVErrorModel>(*this);
 }
 
 namespace {
@@ -71,16 +89,16 @@ constexpr auto base_hash(const char b) noexcept
 {
     using T = std::int8_t;
     switch (b) {
-    case 'A':
-        return T {1};
-    case 'C':
-        return T {2};
-    case 'G':
-        return T {3};
-    case 'T':
-        return T {4};
-    default:
-        return T {5};
+        case 'A':
+            return T {1};
+        case 'C':
+            return T {2};
+        case 'G':
+            return T {3};
+        case 'T':
+            return T {4};
+        default:
+            return T {5};
     }
 }
 
@@ -123,40 +141,30 @@ auto make_substitution_mask(const Haplotype& haplotype)
 
 } // namespace
 
-void X10SnvErrorModel::do_evaluate(const Haplotype& haplotype,
-                                   MutationVector& forward_snv_mask, PenaltyVector& forward_snv_priors,
-                                   MutationVector& reverse_snv_mask, PenaltyVector& reverse_snv_priors) const
+void BasicRepeatBasedSNVErrorModel::do_evaluate(const Haplotype& haplotype,
+                                     MutationVector& forward_snv_mask, PenaltyVector& forward_snv_priors,
+                                     MutationVector& reverse_snv_mask, PenaltyVector& reverse_snv_priors) const
 {
     using std::cbegin; using std::cend; using std::crbegin; using std::crend;
-    using std::begin; using std::end; using std::rbegin; using std::next;
-    constexpr auto Max_period = maxQualities_.size();
-    const auto repeats = extract_repeats(haplotype, Max_period);
+    using std::begin; using std::rbegin; using std::next;
+    const auto repeats = extract_repeats(haplotype, max_period_);
     const auto num_bases = sequence_size(haplotype);
-    std::array<std::vector<std::int8_t>, Max_period> repeat_masks {};
+    std::array<std::vector<std::int8_t>, max_period_> repeat_masks {};
     repeat_masks.fill(std::vector<std::int8_t>(num_bases, 0));
     for (const auto& repeat : repeats) {
         std::fill_n(next(begin(repeat_masks[repeat.period - 1]), repeat.pos), repeat.length, repeat_hash(haplotype, repeat));
     }
-    const auto max_quality = maxQualities_.front().front();
+    const auto max_quality = penalty_caps_.front().front();
     forward_snv_priors.assign(num_bases, max_quality);
     reverse_snv_priors.assign(num_bases, max_quality);
     std::vector<unsigned> runs(num_bases);
-    constexpr unsigned Max_homopolymer_gap {3};
-    for (std::int8_t i {1}; i < 5; ++i) {
-        auto homopolymers = repeat_masks[0];
-        std::replace_if(begin(homopolymers), end(homopolymers), [=] (auto x) { return x != i; }, 0);
-        count_runs(cbegin(homopolymers), cend(homopolymers), begin(runs), Max_homopolymer_gap);
-        set_priors(runs, forward_snv_priors, maxQualities_.front());
-        count_runs(crbegin(homopolymers), crend(homopolymers), rbegin(runs), Max_homopolymer_gap);
-        set_priors(runs, reverse_snv_priors, maxQualities_.front());
-    }
-    for (std::size_t i {1}; i < Max_period; ++i) {
-        const auto max_gap = Max_homopolymer_gap + i;
+    for (unsigned i {0}; i < max_period_; ++i) {
+        const auto max_gap = i + 2;
         const auto& repeat_mask = repeat_masks[i];
         count_runs(cbegin(repeat_mask), cend(repeat_mask), begin(runs), max_gap);
-        set_priors(runs, forward_snv_priors, maxQualities_[i]);
+        set_priors(runs, forward_snv_priors, penalty_caps_[i]);
         count_runs(crbegin(repeat_mask), crend(repeat_mask), rbegin(runs), max_gap);
-        set_priors(runs, reverse_snv_priors, maxQualities_[i]);
+        set_priors(runs, reverse_snv_priors, penalty_caps_[i]);
     }
     const auto substitution_mask = make_substitution_mask(haplotype);
     std::transform(std::cbegin(forward_snv_priors), std::cend(forward_snv_priors), std::cbegin(substitution_mask),

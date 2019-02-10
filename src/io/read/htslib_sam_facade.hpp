@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2018 Daniel Cooke
+// Copyright (c) 2015-2019 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef htslib_sam_facade_hpp
@@ -25,6 +25,7 @@ namespace octopus {
 
 class GenomicRegion;
 class ContigRegion;
+class AnnotatedAlignedRead;
 
 namespace io {
 
@@ -93,6 +94,7 @@ public:
     boost::optional<std::vector<GenomicRegion::ContigName>> mapped_contigs() const override;
     
     void write(const AlignedRead& read);
+    void write(const AnnotatedAlignedRead& read);
     
 private:
     using HtsTid = std::int32_t;
@@ -170,7 +172,9 @@ private:
     const GenomicRegion::ContigName& get_contig_name(HtsTid target) const;
     std::uint64_t get_num_mapped_reads(const GenomicRegion::ContigName& contig) const;
     ReadContainer fetch_all_reads(const GenomicRegion& region) const;
+    void set_fixed_length_data(const AlignedRead& read, bam1_t* result) const;
     void write(const AlignedRead& read, bam1_t* result) const;
+    void write(const AnnotatedAlignedRead& read, bam1_t* result) const;
 };
 
 } // namespace io

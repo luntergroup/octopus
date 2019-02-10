@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2018 Daniel Cooke
+// Copyright (c) 2015-2019 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "individual_caller.hpp"
@@ -15,17 +15,18 @@
 #include <iostream>
 
 #include "basics/genomic_region.hpp"
+#include "containers/probability_matrix.hpp"
 #include "core/types/allele.hpp"
 #include "core/types/variant.hpp"
-#include "utils/maths.hpp"
-#include "utils/mappable_algorithms.hpp"
-#include "utils/read_stats.hpp"
-#include "containers/probability_matrix.hpp"
-#include "logging/logging.hpp"
 #include "core/types/calls/germline_variant_call.hpp"
 #include "core/types/calls/reference_call.hpp"
 #include "core/models/genotype/uniform_genotype_prior_model.hpp"
 #include "core/models/genotype/coalescent_genotype_prior_model.hpp"
+#include "utils/maths.hpp"
+#include "utils/mappable_algorithms.hpp"
+#include "utils/read_stats.hpp"
+#include "utils/append.hpp"
+#include "logging/logging.hpp"
 
 namespace octopus {
 
@@ -420,21 +421,44 @@ auto marginalise_homozygous(const Allele& allele, const GenotypeProbabilityMap& 
     return probability_to_phred(p);
 }
 
-auto mean_depth(const ReadPileups& pileups, const GenomicRegion& region)
-{
-    const auto overlapped = overlap_range(pileups, region.contig_region());
-    return maths::mean(overlapped, [] (const auto& pileup) { return pileup.depth(); });
-}
+using ReadPileupRange = ContainedRange<ReadPileups::const_iterator>;
 
 auto compute_homozygous_posterior(const Allele& allele,
                                   const GenotypeProbabilityMap& genotype_posteriors,
-                                  const ReadPileups& pileups)
+                                  const ReadPileupRange& pileups)
 {
+    assert(!empty(pileups));
     if (has_variation(allele, genotype_posteriors)) {
         return marginalise_homozygous(allele, genotype_posteriors);
     } else {
-        const auto coverage = mean_depth(pileups, mapped_region(allele));
-        return Phred<double> {2 * static_cast<double>(coverage)};
+        std::vector<AlignedRead::BaseQuality> reference_qualities {}, non_reference_qualities {};
+        Allele::NucleotideSequence reference_sequence {};
+        std::size_t reference_idx {0};
+        for (const ReadPileup& pileup : pileups) {
+            reference_sequence.assign(1, allele.sequence()[reference_idx++]);
+            utils::append(pileup.base_qualities(reference_sequence), reference_qualities);
+            utils::append(pileup.base_qualities_not(reference_sequence), non_reference_qualities);
+        }
+        const auto depth = reference_qualities.size() + non_reference_qualities.size();
+        if (depth == 0) return Phred<double> {3.0};
+        for (auto& q : reference_qualities) q = std::max(q, AlignedRead::BaseQuality {1});
+        for (auto& q : non_reference_qualities) q = std::max(q, AlignedRead::BaseQuality {1});
+        std::vector<double> reference_ln_likelihoods(depth), non_reference_ln_likelihoods(depth);
+        const auto phred_to_ln = [] (auto phred) { return phred * -maths::constants::ln10Div10<>; };
+        const auto phred_to_not_ln = [] (auto phred) { return std::log(1.0 - std::pow(10.0, -phred / 10.0)); };
+        auto itr = std::transform(std::cbegin(reference_qualities), std::cend(reference_qualities),
+                                  std::begin(reference_ln_likelihoods), phred_to_not_ln);
+        std::transform(std::cbegin(non_reference_qualities), std::cend(non_reference_qualities), itr, phred_to_ln);
+        itr = std::transform(std::cbegin(reference_qualities), std::cend(reference_qualities),
+                             std::begin(non_reference_ln_likelihoods), phred_to_ln);
+        std::transform(std::cbegin(non_reference_qualities), std::cend(non_reference_qualities), itr, phred_to_not_ln);
+        auto hom_ref_ln_likelihood = std::accumulate(std::cbegin(reference_ln_likelihoods), std::cend(reference_ln_likelihoods), 0.0);
+        auto het_alt_ln_likelihood = std::inner_product(std::cbegin(reference_ln_likelihoods), std::cend(reference_ln_likelihoods),
+                                                        std::cbegin(non_reference_ln_likelihoods), 0.0, std::plus<> {},
+                                                        [] (auto ref, auto alt) { return maths::log_sum_exp(ref, alt) - std::log(2); });
+        const auto hom_ref_ln_posterior = hom_ref_ln_likelihood - maths::log_sum_exp(hom_ref_ln_likelihood, het_alt_ln_likelihood);
+        
+        return probability_to_phred(1.0 - std::exp(hom_ref_ln_posterior));
     }
 }
 
@@ -443,12 +467,17 @@ auto call_reference(const std::vector<Allele>& reference_alleles,
                     const ReadPileups& pileups,
                     const Phred<double> min_call_posterior)
 {
+    assert(std::is_sorted(std::cbegin(reference_alleles), std::cend(reference_alleles)));
     std::vector<RefCall> result {};
+    result.reserve(reference_alleles.size());
+    auto active_pileup_itr = std::cbegin(pileups);
     for (const auto& allele : reference_alleles) {
-        const auto posterior = compute_homozygous_posterior(allele, genotype_posteriors, pileups);
+        const auto active_pileups = contained_range(active_pileup_itr, std::cend(pileups), contig_region(allele));
+        const auto posterior = compute_homozygous_posterior(allele, genotype_posteriors, active_pileups);
         if (posterior >= min_call_posterior) {
             result.push_back({allele, posterior});
         }
+        active_pileup_itr = active_pileups.end().base();
     }
     return result;
 }

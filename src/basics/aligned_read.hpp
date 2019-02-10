@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2018 Daniel Cooke
+// Copyright (c) 2015-2019 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef aligned_read_hpp
@@ -13,6 +13,7 @@
 #include <iterator>
 #include <utility>
 #include <functional>
+#include <numeric>
 #include <iosfwd>
 
 #include <boost/optional.hpp>
@@ -21,6 +22,7 @@
 #include "concepts/equitable.hpp"
 #include "basics/genomic_region.hpp"
 #include "concepts/mappable.hpp"
+#include "utils/memory_footprint.hpp"
 #include "cigar_string.hpp"
 
 namespace octopus {
@@ -228,6 +230,8 @@ AlignedRead::NucleotideSequence::size_type sequence_size(const AlignedRead& read
 bool is_forward_strand(const AlignedRead& read) noexcept;
 bool is_reverse_strand(const AlignedRead& read) noexcept;
 
+bool is_primary_alignment(const AlignedRead& read) noexcept;
+
 bool is_soft_clipped(const AlignedRead& read) noexcept;
 bool is_front_soft_clipped(const AlignedRead& read) noexcept;
 bool is_back_soft_clipped(const AlignedRead& read) noexcept;
@@ -244,6 +248,15 @@ CigarString copy_cigar(const AlignedRead& read, const GenomicRegion& region);
 AlignedRead copy(const AlignedRead& read, const GenomicRegion& region);
 AlignedRead::NucleotideSequence copy_sequence(const AlignedRead& read, const GenomicRegion& region);
 AlignedRead::BaseQualityVector copy_base_qualities(const AlignedRead& read, const GenomicRegion& region);
+
+MemoryFootprint footprint(const AlignedRead& read) noexcept;
+
+template <typename Range>
+MemoryFootprint footprint(const Range& reads) noexcept
+{
+    return std::accumulate(std::cbegin(reads), std::cend(reads), MemoryFootprint {0},
+                           [] (auto curr, const auto& read) noexcept { return curr + footprint(read); });
+}
 
 bool operator==(const AlignedRead& lhs, const AlignedRead& rhs) noexcept;
 bool operator<(const AlignedRead& lhs, const AlignedRead& rhs) noexcept;

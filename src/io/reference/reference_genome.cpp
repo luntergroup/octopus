@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2018 Daniel Cooke
+// Copyright (c) 2015-2019 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "reference_genome.hpp"
@@ -115,10 +115,10 @@ ReferenceGenome make_reference(boost::filesystem::path reference_path,
     } else {
         impl_ = std::make_unique<Fasta>(std::move(reference_path), options);
     }
-    if (max_cache_size.num_bytes() > 0) {
+    if (max_cache_size.bytes() > 0) {
         double locality_bias {0.99}, forward_bias {0.99};
         if (is_threaded) locality_bias = 0.25;
-        return ReferenceGenome {std::make_unique<CachingFasta>(std::move(impl_), max_cache_size.num_bytes(),
+        return ReferenceGenome {std::make_unique<CachingFasta>(std::move(impl_), max_cache_size.bytes(),
                                                                locality_bias, forward_bias)};
     } else {
         return ReferenceGenome {std::move(impl_)};

@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2018 Daniel Cooke
+// Copyright (c) 2015-2019 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef vcf_writer_hpp
@@ -41,6 +41,7 @@ public:
     friend void swap(VcfWriter& lhs, VcfWriter& rhs) noexcept;
     
     bool is_open() const noexcept;
+    void open();
     void open(Path file_path);
     void close() noexcept;
     

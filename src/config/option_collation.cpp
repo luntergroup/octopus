@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2018 Daniel Cooke
+// Copyright (c) 2015-2019 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "option_collation.hpp"
@@ -290,7 +290,7 @@ ReferenceGenome make_reference(const OptionMap& options)
     auto resolved_path = resolve_path(input_path, options);
     auto ref_cache_size = options.at("max-reference-cache-footprint").as<MemoryFootprint>();
     static constexpr MemoryFootprint min_non_zero_reference_cache_size {1'000}; // 1Kb
-    if (ref_cache_size.num_bytes() > 0 && ref_cache_size < min_non_zero_reference_cache_size) {
+    if (ref_cache_size.bytes() > 0 && ref_cache_size < min_non_zero_reference_cache_size) {
         static bool warned {false};
         if (!warned) {
             logging::WarningLogger warn_log {};
@@ -301,7 +301,7 @@ ReferenceGenome make_reference(const OptionMap& options)
         ref_cache_size = 0;
     }
     static constexpr MemoryFootprint min_warn_non_zero_reference_cache_size {1'000'000}; // 1Mb
-    if (ref_cache_size.num_bytes() > 0 && ref_cache_size < min_warn_non_zero_reference_cache_size) {
+    if (ref_cache_size.bytes() > 0 && ref_cache_size < min_warn_non_zero_reference_cache_size) {
         static bool warned {false};
         if (!warned) {
             logging::WarningLogger warn_log {};
@@ -1598,21 +1598,17 @@ bool allow_flank_scoring(const OptionMap& options)
     return options.at("inactive-flank-scoring").as<bool>() && !is_very_fast_mode(options);
 }
 
-auto make_indel_error_model(const OptionMap& options)
+auto make_error_model(const OptionMap& options)
 {
-    if (is_set("sequence-error-model", options)) {
-        return octopus::make_indel_error_model(options.at("sequence-error-model").as<std::string>());
-    } else {
-        return octopus::make_indel_error_model();
-    }
-}
-
-auto make_snv_error_model(const OptionMap& options)
-{
-    if (is_set("sequence-error-model", options)) {
-        return octopus::make_snv_error_model(options.at("sequence-error-model").as<std::string>());
-    } else {
-        return octopus::make_snv_error_model();
+    const auto& model_label = options.at("sequence-error-model").as<std::string>();
+    try {
+        return octopus::make_error_model(model_label);
+    } catch (const UserError& err) {
+        try {
+            const auto model_path = resolve_path(model_label, options);
+            return octopus::make_error_model(model_path);
+        } catch (...) {}
+        throw;
     }
 }
 
@@ -1642,8 +1638,7 @@ AlignedRead::MappingQuality calculate_mapping_quality_cap_trigger(const OptionMa
 
 HaplotypeLikelihoodModel make_likelihood_model(const OptionMap& options, const boost::optional<ReadSetProfile>& read_profile)
 {
-    auto snv_error_model = make_snv_error_model(options);
-    auto indel_error_model = make_indel_error_model(options);
+    auto error_model = make_error_model(options);
     HaplotypeLikelihoodModel::Config config {};
     config.use_mapping_quality = options.at("model-mapping-quality").as<bool>();
     config.use_flank_state = allow_flank_scoring(options);
@@ -1651,7 +1646,7 @@ HaplotypeLikelihoodModel make_likelihood_model(const OptionMap& options, const b
         config.mapping_quality_cap = calculate_mapping_quality_cap(options, read_profile);
         config.mapping_quality_cap_trigger = calculate_mapping_quality_cap_trigger(options, read_profile);
     }
-    return HaplotypeLikelihoodModel {std::move(snv_error_model), std::move(indel_error_model), config};
+    return HaplotypeLikelihoodModel {std::move(error_model.snv), std::move(error_model.indel), config};
 }
 
 bool allow_model_filtering(const OptionMap& options)
@@ -1680,7 +1675,7 @@ auto get_target_working_memory(const OptionMap& options)
         if (!num_threads) {
             num_threads = std::thread::hardware_concurrency();
         }
-        result = MemoryFootprint {std::max(result->num_bytes() / *num_threads, min_target_memory.num_bytes())};
+        result = MemoryFootprint {std::max(result->bytes() / *num_threads, min_target_memory.bytes())};
     }
     return result;
 }
@@ -1714,6 +1709,10 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
             vc_builder.set_refcall_type(CallerBuilder::RefCallType::positional);
         } else {
             vc_builder.set_refcall_type(CallerBuilder::RefCallType::blocked);
+            auto block_merge_threshold = options.at("refcall-block-merge-threshold").as<Phred<double>>();
+            if (block_merge_threshold.score() > 0) {
+                vc_builder.set_refcall_merge_block_threshold(block_merge_threshold);
+            }
         }
         auto min_refcall_posterior = options.at("min-refcall-posterior").as<Phred<double>>();
         vc_builder.set_min_refcall_posterior(min_refcall_posterior);
@@ -1788,7 +1787,7 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
 
 bool is_call_filtering_requested(const OptionMap& options) noexcept
 {
-    return options.at("call-filtering").as<bool>();
+    return options.at("call-filtering").as<bool>() || options.count("annotations") > 0;
 }
 
 std::string get_germline_filter_expression(const OptionMap& options)
@@ -1813,14 +1812,24 @@ std::string get_refcall_filter_expression(const OptionMap& options)
 
 bool is_filter_training_mode(const OptionMap& options)
 {
-    return options.count("training-annotations") > 0;
+    return !options.at("call-filtering").as<bool>() && options.count("annotations") > 0;
 }
 
-std::set<std::string> get_training_measures(const OptionMap& options)
+bool all_active_measure_annotations_requested(const OptionMap& options)
+{
+    if (options.count("annotations") == 1) {
+        const auto annotations = options.at("annotations").as<std::vector<std::string>>();
+        return annotations.size() == 1 && annotations.front() == "active";
+    }  else {
+        return false;
+    }
+}
+
+std::set<std::string> get_requested_measure_annotations(const OptionMap& options)
 {
     std::set<std::string> result {};
-    if (is_filter_training_mode(options)) {
-        for (const auto& measure : options.at("training-annotations").as<std::vector<std::string>>()) {
+    if (options.count("annotations") == 1) {
+        for (const auto& measure : options.at("annotations").as<std::vector<std::string>>()) {
             result.insert(measure);
         }
     }
@@ -1846,6 +1855,7 @@ std::unique_ptr<VariantCallFilterFactory>
 make_call_filter_factory(const ReferenceGenome& reference, ReadPipe& read_pipe, const OptionMap& options,
                          boost::optional<fs::path> temp_directory)
 {
+    std::unique_ptr<VariantCallFilterFactory> result {};
     if (is_call_filtering_requested(options)) {
         const auto caller = get_caller_type(options, read_pipe.samples());
         if (is_set("forest-file", options)) {
@@ -1860,24 +1870,23 @@ make_call_filter_factory(const ReferenceGenome& reference, ReadPipe& read_pipe, 
                     if (!fs::exists(somatic_forest_file)) {
                         throw MissingForestFile {somatic_forest_file, "somatic-forest-file"};
                     }
-                    return std::make_unique<RandomForestFilterFactory>(forest_file, somatic_forest_file, *temp_directory);
+                    result = std::make_unique<RandomForestFilterFactory>(forest_file, somatic_forest_file, *temp_directory);
                 } else if (options.at("somatics-only").as<bool>()) {
-                    return std::make_unique<RandomForestFilterFactory>(forest_file, *temp_directory,
-                                                                       RandomForestFilterFactory::ForestType::somatic);
+                    result = std::make_unique<RandomForestFilterFactory>(forest_file, *temp_directory,
+                                                                         RandomForestFilterFactory::ForestType::somatic);
                 } else {
                     logging::WarningLogger log {};
                     log << "Both germline and somatic forests must be provided for random forest cancer variant filtering";
-                    return nullptr;
                 }
             } else if (caller == "trio") {
                 if (options.at("denovos-only").as<bool>()) {
-                    return std::make_unique<RandomForestFilterFactory>(forest_file, *temp_directory,
-                                                                       RandomForestFilterFactory::ForestType::denovo);
+                    result = std::make_unique<RandomForestFilterFactory>(forest_file, *temp_directory,
+                                                                         RandomForestFilterFactory::ForestType::denovo);
                 } else {
-                    return std::make_unique<RandomForestFilterFactory>(forest_file, *temp_directory);
+                    result = std::make_unique<RandomForestFilterFactory>(forest_file, *temp_directory);
                 }
             } else {
-                return std::make_unique<RandomForestFilterFactory>(forest_file, *temp_directory);
+                result = std::make_unique<RandomForestFilterFactory>(forest_file, *temp_directory);
             }
         } else if (is_set("somatic-forest-file", options)) {
             if (options.at("somatics-only").as<bool>()) {
@@ -1885,46 +1894,56 @@ make_call_filter_factory(const ReferenceGenome& reference, ReadPipe& read_pipe, 
                 if (!fs::exists(somatic_forest_file)) {
                     throw MissingForestFile {somatic_forest_file, "somatic-forest-file"};
                 }
-                return std::make_unique<RandomForestFilterFactory>(somatic_forest_file, *temp_directory,
-                                                                   RandomForestFilterFactory::ForestType::somatic);
+                result = std::make_unique<RandomForestFilterFactory>(somatic_forest_file, *temp_directory,
+                                                                     RandomForestFilterFactory::ForestType::somatic);
             } else {
                 logging::WarningLogger log {};
                 log << "Both germline and somatic forests must be provided for random forest cancer variant filtering";
-                return nullptr;
             }
         } else {
             if (is_filter_training_mode(options)) {
-                return std::make_unique<TrainingFilterFactory>(get_training_measures(options));
+                result = std::make_unique<TrainingFilterFactory>(get_requested_measure_annotations(options));
             } else {
                 auto germline_filter_expression = get_germline_filter_expression(options);
                 if (caller == "cancer") {
                     if (options.at("somatics-only").as<bool>()) {
-                        return std::make_unique<ThresholdFilterFactory>("", get_somatic_filter_expression(options),
-                                                                        "", get_refcall_filter_expression(options));
+                        result = std::make_unique<ThresholdFilterFactory>("", get_somatic_filter_expression(options),
+                                                                          "", get_refcall_filter_expression(options));
                     } else {
-                        return std::make_unique<ThresholdFilterFactory>("", germline_filter_expression,
-                                                                        "", get_somatic_filter_expression(options),
-                                                                        "", get_refcall_filter_expression(options));
+                        result = std::make_unique<ThresholdFilterFactory>("", germline_filter_expression,
+                                                                          "", get_somatic_filter_expression(options),
+                                                                          "", get_refcall_filter_expression(options));
                     }
                 } else if (caller == "trio") {
                     auto denovo_filter_expression = get_denovo_filter_expression(options);
                     if (options.at("denovos-only").as<bool>()) {
-                        return std::make_unique<ThresholdFilterFactory>("", denovo_filter_expression,
-                                                                        "", get_refcall_filter_expression(options),
-                                                                        true, ThresholdFilterFactory::Type::denovo);
+                        result = std::make_unique<ThresholdFilterFactory>("", denovo_filter_expression,
+                                                                          "", get_refcall_filter_expression(options),
+                                                                          true, ThresholdFilterFactory::Type::denovo);
                     } else {
-                        return std::make_unique<ThresholdFilterFactory>("", germline_filter_expression,
-                                                                        "", denovo_filter_expression,
-                                                                        "", get_refcall_filter_expression(options),
-                                                                        ThresholdFilterFactory::Type::denovo);
+                        result = std::make_unique<ThresholdFilterFactory>("", germline_filter_expression,
+                                                                          "", denovo_filter_expression,
+                                                                          "", get_refcall_filter_expression(options),
+                                                                          ThresholdFilterFactory::Type::denovo);
                     }
                 } else {
-                    return std::make_unique<ThresholdFilterFactory>(germline_filter_expression);
+                    result = std::make_unique<ThresholdFilterFactory>(germline_filter_expression);
                 }
             }
         }
+        if (result) {
+            VariantCallFilter::OutputOptions output_options {};
+            output_options.emit_sites_only = call_sites_only(options);
+            if (all_active_measure_annotations_requested(options)) {
+                output_options.annotate_all_active_measures = true;
+            } else {
+                auto annotations = get_requested_measure_annotations(options);
+                output_options.annotations.insert(std::begin(annotations), std::end(annotations));
+            }
+            result->set_output_options(std::move(output_options));
+        }
     }
-    return nullptr;
+    return result;
 }
 
 bool use_calling_read_pipe_for_call_filtering(const OptionMap& options) noexcept
@@ -2016,6 +2035,11 @@ boost::optional<fs::path> filter_request(const OptionMap& options)
     return boost::none;
 }
 
+bool annotate_filter_output(const OptionMap& options)
+{
+    return is_set("annotate-filtered-calls", options);
+}
+
 boost::optional<fs::path> bamout_request(const OptionMap& options)
 {
     if (is_set("bamout", options)) {
@@ -2024,12 +2048,9 @@ boost::optional<fs::path> bamout_request(const OptionMap& options)
     return boost::none;
 }
 
-boost::optional<fs::path> split_bamout_request(const OptionMap& options)
+bool full_bamouts_requested(const OptionMap& options)
 {
-    if (is_set("split-bamout", options)) {
-        return resolve_path(options.at("split-bamout").as<fs::path>(), options);
-    }
-    return boost::none;
+    return options.at("full-bamout").as<bool>();
 }
 
 unsigned max_open_read_files(const OptionMap& options)

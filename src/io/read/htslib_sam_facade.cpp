@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2018 Daniel Cooke
+// Copyright (c) 2015-2019 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "htslib_sam_facade.hpp"
@@ -21,6 +21,7 @@
 #include "exceptions/missing_index_error.hpp"
 #include "exceptions/malformed_file_error.hpp"
 #include "exceptions/unwritable_file_error.hpp"
+#include "annotated_aligned_read.hpp"
 
 namespace octopus { namespace io {
 
@@ -624,6 +625,21 @@ void HtslibSamFacade::write(const AlignedRead& read)
     }
 }
 
+void HtslibSamFacade::write(const AnnotatedAlignedRead& read)
+{
+    if (!hts_file_ || !hts_header_) {
+        throw UnwritableBAM {file_path_};
+    }
+    std::unique_ptr<bam1_t, HtsBam1Deleter> record {bam_init1(), HtsBam1Deleter {}};
+    if (!record) {
+        throw UnwritableBAM {file_path_};
+    }
+    write(read, record.get());
+    if (sam_write1(hts_file_.get(), hts_header_.get(), record.get()) < 0) {
+        throw UnwritableBAM {file_path_};
+    }
+}
+
 // private methods
 
 HtslibSamFacade::ReadContainer HtslibSamFacade::fetch_all_reads(const GenomicRegion& region) const
@@ -998,17 +1014,64 @@ void set_segment(const AlignedRead& read, const std::int32_t tid, bam1_t* result
     set_flag(segment.is_marked_reverse_mapped(), BAM_FMREVERSE, result->core.flag);
 }
 
-void init_variable_length_data(const AlignedRead& read, bam1_t* result)
+auto name_bytes(const AlignedRead& read) noexcept
 {
-    result->m_data = 0;
-    result->m_data += read.name().size() + 1 + read.name().size() % 4;
-    result->m_data += (read.sequence().size() + 1) / 2; // 4 bits per base
-    result->m_data += read.base_qualities().size();
-    result->m_data += 4 * read.cigar().size();
-    if (!read.read_group().empty()) {
-        result->m_data += read.read_group().size() + readGroupTag.size() + 2; // 1 for tag, 1 for '\0'
+    return read.name().size() + 1 + read.name().size() % 4;
+}
+
+auto sequence_bytes(const AlignedRead& read) noexcept
+{
+    return (read.sequence().size() + 1) / 2; // 4 bits per base
+}
+
+auto base_quality_bytes(const AlignedRead& read) noexcept
+{
+    return read.base_qualities().size();
+}
+
+auto cigar_bytes(const AlignedRead& read) noexcept
+{
+    return 4 * read.cigar().size();
+}
+
+auto calculate_required_field_bytes(const AlignedRead& read) noexcept
+{
+    std::size_t result {0};
+    result += name_bytes(read);
+    result += sequence_bytes(read);
+    result += base_quality_bytes(read);
+    result += cigar_bytes(read);
+    return result;
+}
+
+auto calculate_required_field_bytes(const AnnotatedAlignedRead& read) noexcept
+{
+    return calculate_required_field_bytes(read.read());
+}
+
+auto calculate_annotation_bytes(const std::string& tag, const std::string& annotation)
+{
+    return tag.size() + annotation.size() + 2;// 1 for tag, 1 for '\0'
+}
+
+std::size_t calculate_aux_bytes(const AlignedRead& read)
+{
+    return read.read_group().empty() ? 0 : calculate_annotation_bytes(readGroupTag, read.read_group());
+}
+
+std::size_t calculate_aux_bytes(const AnnotatedAlignedRead& read)
+{
+    auto result = calculate_aux_bytes(read.read());
+    for (auto tag : read.tags()) {
+        result += calculate_annotation_bytes(tag, read.annotation(tag));
     }
-    result->l_data = static_cast<int>(result->m_data);
+    return result;
+}
+
+template <typename Read>
+void allocate_variable_length_data(const Read& read, bam1_t* result)
+{
+    result->m_data = calculate_required_field_bytes(read) + calculate_aux_bytes(read);
     result->data = (std::uint8_t*) std::realloc(result->data, result->m_data);
     std::fill_n(result->data, result->m_data, 0);
 }
@@ -1019,6 +1082,7 @@ void set_name(const AlignedRead& read, bam1_t* result)
     std::copy(std::cbegin(name), std::cend(name), result->data);
     result->core.l_extranul = name.size() % 4;
     result->core.l_qname = name.size() + result->core.l_extranul + 1;
+    result->l_data += name_bytes(read);
 }
 
 void set_cigar(const AlignedRead& read, bam1_t* result) noexcept
@@ -1044,6 +1108,7 @@ void set_cigar(const AlignedRead& read, bam1_t* result) noexcept
                        }
                        return result;
                    });
+    result->l_data += cigar_bytes(read);
 }
 
 static constexpr std::array<std::uint8_t, 128> sam_bases
@@ -1072,36 +1137,57 @@ void set_read_sequence(const AlignedRead& read, bam1_t* result) noexcept
     if (sequence.size() % 2 == 1) {
         *bam_seq_itr = sam_bases[sequence.back()] << 4;
     }
+    result->l_data += sequence_bytes(read);
 }
 
 void set_base_qualities(const AlignedRead& read, bam1_t* result) noexcept
 {
     std::copy(std::cbegin(read.base_qualities()), std::cend(read.base_qualities()), bam_get_qual(result));
+    result->l_data += base_quality_bytes(read);
 }
 
-void set_aux(const AlignedRead& read, bam1_t* result) noexcept
+void set_required_data(const AlignedRead& read, bam1_t* result) noexcept
 {
-    const auto& rg = read.read_group();
-    if (!rg.empty()) {
-        auto aux_itr = std::copy(std::cbegin(readGroupTag), std::cend(readGroupTag), bam_get_aux(result));
-        *aux_itr++ = 'Z';
-        std::copy(std::cbegin(rg), std::cend(rg), aux_itr);
-    }
-}
-
-void set_variable_length_data(const AlignedRead& read, bam1_t* result)
-{
-    init_variable_length_data(read, result);
     set_name(read, result);
     set_cigar(read, result);
     set_read_sequence(read, result);
     set_base_qualities(read, result);
-    set_aux(read, result);
+}
+
+void set_required_data(const AnnotatedAlignedRead& read, bam1_t* result) noexcept
+{
+    set_required_data(read.read(), result);
+}
+
+void set_annotation(const std::string& tag, const std::string& annotation, bam1_t* result) noexcept
+{
+    bam_aux_update_str(result, tag.data(), annotation.size() + 1, annotation.c_str());
+}
+
+void set_aux_data(const AlignedRead& read, bam1_t* result) noexcept
+{
+    if (!read.read_group().empty()) set_annotation(readGroupTag, read.read_group(), result);
+}
+
+void set_aux_data(const AnnotatedAlignedRead& read, bam1_t* result) noexcept
+{
+    set_aux_data(read.read(), result);
+    for (auto tag : read.tags()) {
+        set_annotation(tag, read.annotation(tag), result);
+    }
+}
+
+template <typename Read>
+void set_variable_length_data(const Read& read, bam1_t* result)
+{
+    allocate_variable_length_data(read, result);
+    set_required_data(read, result);
+    set_aux_data(read, result);
 }
 
 } // namespace
 
-void HtslibSamFacade::write(const AlignedRead& read, bam1_t* result) const
+void HtslibSamFacade::set_fixed_length_data(const AlignedRead& read, bam1_t* result) const
 {
     set_contig(hts_targets_.at(contig_name(read)), result);
     set_pos(read, result);
@@ -1112,6 +1198,17 @@ void HtslibSamFacade::write(const AlignedRead& read, bam1_t* result) const
     } else {
         result->core.mtid = '*';
     }
+}
+
+void HtslibSamFacade::write(const AlignedRead& read, bam1_t* result) const
+{
+    set_fixed_length_data(read, result);
+    set_variable_length_data(read, result);
+}
+
+void HtslibSamFacade::write(const AnnotatedAlignedRead& read, bam1_t* result) const
+{
+    set_fixed_length_data(read.read(), result);
     set_variable_length_data(read, result);
 }
 

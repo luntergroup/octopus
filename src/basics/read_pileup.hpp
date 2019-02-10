@@ -5,7 +5,6 @@
 #define read_pileup_hpp
 
 #include <vector>
-#include <map>
 #include <utility>
 
 #include "config/common.hpp"
@@ -47,12 +46,18 @@ public:
     
     void add(const AlignedRead& read);
     
+    std::vector<NucleotideSequence> sequences() const;
+    
     const ReadSummaries& summaries(const NucleotideSequence& sequence) const;
+    
+    std::vector<BaseQuality> base_qualities() const;
+    std::vector<BaseQuality> base_qualities(const NucleotideSequence& sequence) const;
+    std::vector<BaseQuality> base_qualities_not(const NucleotideSequence& sequence) const;
     
     unsigned sum_base_qualities(const NucleotideSequence& sequence) const;
 
 private:
-    std::map<NucleotideSequence, ReadSummaries> summaries_;
+    std::vector<std::pair<NucleotideSequence, ReadSummaries>> summaries_;
     ContigRegion region_;
 };
 

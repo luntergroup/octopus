@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2018 Daniel Cooke
+// Copyright (c) 2015-2019 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "median_somatic_mapping_quality.hpp"
@@ -66,7 +66,7 @@ auto get_somatic_haplotypes(const Facet::GenotypeMap& genotypes, const std::vect
     std::vector<Haplotype> result {};
     if (!somatics.empty()) {
         const auto allele_region = somatics.front().mapped_region();
-        for (const auto& p :genotypes) {
+        for (const auto& p : genotypes) {
             const auto& overlapped_genotypes = overlap_range(p.second, allele_region);
             if (size(overlapped_genotypes) == 1) {
                 const auto& genotype = overlapped_genotypes.front();
@@ -117,6 +117,9 @@ Measure::ResultType MedianSomaticMappingQuality::do_evaluate(const VcfRecord& ca
                 || std::find(std::cbegin(somatic_samples), std::cend(somatic_samples), sample) != std::cend(somatic_samples)) {
                 std::vector<AlignedRead::MappingQuality> somatic_mqs {};
                 for (const auto& haplotype : somatic_haplotypes) {
+                    if (assignments.at(sample).count(haplotype) == 0) {
+                        return boost::none; // TODO: This should never happen...
+                    }
                     const auto& somatic_support = assignments.at(sample).at(haplotype);
                     somatic_mqs.reserve(somatic_mqs.size() + somatic_support.size());
                     std::transform(std::cbegin(somatic_support), std::cend(somatic_support), std::back_inserter(somatic_mqs),

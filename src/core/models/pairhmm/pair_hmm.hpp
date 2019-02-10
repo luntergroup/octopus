@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2018 Daniel Cooke
+// Copyright (c) 2015-2019 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef pair_hmm_hpp
@@ -25,7 +25,7 @@ struct MutationModel
     const std::vector<char>& snv_mask;
     const std::vector<Penalty>& snv_priors;
     const std::vector<Penalty>& gap_open;
-    short gap_extend;
+    const std::vector<Penalty>& gap_extend;
     short nuc_prior = 2;
     std::size_t lhs_flank_size = 0, rhs_flank_size = 0;
 };

@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2018 Daniel Cooke
+// Copyright (c) 2015-2019 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef haplotype_hpp
@@ -94,6 +94,7 @@ public:
     
     std::size_t get_hash() const noexcept;
     
+    friend struct StrictLess;
     friend struct HaveSameAlleles;
     friend struct IsLessComplex;
     
@@ -305,12 +306,17 @@ private:
     boost::optional<Haplotype> reference_;
 };
 
+struct StrictLess
+{
+    bool operator()(const Haplotype& lhs, const Haplotype& rhs) const;
+};
+
 // Removes all duplicates haplotypes (w.r.t operator==) keeping the duplicate which is considered least complex w.r.t cmp.
 template <typename Cmp>
 unsigned remove_duplicates(std::vector<Haplotype>& haplotypes, const Cmp& cmp)
 {
     using std::begin; using std::end;
-    std::sort(begin(haplotypes), end(haplotypes));
+    std::sort(begin(haplotypes), end(haplotypes), StrictLess {});
     auto first_dup_itr  = begin(haplotypes);
     const auto last_itr = end(haplotypes);
     while (true) {

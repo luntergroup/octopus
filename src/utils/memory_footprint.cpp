@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2018 Daniel Cooke
+// Copyright (c) 2015-2019 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "memory_footprint.hpp"
@@ -18,12 +18,24 @@ namespace octopus {
 
 bool operator==(const MemoryFootprint& lhs, const MemoryFootprint& rhs) noexcept
 {
-    return lhs.num_bytes() == rhs.num_bytes();
+    return lhs.bytes() == rhs.bytes();
 }
 
 bool operator<(const MemoryFootprint& lhs, const MemoryFootprint& rhs) noexcept
 {
-    return lhs.num_bytes() < rhs.num_bytes();
+    return lhs.bytes() < rhs.bytes();
+}
+
+MemoryFootprint operator+(MemoryFootprint lhs, const MemoryFootprint& rhs) noexcept
+{
+    lhs += rhs;
+    return lhs;
+}
+
+MemoryFootprint operator-(MemoryFootprint lhs, const MemoryFootprint& rhs) noexcept
+{
+    lhs -= rhs;
+    return lhs;
 }
 
 namespace {
@@ -163,7 +175,7 @@ auto get_human_format_units(std::size_t bytes) noexcept
 
 auto get_human_format_units(const MemoryFootprint& footprint) noexcept
 {
-    return get_human_format_units(footprint.num_bytes());
+    return get_human_format_units(footprint.bytes());
 }
 
 } // namespace
@@ -204,10 +216,10 @@ std::ostream& operator<<(std::ostream& os, MemoryFootprint footprint)
 {
     const auto units = get_human_format_units(footprint);
     const auto multiplier = get_multiplier(units);
-    if (footprint.num_bytes() % multiplier == 0) {
-        os << footprint.num_bytes() / multiplier;
+    if (footprint.bytes() % multiplier == 0) {
+        os << footprint.bytes() / multiplier;
     } else {
-        os << static_cast<double>(footprint.num_bytes()) / multiplier;
+        os << static_cast<double>(footprint.bytes()) / multiplier;
     }
     os << to_string(units);
     return os;

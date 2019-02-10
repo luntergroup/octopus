@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2018 Daniel Cooke
+// Copyright (c) 2015-2019 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef indel_error_model_hpp
@@ -22,11 +22,13 @@ public:
     virtual ~IndelErrorModel() = default;
     
     std::unique_ptr<IndelErrorModel> clone() const;
-    PenaltyType evaluate(const Haplotype& haplotype, PenaltyVector& gap_open_penalties) const;
+    void set_penalties(const Haplotype& haplotype, PenaltyVector& gap_open_penalties, PenaltyType& gap_extend_penalty) const;
+    void set_penalties(const Haplotype& haplotype, PenaltyVector& gap_open_penalties, PenaltyVector& gap_extend_penalties) const;
     
 private:
     virtual std::unique_ptr<IndelErrorModel> do_clone() const = 0;
-    virtual PenaltyType do_evaluate(const Haplotype& haplotype, PenaltyVector& gap_open_penalties) const = 0;
+    virtual void do_set_penalties(const Haplotype& haplotype, PenaltyVector& gap_open_penalties, PenaltyType& gap_extend_penalty) const = 0;
+    virtual void do_set_penalties(const Haplotype& haplotype, PenaltyVector& gap_open_penalties, PenaltyVector& gap_extend_penalties) const = 0;
 };
 
 } // namespace octopus

@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2018 Daniel Cooke
+// Copyright (c) 2015-2019 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "octopus.hpp"
@@ -244,9 +244,13 @@ void log_finish_info(const GenomeCallingComponents& components, const utils::Tim
 
 void write_calls(std::deque<VcfRecord>&& calls, VcfWriter& out)
 {
+    if (calls.empty()) return;
     static auto debug_log = get_debug_log();
     if (debug_log) stream(*debug_log) << "Writing " << calls.size() << " calls to output";
+    const bool was_closed {!out.is_open()};
+    if (was_closed) out.open();
     write(calls, out);
+    if (was_closed) out.close();
     calls.clear();
     calls.shrink_to_fit();
 }
@@ -456,8 +460,7 @@ auto create_unique_temp_output_file_path(const GenomicRegion& region,
     return result;
 }
 
-VcfWriter create_unique_temp_output_file(const GenomicRegion& region,
-                                         const GenomeCallingComponents& components)
+VcfWriter create_unique_temp_output_file(const GenomicRegion& region, const GenomeCallingComponents& components)
 {
     auto path = create_unique_temp_output_file_path(region, components);
     const auto call_types = get_call_types(components, {region.contig_name()});
@@ -465,8 +468,7 @@ VcfWriter create_unique_temp_output_file(const GenomicRegion& region,
     return VcfWriter {std::move(path), std::move(header)};
 }
 
-VcfWriter create_unique_temp_output_file(const GenomicRegion::ContigName& contig,
-                                         const GenomeCallingComponents& components)
+VcfWriter create_unique_temp_output_file(const GenomicRegion::ContigName& contig, const GenomeCallingComponents& components)
 {
     return create_unique_temp_output_file(components.reference().contig_region(contig), components);
 }
@@ -481,7 +483,9 @@ TempVcfWriterMap make_temp_vcf_writers(const GenomeCallingComponents& components
     TempVcfWriterMap result {};
     result.reserve(components.contigs().size());
     for (const auto& contig : components.contigs()) {
-        result.emplace(contig, create_unique_temp_output_file(contig, components));
+        auto contig_writer = create_unique_temp_output_file(contig, components);
+        contig_writer.close();
+        result.emplace(contig, std::move(contig_writer));
     }
     return result;
 }
@@ -1106,7 +1110,7 @@ auto extract_writers(TempVcfWriterMap&& vcfs)
 
 auto extract_as_readers(TempVcfWriterMap&& vcfs)
 {
-    return writers_to_readers(extract_writers(std::move(vcfs)));
+    return writers_to_readers(extract_writers(std::move(vcfs)), false);
 }
 
 void merge(TempVcfWriterMap&& temp_vcf_writers, GenomeCallingComponents& components)
@@ -1328,14 +1332,10 @@ void run_csr(GenomeCallingComponents& components)
         } else {
             buffered_rp.hint(flatten(components.search_regions()));
         }
-        VariantCallFilter::OutputOptions output_config {};
-        if (components.sites_only()) {
-            output_config.emit_sites_only = true;
-        }
         const VcfReader in {std::move(*input_path)};
         const auto filter = filter_factory.make(components.reference(), std::move(buffered_rp), in.fetch_header(),
                                                 components.ploidies(), components.pedigree(),
-                                                output_config, progress, components.num_threads());
+                                                progress, components.num_threads());
         assert(filter);
         VcfWriter& out {*components.filtered_output()};
         filter->filter(in, out);
@@ -1437,11 +1437,6 @@ void run_legacy_generation(GenomeCallingComponents& components)
 bool is_bam_realignment_requested(const GenomeCallingComponents& components)
 {
     return static_cast<bool>(components.bamout());
-}
-
-bool is_split_bam_realignment_requested(const GenomeCallingComponents& components)
-{
-    return static_cast<bool>(components.split_bamout());
 }
 
 bool is_stdout_final_output(const GenomeCallingComponents& components)
@@ -1557,7 +1552,7 @@ void run_bam_realign(GenomeCallingComponents& components)
             components.read_manager().close();
             if (components.read_manager().paths().size() == 1) {
                 realign(components.read_manager().paths().front(), get_bam_realignment_vcf(components),
-                        *components.bamout(), components.reference());
+                        *components.bamout(), components.reference(), components.bamout_config());
             } else {
                 namespace fs = boost::filesystem;
                 const auto bamout_directory = *components.bamout();
@@ -1578,45 +1573,11 @@ void run_bam_realign(GenomeCallingComponents& components)
                     auto bamout_path = bamout_directory;
                     bamout_path /= bamin_path.filename();
                     if (bamin_path != bamout_path) {
-                        realign(bamin_path, get_bam_realignment_vcf(components), bamout_path, components.reference());
+                        realign(bamin_path, get_bam_realignment_vcf(components), bamout_path, components.reference(), components.bamout_config());
                     } else {
                         logging::WarningLogger warn_log {};
                         stream(warn_log) << "Cannot make evidence bam " << bamout_path << " as it is an input bam";
                     }
-                }
-            }
-        }
-    }
-    if (is_split_bam_realignment_requested(components)) {
-        if (check_bam_realign(components)) {
-            components.read_manager().close();
-            if (components.read_manager().paths().size() == 1) {
-                auto out_paths = get_haplotype_bam_paths(*components.split_bamout(), get_max_ploidy(components));
-                realign(components.read_manager().paths().front(), get_bam_realignment_vcf(components),
-                        std::move(out_paths), components.reference());
-            } else {
-                namespace fs = boost::filesystem;
-                const auto bamout_directory = *components.split_bamout();
-                if (fs::exists(bamout_directory)) {
-                    if (!fs::is_directory(bamout_directory)) {
-                        logging::ErrorLogger error_log {};
-                        stream(error_log) << "The given evidence bam directory " << bamout_directory << " is not a directory";
-                        return;
-                    }
-                } else {
-                    if (!fs::create_directory(bamout_directory)) {
-                        logging::ErrorLogger error_log {};
-                        stream(error_log) << "Failed to create temporary directory " << bamout_directory << " - check permissions";
-                        return;
-                    }
-                }
-                const auto realignment_vcf = get_bam_realignment_vcf(components);
-                for (const auto& bamin_path : components.read_manager().paths()) {
-                    auto bamout_prefix = bamout_directory;
-                    bamout_prefix /= bamin_path.filename().stem();
-                    const auto max_ploidy = get_max_called_ploidy(realignment_vcf, bamin_path);
-                    auto bamout_paths = get_haplotype_bam_paths(bamout_prefix, max_ploidy);
-                    realign(bamin_path, realignment_vcf, std::move(bamout_paths), components.reference());
                 }
             }
         }

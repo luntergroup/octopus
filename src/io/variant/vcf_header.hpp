@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2018 Daniel Cooke
+// Copyright (c) 2015-2019 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef vcf_header_hpp
@@ -95,7 +95,7 @@ public:
     
     unsigned num_samples() const noexcept;
     
-    std::vector<std::string> samples() const;
+    const std::vector<std::string>& samples() const noexcept;
     
     bool has(const BasicKey& k) const noexcept;
     bool has(const Tag& t) const noexcept;

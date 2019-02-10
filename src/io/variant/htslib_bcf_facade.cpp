@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2018 Daniel Cooke
+// Copyright (c) 2015-2019 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "htslib_bcf_facade.hpp"
@@ -20,6 +20,7 @@
 
 #include "basics/genomic_region.hpp"
 #include "utils/string_utils.hpp"
+#include "exceptions/file_open_error.hpp"
 #include "vcf_spec.hpp"
 #include "vcf_header.hpp"
 #include "vcf_record.hpp"
@@ -62,14 +63,16 @@ std::vector<std::string> extract_samples(const bcf_hdr_t* header)
 
 // public methods
 
-std::string get_hts_mode(const HtslibBcfFacade::Path& file_path, HtslibBcfFacade::Mode mode)
+std::string get_hts_mode(const HtslibBcfFacade::Path& file_path, const HtslibBcfFacade::Mode mode)
 {
     std::string result {"["};
     using Mode = HtslibBcfFacade::Mode;
-    if (mode == Mode::read) {
-        result += "r]";
-    } else {
-        result += 'w';
+    switch (mode) {
+        case Mode::read: result += "r]"; break;
+        case Mode::write: result += "w]"; break;
+        case Mode:: append: result += "a]"; break;
+    }
+    if (mode == Mode::write || mode == Mode::append) {
         auto extension = file_path.extension();
         if (extension == ".bcf") {
             result += "b";
@@ -104,18 +107,40 @@ HtslibBcfFacade::HtslibBcfFacade(Path file_path, Mode mode)
     if (mode == Mode::read) {
         if (boost::filesystem::exists(file_path_)) {
             file_.reset(bcf_open(file_path_.c_str(), hts_mode.c_str()));
-            if (file_ == nullptr) return;
+            if (!file_) {
+                throw FileOpenError {file_path_};
+            }
             header_.reset(bcf_hdr_read(file_.get()));
-            if (header_ == nullptr) {
+            if (!header_) {
                 throw std::runtime_error {"HtslibBcfFacade: could not make header for file " + file_path_.string()};
             }
             samples_ = extract_samples(header_.get());
         } else {
             throw std::runtime_error {"HtslibBcfFacade: " + file_path_.string() + " does not exist"};
         }
-    } else {
+    } else if (mode == Mode::write) {
         file_.reset(bcf_open(file_path_.c_str(), hts_mode.c_str()));
+        if (!file_) {
+            throw FileOpenError {file_path_};
+        }
         header_.reset(bcf_hdr_init(hts_mode.c_str()));
+    } else {
+        const auto hts_read_mode = get_hts_mode(file_path_, Mode::read);
+        file_.reset(bcf_open(file_path_.c_str(), hts_read_mode.c_str()));
+        if (!file_) {
+            throw FileOpenError {file_path_};
+        }
+        header_.reset(bcf_hdr_read(file_.get()));
+        file_.reset();
+        file_.reset(bcf_open(file_path_.c_str(), hts_mode.c_str()));
+        if (!file_) {
+            throw FileOpenError {file_path_};
+        }
+        if (header_) {
+            samples_ = extract_samples(header_.get());
+        } else {
+            header_.reset(bcf_hdr_init(hts_mode.c_str()));
+        }
     }
 }
 
@@ -131,7 +156,6 @@ VcfHeader HtslibBcfFacade::fetch_header() const
     VcfHeader::Builder result {};
     result.set_file_format(bcf_hdr_get_version(header_.get()));
     result.set_samples(samples_);
-    
     std::for_each(header_->hrec, header_->hrec + header_->nhrec,
                   [&result] (const auto record) {
                       switch (record->type) {
@@ -143,26 +167,28 @@ VcfHeader HtslibBcfFacade::fetch_header() const
                               break;
                       }
                   });
-    
     return result.build_once();
+}
+
+bool contains_contig(const bcf_hdr_t* header, const std::string& contig)
+{
+    return bcf_hdr_get_hrec(header, BCF_HL_CTG, "ID", contig.c_str(), nullptr) != nullptr;
 }
 
 std::size_t HtslibBcfFacade::count_records() const
 {
     HtsBcfSrPtr sr {bcf_sr_init(), HtsSrsDeleter {}};
-    
     if (bcf_sr_add_reader(sr.get(), file_path_.c_str()) != 1) {
         sr.release();
         throw std::runtime_error {"failed to open file " + file_path_.string()};
     }
-    
     return count_records(sr);
 }
 
 std::size_t HtslibBcfFacade::count_records(const std::string& contig) const
 {
+    if (is_bcf() && !contains_contig(header_.get(), contig)) return 0;
     HtsBcfSrPtr sr {bcf_sr_init(), HtsSrsDeleter {}};
-    
     if (bcf_sr_set_regions(sr.get(), contig.c_str(), 0) != 0) { // must go before bcf_sr_add_reader
         throw std::runtime_error {"failed to load contig " + contig};
     }
@@ -170,14 +196,13 @@ std::size_t HtslibBcfFacade::count_records(const std::string& contig) const
         sr.release();
         throw std::runtime_error {"failed to open file " + file_path_.string()};
     }
-    
     return count_records(sr);
 }
 
 std::size_t HtslibBcfFacade::count_records(const GenomicRegion& region) const
 {
+    if (is_bcf() && !contains_contig(header_.get(), region.contig_name())) return 0;
     HtsBcfSrPtr sr {bcf_sr_init(), HtsSrsDeleter {}};
-    
     if (bcf_sr_set_regions(sr.get(), to_string(region).c_str(), 0) != 0) { // must go before bcf_sr_add_reader
         throw std::runtime_error {"failed to load region " + to_string(region)};
     }
@@ -185,7 +210,6 @@ std::size_t HtslibBcfFacade::count_records(const GenomicRegion& region) const
         sr.release();
         throw std::runtime_error {"failed to open file " + file_path_.string()};
     }
-    
     return count_records(sr);
 }
 
@@ -250,13 +274,12 @@ HtslibBcfFacade::RecordContainer
 HtslibBcfFacade::fetch_records(const UnpackPolicy level) const
 {
     const auto n_records = count_records();
+    if (n_records == 0) return {};
     HtsBcfSrPtr sr {bcf_sr_init(), HtsSrsDeleter {}};
-    
     if (bcf_sr_add_reader(sr.get(), file_path_.c_str()) != 1) {
         sr.release();
         throw std::runtime_error {"failed to open file " + file_path_.string()};
     }
-    
     return fetch_records(sr.get(), level, n_records);
 }
 
@@ -264,8 +287,8 @@ HtslibBcfFacade::RecordContainer
 HtslibBcfFacade::fetch_records(const std::string& contig, const UnpackPolicy level) const
 {
     const auto n_records = count_records(contig);
+    if (n_records == 0) return {};
     HtsBcfSrPtr sr {bcf_sr_init(), HtsSrsDeleter {}};
-    
     if (bcf_sr_set_regions(sr.get(), contig.c_str(), 0) != 0) { // must go before bcf_sr_add_reader
         throw std::runtime_error {"failed load contig " + contig};
     }
@@ -273,7 +296,6 @@ HtslibBcfFacade::fetch_records(const std::string& contig, const UnpackPolicy lev
         sr.release();
         throw std::runtime_error {"failed to open file " + file_path_.string()};
     }
-    
     return fetch_records(sr.get(), level, n_records);
 }
 
@@ -281,9 +303,9 @@ HtslibBcfFacade::RecordContainer
 HtslibBcfFacade::fetch_records(const GenomicRegion& region, const UnpackPolicy level) const
 {
     const auto n_records = count_records(region);
+    if (n_records == 0) return {};
     HtsBcfSrPtr sr {bcf_sr_init(), HtsSrsDeleter {}};
     const auto region_str = to_string(region);
-    
     if (bcf_sr_set_regions(sr.get(), region_str.c_str(), 0) != 0) { // must go before bcf_sr_add_reader
         throw std::runtime_error {"failed load region " + region_str};
     }
@@ -291,7 +313,6 @@ HtslibBcfFacade::fetch_records(const GenomicRegion& region, const UnpackPolicy l
         sr.release();
         throw std::runtime_error {"failed to open file " + file_path_.string()};
     }
-    
     return fetch_records(sr.get(), level, n_records);
 }
 
@@ -393,7 +414,7 @@ void HtslibBcfFacade::write(const VcfRecord& record)
     
     const auto& contig = record.chrom();
     
-    if (bcf_hdr_get_hrec(header_.get(), BCF_HL_CTG, "ID", contig.c_str(), nullptr) == nullptr) {
+    if (!contains_contig(header_.get(), contig)) {
         throw std::runtime_error {"HtslibBcfFacade: required contig header line missing for contig \"" + contig + "\""};
     }
     
@@ -930,6 +951,12 @@ void set_samples(const bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source,
           }
         }
     });
+}
+
+bool HtslibBcfFacade::is_bcf() const noexcept
+{
+    assert(file_);
+    return file_->format.format == bcf;
 }
 
 std::size_t HtslibBcfFacade::count_records(HtsBcfSrPtr& sr) const

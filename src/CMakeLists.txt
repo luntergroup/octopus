@@ -27,6 +27,8 @@ set(EXCEPTIONS_SOURCES
     exceptions/unwritable_file_error.cpp
     exceptions/unimplemented_feature_error.hpp
     exceptions/unimplemented_feature_error.cpp
+    exceptions/file_open_error.hpp
+    exceptions/file_open_error.cpp
 )
 
 set(CONCEPTS_SOURCES
@@ -102,6 +104,9 @@ set(IO_SOURCES
     io/read/read_reader.cpp
     io/read/read_writer.hpp
     io/read/read_writer.cpp
+    io/read/buffered_read_writer.hpp
+    io/read/annotated_aligned_read.hpp
+    io/read/annotated_aligned_read.cpp
     
     io/variant/htslib_bcf_facade.hpp
     io/variant/htslib_bcf_facade.cpp
@@ -183,6 +188,7 @@ set(UTILS_SOURCES
     utils/select_top_k.hpp
     utils/system_utils.hpp
     utils/system_utils.cpp
+    utils/k_medoids.hpp
 )
 
 set(CORE_SOURCES
@@ -420,24 +426,20 @@ set(CORE_SOURCES
     core/models/pairhmm/simd_pair_hmm.hpp
     core/models/pairhmm/simd_pair_hmm.cpp
 
-    core/models/error/hiseq_indel_error_model.hpp
-    core/models/error/hiseq_indel_error_model.cpp
-    core/models/error/x10_indel_error_model.hpp
-    core/models/error/x10_indel_error_model.cpp
-    core/models/error/umi_indel_error_model.hpp
-    core/models/error/umi_indel_error_model.cpp
     core/models/error/indel_error_model.hpp
     core/models/error/indel_error_model.cpp
+    core/models/error/repeat_based_indel_error_model.hpp
+    core/models/error/repeat_based_indel_error_model.cpp
+    core/models/error/repeat_based_snv_error_model.hpp
+    core/models/error/repeat_based_snv_error_model.cpp
     core/models/error/snv_error_model.hpp
     core/models/error/snv_error_model.cpp
-    core/models/error/hiseq_snv_error_model.hpp
-    core/models/error/hiseq_snv_error_model.cpp
-    core/models/error/x10_snv_error_model.hpp
-    core/models/error/x10_snv_error_model.cpp
-    core/models/error/umi_snv_error_model.hpp
-    core/models/error/umi_snv_error_model.cpp
     core/models/error/error_model_factory.hpp
     core/models/error/error_model_factory.cpp
+    core/models/error/basic_repeat_based_indel_error_model.hpp
+    core/models/error/basic_repeat_based_indel_error_model.cpp
+    core/models/error/custom_repeat_based_indel_error_model.hpp
+    core/models/error/custom_repeat_based_indel_error_model.cpp
 
     core/models/mutation/somatic_mutation_model.hpp
     core/models/mutation/somatic_mutation_model.cpp
@@ -447,7 +449,6 @@ set(CORE_SOURCES
     core/models/mutation/denovo_model.cpp
     core/models/mutation/indel_mutation_model.hpp
     core/models/mutation/indel_mutation_model.cpp
-    
 
     core/models/reference/individual_reference_likelihood_model.hpp
     core/models/reference/individual_reference_likelihood_model.cpp
@@ -571,6 +572,7 @@ set(WarningIgnores
 
 set(GCCWarningIgnores
     -Wno-maybe-uninitialized
+    -Wno-noexcept-type
     )
 
 # Compile options for all builds
