@@ -168,11 +168,6 @@ boost::optional<GenomeCallingComponents::Path> GenomeCallingComponents::bamout()
     return components_.bamout;
 }
 
-boost::optional<GenomeCallingComponents::Path> GenomeCallingComponents::split_bamout() const
-{
-    return components_.split_bamout;
-}
-
 BAMRealigner::Config GenomeCallingComponents::bamout_config() const noexcept
 {
     return components_.bamout_config;
@@ -511,7 +506,6 @@ GenomeCallingComponents::Components::Components(ReferenceGenome&& reference, Rea
 , legacy {}
 , filter_request {}
 , bamout {options::bamout_request(options)}
-, split_bamout {options::split_bamout_request(options)}
 , bamout_config {}
 , data_profile {options::data_profile_request(options)}
 {

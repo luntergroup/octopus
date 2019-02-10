@@ -74,7 +74,6 @@ public:
     boost::optional<Path> legacy() const;
     boost::optional<Path> filter_request() const;
     boost::optional<Path> bamout() const;
-    boost::optional<Path> split_bamout() const;
     BAMRealigner::Config bamout_config() const noexcept;
     boost::optional<Path> data_profile() const;
     
@@ -113,7 +112,7 @@ private:
         bool sites_only;
         boost::optional<Path> legacy;
         boost::optional<Path> filter_request;
-        boost::optional<Path> bamout, split_bamout;
+        boost::optional<Path> bamout;
         BAMRealigner::Config bamout_config;
         boost::optional<Path> data_profile;
         // Components that require temporary directory during construction appear last to make
