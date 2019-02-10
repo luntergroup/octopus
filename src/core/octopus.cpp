@@ -1439,11 +1439,6 @@ bool is_bam_realignment_requested(const GenomeCallingComponents& components)
     return static_cast<bool>(components.bamout());
 }
 
-bool is_split_bam_realignment_requested(const GenomeCallingComponents& components)
-{
-    return static_cast<bool>(components.split_bamout());
-}
-
 bool is_stdout_final_output(const GenomeCallingComponents& components)
 {
     return (components.filtered_output() && !components.filtered_output()->path()) || !components.output().path();
@@ -1555,12 +1550,9 @@ void run_bam_realign(GenomeCallingComponents& components)
     if (is_bam_realignment_requested(components)) {
         if (check_bam_realign(components)) {
             components.read_manager().close();
-            BAMRealigner::Config config {};
-            config.copy_hom_ref_reads = components.write_full_bamouts();
-            config.max_buffer = components.read_buffer_footprint();
             if (components.read_manager().paths().size() == 1) {
                 realign(components.read_manager().paths().front(), get_bam_realignment_vcf(components),
-                        *components.bamout(), components.reference(), config);
+                        *components.bamout(), components.reference(), components.bamout_config());
             } else {
                 namespace fs = boost::filesystem;
                 const auto bamout_directory = *components.bamout();
@@ -1581,48 +1573,11 @@ void run_bam_realign(GenomeCallingComponents& components)
                     auto bamout_path = bamout_directory;
                     bamout_path /= bamin_path.filename();
                     if (bamin_path != bamout_path) {
-                        realign(bamin_path, get_bam_realignment_vcf(components), bamout_path, components.reference(), config);
+                        realign(bamin_path, get_bam_realignment_vcf(components), bamout_path, components.reference(), components.bamout_config());
                     } else {
                         logging::WarningLogger warn_log {};
                         stream(warn_log) << "Cannot make evidence bam " << bamout_path << " as it is an input bam";
                     }
-                }
-            }
-        }
-    }
-    if (is_split_bam_realignment_requested(components)) {
-        if (check_bam_realign(components)) {
-            components.read_manager().close();
-            BAMRealigner::Config config {};
-            config.copy_hom_ref_reads = components.write_full_bamouts();
-            config.max_buffer = components.read_buffer_footprint();
-            if (components.read_manager().paths().size() == 1) {
-                auto out_paths = get_haplotype_bam_paths(*components.split_bamout(), get_max_ploidy(components));
-                realign(components.read_manager().paths().front(), get_bam_realignment_vcf(components),
-                        std::move(out_paths), components.reference(), config);
-            } else {
-                namespace fs = boost::filesystem;
-                const auto bamout_directory = *components.split_bamout();
-                if (fs::exists(bamout_directory)) {
-                    if (!fs::is_directory(bamout_directory)) {
-                        logging::ErrorLogger error_log {};
-                        stream(error_log) << "The given evidence bam directory " << bamout_directory << " is not a directory";
-                        return;
-                    }
-                } else {
-                    if (!fs::create_directory(bamout_directory)) {
-                        logging::ErrorLogger error_log {};
-                        stream(error_log) << "Failed to create temporary directory " << bamout_directory << " - check permissions";
-                        return;
-                    }
-                }
-                const auto realignment_vcf = get_bam_realignment_vcf(components);
-                for (const auto& bamin_path : components.read_manager().paths()) {
-                    auto bamout_prefix = bamout_directory;
-                    bamout_prefix /= bamin_path.filename().stem();
-                    const auto max_ploidy = get_max_called_ploidy(realignment_vcf, bamin_path);
-                    auto bamout_paths = get_haplotype_bam_paths(bamout_prefix, max_ploidy);
-                    realign(bamin_path, realignment_vcf, std::move(bamout_paths), components.reference(), config);
                 }
             }
         }

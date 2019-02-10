@@ -168,14 +168,9 @@ boost::optional<GenomeCallingComponents::Path> GenomeCallingComponents::bamout()
     return components_.bamout;
 }
 
-boost::optional<GenomeCallingComponents::Path> GenomeCallingComponents::split_bamout() const
+BAMRealigner::Config GenomeCallingComponents::bamout_config() const noexcept
 {
-    return components_.split_bamout;
-}
-
-bool GenomeCallingComponents::write_full_bamouts() const noexcept
-{
-    return components_.write_full_bamouts;
+    return components_.bamout_config;
 }
 
 boost::optional<GenomeCallingComponents::Path> GenomeCallingComponents::data_profile() const
@@ -511,8 +506,7 @@ GenomeCallingComponents::Components::Components(ReferenceGenome&& reference, Rea
 , legacy {}
 , filter_request {}
 , bamout {options::bamout_request(options)}
-, split_bamout {options::split_bamout_request(options)}
-, write_full_bamouts {options::full_bamouts_requested(options)}
+, bamout_config {}
 , data_profile {options::data_profile_request(options)}
 {
     drop_unused_samples(this->samples, this->read_manager);
@@ -531,6 +525,9 @@ GenomeCallingComponents::Components::Components(ReferenceGenome&& reference, Rea
         if (temp_directory) fs::remove_all(*temp_directory);
         throw;
     }
+    bamout_config.copy_hom_ref_reads = options::full_bamouts_requested(options);
+    bamout_config.max_buffer = read_buffer_footprint;
+    bamout_config.max_threads = num_threads;
 }
 
 void GenomeCallingComponents::Components::setup_progress_meter(const options::OptionMap& options)

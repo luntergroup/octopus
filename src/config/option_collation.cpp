@@ -2048,14 +2048,6 @@ boost::optional<fs::path> bamout_request(const OptionMap& options)
     return boost::none;
 }
 
-boost::optional<fs::path> split_bamout_request(const OptionMap& options)
-{
-    if (is_set("split-bamout", options)) {
-        return resolve_path(options.at("split-bamout").as<fs::path>(), options);
-    }
-    return boost::none;
-}
-
 bool full_bamouts_requested(const OptionMap& options)
 {
     return options.at("full-bamout").as<bool>();

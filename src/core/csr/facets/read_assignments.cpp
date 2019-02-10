@@ -53,6 +53,7 @@ ReadAssignments::ReadAssignments(const ReferenceGenome& reference, const Genotyp
                 }
                 for (auto& s : genotype_support) {
                     safe_realign_to_reference(s.second, s.first);
+                    std::sort(std::begin(s.second), std::end(s.second));
                     result_.support[sample][s.first] = std::move(s.second);
                 }
             }

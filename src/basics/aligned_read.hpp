@@ -255,7 +255,7 @@ template <typename Range>
 MemoryFootprint footprint(const Range& reads) noexcept
 {
     return std::accumulate(std::cbegin(reads), std::cend(reads), MemoryFootprint {0},
-                           [] (const MemoryFootprint curr, const AlignedRead& read) noexcept { return curr + footprint(read); });
+                           [] (auto curr, const auto& read) noexcept { return curr + footprint(read); });
 }
 
 bool operator==(const AlignedRead& lhs, const AlignedRead& rhs) noexcept;

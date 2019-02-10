@@ -15,6 +15,7 @@
 #include "io/variant/vcf_record.hpp"
 #include "io/variant/vcf_header.hpp"
 #include "io/read/buffered_read_writer.hpp"
+#include "io/read/annotated_aligned_read.hpp"
 #include "utils/genotype_reader.hpp"
 #include "utils/append.hpp"
 #include "utils/read_stats.hpp"
@@ -56,8 +57,7 @@ bool is_alignable(const AlignedRead& read) noexcept
 auto remove_unalignable_reads(std::vector<AlignedRead>& reads)
 {
     const auto bad_read_itr = std::stable_partition(std::begin(reads), std::end(reads), is_alignable);
-    std::deque<AlignedRead> result {std::make_move_iterator(bad_read_itr),
-                                    std::make_move_iterator(std::end(reads))};
+    std::vector<AlignedRead> result {std::make_move_iterator(bad_read_itr), std::make_move_iterator(std::end(reads))};
     reads.erase(bad_read_itr, std::end(reads));
     return result;
 }
@@ -76,27 +76,130 @@ auto copy_reads(AmbiguousReadList&& reads)
     return result;
 }
 
-auto assign_and_realign(const std::vector<AlignedRead>& reads, const Genotype<Haplotype>& genotype,
-                        BAMRealigner::Report& report)
+struct Alignment
 {
-    std::vector<AlignedRead> result {};
+    GenomicRegion region;
+    CigarString cigar;
+};
+
+auto copy_alignments(const std::vector<AlignedRead>& reads)
+{
+    std::vector<Alignment> result {};
+    result.reserve(reads.size());
+    for (const auto& read : reads) result.push_back({read.mapped_region(), read.cigar()});
+    return result;
+}
+
+auto to_md_string(const CigarString& cigar, const Haplotype& haplotype)
+{
+    std::ostringstream ss {};
+    auto sequence_itr = std::cbegin(haplotype.sequence());
+    std::size_t match_length {0};
+    for (const auto& op : cigar) {
+        assert(sequence_itr <= std::cend(haplotype.sequence()));
+        using Flag = CigarOperation::Flag;
+        switch (op.flag()) {
+            case Flag::alignmentMatch: // Assumes no mismatches (would need read sequence)
+            case Flag::sequenceMatch: {
+                match_length += op.size();
+                sequence_itr += op.size();
+                break;
+            }
+            case Flag::deletion: {
+                if (match_length > 0) {
+                    ss << match_length;
+                    match_length = 0;
+                }
+                ss << '^';
+            }
+            // fall through
+            case Flag::substitution: {
+                if (match_length > 0) {
+                    ss << match_length;
+                    match_length = 0;
+                }
+                std::copy(sequence_itr, sequence_itr + op.size(), std::ostream_iterator<char> {ss});
+            }
+            // fall through
+            case Flag::softClipped:
+            case Flag::padding:
+                sequence_itr += op.size();
+                // fall through
+            case Flag::insertion:
+            case Flag::hardClipped:
+            default: break;
+        }
+    }
+    if (match_length > 0) ss << match_length;
+    return ss.str();
+}
+
+template <typename Container>
+auto copy(const Container& sequence, std::size_t pos, std::size_t length)
+{
+    assert(pos + length <= sequence.size());
+    auto begin_itr = std::next(std::cbegin(sequence), pos);
+    return Container {begin_itr, std::next(begin_itr, length)};
+}
+
+Haplotype get_aligned_part(const Haplotype& inferred_haplotype, const AlignedRead& realigned_read,
+                           const Alignment& inferred_alignment, const ReferenceGenome& reference)
+{
+    assert(contains(inferred_haplotype, realigned_read));
+    const auto& sequence = inferred_haplotype.sequence();
+    const auto alignment_start = begin_distance(inferred_haplotype, inferred_alignment.region);
+    const auto alignment_length = reference_size(inferred_alignment.cigar);
+    return Haplotype {mapped_region(realigned_read), copy(sequence, alignment_start, alignment_length), reference};
+}
+
+auto realign_and_annotate(const std::vector<AlignedRead>& reads, const Haplotype& haplotype,
+                          const ReferenceGenome& reference,
+                          boost::optional<int> haplotype_id = boost::none)
+{
+    std::vector<AnnotatedAlignedRead> result {};
+    if (reads.empty()) return result;
+    const auto expanded_haplotype = expand_for_realignment(haplotype, reads);
+    auto realignments = realign(reads, expanded_haplotype);
+    const auto inferred_alignments = copy_alignments(realignments);
+    rebase(realignments, haplotype);
+    result.reserve(realignments.size());
+    for (std::size_t n {0}; n < realignments.size(); ++n) {
+        result.emplace_back(std::move(realignments[n]));
+        const auto& read = result.back().read();
+        const Haplotype reference_haplotype {mapped_region(read), reference};
+        result.back().annotate("MD", to_md_string(read.cigar(), reference_haplotype));
+        result.back().annotate("hc", to_string(inferred_alignments[n].cigar));
+        const auto inferred_haplotype = get_aligned_part(expanded_haplotype, read, inferred_alignments[n], reference);
+        result.back().annotate("md", to_md_string(inferred_alignments[n].cigar, inferred_haplotype));
+        if (haplotype_id) {
+            result.back().annotate("hi", std::to_string(*haplotype_id));
+        }
+    }
+    return result;
+}
+
+auto assign_and_realign(const std::vector<AlignedRead>& reads, const Genotype<Haplotype>& genotype,
+                        const ReferenceGenome& reference, BAMRealigner::Report& report)
+{
+    std::vector<AnnotatedAlignedRead> result {};
     if (!reads.empty()) {
         result.reserve(reads.size());
         if (is_homozygous_nonreference(genotype)) {
-            utils::append(safe_realign_to_reference(reads, genotype[0]), result);
+            utils::append(realign_and_annotate(reads, genotype[0], reference, genotype.ploidy()), result);
         } else {
             AmbiguousReadList unassigned_reads {};
             auto support = compute_haplotype_support(genotype, reads, unassigned_reads);
+            int haplotype_id {0};
             for (auto& p : support) {
                 if (!p.second.empty()) {
                     report.n_reads_assigned += p.second.size();
-                    safe_realign_to_reference(p.second, p.first);
-                    utils::append(std::move(p.second), result);
+                    utils::append(realign_and_annotate(p.second, p.first, reference, haplotype_id), result);
                 }
+                ++haplotype_id;
             }
             if (!unassigned_reads.empty()) {
                 report.n_reads_assigned += unassigned_reads.size();
-                utils::append(safe_realign_to_reference(copy_reads(std::move(unassigned_reads)), genotype[0]), result);
+                utils::append(realign_and_annotate(copy_reads(std::move(unassigned_reads)), genotype[0], reference, genotype.ploidy()), result);
             }
         }
         std::sort(std::begin(result), std::end(result));
@@ -104,8 +207,16 @@ auto assign_and_realign(const std::vector<AlignedRead>& reads, const Genotype<Ha
     return result;
 }
 
-template <typename Container>
-auto move_merge(Container&& src, std::vector<AlignedRead>& dst)
+auto to_annotated(std::vector<AlignedRead> reads)
+{
+    std::vector<AnnotatedAlignedRead> result {};
+    result.reserve(reads.size());
+    for (auto& read : reads) result.emplace_back(std::move(read));
+    return result;
+}
+
+template <typename Container, typename T>
+auto move_merge(Container&& src, std::vector<T>& dst)
 {
     assert(std::is_sorted(std::cbegin(src), std::cend(src)));
     assert(std::is_sorted(std::cbegin(dst), std::cend(dst)));
@@ -119,17 +230,17 @@ BAMRealigner::Report
 BAMRealigner::realign(ReadReader& src, VcfReader& variants, ReadWriter& dst,
                       const ReferenceGenome& reference, SampleList samples) const
 {
-    io::BufferedReadWriter::Config writer_config {};
+    io::BufferedReadWriter<AnnotatedAlignedRead>::Config writer_config {};
     writer_config.max_buffer_footprint = config_.max_buffer;
-    io::BufferedReadWriter writer {dst, writer_config};
+    io::BufferedReadWriter<AnnotatedAlignedRead> writer {dst, writer_config};
     Report report {};
     BatchList batch {};
     boost::optional<GenomicRegion> batch_region {};
-    std::vector<AlignedRead> buffer {};
-    for (auto p = variants.iterate(); p.first != p.second; ) {
+    for (auto p = variants.iterate(); p.first != p.second;) {
         std::tie(batch, batch_region) = read_next_batch(p.first, p.second, src, reference, samples, batch_region);
         for (auto& sample : batch) {
-            std::vector<AlignedRead> genotype_reads {}, realigned_reads {};
+            std::vector<AlignedRead> genotype_reads {};
+            std::vector<AnnotatedAlignedRead> realigned_reads {};
             auto sample_reads_itr = std::begin(sample.reads);
             for (const auto& genotype : sample.genotypes) {
                 const auto padded_genotype_region = expand(mapped_region(genotype), 1);
@@ -137,14 +248,14 @@ BAMRealigner::realign(ReadReader& src, VcfReader& variants, ReadWriter& dst,
                 genotype_reads.assign(std::make_move_iterator(overlapped_reads.begin()),
                                       std::make_move_iterator(overlapped_reads.end()));
                 sample_reads_itr = sample.reads.erase(overlapped_reads.begin(), overlapped_reads.end());
-                auto bad_reads = remove_unalignable_reads(genotype_reads);
-                auto realignments = assign_and_realign(genotype_reads, genotype, report);
+                auto bad_reads = to_annotated(remove_unalignable_reads(genotype_reads));
+                auto realignments = assign_and_realign(genotype_reads, genotype, reference, report);
                 report.n_reads_unassigned += bad_reads.size();
                 move_merge(bad_reads, realignments);
                 move_merge(realignments, realigned_reads);
             }
-            move_merge(realigned_reads, sample.reads);
-            writer << sample.reads;
+            move_merge(to_annotated(std::move(sample.reads)), realigned_reads);
+            writer << realigned_reads;
         }
         batch_region = encompassing_region(batch.front().genotypes);
     }
@@ -213,9 +324,9 @@ BAMRealigner::realign(ReadReader& src, VcfReader& variants, std::vector<ReadWrit
                       const ReferenceGenome& reference, SampleList samples) const
 {
     if (dsts.size() == 1) return realign(src, variants, dsts.front(), reference, samples);
-    io::BufferedReadWriter::Config writer_config {};
+    io::BufferedReadWriter<AlignedRead>::Config writer_config {};
     writer_config.max_buffer_footprint = config_.max_buffer.bytes() / dsts.size();
-    std::vector<io::BufferedReadWriter> writers {};
+    std::vector<io::BufferedReadWriter<AlignedRead>> writers {};
     writers.reserve(dsts.size());
     for (auto& dst : dsts) writers.emplace_back(dst, writer_config);
     Report report {};

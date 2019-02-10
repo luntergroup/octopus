@@ -184,10 +184,6 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<fs::path>(),
      "Output realigned BAM files")
     
-    ("split-bamout",
-     po::value<fs::path>(),
-     "Output split realigned BAM files")
-    
     ("full-bamout",
      po::bool_switch()->default_value(false),
      "Output all reads when producing realigned bam outputs rather than just variant read minibams")

@@ -23,6 +23,7 @@
 #include "readpipe/read_pipe_fwd.hpp"
 #include "core/callers/caller_factory.hpp"
 #include "core/csr/filters/variant_call_filter_factory.hpp"
+#include "core/tools/bam_realigner.hpp"
 #include "utils/memory_footprint.hpp"
 #include "utils/input_reads_profiler.hpp"
 #include "logging/progress_meter.hpp"
@@ -73,8 +74,7 @@ public:
     boost::optional<Path> legacy() const;
     boost::optional<Path> filter_request() const;
     boost::optional<Path> bamout() const;
-    boost::optional<Path> split_bamout() const;
-    bool write_full_bamouts() const noexcept;
+    BAMRealigner::Config bamout_config() const noexcept;
     boost::optional<Path> data_profile() const;
     
 private:
@@ -112,8 +112,8 @@ private:
         bool sites_only;
         boost::optional<Path> legacy;
         boost::optional<Path> filter_request;
-        boost::optional<Path> bamout, split_bamout;
-        bool write_full_bamouts;
+        boost::optional<Path> bamout;
+        BAMRealigner::Config bamout_config;
         boost::optional<Path> data_profile;
         // Components that require temporary directory during construction appear last to make
         // exception handling easier.
