@@ -17,6 +17,8 @@ struct VersionNumber
     unsigned short major, minor;
     boost::optional<unsigned short> patch = boost::none;
     boost::optional<std::string> name = boost::none;
+    boost::optional<std::string> branch = boost::none;
+    boost::optional<std::string> commit = boost::none;
 };
 
 extern const VersionNumber Version;
