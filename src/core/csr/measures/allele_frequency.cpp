@@ -12,7 +12,7 @@
 #include "io/variant/vcf_record.hpp"
 #include "utils/concat.hpp"
 #include "allele_depth.hpp"
-#include "depth.hpp"
+#include "assigned_depth.hpp"
 
 namespace octopus { namespace csr {
 
@@ -26,7 +26,7 @@ std::unique_ptr<Measure> AlleleFrequency::do_clone() const
 Measure::ResultType AlleleFrequency::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     const auto allele_depths = boost::get<std::vector<boost::optional<int>>>(AlleleDepth{}.evaluate(call, facets));
-    const auto depths = boost::get<std::vector<std::size_t>>(Depth{true, false}.evaluate(call, facets));
+    const auto depths = boost::get<std::vector<std::size_t>>(AssignedDepth{}.evaluate(call, facets));
     std::vector<boost::optional<double>> result(allele_depths.size());
     std::transform(std::cbegin(allele_depths), std::cend(allele_depths), std::cbegin(depths), std::begin(result),
                    [] (const auto allele_depth, const auto depth) -> boost::optional<double> {
@@ -51,12 +51,12 @@ const std::string& AlleleFrequency::do_name() const
 
 std::string AlleleFrequency::do_describe() const
 {
-    return "Minor allele frequency of ALT alleles";
+    return "Empirical minor allele frequency of ALT alleles (AD / ADP)";
 }
 
 std::vector<std::string> AlleleFrequency::do_requirements() const
 {
-    return concat(AlleleDepth{}.requirements(), Depth{true, false}.requirements());
+    return concat(AlleleDepth{}.requirements(), AssignedDepth{}.requirements());
 }
 
 } // namespace csr
