@@ -19,6 +19,7 @@
 #include "utils/genotype_reader.hpp"
 #include "utils/append.hpp"
 #include "utils/read_stats.hpp"
+#include "utils/random_select.hpp"
 #include "read_assigner.hpp"
 #include "read_realigner.hpp"
 
@@ -60,11 +61,6 @@ auto remove_unalignable_reads(std::vector<AlignedRead>& reads)
     std::vector<AlignedRead> result {std::make_move_iterator(bad_read_itr), std::make_move_iterator(std::end(reads))};
     reads.erase(bad_read_itr, std::end(reads));
     return result;
-}
-
-bool is_homozygous_nonreference(const Genotype<Haplotype>& genotype)
-{
-    return genotype.is_homozygous() && !is_reference(genotype[0]);
 }
 
 auto copy_reads(AmbiguousReadList&& reads)
@@ -184,11 +180,13 @@ auto assign_and_realign(const std::vector<AlignedRead>& reads, const Genotype<Ha
     std::vector<AnnotatedAlignedRead> result {};
     if (!reads.empty()) {
         result.reserve(reads.size());
-        if (is_homozygous_nonreference(genotype)) {
+        if (genotype.is_homozygous()) {
             utils::append(realign_and_annotate(reads, genotype[0], reference, genotype.ploidy()), result);
         } else {
             AmbiguousReadList unassigned_reads {};
-            auto support = compute_haplotype_support(genotype, reads, unassigned_reads);
+            AssignmentConfig assigner_config {};
+            assigner_config.ambiguous_record = AssignmentConfig::AmbiguousRecord::haplotypes;
+            auto support = compute_haplotype_support(genotype, reads, unassigned_reads, assigner_config);
             int haplotype_id {0};
             for (auto& p : support) {
                 if (!p.second.empty()) {
@@ -198,8 +196,18 @@ auto assign_and_realign(const std::vector<AlignedRead>& reads, const Genotype<Ha
                 ++haplotype_id;
             }
             if (!unassigned_reads.empty()) {
+                // Reads that could not be assigned to a unique haplotype are randomly aligned to any of the
+                // ambiguous haplotypes
+                std::unordered_map<Haplotype, std::vector<AlignedRead>> random_assigned_reads {};
+                random_assigned_reads.reserve(genotype.ploidy());
+                for (AmbiguousRead& ambiguous : unassigned_reads) {
+                    assert(ambiguous.haplotypes && !ambiguous.haplotypes->empty());
+                    random_assigned_reads[random_select(*ambiguous.haplotypes)].push_back(std::move(ambiguous.read));
+                }
+                for (auto& p : random_assigned_reads) {
+                    utils::append(realign_and_annotate(std::move(p.second), p.first, reference, genotype.ploidy()), result);
+                }
                 report.n_reads_assigned += unassigned_reads.size();
-                utils::append(realign_and_annotate(copy_reads(std::move(unassigned_reads)), genotype[0], reference, genotype.ploidy()), result);
             }
         }
         std::sort(std::begin(result), std::end(result));
@@ -275,7 +283,7 @@ auto split_and_realign(const std::vector<AlignedRead>& reads, const Genotype<Hap
 {
     std::vector<std::vector<AlignedRead>> result(genotype.zygosity() + 1);
     if (!reads.empty()) {
-        if (is_homozygous_nonreference(genotype)) {
+        if (genotype.is_homozygous()) {
             report.n_reads_assigned += reads.size();
             result.back() = safe_realign_to_reference(reads, genotype[0]);
         } else {
