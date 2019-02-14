@@ -375,7 +375,9 @@ try_assign_ambiguous_reads_to_alleles(const std::vector<Allele>& alleles,
         if (ambiguous_read.haplotypes && have_common_alleles(*ambiguous_read.haplotypes, alleles)) {
             const auto supported_alleles = copy_included(alleles, ambiguous_read.haplotypes->front());
             for (const auto& allele : supported_alleles) {
-                assigned[allele].emplace_back(ambiguous_read.read);
+                if (overlaps(ambiguous_read, allele)) {
+                    assigned[allele].emplace_back(ambiguous_read.read);
+                }
             }
         }
     }

@@ -105,7 +105,9 @@ compute_allele_support(const std::vector<Allele>& alleles,
         ReadRefSupportSet allele_support {};
         for (const auto& p : haplotype_support) {
             if (inclusion_pred(p.first, allele)) {
-                allele_support.insert(std::cend(allele_support), std::cbegin(p.second), std::cend(p.second));
+                allele_support.reserve(p.second.size());
+                std::copy_if(std::cbegin(p.second), std::cend(p.second), std::back_inserter(allele_support),
+                             [&allele] (const auto& read) { return overlaps(read, allele); });
             }
         }
         std::sort(std::begin(allele_support), std::end(allele_support));
