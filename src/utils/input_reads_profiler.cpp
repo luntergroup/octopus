@@ -13,28 +13,12 @@
 #include "mappable_algorithms.hpp"
 #include "maths.hpp"
 #include "append.hpp"
+#include "random_select.hpp"
 #include "read_stats.hpp"
 
 namespace octopus {
 
 namespace {
-
-template <typename ForwardIt, typename RandomGenerator>
-ForwardIt random_select(ForwardIt first, ForwardIt last, RandomGenerator& g)
-{
-    if (first == last) return first;
-    const auto max = static_cast<std::size_t>(std::distance(first, last));
-    std::uniform_int_distribution<std::size_t> dist {0, max - 1};
-    std::advance(first, dist(g));
-    return first;
-}
-
-template <typename ForwardIt>
-ForwardIt random_select(ForwardIt first, ForwardIt last)
-{
-    static std::mt19937 generator {42};
-    return random_select(first, last, generator);
-}
 
 auto get_covered_sample_regions(const std::vector<SampleName>& samples, const InputRegionMap& input_regions,
                                 const ReadManager& read_manager)

@@ -189,6 +189,7 @@ set(UTILS_SOURCES
     utils/system_utils.hpp
     utils/system_utils.cpp
     utils/k_medoids.hpp
+    utils/random_select.hpp
 )
 
 set(CORE_SOURCES
