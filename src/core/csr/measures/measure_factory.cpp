@@ -60,6 +60,7 @@ void init(MeasureMakerMap& measure_makers)
     measure_makers[name<VariantLength>()]               = [] () { return make_wrapped_measure<VariantLength>(); };
     measure_makers[name<BaseMismatchCount>()]           = [] () { return make_wrapped_measure<BaseMismatchCount>(); };
     measure_makers[name<BaseMismatchFraction>()]        = [] () { return make_wrapped_measure<BaseMismatchFraction>(); };
+    measure_makers[name<AssignedDepth>()]               = [] () { return make_wrapped_measure<AssignedDepth>(); };
 }
 
 class BadParameterList : public UserError
