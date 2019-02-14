@@ -17,8 +17,58 @@ forests = ['germline', 'somatic']
 latest_llvm = 'llvm'
 latest_gcc = 'gcc@8'
 
-def get_octopus_version():
-    return "0.6.0-beta"
+class Version(object):
+    def __init__(self):
+        self.major = None
+        self.minor = None
+        self.patch = None
+        self.release = None
+        self.branch = None
+        self.commit = None
+
+    def __str__(self):
+        res = '.'.join(str(x) for x in [self.major, self.minor, self.patch])
+        if self.release:
+            res += '-' + self.release
+        if self.branch or self.commit:
+            res += ' ('
+            pad = ''
+            if self.branch:
+                res += self.branch
+                pad = ' '
+            if self.commit:
+                res += pad + self.commit
+            res += ')'
+        return res
+
+def to_short_version_str(version):
+    res = '.'.join(str(x) for x in [version.major, version.minor, version.patch])
+    if version.release:
+        res += '-' + version.release
+    return res
+
+def get_octopus_version(octopus_build_dir):
+    cmake_generated_dir = os.path.join(octopus_build_dir, 'generated')
+    cmake_version_header = os.path.join(cmake_generated_dir, "version.hpp")
+    header = open(cmake_version_header).read().splitlines()
+    result = Version()
+    for line in header:
+        tokens = line.split()
+        if len(tokens) == 3 and tokens[0] == "#define":
+            field, value = tokens[1], tokens[2].replace('"', '')
+            if field == "VERSION_MAJOR":
+                result.major = int(value)
+            elif field == "VERSION_MINOR":
+                result.minor = int(value)
+            elif field == "VERSION_PATCH":
+                result.patch = int(value)
+            elif field == "VERSION_RELEASE":
+                result.release = value
+            elif field == "GIT_BRANCH":
+                result.branch = value
+            elif field == "GIT_COMMIT_HASH":
+                result.commit = value
+    return result
 
 def is_unix():
     system = platform.system()
@@ -96,7 +146,7 @@ def download_forests(forest_dir, version):
         print("No forest directory found, making one")
         os.makedirs(forest_dir)
     for forest in forests:
-        forest_name = forest + '.v' + version + '.forest'
+        forest_name = forest + '.v' + to_short_version_str(version) + '.forest'
         forest_url = os.path.join(forest_url_base, forest_name)
         forest_file = os.path.join(forest_dir, forest_name)
         try:
@@ -109,9 +159,6 @@ def main(args):
     script_dir = os.path.dirname(os.path.realpath(__file__))
     octopus_dir = os.path.dirname(script_dir)
     root_cmake = os.path.join(octopus_dir, "CMakeLists.txt")
-    octopus_version = get_octopus_version()
-
-    print("Installing Octopus " + octopus_version)
 
     if not os.path.exists(root_cmake):
         print("octopus source directory corrupted: root CMakeLists.txt is missing. Please re-download source code.")
@@ -204,6 +251,9 @@ def main(args):
             ret = call(["cmake"] + cmake_options + [".."])
 
     if ret == 0:
+        octopus_version = get_octopus_version(octopus_build_dir)
+        print("Installing Octopus " + str(octopus_version))
+
         make_options = []
         if args["threads"]:
             if (args["threads"] > 1):
@@ -216,10 +266,10 @@ def main(args):
         else:
             print("Windows make files not supported. Build files have been written to " + octopus_build_dir)
 
-    if args["download_forests"]:
-        if len(forests) > 0:
-            forest_dir = os.path.join(octopus_dir, "resources/forests")
-            download_forests(forest_dir, octopus_version)
+        if args["download_forests"]:
+            if len(forests) > 0:
+                forest_dir = os.path.join(octopus_dir, "resources/forests")
+                download_forests(forest_dir, octopus_version)
 
     sys.exit(ret)
 
