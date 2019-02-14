@@ -491,7 +491,8 @@ BAMRealigner::read_next_batch(VcfIterator& first, const VcfIterator& last, ReadR
                 }
             }
         }
-        auto reads = src.fetch_reads(samples, expand(*batch_region, 1)); // Pad for soft clipped reads
+        const GenomicRegion::Distance fetch_pad {config_.copy_hom_ref_reads ? 0 : 10}; // Pad for soft clipped reads
+        auto reads = src.fetch_reads(samples, expand(*batch_region, fetch_pad));
         sort(reads);
         if (config_.primary_only) {
             filter_primary(reads);
@@ -501,7 +502,7 @@ BAMRealigner::read_next_batch(VcfIterator& first, const VcfIterator& last, ReadR
         for (const auto& sample : samples) {
             auto& sample_genotypes = genotypes[sample];
             if (prev_batch_region) {
-                erase_overlapped(reads[sample], expand_rhs(*prev_batch_region, 1));
+                erase_overlapped(reads[sample], expand_rhs(*prev_batch_region, fetch_pad));
             }
             batches.push_back({std::move(sample_genotypes), std::move(reads[sample])});
         }
