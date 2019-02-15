@@ -248,6 +248,8 @@ set(CORE_SOURCES
     core/csr/facets/reference_context.cpp
     core/csr/facets/genotypes.hpp
     core/csr/facets/genotypes.cpp
+    core/csr/facets/alleles.hpp
+    core/csr/facets/alleles.cpp
     core/csr/facets/ploidies.hpp
     core/csr/facets/ploidies.cpp
     core/csr/facets/pedigree.hpp

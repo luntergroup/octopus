@@ -51,6 +51,7 @@ public:
 private:
     struct BlockData
     {
+        const CallBlock* calls;
         boost::optional<GenomicRegion> region;
         boost::optional<ReadMap> reads;
         boost::optional<GenotypeMap> genotypes;
