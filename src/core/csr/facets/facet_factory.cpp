@@ -211,6 +211,7 @@ FacetFactory::make(const std::vector<std::string>& names,
         for (const auto& block : blocks) {
             // It's faster to fetch reads serially from left to right, so do this outside the thread pool
             BlockData data {};
+            data.calls = std::addressof(block);
             if (!block.empty()) {
                 data.region = encompassing_region(block);
                 if (fetch_reads) {
