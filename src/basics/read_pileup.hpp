@@ -10,6 +10,7 @@
 #include "config/common.hpp"
 #include "concepts/mappable.hpp"
 #include "contig_region.hpp"
+#include "genomic_region.hpp"
 #include "aligned_read.hpp"
 
 namespace octopus {

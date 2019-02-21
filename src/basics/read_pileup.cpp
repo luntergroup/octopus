@@ -8,6 +8,7 @@
 #include <numeric>
 
 #include "utils/append.hpp"
+#include "utils/mappable_algorithms.hpp"
 
 namespace octopus {
 
