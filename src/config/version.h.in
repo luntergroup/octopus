@@ -7,11 +7,11 @@
 /*
 * These values are automatically set according to their cmake variables.
 */
-#define VERSION_MAJOR @octopus_VERSION_MAJOR@
-#define VERSION_MINOR @octopus_VERSION_MINOR@
-#define VERSION_PATCH @octopus_VERSION_PATCH@
-#define VERSION_RELEASE "@octopus_VERSION_RELEASE@"
-#define GIT_BRANCH "@GIT_BRANCH@"
-#define GIT_COMMIT_HASH "@GIT_COMMIT_HASH@"
+#define VERSION_MAJOR 0
+#define VERSION_MINOR 6
+#define VERSION_PATCH 1
+#define VERSION_RELEASE "beta"
+#define GIT_BRANCH "develop"
+#define GIT_COMMIT_HASH "73d2cd1e"
 
 #endif

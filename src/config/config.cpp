@@ -6,6 +6,7 @@
 #include <ostream>
 
 #include "version.hpp"
+#include "system.hpp"
 
 namespace octopus { namespace config {
 
@@ -45,6 +46,14 @@ const VersionNumber Version {VERSION_MAJOR,
                              get_release_name(),
                              get_git_branch_name(),
                              get_git_commit()};
+
+const SystemInfo System {SYSTEM_PROCESSOR,
+                         SYSTEM_NAME,
+                         SYSTEM_VERSION,
+                         COMPILER_NAME,
+                         COMPILER_VERSION,
+                         BOOSTLIB_VERSION,
+                         BUILD_TYPE};
 
 std::ostream& operator<<(std::ostream& os, const VersionNumber& version)
 {

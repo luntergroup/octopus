@@ -631,6 +631,10 @@ elseif (CMAKE_BUILD_TYPE MATCHES Debug)
     target_link_libraries (octopus-debug ${HTSlib_LIBRARIES})
     find_package(Threads REQUIRED)
     target_link_libraries(octopus-debug ${CMAKE_THREAD_LIBS_INIT})
+    configure_file (
+        "${PROJECT_SOURCE_DIR}/src/config/system.h.in"
+        "${PROJECT_BINARY_DIR}/generated/system.hpp"
+    )
     install(TARGETS octopus-debug DESTINATION ${CMAKE_INSTALL_PREFIX})
 elseif (CMAKE_BUILD_TYPE MATCHES RelWithDebInfo)
     set(SanitizeFlags -fsanitize=address,undefined)
@@ -656,6 +660,10 @@ elseif (CMAKE_BUILD_TYPE MATCHES RelWithDebInfo)
     target_link_libraries (octopus-sanitize ${HTSlib_LIBRARIES} ${SanitizeFlags})
     find_package(Threads REQUIRED)
     target_link_libraries(octopus-sanitize ${CMAKE_THREAD_LIBS_INIT} ${SanitizeFlags})
+    configure_file (
+        "${PROJECT_SOURCE_DIR}/src/config/system.h.in"
+        "${PROJECT_BINARY_DIR}/generated/system.hpp"
+    )
     install(TARGETS octopus-sanitize DESTINATION ${CMAKE_INSTALL_PREFIX})
 else()
     add_executable(octopus main.cpp ${OCTOPUS_SOURCES} ${INCLUDE_SOURCES})
@@ -687,5 +695,9 @@ else()
     else()
         message(WARNING "IPO is not supported: ${output}")
     endif()
+    configure_file (
+        "${PROJECT_SOURCE_DIR}/src/config/system.h.in"
+        "${PROJECT_BINARY_DIR}/generated/system.hpp"
+    )
     install(TARGETS octopus DESTINATION ${CMAKE_INSTALL_PREFIX})
 endif()

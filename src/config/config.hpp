@@ -21,9 +21,19 @@ struct VersionNumber
     boost::optional<std::string> commit = boost::none;
 };
 
+struct SystemInfo
+{
+    std::string system_processor, system_name, system_version;
+    std::string compiler_name, compiler_version;
+    std::string boost_version;
+    std::string build_type;
+};
+
 extern const VersionNumber Version;
+extern const SystemInfo System;
 
 std::ostream& operator<<(std::ostream& os, const VersionNumber& version);
+std::ostream& operator<<(std::ostream& os, const SystemInfo& system);
 
 extern const std::string HelpForum, BugReport;
 
