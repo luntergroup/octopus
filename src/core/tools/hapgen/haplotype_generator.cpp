@@ -1246,12 +1246,16 @@ void HaplotypeGenerator::resolve_sandwich_insertion()
 }
 
 template <typename Range>
-auto sum_indel_sizes(const Range& alleles) noexcept
+auto calculate_haplotype_reference_distance_lower_bound(const Range& alleles)
 {
-    return std::accumulate(std::cbegin(alleles), std::cend(alleles), std::size_t {0},
-                           [] (const auto curr, const Allele& allele) noexcept {
-                               return curr + reference_distance(allele);
-                           });
+    std::size_t result {0};
+    for (auto itr = std::cbegin(alleles); itr != std::cend(alleles);) {
+        auto next_itr = std::find_if(std::next(itr), std::cend(alleles), [=] (const auto& x) { return !is_same_region(x, *itr); });
+        const static auto ref_distance_less = [] (const auto& lhs, const auto& rhs) { return reference_distance(lhs) < reference_distance(rhs); };
+        result += reference_distance(*std::max_element(itr, next_itr, ref_distance_less));
+        itr = next_itr;
+    }
+    return result;
 }
 
 GenomicRegion HaplotypeGenerator::calculate_haplotype_region() const
@@ -1261,7 +1265,7 @@ GenomicRegion HaplotypeGenerator::calculate_haplotype_region() const
     // reference sequence for full read re-mapping and alignment (i.e. the read must be
     // contained by the haplotype). Note the sum of the indel sizes may not be sufficient
     // as the candidate generator may not propopse all variation in the original reads.
-    const auto min_flank_padding = sum_indel_sizes(overlapped) + policies_.min_flank_pad;
+    const auto min_flank_padding = calculate_haplotype_reference_distance_lower_bound(overlapped) + policies_.min_flank_pad;
     if (has_overlapped(reads_.get(), active_region_)) {
         const auto& lhs_read = *leftmost_overlapped(reads_.get(), active_region_);
         const auto& rhs_read = *rightmost_overlapped(reads_.get(), active_region_);
