@@ -737,7 +737,11 @@ OptionMap parse_options(const int argc, const char** argv)
     }
     
     if (vm_init.count("version") == 1) {
-        std::cout << "octopus " << config::Version << std::endl;
+        std::cout << "octopus version " << config::Version << '\n'
+                  << "Target: " << config::System.system_processor << ' ' << config::System.system_name << " " << config::System.system_version << '\n'
+                  << "Compiler: " << config::System.compiler_name << ' ' << config::System.compiler_version << '\n'
+                  << "Boost: " << config::System.boost_version
+                  << std::endl;
         return vm_init;
     }
     
