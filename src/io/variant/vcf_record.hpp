@@ -134,6 +134,8 @@ VcfRecord::NucleotideSequence get_ancestral_allele(const VcfRecord& record);
 std::vector<unsigned> get_allele_count(const VcfRecord& record);
 std::vector<double> get_allele_frequency(const VcfRecord& record);
 
+bool is_info_missing(const VcfRecord::KeyType& key, const VcfRecord& record);
+
 bool is_filtered(const VcfRecord& record) noexcept;
 bool is_dbsnp_member(const VcfRecord& record) noexcept;
 bool is_hapmap2_member(const VcfRecord& record) noexcept;

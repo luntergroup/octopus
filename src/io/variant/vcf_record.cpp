@@ -321,6 +321,16 @@ std::vector<VcfRecord::NucleotideSequence> get_genotype(const VcfRecord& record,
     return record.get_sample_value(sample, vcfspec::format::genotype);
 }
 
+bool is_missing(const std::vector<VcfRecord::ValueType>& values) noexcept
+{
+    return values.size() < 2 && values.front() == vcfspec::missingValue;
+}
+
+bool is_info_missing(const VcfRecord::KeyType& key, const VcfRecord& record)
+{
+    return !record.has_info(key) || is_missing(record.info_value(key));
+}
+
 bool is_filtered(const VcfRecord& record) noexcept
 {
     const auto& filters = record.filter();
