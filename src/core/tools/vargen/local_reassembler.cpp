@@ -830,7 +830,7 @@ auto extract_variants(const Assembler::NucleotideSequence& ref, const Assembler:
     return result;
 }
 
-auto align(Assembler::Variant& v, const Model& model)
+auto align(const Assembler::Variant& v, const Model& model)
 {
     return align(v.ref, v.alt, model).cigar;
 }
