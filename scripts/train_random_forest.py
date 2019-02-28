@@ -9,7 +9,7 @@ from pysam import VariantFile
 import random
 import numpy as np
 
-default_measures = "AC AD AF ARF BQ CC CRF DP FRF GC GQ GQD NC MC MF MP MRC MQ MQ0 MQD PP PPD QD QUAL REFCALL REB RSB RTB SB SD SF SHC SMQ SOMATIC STR_LENGTH STR_PERIOD".split()
+default_measures = "AC AD ADP AF ARF BQ CC CRF DP FRF GC GQ GQD NC MC MF MP MRC MQ MQ0 MQD PP PPD QD QUAL REFCALL REB RSB RTB SB SD SF SHC SMQ SOMATIC STR_LENGTH STR_PERIOD VL".split()
 
 def run_octopus(octopus, ref_path, bam_path, regions_bed, threads, out_path):
     call([octopus, '-R', ref_path, '-I', bam_path, '-t', regions_bed,
@@ -131,7 +131,10 @@ def main(options):
     add_header(master_data_path, ranger_header)
     ranger_out_prefix = join(options.out, options.prefix)
     run_ranger_training(options.ranger, master_data_path, options.trees, options.min_node_size, options.threads, ranger_out_prefix)
-    remove(ranger_out_prefix + ".confusion")
+    try:
+        remove(ranger_out_prefix + ".confusion")
+    except FileNotFoundError:
+        print('Ranger did not complete, perhaps it was killed due to insufficient memory')
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

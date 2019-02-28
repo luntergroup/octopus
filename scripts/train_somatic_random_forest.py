@@ -10,7 +10,7 @@ from pysam import VariantFile
 import random
 import numpy as np
 
-default_measures = "AC AD AF ARF BQ CC CRF DP FRF GC GQ GQD NC MC MF MP MRC MQ MQ0 MQD PP PPD QD QUAL REFCALL REB RSB RTB SB SD SF SHC SMQ SOMATIC STR_LENGTH STR_PERIOD".split()
+default_measures = "AC AD ADP AF ARF BQ CC CRF DP FRF GC GQ GQD NC MC MF MP MRC MQ MQ0 MQD PP PPD QD QUAL REFCALL REB RSB RTB SB SD SF SHC SMQ SOMATIC STR_LENGTH STR_PERIOD VL".split()
 
 def get_sample_names(truth_vcf_name):
     truth_vcf = VariantFile(truth_vcf_name)
@@ -42,9 +42,9 @@ def get_annotation(field, rec, vcf_header):
         return rec.qual
     elif field in rec.format:
         if len(vcf_header.samples) > 1:
-            return [rec.samples[sample][field] for sample in vcf_header.samples]
+            return [to_float(rec.samples[sample][field]) for sample in vcf_header.samples]
         else:
-            return rec.samples[samples[0]][field]
+            return to_float(rec.samples[samples[0]][field])
     else:
         res = rec.info[field]
         if type(res) == tuple:
@@ -52,15 +52,15 @@ def get_annotation(field, rec, vcf_header):
         else:
             return to_float(res)
 
-def is_somatic(rec):
-    return any(get_annotation('SOMATIC', rec))
+def is_somatic(rec, header):
+    return any(get_annotation('SOMATIC', rec, header))
 
 def filter_somatic(in_vcf_path, out_vcf_path):
     in_vcf = VariantFile(in_vcf_path)
     out_vcf = VariantFile(out_vcf_path, 'w', header=in_vcf.header)
     num_skipped_records = 0
     for rec in in_vcf:
-        if is_somatic(rec):
+        if is_somatic(rec, in_vcf.header):
             try:
                 out_vcf.write(rec)
             except OSError:
