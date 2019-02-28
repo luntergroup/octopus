@@ -27,7 +27,7 @@ static constexpr std::array<LibraryPreparation, 3> libraries {
 };
 static constexpr std::array<Sequencer, 6> sequencers {
     Sequencer::hiseq_2000, Sequencer::hiseq_2500, Sequencer::hiseq_4000,
-    Sequencer::xten, Sequencer::novaseq, Sequencer::bgiseq_5000
+    Sequencer::xten, Sequencer::novaseq, Sequencer::bgiseq_500
 };
 
 std::ostream& operator<<(std::ostream& out, const LibraryPreparation& library)
@@ -114,8 +114,8 @@ std::ostream& operator<<(std::ostream& out, const Sequencer& sequencer)
         case Sequencer::novaseq:
             out << "NovaSeq";
             break;
-        case Sequencer::bgiseq_5000:
-            out << "BGISEQ-5000";
+        case Sequencer::bgiseq_500:
+            out << "BGISEQ-500";
             break;
     }
     return out;
@@ -160,8 +160,8 @@ std::istream& operator>>(std::istream& in, Sequencer& result)
         result = Sequencer::xten;
     else if (token == "NOVASEQ")
         result = Sequencer::novaseq;
-    else if (token == "BGISEQ-5000")
-        result = Sequencer::bgiseq_5000;
+    else if (token == "BGISEQ-500")
+        result = Sequencer::bgiseq_500;
     else throw UnknownSequencer {token};
     return in;
 }
@@ -248,7 +248,7 @@ static const RepeatBasedIndelModelParameterMap builtin_indel_models {{
         }
     },
     {
-     	{LibraryPreparation::pcr_free, Sequencer::bgiseq_5000},
+     	{LibraryPreparation::pcr_free, Sequencer::bgiseq_500},
         {
             {45,45,47,44,43,39,37,33,29,26,24,22,21,21,20,19,18,18,17,16,15,14,14,13,13,13,12,12,11,11,10,10,10,9,9,9,9,9,9,9,9,9,9,9,8},
             {45,45,47,45,42,38,33,28,24,21,19,18,16,15,13,12,11,11,11,10,10,9,9,9,9,9,9,9,8,8,8,8,8,8,8,6},
@@ -302,7 +302,7 @@ static const RepeatBasedIndelModelParameterMap builtin_indel_models {{
         }
     },
     {
-     	{LibraryPreparation::pcr, Sequencer::bgiseq_5000},
+     	{LibraryPreparation::pcr, Sequencer::bgiseq_500},
         {
             {60,60,49,47,43,39,35,31,25,21,17,14,13,12,11,11,10,10,9,9,9,8,8,8,8,8,7,7,7,7,6,6,6,6,6,6,5,5,5,5,5,5,5,5,5,5,5,5,5,4},
             {60,60,48,45,42,38,32,26,22,17,14,12,10,9,8,7,6,6,6,5,5,5,5,5,4,4,4,4,4,4,4,4,3},
@@ -356,7 +356,7 @@ static const RepeatBasedIndelModelParameterMap builtin_indel_models {{
         }
     },
     {
-     	{LibraryPreparation::tenx, Sequencer::bgiseq_5000},
+     	{LibraryPreparation::tenx, Sequencer::bgiseq_500},
         {
             {45,45,37,35,30,28,26,25,21,17,14,12,11,11,10,10,9,9,8,8,8,7,7,7,7,7,7,7,6},
             {45,45,36,33,29,26,22,20,17,15,13,11,10,9,9,9,9,8},
