@@ -19,9 +19,10 @@ GenomicRegion parse_region(std::string region, const ReferenceGenome& reference)
 
 enum class NonreferenceContigPolicy { exception, ignore };
 
-std::deque<GenomicRegion> extract_regions(const boost::filesystem::path& file_path,
-                                          const ReferenceGenome& reference,
-                                          NonreferenceContigPolicy policy = NonreferenceContigPolicy::exception);
+std::deque<GenomicRegion>
+extract_regions(const boost::filesystem::path& file_name,
+                const ReferenceGenome& reference,
+                NonreferenceContigPolicy policy = NonreferenceContigPolicy::exception);
 
 } // namespace io
 } // namespace octopus
