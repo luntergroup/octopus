@@ -1,13 +1,17 @@
-// Copyright (c) 2015-2018 Daniel Cooke
+// Copyright (c) 2015-2019 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
-#ifndef cmake_config_h
-#define cmake_config_h
+#ifndef version_hpp
+#define version_hpp
 
 /*
 * These values are automatically set according to their cmake variables.
 */
 #define VERSION_MAJOR @octopus_VERSION_MAJOR@
 #define VERSION_MINOR @octopus_VERSION_MINOR@
+#define VERSION_PATCH @octopus_VERSION_PATCH@
+#define VERSION_RELEASE "@octopus_VERSION_RELEASE@"
+#define GIT_BRANCH "@GIT_BRANCH@"
+#define GIT_COMMIT_HASH "@GIT_COMMIT_HASH@"
 
 #endif

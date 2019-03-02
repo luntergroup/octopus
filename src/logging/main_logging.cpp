@@ -11,32 +11,22 @@
 namespace octopus {
 
 namespace detail {
-    std::string make_banner()
-    {
-        return std::string(config::CommandLineWidth, '-');
-    }
+
+std::string make_banner()
+{
+    return std::string(config::CommandLineWidth, '-');
 }
+
+} // namespace detail
 
 void log_program_startup()
 {
     logging::InfoLogger log {};
-    
     const auto banner = detail::make_banner();
-    
     log << banner;
-    
     std::ostringstream ss {};
-    
     ss << "octopus v" << config::Version;
-    
-    if (TRACE_MODE) {
-        ss << " (trace mode)";
-    } else if (DEBUG_MODE) {
-        ss << " (debug mode)";
-    }
-    
     log << ss.str();
-    
     log << config::CopyrightNotice;
     log << banner;
 }

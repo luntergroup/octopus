@@ -1109,18 +1109,25 @@ auto has_contained(const Range& mappables, const MappableTp& mappable)
 // count_contained
 
 /**
- Returns the number of mappable elements in the range [first, last) that are contained within mappable.
+ Returns the number of mappable elements in the range [first, last) that overlap with mappable.
  
  Requires the range [first, last) is ForwardSorted.
  */
-template <typename BidirIt, typename MappableTp>
-std::size_t count_contained(BidirIt first, BidirIt last, const MappableTp& mappable)
+template <typename ForwardIt, typename MappableTp, typename TagTp>
+std::size_t count_contained(ForwardIt first, ForwardIt last, const MappableTp& mappable,
+                            TagTp)
 {
-    using MappableTp2 = typename std::iterator_traits<BidirIt>::value_type;
+    using MappableTp2 = typename std::iterator_traits<ForwardIt>::value_type;
     static_assert(is_region_or_mappable<MappableTp> && is_region_or_mappable<MappableTp2>,
                   "Mappable required");
     const auto contained = contained_range(first, last, mappable);
-    return std::distance(contained.begin(), contained.end());
+    return size(contained, TagTp {});
+}
+
+template <typename BidirIt, typename MappableTp>
+std::size_t count_contained(BidirIt first, BidirIt last, const MappableTp& mappable)
+{
+    return count_contained(first, last, mappable, ForwardSortedTag {});
 }
 
 namespace detail {

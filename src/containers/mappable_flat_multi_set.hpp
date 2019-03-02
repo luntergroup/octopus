@@ -729,6 +729,9 @@ MappableFlatMultiSet<MappableType, Allocator>::count_contained(const_iterator fi
                                                                const MappableType_& mappable) const
 {
     using octopus::count_contained;
+    if (is_bidirectionally_sorted_) {
+        return count_contained(first, last, mappable, BidirectionallySortedTag {});
+    }
     return count_contained(first, last, mappable);
 }
 

@@ -47,5 +47,6 @@
 #include "core/csr/measures/variant_length.hpp"
 #include "core/csr/measures/base_mismatch_count.hpp"
 #include "core/csr/measures/base_mismatch_fraction.hpp"
+#include "core/csr/measures/assigned_depth.hpp"
 
 #endif

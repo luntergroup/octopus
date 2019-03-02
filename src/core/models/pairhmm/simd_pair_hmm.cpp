@@ -415,7 +415,7 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
 }
 
 int align(const char* truth, const char* target, const std::int8_t* qualities,
-          int truth_len, int target_len,
+          const int truth_len, const int target_len,
           const std::int8_t* gap_open, const std::int8_t* gap_extend,
           short nuc_prior,
           int& first_pos, char* aln1, char* aln2) noexcept
@@ -563,7 +563,14 @@ int align(const char* truth, const char* target, const std::int8_t* qualities,
     auto y      = target_len;
     auto x      = s - y;
     auto alnidx = 0;
-    auto state = (reinterpret_cast<short*>(_backpointers.data() + s)[i] >> (2 * matchLabel)) & 3;
+    
+    auto ptr = reinterpret_cast<short*>(_backpointers.data() + s);
+    if ((ptr + i) < reinterpret_cast<short*>(_backpointers.data())
+        || (ptr + i) >= reinterpret_cast<short*>(_backpointers.data() + _backpointers.size())) {
+        first_pos = -1;
+        return -1;
+    }
+    auto state = (ptr[i] >> (2 * matchLabel)) & 3;
     
     s -= 2;
     

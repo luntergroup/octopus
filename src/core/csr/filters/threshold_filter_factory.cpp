@@ -91,6 +91,7 @@ void init(MeasureToFilterKeyMap& filter_names)
     filter_names[name<ClassificationConfidence>()]    = lowClassificationConfidence;
     filter_names[name<AlleleDepth>()]                 = alleleDepth;
     filter_names[name<MedianSomaticMappingQuality>()] = somaticMappingQuality;
+    filter_names[name<AssignedDepth>()]               = lowAssignedDepth;
 }
 
 auto get_vcf_filter_name(const MeasureWrapper& measure, const std::string& comparator, const double threshold_target)

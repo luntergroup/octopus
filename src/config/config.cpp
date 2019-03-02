@@ -5,15 +5,71 @@
 
 #include <ostream>
 
+#include "version.hpp"
+#include "system.hpp"
+
 namespace octopus { namespace config {
 
-const VersionNumber Version {0, 6, 0, boost::optional<std::string> {"beta"}};
+static boost::optional<std::string> get_release_name()
+{
+    std::string name {VERSION_RELEASE};
+    if (name.empty()) {
+        return boost::none;
+    } else {
+        return name;
+    }
+}
+
+static boost::optional<std::string> get_git_branch_name()
+{
+    std::string name {GIT_BRANCH};
+    if (name.empty()) {
+        return boost::none;
+    } else {
+        return name;
+    }
+}
+
+static boost::optional<std::string> get_git_commit()
+{
+    std::string name {GIT_COMMIT_HASH};
+    if (name.empty()) {
+        return boost::none;
+    } else {
+        return name;
+    }
+}
+
+const VersionNumber Version {VERSION_MAJOR,
+                             VERSION_MINOR,
+                             VERSION_PATCH,
+                             get_release_name(),
+                             get_git_branch_name(),
+                             get_git_commit()};
+
+const SystemInfo System {SYSTEM_PROCESSOR,
+                         SYSTEM_NAME,
+                         SYSTEM_VERSION,
+                         COMPILER_NAME,
+                         COMPILER_VERSION,
+                         BOOSTLIB_VERSION,
+                         BUILD_TYPE};
 
 std::ostream& operator<<(std::ostream& os, const VersionNumber& version)
 {
     os << version.major << '.' << version.minor;
     if (version.patch) os << '.' << *version.patch;
     if (version.name) os << '-' << *version.name;
+    if ((version.branch && *version.branch != "master") || version.commit) {
+        os << " (";
+        std::string space {""};
+        if (version.branch && *version.branch != "master") {
+            os << *version.branch;
+            space = " ";
+        }
+        if (version.commit) os << space << *version.commit;
+        os << ')';
+    }
     return os;
 }
 

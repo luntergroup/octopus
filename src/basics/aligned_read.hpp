@@ -32,8 +32,8 @@ class AlignedRead : public Comparable<AlignedRead>, public Mappable<AlignedRead>
 public:
     using MappingDomain       = GenomicRegion;
     using NucleotideSequence  = std::string;
-    using MappingQuality      = std::uint_fast8_t;
-    using BaseQuality         = std::uint_fast8_t;
+    using MappingQuality      = std::uint8_t;
+    using BaseQuality         = std::uint8_t;
     using BaseQualityVector   = std::vector<BaseQuality>;
     
     enum class Direction { forward, reverse };

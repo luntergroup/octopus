@@ -8,6 +8,7 @@
 #include <numeric>
 
 #include "utils/append.hpp"
+#include "utils/mappable_algorithms.hpp"
 
 namespace octopus {
 
@@ -111,7 +112,7 @@ unsigned ReadPileup::sum_base_qualities(const NucleotideSequence& sequence) cons
 
 namespace {
 
-auto overlap_range(std::vector<ReadPileup>& pileups, const AlignedRead& read)
+auto pileup_overlap_range(std::vector<ReadPileup>& pileups, const AlignedRead& read)
 {
     return overlap_range(std::begin(pileups), std::end(pileups), contig_region(read), BidirectionallySortedTag {});
 }
@@ -126,7 +127,7 @@ ReadPileups make_pileups(const ReadContainer& reads, const GenomicRegion& region
         result.emplace_back(position);
     }
     for (const AlignedRead& read : overlap_range(reads, region)) {
-        for (ReadPileup& pileup : overlap_range(result, read)) {
+        for (ReadPileup& pileup : pileup_overlap_range(result, read)) {
             pileup.add(read);
         }
     }

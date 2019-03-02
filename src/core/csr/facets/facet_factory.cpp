@@ -17,6 +17,7 @@
 #include "reference_context.hpp"
 #include "samples.hpp"
 #include "genotypes.hpp"
+#include "alleles.hpp"
 #include "ploidies.hpp"
 #include "pedigree.hpp"
 
@@ -210,6 +211,7 @@ FacetFactory::make(const std::vector<std::string>& names,
         for (const auto& block : blocks) {
             // It's faster to fetch reads serially from left to right, so do this outside the thread pool
             BlockData data {};
+            data.calls = std::addressof(block);
             if (!block.empty()) {
                 data.region = encompassing_region(block);
                 if (fetch_reads) {
@@ -267,6 +269,11 @@ void FacetFactory::setup_facet_makers()
         assert(block.genotypes);
         return {std::make_unique<Genotypes>(*block.genotypes)};
     };
+    facet_makers_[name<Alleles>()] = [this] (const BlockData& block) -> FacetWrapper
+    {
+        assert(block.calls);
+        return {std::make_unique<Alleles>(this->samples_, *block.calls)};
+    };
     facet_makers_[name<Ploidies>()] = [this] (const BlockData& block) -> FacetWrapper
     {
         return {std::make_unique<Ploidies>(*ploidies_, *block.region, input_header_.samples())};
@@ -322,6 +329,7 @@ FacetFactory::FacetBlock FacetFactory::make(const std::vector<std::string>& name
 FacetFactory::BlockData FacetFactory::make_block_data(const std::vector<std::string>& names, const CallBlock& block) const
 {
     BlockData result {};
+    result.calls = std::addressof(block);
     assert(!names.empty());
     if (!block.empty()) {
         result.region = encompassing_region(block);

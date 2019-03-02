@@ -12,6 +12,8 @@
 #include <boost/optional.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/type_traits/is_unsigned.hpp>
+#include <boost/iostreams/filtering_stream.hpp>
+#include <boost/iostreams/filter/gzip.hpp>
 
 #include "exceptions/user_error.hpp"
 #include "utils/string_utils.hpp"
@@ -159,23 +161,20 @@ std::istream& operator>>(std::istream& is, Line& data)
     return is;
 }
 
-bool is_bed_file(const boost::filesystem::path& file)
+bool is_bed_format(const boost::filesystem::path& file)
 {
-    return file.extension().string() == ".bed";
+    return file.extension().string() == ".bed" || (file.extension().string() == ".gz" && file.stem().extension().string() == ".bed");
 }
 
-void seek_past_bed_header(std::ifstream& file)
+template <typename Stream>
+void seek_past_bed_header(Stream& file)
 {
     // TODO
 }
 
-auto open(const boost::filesystem::path& file)
+bool is_gzipped(const boost::filesystem::path& file_name)
 {
-    std::ifstream result {file.string()};
-    if (is_bed_file(file)) {
-        seek_past_bed_header(result);
-    }
-    return result;
+    return file_name.extension().string() == ".gz";
 }
 
 bool is_valid_bed_record(const std::string& line)
@@ -197,7 +196,7 @@ std::string convert_bed_line_to_region_str(const std::string& bed_line)
 std::function<GenomicRegion(const std::string&)>
 make_throwing_region_line_parser(const boost::filesystem::path& file, const ReferenceGenome& reference)
 {
-    if (is_bed_file(file)) {
+    if (is_bed_format(file)) {
         return [&] (const std::string& line) -> GenomicRegion
         {
             return parse_region(convert_bed_line_to_region_str(line), reference);
@@ -213,7 +212,7 @@ make_throwing_region_line_parser(const boost::filesystem::path& file, const Refe
 std::function<boost::optional<GenomicRegion>(const std::string&)>
 make_optional_region_line_parser(const boost::filesystem::path& file, const ReferenceGenome& reference)
 {
-    if (is_bed_file(file)) {
+    if (is_bed_format(file)) {
         return [&] (const std::string& line) -> boost::optional<GenomicRegion>
         {
             try {
@@ -234,29 +233,53 @@ make_optional_region_line_parser(const boost::filesystem::path& file, const Refe
     }
 }
 
-} // namespace
-
-std::deque<GenomicRegion> extract_regions(const boost::filesystem::path& file,
-                                          const ReferenceGenome& reference,
-                                          const NonreferenceContigPolicy policy)
+template <typename Stream>
+std::deque<GenomicRegion>
+extract_regions(Stream& region_stream,
+                const boost::filesystem::path& file_name,
+                const ReferenceGenome& reference,
+                const NonreferenceContigPolicy policy)
 {
-    auto stream = open(file);
     std::deque<GenomicRegion> result {};
     if (policy == NonreferenceContigPolicy::exception) {
-        std::transform(std::istream_iterator<Line>(stream), std::istream_iterator<Line>(),
-                       std::back_inserter(result), make_throwing_region_line_parser(file, reference));
+        std::transform(std::istream_iterator<Line>(region_stream), std::istream_iterator<Line>(),
+                       std::back_inserter(result), make_throwing_region_line_parser(file_name, reference));
     } else {
         std::deque<boost::optional<GenomicRegion>> filtered_results {};
-        std::transform(std::istream_iterator<Line>(stream), std::istream_iterator<Line>(),
-                       std::back_inserter(filtered_results), make_optional_region_line_parser(file, reference));
+        std::transform(std::istream_iterator<Line>(region_stream), std::istream_iterator<Line>(),
+                       std::back_inserter(filtered_results), make_optional_region_line_parser(file_name, reference));
         for (const auto& region : filtered_results) {
             if (region) {
                 result.push_back(std::move(*region));
             }
         }
     }
-    result.shrink_to_fit();
     return result;
+}
+
+} // namespace
+
+std::deque<GenomicRegion>
+extract_regions(const boost::filesystem::path& file_name,
+                const ReferenceGenome& reference,
+                const NonreferenceContigPolicy policy)
+{
+    if (is_gzipped(file_name)) {
+        std::ifstream file {file_name.string(), std::ios_base::binary};
+        boost::iostreams::filtering_istream stream;
+        stream.push(boost::iostreams::gzip_decompressor());
+        stream.push(file);
+        if (is_bed_format(file_name)) {
+            seek_past_bed_header(stream);
+        }
+        return extract_regions(stream, file_name, reference, policy);
+    } else {
+        std::ifstream stream {file_name.string()};
+        if (is_bed_format(file_name)) {
+            seek_past_bed_header(stream);
+        }
+        return extract_regions(stream, file_name, reference, policy);
+    }
 }
 
 } // namespace io

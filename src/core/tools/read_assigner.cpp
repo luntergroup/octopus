@@ -7,7 +7,6 @@
 #include <iterator>
 #include <algorithm>
 #include <limits>
-#include <random>
 #include <stdexcept>
 #include <cassert>
 
@@ -15,6 +14,7 @@
 
 #include "utils/maths.hpp"
 #include "utils/kmer_mapper.hpp"
+#include "utils/random_select.hpp"
 #include "core/models/haplotype_likelihood_model.hpp"
 #include "core/models/error/error_model_factory.hpp"
 
@@ -60,31 +60,6 @@ void find_map_haplotypes(const std::vector<Haplotype>& haplotypes, const unsigne
         result.resize(haplotypes.size());
         std::iota(std::begin(result), std::end(result), 0);
     }
-}
-
-template <typename ForwardIt, typename RandomGenerator>
-ForwardIt random_select(ForwardIt first, ForwardIt last, RandomGenerator& g)
-{
-    if (first == last) return first;
-    const auto max = static_cast<std::size_t>(std::distance(first, last));
-    if (max == 1) return first;
-    std::uniform_int_distribution<std::size_t> dist {0, max - 1};
-    std::advance(first, dist(g));
-    return first;
-}
-
-template <typename ForwardIt>
-ForwardIt random_select(ForwardIt first, ForwardIt last)
-{
-    static thread_local std::mt19937 generator {42};
-    return random_select(first, last, generator);
-}
-
-template <typename Range>
-decltype(auto) random_select(const Range& values)
-{
-    assert(!values.empty());
-    return *random_select(std::cbegin(values), std::cend(values));
 }
 
 auto calculate_support(const std::vector<Haplotype>& haplotypes,
@@ -375,7 +350,9 @@ try_assign_ambiguous_reads_to_alleles(const std::vector<Allele>& alleles,
         if (ambiguous_read.haplotypes && have_common_alleles(*ambiguous_read.haplotypes, alleles)) {
             const auto supported_alleles = copy_included(alleles, ambiguous_read.haplotypes->front());
             for (const auto& allele : supported_alleles) {
-                assigned[allele].emplace_back(ambiguous_read.read);
+                if (overlaps(ambiguous_read, allele)) {
+                    assigned[allele].emplace_back(ambiguous_read.read);
+                }
             }
         }
     }

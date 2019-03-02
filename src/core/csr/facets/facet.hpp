@@ -13,10 +13,12 @@
 
 #include "concepts/equitable.hpp"
 #include "config/common.hpp"
-#include "core/types/haplotype.hpp"
-#include "core/tools/read_assigner.hpp"
 #include "basics/ploidy_map.hpp"
 #include "basics/pedigree.hpp"
+#include "core/types/allele.hpp"
+#include "core/types/haplotype.hpp"
+#include "core/types/genotype.hpp"
+#include "core/tools/read_assigner.hpp"
 
 namespace octopus { namespace csr {
 
@@ -24,6 +26,7 @@ class Facet : public Equitable<Facet>
 {
 public:
     using GenotypeMap = std::unordered_map<SampleName, MappableFlatSet<Genotype<Haplotype>>>;
+    using AlleleMap = std::unordered_map<SampleName, MappableFlatSet<Allele>>;
     using SampleSupportMap = std::unordered_map<SampleName, HaplotypeSupportMap>;
     using SampleAmbiguityMap = std::unordered_map<SampleName, AmbiguousReadList>;
     using LocalPloidyMap = std::unordered_map<SampleName, unsigned>;
@@ -40,6 +43,7 @@ public:
                                       std::reference_wrapper<const std::vector<std::string>>,
                                       std::reference_wrapper<const Haplotype>,
                                       std::reference_wrapper<const GenotypeMap>,
+                                      std::reference_wrapper<const AlleleMap>,
                                       std::reference_wrapper<const LocalPloidyMap>,
                                       std::reference_wrapper<const octopus::Pedigree>
                                      >;

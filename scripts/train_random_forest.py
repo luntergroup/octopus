@@ -9,11 +9,12 @@ from pysam import VariantFile
 import random
 import numpy as np
 
-default_measures = "AC AD AF ARF BQ CC CRF DP FRF GC GQ GQD NC MC MF MP MRC MQ MQ0 MQD PP PPD QD QUAL REFCALL REB RSB RTB SB SD SF SHC SMQ SOMATIC STR_LENGTH STR_PERIOD".split()
+default_measures = "AC AD ADP AF ARF BQ CC CRF DP FRF GC GQ GQD NC MC MF MP MRC MQ MQ0 MQD PP PPD QD QUAL REFCALL REB RSB RTB SB SD SF SHC SMQ SOMATIC STR_LENGTH STR_PERIOD VL".split()
 
-def run_octopus(octopus, ref_path, bam_path, regions_bed, measures, threads, out_path):
-    call([octopus, '-R', ref_path, '-I', bam_path, '-t', regions_bed, '-o', out_path, '--threads', str(threads),
-          '--legacy', '--training-annotations'] + measures)
+def run_octopus(octopus, ref_path, bam_path, regions_bed, threads, out_path):
+    call([octopus, '-R', ref_path, '-I', bam_path, '-t', regions_bed,
+         '-f', 'off', '--annotations', 'forest',
+          '--legacy', '--threads', str(threads), '-o', out_path])
 
 def get_reference_id(ref_path):
     return basename(ref_path).replace(".fasta", "")
@@ -21,11 +22,11 @@ def get_reference_id(ref_path):
 def get_bam_id(bam_path):
     return basename(bam_path).replace(".bam", "")
 
-def call_variants(octopus, ref_path, bam_path, regions_bed, measures, threads, out_dir):
+def call_variants(octopus, ref_path, bam_path, regions_bed, threads, out_dir):
     ref_id = get_reference_id(ref_path)
     bam_id = get_bam_id(bam_path)
     out_vcf = join(out_dir, "octopus." + bam_id + "." + ref_id + ".vcf.gz")
-    run_octopus(octopus, ref_path, bam_path, regions_bed, measures, threads, out_vcf)
+    run_octopus(octopus, ref_path, bam_path, regions_bed, threads, out_vcf)
     legacy_vcf = out_vcf.replace(".vcf.gz", ".legacy.vcf.gz")
     return legacy_vcf
 
@@ -33,9 +34,9 @@ def run_rtg(rtg, rtg_ref_path, truth_vcf_path, confident_bed_path, octopus_vcf_p
     call([rtg, 'vcfeval', '-b', truth_vcf_path, '-t', rtg_ref_path, '--evaluation-regions', confident_bed_path,
           '--ref-overlap', '-c', octopus_vcf_path, '-o', out_dir])
 
-def eval_octopus(octopus, ref_path, bam_path, regions_bed, measures, threads,
+def eval_octopus(octopus, ref_path, bam_path, regions_bed, threads,
                  rtg, rtg_ref_path, truth_vcf_path, confident_bed_path, out_dir):
-    octopus_vcf = call_variants(octopus, ref_path, bam_path, regions_bed, measures, threads, out_dir)
+    octopus_vcf = call_variants(octopus, ref_path, bam_path, regions_bed, threads, out_dir)
     rtf_eval_dir = join(out_dir, basename(octopus_vcf).replace(".legacy.vcf.gz", ".eval"))
     run_rtg(rtg, rtg_ref_path, truth_vcf_path, confident_bed_path, octopus_vcf, rtf_eval_dir)
     return rtf_eval_dir
@@ -100,7 +101,7 @@ def main(options):
         makedirs(options.out)
     rtg_eval_dirs = []
     for bam_path in options.reads:
-        rtg_eval_dirs.append(eval_octopus(options.octopus, options.reference, bam_path, options.regions, options.measures,
+        rtg_eval_dirs.append(eval_octopus(options.octopus, options.reference, bam_path, options.regions,
                                           options.threads, options.rtg, options.sdf, options.truth, options.confident,
                                           options.out))
     data_paths = []
@@ -110,13 +111,13 @@ def main(options):
         tp_train_vcf_path = tp_vcf_path.replace("tp.vcf", "tp.train.vcf")
         subset(tp_vcf_path, tp_train_vcf_path, options.regions)
         tp_data_path = tp_train_vcf_path.replace(".vcf.gz", ".dat")
-        make_ranger_data(tp_train_vcf_path, tp_data_path, True, options.measures, options.missing_value)
+        make_ranger_data(tp_train_vcf_path, tp_data_path, True, default_measures, options.missing_value)
         data_paths.append(tp_data_path)
         fp_vcf_path = join(rtg_eval, "fp.vcf.gz")
         fp_train_vcf_path = fp_vcf_path.replace("fp.vcf", "fp.train.vcf")
         subset(fp_vcf_path, fp_train_vcf_path, options.regions)
         fp_data_path = fp_train_vcf_path.replace(".vcf.gz", ".dat")
-        make_ranger_data(fp_train_vcf_path, fp_data_path, False, options.measures, options.missing_value)
+        make_ranger_data(fp_train_vcf_path, fp_data_path, False, default_measures, options.missing_value)
         data_paths.append(fp_data_path)
         tmp_paths += [tp_train_vcf_path, fp_train_vcf_path]
     master_data_path = join(options.out, options.prefix + ".dat")
@@ -126,11 +127,14 @@ def main(options):
     for path in tmp_paths:
         remove(path)
     shuffle(master_data_path)
-    ranger_header = ' '.join(options.measures + ['TP'])
+    ranger_header = ' '.join(default_measures + ['TP'])
     add_header(master_data_path, ranger_header)
     ranger_out_prefix = join(options.out, options.prefix)
     run_ranger_training(options.ranger, master_data_path, options.trees, options.min_node_size, options.threads, ranger_out_prefix)
-    remove(ranger_out_prefix + ".confusion")
+    try:
+        remove(ranger_out_prefix + ".confusion")
+    except FileNotFoundError:
+        print('Ranger did not complete, perhaps it was killed due to insufficient memory')
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -147,11 +151,6 @@ if __name__ == '__main__':
                         type=str,
                         required=True,
                         help='BED files containing regions to call')
-    parser.add_argument('--measures',
-                        type=str,
-                        nargs='+',
-                        default=default_measures,
-                        help='Measures to use for training')
     parser.add_argument('--truth',
                         type=str,
                         required=True,

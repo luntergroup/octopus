@@ -189,6 +189,7 @@ set(UTILS_SOURCES
     utils/system_utils.hpp
     utils/system_utils.cpp
     utils/k_medoids.hpp
+    utils/random_select.hpp
 )
 
 set(CORE_SOURCES
@@ -247,6 +248,8 @@ set(CORE_SOURCES
     core/csr/facets/reference_context.cpp
     core/csr/facets/genotypes.hpp
     core/csr/facets/genotypes.cpp
+    core/csr/facets/alleles.hpp
+    core/csr/facets/alleles.cpp
     core/csr/facets/ploidies.hpp
     core/csr/facets/ploidies.cpp
     core/csr/facets/pedigree.hpp
@@ -382,6 +385,8 @@ set(CORE_SOURCES
     core/csr/measures/base_mismatch_count.cpp
     core/csr/measures/base_mismatch_fraction.hpp
     core/csr/measures/base_mismatch_fraction.cpp
+    core/csr/measures/assigned_depth.hpp
+    core/csr/measures/assigned_depth.cpp
 
     core/models/haplotype_likelihood_array.hpp
     core/models/haplotype_likelihood_array.cpp
@@ -626,6 +631,10 @@ elseif (CMAKE_BUILD_TYPE MATCHES Debug)
     target_link_libraries (octopus-debug ${HTSlib_LIBRARIES})
     find_package(Threads REQUIRED)
     target_link_libraries(octopus-debug ${CMAKE_THREAD_LIBS_INIT})
+    configure_file (
+        "${PROJECT_SOURCE_DIR}/src/config/system.h.in"
+        "${PROJECT_BINARY_DIR}/generated/system.hpp"
+    )
     install(TARGETS octopus-debug DESTINATION ${CMAKE_INSTALL_PREFIX})
 elseif (CMAKE_BUILD_TYPE MATCHES RelWithDebInfo)
     set(SanitizeFlags -fsanitize=address,undefined)
@@ -651,6 +660,10 @@ elseif (CMAKE_BUILD_TYPE MATCHES RelWithDebInfo)
     target_link_libraries (octopus-sanitize ${HTSlib_LIBRARIES} ${SanitizeFlags})
     find_package(Threads REQUIRED)
     target_link_libraries(octopus-sanitize ${CMAKE_THREAD_LIBS_INIT} ${SanitizeFlags})
+    configure_file (
+        "${PROJECT_SOURCE_DIR}/src/config/system.h.in"
+        "${PROJECT_BINARY_DIR}/generated/system.hpp"
+    )
     install(TARGETS octopus-sanitize DESTINATION ${CMAKE_INSTALL_PREFIX})
 else()
     add_executable(octopus main.cpp ${OCTOPUS_SOURCES} ${INCLUDE_SOURCES})
@@ -682,5 +695,9 @@ else()
     else()
         message(WARNING "IPO is not supported: ${output}")
     endif()
+    configure_file (
+        "${PROJECT_SOURCE_DIR}/src/config/system.h.in"
+        "${PROJECT_BINARY_DIR}/generated/system.hpp"
+    )
     install(TARGETS octopus DESTINATION ${CMAKE_INSTALL_PREFIX})
 endif()
