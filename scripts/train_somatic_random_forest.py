@@ -41,10 +41,7 @@ def get_annotation(field, rec, vcf_header):
     if field == 'QUAL':
         return rec.qual
     elif field in rec.format:
-        if len(vcf_header.samples) > 1:
-            return [to_float(rec.samples[sample][field]) for sample in vcf_header.samples]
-        else:
-            return to_float(rec.samples[vcf_header.samples[0]][field])
+        return [to_float(rec.samples[sample][field]) for sample in vcf_header.samples]
     else:
         res = rec.info[field]
         if type(res) == tuple:
