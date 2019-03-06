@@ -142,9 +142,11 @@ CancerCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
     if (debug_log_) stream(*debug_log_) << "There are " << result->germline_genotypes_.size() << " candidate germline genotypes";
     evaluate_germline_model(*result, haplotype_likelihoods);
     evaluate_cnv_model(*result, haplotype_likelihoods);
-    fit_somatic_model(*result, haplotype_likelihoods);
-    evaluate_noise_model(*result, haplotype_likelihoods);
-    set_model_posteriors(*result);
+    if (haplotypes.size() > 1) {
+        fit_somatic_model(*result, haplotype_likelihoods);
+        evaluate_noise_model(*result, haplotype_likelihoods);
+        set_model_posteriors(*result);
+    }
     return result;
 }
 
@@ -410,8 +412,9 @@ void filter_with_germline_model(std::vector<CancerGenotype<Haplotype>>& genotype
 
 void CancerCaller::generate_cancer_genotypes(Latents& latents, const HaplotypeLikelihoodArray& haplotype_likelihoods) const
 {
-    const auto& germline_genotypes = latents.germline_genotypes_;
     const auto num_haplotypes = latents.haplotypes_.get().size();
+    if (num_haplotypes == 1) return;
+    const auto& germline_genotypes = latents.germline_genotypes_;
     const auto num_germline_genotypes = germline_genotypes.size();
     const auto max_possible_cancer_genotypes = num_haplotypes * num_germline_genotypes;
     const auto max_allowed_cancer_genotypes = std::max(parameters_.max_genotypes, num_germline_genotypes);
@@ -1547,15 +1550,17 @@ void CancerCaller::Latents::compute_haplotype_posteriors() const
             result.at(haplotype) += model_posteriors_.cnv * p.get<1>();
         }
     }
-    const auto credible_frequency = parameters_.get().min_expected_somatic_frequency;
-    const auto conditional_somatic_prob = compute_credible_somatic_mass(somatic_model_inferences_.posteriors.alphas, somatic_ploidy_, credible_frequency);
-    // Contribution from somatic model
-    for (const auto& p : zip(cancer_genotypes_, somatic_model_inferences_.posteriors.genotype_probabilities)) {
-        for (const auto& haplotype : p.get<0>().germline().copy_unique_ref()) {
-            result.at(haplotype) += model_posteriors_.somatic * p.get<1>();
-        }
-        for (const auto& haplotype : p.get<0>().somatic().copy_unique_ref()) {
-            result.at(haplotype) += model_posteriors_.somatic * conditional_somatic_prob * p.get<1>();
+    if (!cancer_genotypes_.empty()) {
+        const auto credible_frequency = parameters_.get().min_expected_somatic_frequency;
+        const auto conditional_somatic_prob = compute_credible_somatic_mass(somatic_model_inferences_.posteriors.alphas, somatic_ploidy_, credible_frequency);
+        // Contribution from somatic model
+        for (const auto& p : zip(cancer_genotypes_, somatic_model_inferences_.posteriors.genotype_probabilities)) {
+            for (const auto& haplotype : p.get<0>().germline().copy_unique_ref()) {
+                result.at(haplotype) += model_posteriors_.somatic * p.get<1>();
+            }
+            for (const auto& haplotype : p.get<0>().somatic().copy_unique_ref()) {
+                result.at(haplotype) += model_posteriors_.somatic * conditional_somatic_prob * p.get<1>();
+            }
         }
     }
     haplotype_posteriors_ = std::make_shared<Latents::HaplotypeProbabilityMap>(std::move(result));
