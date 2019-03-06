@@ -912,11 +912,14 @@ void HaplotypeGenerator::populate_tree_with_novel_alleles()
     assert(!empty(novel_active_alleles));
     if (overlaps(novel_active_alleles.front(), active_region_)) {
         // Then there are duplicate insertions at the front of the novel region that must be removed
-        while (overlaps(novel_active_alleles.front(), active_region_)) {
+        while (!empty(novel_active_alleles) && overlaps(novel_active_alleles.front(), active_region_)) {
             novel_active_alleles.advance_begin(1);
-            assert(!empty(novel_active_alleles));
         }
-        novel_active_region = encompassing_region(novel_active_alleles);
+        if (!empty(novel_active_alleles)) {
+            novel_active_region = encompassing_region(novel_active_alleles);
+        } else {
+            novel_active_region = tail_region(*next_active_region_);
+        }
     }
     auto last_added_novel_itr = extend_tree_until(novel_active_alleles, tree_, policies_.haplotype_limits.holdout);
     if (last_added_novel_itr != std::cend(novel_active_alleles)) {
