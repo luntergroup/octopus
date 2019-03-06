@@ -110,6 +110,7 @@ private:
     using LeafIterator  = decltype(haplotype_leafs_)::const_iterator;
     using CacheIterator = decltype(haplotype_leaf_cache_)::iterator;
     
+    bool is_leaf(Vertex v) const;
     bool is_bifurcating(Vertex v) const;
     Vertex remove_forward(Vertex u);
     Vertex remove_backward(Vertex v);
@@ -126,6 +127,7 @@ private:
                                            const Haplotype& haplotype) const;
     LeafIterator find_equal_haplotype_leaf(LeafIterator first, LeafIterator last,
                                            const Haplotype& haplotype) const;
+    void clear_overlapped(const ContigRegion& region);
     std::pair<Vertex, bool> clear(Vertex leaf, const ContigRegion& region);
     std::pair<Vertex, bool> clear_external(Vertex leaf, const ContigRegion& region);
     std::pair<Vertex, bool> clear_internal(Vertex leaf, const ContigRegion& region);

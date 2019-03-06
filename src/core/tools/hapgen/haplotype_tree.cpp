@@ -429,14 +429,7 @@ void HaplotypeTree::clear(const GenomicRegion& region)
     if (octopus::contains(region, tree_region)) {
         clear();
     } else if (overlaps(region, tree_region)) {
-        haplotype_leaf_cache_.clear();
-        std::list<Vertex> new_leafs {};
-        for (const Vertex leaf : haplotype_leafs_) {
-            const auto p = clear(leaf, contig_region(region));
-            if (p.second) new_leafs.push_back(p.first);
-        }
-        haplotype_leafs_ = new_leafs;
-        tree_region_ = boost::none;
+        clear_overlapped(region.contig_region());
     }
 }
 
@@ -496,6 +489,11 @@ HaplotypeTree::Vertex HaplotypeTree::get_previous_allele(const Vertex allele) co
     const auto p = boost::inv_adjacent_vertices(allele, tree_);
     assert(std::distance(p.first, p.second) == 1);
     return *p.first;
+}
+
+bool HaplotypeTree::is_leaf(const Vertex v) const
+{
+    return boost::out_degree(v, tree_) == 0;
 }
 
 bool HaplotypeTree::is_bifurcating(const Vertex v) const
@@ -664,6 +662,20 @@ HaplotypeTree::find_equal_haplotype_leaf(const LeafIterator first, const LeafIte
                         });
 }
 
+void HaplotypeTree::clear_overlapped(const ContigRegion& region)
+{
+    haplotype_leaf_cache_.clear();
+    std::list<Vertex> new_leafs {};
+    for (const Vertex leaf : haplotype_leafs_) {
+        const auto p = clear(leaf, region);
+        if (p.second) new_leafs.push_back(p.first);
+    }
+    // As the tree is cleared, a  branch stub could be appended to a previous new leaf node
+    new_leafs.erase(std::remove_if(std::begin(new_leafs), std::end(new_leafs), [this] (Vertex v) { return !is_leaf(v); }), std::end(new_leafs));
+    haplotype_leafs_ = std::move(new_leafs);
+    tree_region_ = boost::none;
+}
+
 std::pair<HaplotypeTree::Vertex, bool>
 HaplotypeTree::clear(const Vertex leaf, const ContigRegion& region)
 {
@@ -677,7 +689,7 @@ HaplotypeTree::clear(const Vertex leaf, const ContigRegion& region)
 std::pair<HaplotypeTree::Vertex, bool>
 HaplotypeTree::clear_external(Vertex leaf, const ContigRegion& region)
 {
-    assert(boost::out_degree(leaf, tree_) == 0);
+    assert(is_leaf(leaf));
     while (leaf != root_) {
         if (boost::out_degree(leaf, tree_) > 0) {
             return std::make_pair(leaf, false);
@@ -694,6 +706,7 @@ HaplotypeTree::clear_external(Vertex leaf, const ContigRegion& region)
 std::pair<HaplotypeTree::Vertex, bool>
 HaplotypeTree::clear_internal(const Vertex leaf, const ContigRegion& region)
 {
+    assert(is_leaf(leaf));
     // TODO: we can optimise this for cases where region overlaps the leftmost alleles in the tree
     if (leaf == root_ || is_after(region, tree_[leaf])) {
         return std::make_pair(leaf, true);
@@ -748,7 +761,7 @@ HaplotypeTree::clear_internal(const Vertex leaf, const ContigRegion& region)
                                      });
         if (it == vertex_range.second) break;
         allele_to_move_to = *it; // i.e. move forward
-        if (boost::out_degree(allele_to_move, tree_) == 0) break;
+        if (is_leaf(allele_to_move)) break;
         // Safe to remove forward as we made this branch earlier via copies
         allele_to_move = remove_forward(allele_to_move);
     }
