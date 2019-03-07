@@ -266,11 +266,6 @@ MemoryFootprint footprint(const Range& reads) noexcept
 bool operator==(const AlignedRead& lhs, const AlignedRead& rhs) noexcept;
 bool operator<(const AlignedRead& lhs, const AlignedRead& rhs) noexcept;
 
-struct IsDuplicate
-{
-    bool operator()(const AlignedRead& lhs, const AlignedRead& rhs) const noexcept;
-};
-
 bool operator==(const AlignedRead::Segment& lhs, const AlignedRead::Segment& rhs) noexcept;
 
 std::ostream& operator<<(std::ostream& os, const AlignedRead::BaseQualityVector& qualities);

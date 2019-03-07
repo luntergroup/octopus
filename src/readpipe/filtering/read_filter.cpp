@@ -200,5 +200,35 @@ bool IsLocalTemplate::passes(const AlignedRead& read) const noexcept
     return !read.has_other_segment() || read.next_segment().contig_name() == contig_name(read);
 }
 
+bool primary_segments_are_duplicates(const AlignedRead& lhs, const AlignedRead& rhs) noexcept
+{
+    return lhs.mapped_region() == rhs.mapped_region()
+           && lhs.direction() == rhs.direction()
+           && lhs.mapping_quality() == rhs.mapping_quality()
+           && lhs.cigar() == rhs.cigar();
+}
+
+bool are_duplicates(const AlignedRead::Segment& lhs, const AlignedRead::Segment& rhs) noexcept
+{
+    return lhs.contig_name() == rhs.contig_name()
+           && lhs.is_marked_unmapped() == rhs.is_marked_unmapped()
+           && lhs.is_marked_reverse_mapped() == rhs.is_marked_reverse_mapped()
+           && lhs.inferred_template_length() == rhs.inferred_template_length();
+}
+
+bool other_segments_are_duplicates(const AlignedRead& lhs, const AlignedRead& rhs) noexcept
+{
+    if (lhs.has_other_segment()) {
+        return rhs.has_other_segment() && are_duplicates(lhs.next_segment(), rhs.next_segment());
+    } else {
+        return !rhs.has_other_segment();
+    }
+}
+
+bool IsDuplicate::operator()(const AlignedRead& lhs, const AlignedRead& rhs) const noexcept
+{
+    return primary_segments_are_duplicates(lhs, rhs) && other_segments_are_duplicates(lhs, rhs);
+}
+
 } // namespace readpipe
 } // namespace octopus

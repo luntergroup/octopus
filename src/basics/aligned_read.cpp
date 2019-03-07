@@ -467,33 +467,12 @@ bool operator<(const AlignedRead& lhs, const AlignedRead& rhs) noexcept
             } else {
                 return lhs.mapping_quality() < rhs.mapping_quality();
             }
-
-bool next_segments_are_duplicates(const AlignedRead& lhs, const AlignedRead& rhs) noexcept
-{
-    if (lhs.has_other_segment()) {
-        if (rhs.has_other_segment()) {
-            return lhs.next_segment() == rhs.next_segment();
         } else {
-            return false;
+            return lhs.direction() == AlignedRead::Direction::forward; // put forward strand reads first
         }
     } else {
-        return !rhs.has_other_segment();
+        return lhs.mapped_region() < rhs.mapped_region();
     }
-}
-
-bool IsDuplicate::operator()(const AlignedRead& lhs, const AlignedRead& rhs) const noexcept
-{
-    return lhs.mapped_region() == rhs.mapped_region()
-        && lhs.cigar() == rhs.cigar()
-        && lhs.is_marked_reverse_mapped() == rhs.is_marked_reverse_mapped()
-        && next_segments_are_duplicates(lhs, rhs);
-}
-
-bool operator==(const AlignedRead::Segment& lhs, const AlignedRead::Segment& rhs) noexcept
-{
-    return lhs.contig_name() == rhs.contig_name()
-        && lhs.begin() == rhs.begin()
-        && lhs.inferred_template_length() == rhs.inferred_template_length();
 }
 
 std::ostream& operator<<(std::ostream& os, const AlignedRead::BaseQualityVector& qualities)

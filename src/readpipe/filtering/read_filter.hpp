@@ -9,9 +9,13 @@
 #include <algorithm>
 #include <iterator>
 #include <memory>
+#include <deque>
 
 #include "basics/cigar_string.hpp"
 #include "basics/aligned_read.hpp"
+#include "basics/mappable_reference_wrapper.hpp"
+
+#include <iostream> // DEBUG
 
 namespace octopus { namespace readpipe
 {
@@ -255,6 +259,20 @@ private:
     virtual BidirIt do_partition(BidirIt first, BidirIt last) const = 0;
 };
 
+bool primary_segments_are_duplicates(const AlignedRead& lhs, const AlignedRead& rhs) noexcept;
+bool other_segments_are_duplicates(const AlignedRead& lhs, const AlignedRead& rhs) noexcept;
+
+struct IsDuplicate
+{
+    bool operator()(const AlignedRead& lhs, const AlignedRead& rhs) const noexcept;
+};
+
+template <typename Range>
+bool any_duplicates(const AlignedRead& read, const Range& reads) noexcept
+{
+    return std::any_of(std::cbegin(reads), std::cend(reads), [&read] (const auto& other) { return IsDuplicate{}(read, other); });
+}
+
 template <typename ForwardIt>
 struct IsNotDuplicate : ContextReadFilter<ForwardIt>
 {
@@ -264,7 +282,26 @@ struct IsNotDuplicate : ContextReadFilter<ForwardIt>
     
     ForwardIt do_remove(ForwardIt first, ForwardIt last) const override
     {
-        return std::unique(first, last, IsDuplicate {});
+        // Recall that reads come sorted w.r.t operator< and it is therefore not guaranteed that 'duplicate'
+        // reads (according to IsDuplicate) will be adjacent to one another. In particular, operator< only
+        // guarantees that the read segment described in the A
+        first = std::adjacent_find(first, last, [] (const auto& lhs, const auto& rhs) { return primary_segments_are_duplicates(lhs, rhs); });
+        if (first != last) {
+            std::deque<AlignedRead> buffer {*first++};
+            first = std::remove_if(first, last, [&] (const AlignedRead& read) {
+                if (primary_segments_are_duplicates(read, buffer.front())) { // can check any read in buffer
+                    if (any_duplicates(read, buffer)) {
+                        return true; // remove
+                    } else {
+                        buffer.emplace_back(read);
+                    }
+                } else {
+                    buffer.assign({read});
+                }
+                return false; // do not remove
+            });
+        }
+        return first;
     }
     
     ForwardIt do_partition(ForwardIt first, ForwardIt last) const override
