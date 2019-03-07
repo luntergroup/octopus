@@ -51,7 +51,7 @@ boost::optional<std::vector<SampleName>> get_user_samples(const OptionMap& optio
 
 ReadManager make_read_manager(const OptionMap& options);
 
-ReadPipe make_read_pipe(ReadManager& read_manager, std::vector<SampleName> samples, const OptionMap& options);
+ReadPipe make_read_pipe(ReadManager& read_manager, const ReferenceGenome& reference, std::vector<SampleName> samples, const OptionMap& options);
 
 bool call_sites_only(const OptionMap& options);
 
@@ -73,7 +73,7 @@ bool use_calling_read_pipe_for_call_filtering(const OptionMap& options) noexcept
 
 bool keep_unfiltered_calls(const OptionMap& options) noexcept;
 
-ReadPipe make_call_filter_read_pipe(ReadManager& read_manager, std::vector<SampleName> samples, const OptionMap& options);
+ReadPipe make_call_filter_read_pipe(ReadManager& read_manager, const ReferenceGenome& reference, std::vector<SampleName> samples, const OptionMap& options);
 
 boost::optional<fs::path> get_output_path(const OptionMap& options);
 

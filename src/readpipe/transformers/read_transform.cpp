@@ -9,6 +9,7 @@
 #include <cassert>
 
 #include "utils/maths.hpp"
+#include "utils/sequence_utils.hpp"
 
 namespace octopus { namespace readpipe {
 
@@ -164,6 +165,17 @@ MaskLowAverageQualitySoftClippedTails::MaskLowAverageQualitySoftClippedTails(Bas
 
 namespace {
 
+auto get_soft_clip_head_size(const AlignedRead& read) noexcept
+{
+    CigarOperation::Size front_size, back_size;
+    std::tie(front_size, back_size) = get_soft_clipped_sizes(read);
+    if (read.is_marked_reverse_mapped()) {
+        return back_size;
+    } else {
+        return front_size;
+    }
+}
+
 auto get_soft_clip_tail_size(const AlignedRead& read) noexcept
 {
     CigarOperation::Size front_size, back_size;
@@ -192,6 +204,15 @@ auto mean_tail_quality(const AlignedRead& read, const std::size_t num_bases) noe
     }
 }
 
+void zero_head_base_qualities(AlignedRead& read, const std::size_t num_bases) noexcept
+{
+    if (read.is_marked_reverse_mapped()) {
+        zero_back_qualities(read, num_bases);
+    } else {
+        zero_front_qualities(read, num_bases);
+    }
+}
+
 void zero_tail_base_qualities(AlignedRead& read, const std::size_t num_bases) noexcept
 {
     if (read.is_marked_reverse_mapped()) {
@@ -210,6 +231,78 @@ void MaskLowAverageQualitySoftClippedTails::operator()(AlignedRead& read) const 
         const auto mean_quality = mean_tail_quality(read, tail_clip_size);
         if (mean_quality < threshold_) {
             zero_tail_base_qualities(read, tail_clip_size);
+        }
+    }
+}
+
+MaskInvertedSoftClippedReadEnds::MaskInvertedSoftClippedReadEnds(const ReferenceGenome& reference,
+                                                                 AlignedRead::NucleotideSequence::size_type min_clip_length,
+                                                                 GenomicRegion::Size max_flank_search)
+: reference_ {reference}
+, min_clip_length_ {min_clip_length}
+, max_flank_search_ {max_flank_search}
+{}
+
+namespace {
+
+auto copy_head_sequence(const AlignedRead& read, const AlignedRead::NucleotideSequence::size_type length)
+{
+    if (length >= sequence_size(read)) return read.sequence();
+    if (read.is_marked_reverse_mapped()) {
+        return AlignedRead::NucleotideSequence {std::prev(std::cend(read.sequence()), length), std::cend(read.sequence())};
+    } else {
+        return AlignedRead::NucleotideSequence {std::cbegin(read.sequence()), std::next(std::cbegin(read.sequence()), length)};
+    }
+}
+
+auto copy_tail_sequence(const AlignedRead& read, const AlignedRead::NucleotideSequence::size_type length)
+{
+    if (length >= sequence_size(read)) return read.sequence();
+    if (read.is_marked_reverse_mapped()) {
+        return AlignedRead::NucleotideSequence {std::cbegin(read.sequence()), std::next(std::cbegin(read.sequence()), length)};
+    } else {
+        return AlignedRead::NucleotideSequence {std::prev(std::cend(read.sequence()), length), std::cend(read.sequence())};
+    }
+}
+
+auto copy_soft_clipped_head_sequence(const AlignedRead& read)
+{
+    return copy_head_sequence(read, get_soft_clip_head_size(read));
+}
+
+auto copy_soft_clipped_tail_sequence(const AlignedRead& read)
+{
+    return copy_tail_sequence(read, get_soft_clip_tail_size(read));
+}
+
+template <typename Range1, typename Range2>
+bool includes(const Range1& target, const Range2& query)
+{
+    return std::search(std::cbegin(target), std::cend(target), std::cbegin(query), std::cend(query)) != std::cend(target);
+}
+
+} // namespace
+
+void MaskInvertedSoftClippedReadEnds::operator()(AlignedRead& read) const
+{
+    if (is_soft_clipped(read)) {
+        const auto soft_clipped_head_length = get_soft_clip_head_size(read);
+        if (soft_clipped_head_length >= min_clip_length_) {
+            auto query = copy_head_sequence(read, soft_clipped_head_length);
+            utils::reverse_complement(query);
+            auto target = reference_.get().fetch_sequence(expand(mapped_region(read), max_flank_search_));
+            if (includes(target, query)) {
+                zero_head_base_qualities(read, soft_clipped_head_length);
+            }
+        }
+        const auto soft_clipped_tail_length = get_soft_clip_tail_size(read);
+        if (soft_clipped_tail_length >= min_clip_length_) {
+            auto query = copy_tail_sequence(read, soft_clipped_tail_length);
+            utils::reverse_complement(query);
+            auto target = reference_.get().fetch_sequence(expand(mapped_region(read), max_flank_search_));
+            if (includes(target, query)) {
+                zero_tail_base_qualities(read, soft_clipped_tail_length);
+            }
         }
     }
 }

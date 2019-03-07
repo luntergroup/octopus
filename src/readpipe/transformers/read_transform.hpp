@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "basics/aligned_read.hpp"
+#include "io/reference/reference_genome.hpp"
 
 namespace octopus { namespace readpipe {
 
@@ -131,6 +132,20 @@ struct MaskLowAverageQualitySoftClippedTails
 private:
     const BaseQuality threshold_;
     const Length min_tail_length_;
+};
+
+struct MaskInvertedSoftClippedReadEnds
+{
+    MaskInvertedSoftClippedReadEnds(const ReferenceGenome& reference,
+                                    AlignedRead::NucleotideSequence::size_type min_clip_length,
+                                    GenomicRegion::Size max_flank_search);
+    
+    void operator()(AlignedRead& read) const;
+    
+private:
+    std::reference_wrapper<const ReferenceGenome> reference_;
+    AlignedRead::NucleotideSequence::size_type min_clip_length_;
+    GenomicRegion::Size max_flank_search_;
 };
 
 using ReadReferenceVector = std::vector<std::reference_wrapper<AlignedRead>>;

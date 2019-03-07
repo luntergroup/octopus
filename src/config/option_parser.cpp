@@ -226,6 +226,10 @@ OptionMap parse_options(const int argc, const char** argv)
     ("overlap-masking",
      po::value<bool>()->default_value(true),
      "Enable read segment overlap masking")
+     
+    ("mask-inverted-soft-clipping",
+    po::value<bool>()->default_value(true),
+    "Enable read segment overlap masking")
     ;
     
     po::options_description filters("Read filtering");
