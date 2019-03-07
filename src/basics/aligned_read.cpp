@@ -412,44 +412,61 @@ MemoryFootprint footprint(const AlignedRead& read) noexcept
     return sizeof(AlignedRead) + calculate_dynamic_bytes(read);
 }
 
+bool operator==(const AlignedRead::Segment& lhs, const AlignedRead::Segment& rhs) noexcept
+{
+    return lhs.contig_name() == rhs.contig_name()
+           && lhs.begin() == rhs.begin()
+           && lhs.flags_ == rhs.flags_
+           && lhs.inferred_template_length() == rhs.inferred_template_length();
+}
+
+bool other_segments_equal(const AlignedRead& lhs, const AlignedRead& rhs) noexcept
+{
+    if (lhs.has_other_segment()) {
+        return rhs.has_other_segment() && lhs.next_segment() == rhs.next_segment();
+    } else {
+        return !rhs.has_other_segment();
+    }
+}
+
 bool operator==(const AlignedRead& lhs, const AlignedRead& rhs) noexcept
 {
     return lhs.mapping_quality() == rhs.mapping_quality()
-        && lhs.is_marked_reverse_mapped() == rhs.is_marked_reverse_mapped()
+        && lhs.flags_ == rhs.flags_
         && lhs.mapped_region()   == rhs.mapped_region()
         && lhs.cigar()           == rhs.cigar()
         && lhs.sequence()        == rhs.sequence()
-        && lhs.base_qualities()  == rhs.base_qualities();
+        && lhs.base_qualities()  == rhs.base_qualities()
+        && lhs.read_group()      == rhs.read_group()
+        && lhs.name()            == rhs.name()
+        && other_segments_equal(lhs, rhs);
 }
 
 bool operator<(const AlignedRead& lhs, const AlignedRead& rhs) noexcept
 {
     if (lhs.mapped_region() == rhs.mapped_region()) {
-        if (lhs.is_marked_reverse_mapped() == rhs.is_marked_reverse_mapped()) {
-            if (lhs.cigar() == rhs.cigar()) {
-                if (lhs.has_other_segment() == rhs.has_other_segment()) {
-                    if (!lhs.has_other_segment() || lhs.next_segment().begin() == rhs.next_segment().begin()) {
-                        if (lhs.sequence() == rhs.sequence()) {
-                            return lhs.base_qualities() < rhs.base_qualities();
+        if (lhs.direction() == rhs.direction()) {
+            if (lhs.mapping_quality() == rhs.mapping_quality()) {
+                if (lhs.cigar() == rhs.cigar()) {
+                    if (lhs.sequence() == rhs.sequence()) {
+                        if (lhs.read_group() == rhs.read_group()) {
+                            if (lhs.name() == rhs.name()) {
+                                return lhs.base_qualities() < rhs.base_qualities();
+                            } else {
+                                return lhs.name() < rhs.name();
+                            }
                         } else {
-                            return lhs.sequence() < rhs.sequence();
+                            return lhs.read_group() < rhs.read_group();
                         }
                     } else {
-                        return lhs.next_segment().begin() < rhs.next_segment().begin();
+                        return lhs.sequence() < rhs.sequence();
                     }
                 } else {
-                    return lhs.has_other_segment(); // put reads with other segments first
+                    return lhs.cigar() < rhs.cigar();
                 }
             } else {
-                return lhs.cigar() < rhs.cigar();
+                return lhs.mapping_quality() < rhs.mapping_quality();
             }
-        } else {
-            return !lhs.is_marked_reverse_mapped(); // put forward strand reads first
-        }
-    } else {
-        return lhs.mapped_region() < rhs.mapped_region();
-    }
-}
 
 bool next_segments_are_duplicates(const AlignedRead& lhs, const AlignedRead& rhs) noexcept
 {
