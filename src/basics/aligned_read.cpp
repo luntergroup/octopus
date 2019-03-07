@@ -415,6 +415,7 @@ MemoryFootprint footprint(const AlignedRead& read) noexcept
 bool operator==(const AlignedRead& lhs, const AlignedRead& rhs) noexcept
 {
     return lhs.mapping_quality() == rhs.mapping_quality()
+        && lhs.is_marked_reverse_mapped() == rhs.is_marked_reverse_mapped()
         && lhs.mapped_region()   == rhs.mapped_region()
         && lhs.cigar()           == rhs.cigar()
         && lhs.sequence()        == rhs.sequence()
@@ -424,18 +425,26 @@ bool operator==(const AlignedRead& lhs, const AlignedRead& rhs) noexcept
 bool operator<(const AlignedRead& lhs, const AlignedRead& rhs) noexcept
 {
     if (lhs.mapped_region() == rhs.mapped_region()) {
-        if (lhs.mapping_quality() == rhs.mapping_quality()) {
+        if (lhs.is_marked_reverse_mapped() == rhs.is_marked_reverse_mapped()) {
             if (lhs.cigar() == rhs.cigar()) {
-                if (lhs.sequence() == rhs.sequence()) {
-                    return lhs.base_qualities() < rhs.base_qualities();
+                if (lhs.has_other_segment() == rhs.has_other_segment()) {
+                    if (!lhs.has_other_segment() || lhs.next_segment().begin() == rhs.next_segment().begin()) {
+                        if (lhs.sequence() == rhs.sequence()) {
+                            return lhs.base_qualities() < rhs.base_qualities();
+                        } else {
+                            return lhs.sequence() < rhs.sequence();
+                        }
+                    } else {
+                        return lhs.next_segment().begin() < rhs.next_segment().begin();
+                    }
                 } else {
-                    return lhs.sequence() < rhs.sequence();
+                    return lhs.has_other_segment(); // put reads with other segments first
                 }
             } else {
                 return lhs.cigar() < rhs.cigar();
             }
         } else {
-            return lhs.mapping_quality() < rhs.mapping_quality();
+            return !lhs.is_marked_reverse_mapped(); // put forward strand reads first
         }
     } else {
         return lhs.mapped_region() < rhs.mapped_region();
