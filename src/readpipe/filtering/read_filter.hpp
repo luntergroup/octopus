@@ -9,13 +9,11 @@
 #include <algorithm>
 #include <iterator>
 #include <memory>
-#include <deque>
+#include <vector>
 
 #include "basics/cigar_string.hpp"
 #include "basics/aligned_read.hpp"
 #include "basics/mappable_reference_wrapper.hpp"
-
-#include <iostream> // DEBUG
 
 namespace octopus { namespace readpipe
 {
@@ -268,9 +266,9 @@ struct IsDuplicate
 };
 
 template <typename Range>
-bool any_duplicates(const AlignedRead& read, const Range& reads) noexcept
+bool no_duplicates(const AlignedRead& read, const Range& reads) noexcept
 {
-    return std::any_of(std::cbegin(reads), std::cend(reads), [&read] (const auto& other) { return IsDuplicate{}(read, other); });
+    return std::none_of(std::cbegin(reads), std::cend(reads), [&read] (auto other_itr) { return IsDuplicate{}(read, *other_itr); });
 }
 
 template <typename ForwardIt>
@@ -287,19 +285,19 @@ struct IsNotDuplicate : ContextReadFilter<ForwardIt>
         // guarantees that the read segment described in the A
         first = std::adjacent_find(first, last, [] (const auto& lhs, const auto& rhs) { return primary_segments_are_duplicates(lhs, rhs); });
         if (first != last) {
-            std::deque<AlignedRead> buffer {*first++};
-            first = std::remove_if(first, last, [&] (const AlignedRead& read) {
-                if (primary_segments_are_duplicates(read, buffer.front())) { // can check any read in buffer
-                    if (any_duplicates(read, buffer)) {
-                        return true; // remove
-                    } else {
-                        buffer.emplace_back(read);
+            std::vector<ForwardIt> buffer {first++};
+            buffer.reserve(100);
+            for (auto itr = first; itr != last; ++itr) {
+                if (primary_segments_are_duplicates(*itr, *buffer.front())) { // can check any read in buffer
+                    if (no_duplicates(*itr, buffer)) {
+                        if (itr != first) *first = std::move(*itr);
+                        buffer.emplace_back(first++);
                     }
                 } else {
-                    buffer.assign({read});
+                    if (itr != first) *first = std::move(*itr);
+                    buffer.assign({first++});
                 }
-                return false; // do not remove
-            });
+            }
         }
         return first;
     }
