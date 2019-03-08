@@ -315,13 +315,31 @@ Mask3PrimeShiftedSoftClippedHeads::Mask3PrimeShiftedSoftClippedHeads(const Refer
 , max_flank_search_ {max_flank_search}
 {}
 
+namespace {
+
+auto expand_lhs_region(const AlignedRead& read, const GenomicRegion::Distance n)
+{
+    return expand_lhs(mapped_region(read), std::min(n, static_cast<GenomicRegion::Distance>(mapped_begin(read))));
+}
+
+auto expand_rhs_region(const AlignedRead& read, const GenomicRegion::Size n)
+{
+    return expand_rhs(mapped_region(read), n);
+}
+
+auto expand_3prime_region(const AlignedRead& read, const GenomicRegion::Size n)
+{
+    return is_forward_strand(read) ? expand_rhs_region(read, n) : expand_lhs_region(read, n);
+}
+
+} // namespace
+
 void Mask3PrimeShiftedSoftClippedHeads::operator()(AlignedRead& read) const
 {
     const auto soft_clipped_head_length = get_soft_clip_head_size(read);
     if (soft_clipped_head_length >= min_clip_length_) {
         const auto clip = copy_head_sequence(read, soft_clipped_head_length);
-        const auto context_region = is_forward_strand(read)
-            ? expand_rhs(mapped_region(read), max_flank_search_) : expand_lhs(mapped_region(read), max_flank_search_);
+        const auto context_region = expand_3prime_region(read, max_flank_search_);
         const auto context = reference_.get().fetch_sequence(context_region);
         if (includes(context, clip)) {
             zero_head_base_qualities(read, soft_clipped_head_length);
