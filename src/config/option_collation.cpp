@@ -740,7 +740,10 @@ auto make_read_transformers(const ReferenceGenome& reference, const OptionMap& o
             postfilter_transformer.add(MaskStrandOfDuplicatedBases {});
         }
         if (options.at("mask-inverted-soft-clipping").as<bool>()) {
-            prefilter_transformer.add(MaskInvertedSoftClippedReadEnds {reference, 5, 300});
+            prefilter_transformer.add(MaskInvertedSoftClippedReadEnds {reference, 10, 500});
+        }
+        if (options.at("mask-3prime-shifted-soft-clipped-heads").as<bool>()) {
+            prefilter_transformer.add(Mask3PrimeShiftedSoftClippedHeads {reference, 10, 500});
         }
         prefilter_transformer.shrink_to_fit();
         postfilter_transformer.shrink_to_fit();
