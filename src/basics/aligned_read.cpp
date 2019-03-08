@@ -87,11 +87,7 @@ const CigarString& AlignedRead::cigar() const noexcept
 
 AlignedRead::Direction AlignedRead::direction() const noexcept
 {
-    if (is_marked_reverse_mapped()) {
-        return Direction::reverse;
-    } else {
-        return Direction::forward;
-    }
+    return is_marked_reverse_mapped() ? Direction::reverse : Direction::forward;
 }
 
 bool AlignedRead::has_other_segment() const noexcept
@@ -266,7 +262,7 @@ bool is_forward_strand(const AlignedRead& read) noexcept
 
 bool is_reverse_strand(const AlignedRead& read) noexcept
 {
-    return !is_forward_strand(read);
+    return read.direction() == AlignedRead::Direction::reverse;
 }
 
 bool is_primary_alignment(const AlignedRead& read) noexcept
