@@ -117,6 +117,7 @@ private:
     virtual boost::optional<std::string> call_quality_name() const { return boost::none; }
     virtual boost::optional<std::string> genotype_quality_name() const { return boost::none; }
     virtual bool is_soft_filtered(const ClassificationList& sample_classifications, const MeasureVector& measures) const;
+    virtual Phred<double> combine_sample_qualities(const std::vector<Phred<double>>& qualities) const;
     
     VcfHeader make_header(const VcfReader& source) const;
     Measure::FacetMap compute_facets(const CallBlock& block) const;
