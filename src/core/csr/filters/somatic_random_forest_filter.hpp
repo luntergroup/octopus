@@ -46,8 +46,14 @@ public:
     
     virtual ~SomaticRandomForestVariantCallFilter() override = default;
 
+protected:
+    virtual void annotate(VcfHeader::Builder& header) const override;
+
 private:
+    const static std::string call_quality_name_;
+    
     virtual bool is_soft_filtered(const ClassificationList& sample_classifications, const MeasureVector& measures) const override;
+    virtual boost::optional<std::string> call_quality_name() const override;
 };
 
 } // namespace csr

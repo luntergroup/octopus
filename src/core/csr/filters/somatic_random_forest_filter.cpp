@@ -10,6 +10,8 @@
 
 namespace octopus { namespace csr {
 
+const std::string SomaticRandomForestVariantCallFilter::call_quality_name_ = "RFQUAL_ALL";
+
 SomaticRandomForestVariantCallFilter::SomaticRandomForestVariantCallFilter(FacetFactory facet_factory,
                                                                            std::vector<MeasureWrapper> measures,
                                                                            Path germline_forest, Path somatic_forest,
@@ -59,11 +61,22 @@ SomaticRandomForestVariantCallFilter::SomaticRandomForestVariantCallFilter(Facet
     progress
 } {}
 
+void SomaticRandomForestVariantCallFilter::annotate(VcfHeader::Builder& header) const
+{
+    ConditionalRandomForestFilter::annotate(header);
+    header.add_info(call_quality_name_, "1", "Float", "Combined empirical quality score from random forest classifiers");
+}
+
 bool SomaticRandomForestVariantCallFilter::is_soft_filtered(const ClassificationList& sample_classifications,
                                                             const MeasureVector& measures) const
 {
     return std::any_of(std::cbegin(sample_classifications), std::cend(sample_classifications),
                        [] (const auto& c) { return c.category != Classification::Category::unfiltered; });
+}
+
+boost::optional<std::string> SomaticRandomForestVariantCallFilter::call_quality_name() const
+{
+    return call_quality_name_;
 }
 
 } // namespace csr
