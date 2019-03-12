@@ -212,7 +212,7 @@ VariantCallFilter::Classification RandomForestFilter::classify(const std::size_t
         result.category = Classification::Category::soft_filtered;
         result.reasons.assign({"RF"});
     }
-    result.quality = probability_to_phred(std::max(prob_false, 1e-10));
+    result.quality = probability_false_to_phred(std::max(prob_false, 1e-10));
     return result;
 }
 

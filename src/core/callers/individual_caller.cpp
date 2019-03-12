@@ -220,7 +220,7 @@ auto compute_posterior(const Allele& allele, const GenotypeProbabilityMap& genot
                              0.0, [&allele] (const auto curr, const auto& p) {
                                  return curr + (contains(p.first, allele) ? 0.0 : p.second);
                              });
-    return probability_to_phred(p);
+    return probability_false_to_phred(p);
 }
 
 auto compute_candidate_posteriors(const std::vector<Variant>& candidates,
@@ -301,7 +301,7 @@ auto compute_posterior(const Genotype<Allele>& genotype, const GenotypeProbabili
                              [&genotype] (const double curr, const auto& p) {
                                  return curr + (contains(p.first, genotype) ? 0.0 : p.second);
                              });
-    return probability_to_phred(p);
+    return probability_false_to_phred(p);
 }
 
 GenotypeCalls call_genotypes(const Genotype<Haplotype>& genotype_call,
@@ -418,7 +418,7 @@ auto marginalise_homozygous(const Allele& allele, const GenotypeProbabilityMap& 
                              [&] (const auto curr, const auto& p) {
                                  return curr + (is_homozygous(p.first, allele) ? 0.0 : p.second);
                              });
-    return probability_to_phred(p);
+    return probability_false_to_phred(p);
 }
 
 using ReadPileupRange = ContainedRange<ReadPileups::const_iterator>;
@@ -458,7 +458,7 @@ auto compute_homozygous_posterior(const Allele& allele,
                                                         [] (auto ref, auto alt) { return maths::log_sum_exp(ref, alt) - std::log(2); });
         const auto hom_ref_ln_posterior = hom_ref_ln_likelihood - maths::log_sum_exp(hom_ref_ln_likelihood, het_alt_ln_likelihood);
         
-        return probability_to_phred(1.0 - std::exp(hom_ref_ln_posterior));
+        return probability_false_to_phred(1.0 - std::exp(hom_ref_ln_posterior));
     }
 }
 

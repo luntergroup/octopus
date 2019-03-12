@@ -331,7 +331,7 @@ VariantCallFilter::Classification ConditionalRandomForestFilter::classify(const 
             result.category = Classification::Category::soft_filtered;
             result.reasons.assign({"RF"});
         }
-        result.quality = probability_to_phred(std::max(prob_false, 1e-10));
+        result.quality = probability_false_to_phred(std::max(prob_false, 1e-10));
     } else {
         result.category = Classification::Category::hard_filtered;
     }

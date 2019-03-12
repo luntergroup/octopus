@@ -696,14 +696,14 @@ dirichlet_mle(std::vector<RealType> pi, const RealType precision,
 
 template <typename NumericType = float, typename RealType,
           typename = std::enable_if_t<std::is_floating_point<RealType>::value>>
-NumericType probability_to_phred(const RealType p)
+NumericType probability_true_to_phred(const RealType p)
 {
     return -10.0 * std::log10(std::max(1.0 - p, std::numeric_limits<RealType>::epsilon()));
 }
 
 template <typename NumericType = float, typename RealType,
           typename = std::enable_if_t<std::is_floating_point<RealType>::value>>
-NumericType probability_to_phred(const RealType p, const unsigned precision)
+NumericType probability_true_to_phred(const RealType p, const unsigned precision)
 {
     return round(static_cast<NumericType>(-10.0 * std::log10(std::max(1.0 - p, std::numeric_limits<RealType>::epsilon()))), precision);
 }

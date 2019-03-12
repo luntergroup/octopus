@@ -1012,7 +1012,7 @@ Phred<double> marginalise(const Allele& allele, const M& genotype_posteriors)
                              0.0, [&allele] (const auto curr, const auto& p) {
                                  return curr + (contains(p.first, allele) ? 0.0 : p.second);
                              });
-    return probability_to_phred(p);
+    return probability_false_to_phred(p);
 }
 
 template <typename M>
@@ -1060,18 +1060,6 @@ BigFloat marginalise(const Allele& allele, const std::vector<CancerGenotype<Hapl
     return BigFloat {1.0} - result_complement;
 }
 
-Phred<double> probability_true_to_phred(BigFloat probability_true)
-{
-    using boost::multiprecision::nextafter;
-    if (probability_true <= 0.0) probability_true = nextafter(BigFloat {0.0}, BigFloat {1.0});
-    if (probability_true >= 1.0) probability_true = nextafter(BigFloat {1.0}, BigFloat {0.0});
-    const BigFloat probability_false {BigFloat {1.0} - probability_true};
-    const BigFloat ln_probability_false {boost::multiprecision::log(probability_false)};
-    const BigFloat phred_probability_false {ln_probability_false / -maths::constants::ln10Div10<>};
-    assert(phred_probability_false >= 0.0);
-    return Phred<double> {phred_probability_false.convert_to<double>()};
-}
-
 Phred<double>
 calculate_segregation_probability(const Allele& allele,
                                   const std::vector<Genotype<Haplotype>>& germline_genotypes,
@@ -1091,7 +1079,7 @@ calculate_segregation_probability(const Allele& allele,
     auto prob_somatic_segregates = marginalise(allele, cancer_genotypes, cancer_genotype_probabilities, BigFloat {1.0} - somatic_mass);
     prob_somatic_segregates *= somatic_probability;
     const BigFloat prob_segregates {prob_germline_segregates + prob_cnv_segregates + prob_somatic_segregates};
-    return probability_true_to_phred(prob_segregates);
+    return probability_true_to_phred<double>(prob_segregates);
 }
 
 Phred<double>
@@ -1118,7 +1106,7 @@ Phred<double> calculate_somatic_posterior(const double somatic_model_posterior, 
 {
     BigFloat somatic_posterior {somatic_model_posterior};
     somatic_posterior *= somatic_mass;
-    return probability_true_to_phred(somatic_posterior);
+    return probability_true_to_phred<double>(somatic_posterior);
 }
 
 // germline variant calling
@@ -1166,7 +1154,7 @@ auto compute_somatic_variant_posteriors(const std::vector<VariantReference>& can
     for (const auto& candidate : candidates) {
         auto p = marginalise_somatic(candidate.get().alt_allele(), cancer_genotypes, cancer_genotype_posteriors);
         p *= somatic_posterior;
-        result.emplace_back(candidate, probability_true_to_phred(p));
+        result.emplace_back(candidate, probability_true_to_phred<double>(p));
     }
     return result;
 }
@@ -1200,7 +1188,7 @@ marginalise(const CancerGenotype<Allele>& genotype, const std::vector<CancerGeno
     auto p = std::inner_product(std::cbegin(genotypes), std::cend(genotypes), std::cbegin(genotype_posteriors),
                                 0.0, std::plus<> {},  [&genotype] (const auto& g, auto probability) {
                                     return contains(g, genotype) ? 0.0 : probability; });
-    return probability_to_phred(p);
+    return probability_false_to_phred(p);
 }
 
 auto call_somatic_genotypes(const CancerGenotype<Haplotype>& called_genotype,
@@ -1423,9 +1411,9 @@ CancerCaller::call_variants(const std::vector<Variant>& candidates, const Latent
         if (called_somatic_genotype.ploidy() > 0) {
             germline_genotype_calls.emplace_back(std::move(genotype_chunk),
                                                  copy<Allele>(called_somatic_genotype, region),
-                                                 probability_to_phred(inv_posterior));
+                                                 probability_false_to_phred(inv_posterior));
         } else {
-            germline_genotype_calls.emplace_back(std::move(genotype_chunk), probability_to_phred(inv_posterior));
+            germline_genotype_calls.emplace_back(std::move(genotype_chunk), probability_false_to_phred(inv_posterior));
         }
     }
     if (debug_log_) {

@@ -348,7 +348,7 @@ auto marginalise(const GenotypeProbabilityMap& genotype_posteriors,
                                 [] (const auto& p, const bool is_contained) {
                                     return is_contained ? 0.0 : p.second;
                                 });
-    return probability_to_phred(p);
+    return probability_false_to_phred(p);
 }
 
 auto compute_sample_allele_posteriors(const GenotypeProbabilityMap& genotype_posteriors,
@@ -537,7 +537,7 @@ auto marginalise_homozygous(const std::vector<SampleName>& samples,
                        return std::log(marginalise_homozygous(genotype_posteriors[sample], homozygotes));
                    });
     const auto p = std::accumulate(std::cbegin(ps), std::cend(ps), 0.0);
-    return probability_to_phred(std::exp(p));
+    return probability_false_to_phred(std::exp(p));
 }
 
 auto compute_homozygous_posteriors(const std::vector<Allele>& alleles,
@@ -568,7 +568,7 @@ auto marginalise(const Genotype<Allele>& genotype, const GenotypeProbabilityMap&
                              [&genotype] (const double curr, const auto& p) {
                                  return curr + (contains(p.first, genotype) ? 0.0 : p.second);
                              });
-    return probability_to_phred(p);
+    return probability_false_to_phred(p);
 }
 
 auto call_genotypes(const std::vector<SampleName>& samples,

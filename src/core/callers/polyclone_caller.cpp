@@ -302,7 +302,7 @@ auto compute_posterior(const Allele& allele, const GenotypeProbabilityMap& genot
                              0.0, [&allele] (const auto curr, const auto& p) {
         return curr + (contains(p.first, allele) ? 0.0 : p.second);
     });
-    return probability_to_phred(p);
+    return probability_false_to_phred(p);
 }
 
 auto compute_candidate_posteriors(const std::vector<Variant>& candidates,
@@ -383,7 +383,7 @@ auto compute_posterior(const Genotype<Allele>& genotype, const GenotypeProbabili
                              [&genotype] (const double curr, const auto& p) {
                                  return curr + (contains(p.first, genotype) ? 0.0 : p.second);
                              });
-    return probability_to_phred(p);
+    return probability_false_to_phred(p);
 }
 
 GenotypeCalls call_genotypes(const Genotype<Haplotype>& genotype_call,
