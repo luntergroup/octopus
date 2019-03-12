@@ -64,7 +64,7 @@ SomaticRandomForestVariantCallFilter::SomaticRandomForestVariantCallFilter(Facet
 void SomaticRandomForestVariantCallFilter::annotate(VcfHeader::Builder& header) const
 {
     ConditionalRandomForestFilter::annotate(header);
-    header.add_info(call_quality_name_, "1", "Float", "Combined empirical quality score from random forest classifiers");
+    header.add_info(call_quality_name_, "1", "Float", "Combined quality score for call using product of sample RFQUAL");
 }
 
 bool SomaticRandomForestVariantCallFilter::is_soft_filtered(const ClassificationList& sample_classifications,
