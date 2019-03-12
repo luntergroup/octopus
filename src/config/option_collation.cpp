@@ -691,7 +691,7 @@ bool allow_assembler_generation(const OptionMap& options)
     return options.at("assembly-candidate-generator").as<bool>() && !is_fast_mode(options);
 }
 
-auto make_read_transformers(const OptionMap& options)
+auto make_read_transformers(const ReferenceGenome& reference, const OptionMap& options)
 {
     using namespace octopus::readpipe;
     ReadTransformer prefilter_transformer {}, postfilter_transformer {};
@@ -738,6 +738,12 @@ auto make_read_transformers(const OptionMap& options)
         }
         if (options.at("overlap-masking").as<bool>()) {
             postfilter_transformer.add(MaskStrandOfDuplicatedBases {});
+        }
+        if (options.at("mask-inverted-soft-clipping").as<bool>()) {
+            prefilter_transformer.add(MaskInvertedSoftClippedReadEnds {reference, 10, 500});
+        }
+        if (options.at("mask-3prime-shifted-soft-clipped-heads").as<bool>()) {
+            prefilter_transformer.add(Mask3PrimeShiftedSoftClippedHeads {reference, 10, 500});
         }
         prefilter_transformer.shrink_to_fit();
         postfilter_transformer.shrink_to_fit();
@@ -834,9 +840,9 @@ boost::optional<readpipe::Downsampler> make_downsampler(const OptionMap& options
     return boost::none;
 }
 
-ReadPipe make_read_pipe(ReadManager& read_manager, std::vector<SampleName> samples, const OptionMap& options)
+ReadPipe make_read_pipe(ReadManager& read_manager, const ReferenceGenome& reference, std::vector<SampleName> samples, const OptionMap& options)
 {
-    auto transformers = make_read_transformers(options);
+    auto transformers = make_read_transformers(reference, options);
     if (transformers.second.num_transforms() > 0) {
         return ReadPipe {read_manager, std::move(transformers.first), make_read_filterer(options),
                          std::move(transformers.second), make_downsampler(options), std::move(samples)};
@@ -1970,10 +1976,10 @@ ReadPipe make_default_filter_read_pipe(ReadManager& read_manager, std::vector<Sa
     return ReadPipe {read_manager, std::move(transformer), std::move(filterer), boost::none, std::move(samples)};
 }
 
-ReadPipe make_call_filter_read_pipe(ReadManager& read_manager, std::vector<SampleName> samples, const OptionMap& options)
+ReadPipe make_call_filter_read_pipe(ReadManager& read_manager, const ReferenceGenome& reference, std::vector<SampleName> samples, const OptionMap& options)
 {
     if (use_calling_read_pipe_for_call_filtering(options)) {
-        return make_read_pipe(read_manager, std::move(samples), options);
+        return make_read_pipe(read_manager, reference, std::move(samples), options);
     } else {
         return make_default_filter_read_pipe(read_manager, std::move(samples));
     }

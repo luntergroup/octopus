@@ -9,6 +9,7 @@
 #include <cassert>
 
 #include "utils/maths.hpp"
+#include "utils/sequence_utils.hpp"
 
 namespace octopus { namespace readpipe {
 
@@ -28,7 +29,7 @@ void MaskOverlappedSegment::operator()(AlignedRead& read) const noexcept
 {
     // Only reads in the forward direction are masked to prevent double masking
     if (read.has_other_segment() && contig_name(read) == read.next_segment().contig_name()
-        && !read.next_segment().is_marked_unmapped() && !read.is_marked_reverse_mapped()) {
+        && !read.next_segment().is_marked_unmapped() && is_forward_strand(read)) {
         const auto next_segment_begin = read.next_segment().begin();
         if (next_segment_begin < mapped_end(read)) {
             const auto overlapped_size = mapped_end(read) - next_segment_begin;
@@ -45,10 +46,10 @@ void MaskAdapters::operator()(AlignedRead& read) const noexcept
         const auto read_size   = sequence_size(read);
         if (insert_size < read_size) {
             const auto num_adapter_bases = read_size - insert_size;
-            if (read.is_marked_reverse_mapped()) {
-                zero_front_qualities(read, num_adapter_bases);
-            } else {
+            if (is_forward_strand(read)) {
                 zero_back_qualities(read, num_adapter_bases);
+            } else {
+                zero_front_qualities(read, num_adapter_bases);
             }
         }
     }
@@ -58,10 +59,10 @@ MaskTail::MaskTail(Length num_bases) : num_bases_ {num_bases} {}
 
 void MaskTail::operator()(AlignedRead& read) const noexcept
 {
-    if (read.is_marked_reverse_mapped()) {
-        zero_front_qualities(read, num_bases_);
-    } else {
+    if (is_forward_strand(read)) {
         zero_back_qualities(read, num_bases_);
+    } else {
+        zero_front_qualities(read, num_bases_);
     }
 }
 
@@ -71,12 +72,12 @@ void MaskLowQualityTails::operator()(AlignedRead& read) const noexcept
 {
     auto& qualities = read.base_qualities();
     const auto is_low_quality = [this] (BaseQuality q) noexcept { return q < threshold_; };
-    if (read.is_marked_reverse_mapped()) {
-        const auto first_high_quality = std::find_if_not(std::begin(qualities), std::end(qualities), is_low_quality);
-        std::fill(std::begin(qualities), first_high_quality, 0);
-    } else {
+    if (is_forward_strand(read)) {
         const auto first_high_quality = std::find_if_not(std::rbegin(qualities), std::rend(qualities), is_low_quality);
         std::fill(std::rbegin(qualities), first_high_quality, 0);
+    } else {
+        const auto first_high_quality = std::find_if_not(std::begin(qualities), std::end(qualities), is_low_quality);
+        std::fill(std::begin(qualities), first_high_quality, 0);
     }
 }
 
@@ -164,14 +165,25 @@ MaskLowAverageQualitySoftClippedTails::MaskLowAverageQualitySoftClippedTails(Bas
 
 namespace {
 
+auto get_soft_clip_head_size(const AlignedRead& read) noexcept
+{
+    CigarOperation::Size front_size, back_size;
+    std::tie(front_size, back_size) = get_soft_clipped_sizes(read);
+    if (is_forward_strand(read)) {
+        return front_size;
+    } else {
+        return back_size;
+    }
+}
+
 auto get_soft_clip_tail_size(const AlignedRead& read) noexcept
 {
     CigarOperation::Size front_size, back_size;
     std::tie(front_size, back_size) = get_soft_clipped_sizes(read);
-    if (read.is_marked_reverse_mapped()) {
-        return front_size;
-    } else {
+    if (is_forward_strand(read)) {
         return back_size;
+    } else {
+        return front_size;
     }
 }
 
@@ -185,19 +197,28 @@ auto mean_quality(const ForwardIt first, const std::size_t num_bases) noexcept
 auto mean_tail_quality(const AlignedRead& read, const std::size_t num_bases) noexcept
 {
     assert(num_bases > 0);
-    if (read.is_marked_reverse_mapped()) {
-        return mean_quality(std::cbegin(read.base_qualities()), num_bases);
-    } else {
+    if (is_forward_strand(read)) {
         return mean_quality(std::crbegin(read.base_qualities()), num_bases);
+    } else {
+        return mean_quality(std::cbegin(read.base_qualities()), num_bases);
+    }
+}
+
+void zero_head_base_qualities(AlignedRead& read, const std::size_t num_bases) noexcept
+{
+    if (is_forward_strand(read)) {
+        zero_front_qualities(read, num_bases);
+    } else {
+        zero_back_qualities(read, num_bases);
     }
 }
 
 void zero_tail_base_qualities(AlignedRead& read, const std::size_t num_bases) noexcept
 {
-    if (read.is_marked_reverse_mapped()) {
-        zero_front_qualities(read, num_bases);
-    } else {
+    if (is_forward_strand(read)) {
         zero_back_qualities(read, num_bases);
+    } else {
+        zero_front_qualities(read, num_bases);
     }
 }
 
@@ -210,6 +231,118 @@ void MaskLowAverageQualitySoftClippedTails::operator()(AlignedRead& read) const 
         const auto mean_quality = mean_tail_quality(read, tail_clip_size);
         if (mean_quality < threshold_) {
             zero_tail_base_qualities(read, tail_clip_size);
+        }
+    }
+}
+
+MaskInvertedSoftClippedReadEnds::MaskInvertedSoftClippedReadEnds(const ReferenceGenome& reference,
+                                                                 AlignedRead::NucleotideSequence::size_type min_clip_length,
+                                                                 GenomicRegion::Size max_flank_search)
+: reference_ {reference}
+, min_clip_length_ {min_clip_length}
+, max_flank_search_ {max_flank_search}
+{}
+
+namespace {
+
+auto copy_head_sequence(const AlignedRead& read, const AlignedRead::NucleotideSequence::size_type length)
+{
+    if (length >= sequence_size(read)) return read.sequence();
+    if (is_forward_strand(read)) {
+        return AlignedRead::NucleotideSequence {std::cbegin(read.sequence()), std::next(std::cbegin(read.sequence()), length)};
+    } else {
+        return AlignedRead::NucleotideSequence {std::prev(std::cend(read.sequence()), length), std::cend(read.sequence())};
+    }
+}
+
+auto copy_tail_sequence(const AlignedRead& read, const AlignedRead::NucleotideSequence::size_type length)
+{
+    if (length >= sequence_size(read)) return read.sequence();
+    if (is_reverse_strand(read)) {
+        return AlignedRead::NucleotideSequence {std::cbegin(read.sequence()), std::next(std::cbegin(read.sequence()), length)};
+    } else {
+        return AlignedRead::NucleotideSequence {std::prev(std::cend(read.sequence()), length), std::cend(read.sequence())};
+    }
+}
+
+auto copy_soft_clipped_head_sequence(const AlignedRead& read)
+{
+    return copy_head_sequence(read, get_soft_clip_head_size(read));
+}
+
+auto copy_soft_clipped_tail_sequence(const AlignedRead& read)
+{
+    return copy_tail_sequence(read, get_soft_clip_tail_size(read));
+}
+
+template <typename Range1, typename Range2>
+bool includes(const Range1& target, const Range2& query)
+{
+    return std::search(std::cbegin(target), std::cend(target), std::cbegin(query), std::cend(query)) != std::cend(target);
+}
+
+} // namespace
+
+void MaskInvertedSoftClippedReadEnds::operator()(AlignedRead& read) const
+{
+    if (is_soft_clipped(read)) {
+        const auto soft_clipped_head_length = get_soft_clip_head_size(read);
+        if (soft_clipped_head_length >= min_clip_length_) {
+            auto query = copy_head_sequence(read, soft_clipped_head_length);
+            utils::reverse_complement(query);
+            auto target = reference_.get().fetch_sequence(expand(mapped_region(read), max_flank_search_));
+            if (includes(target, query)) {
+                zero_head_base_qualities(read, soft_clipped_head_length);
+            }
+        }
+        const auto soft_clipped_tail_length = get_soft_clip_tail_size(read);
+        if (soft_clipped_tail_length >= min_clip_length_) {
+            auto query = copy_tail_sequence(read, soft_clipped_tail_length);
+            utils::reverse_complement(query);
+            auto target = reference_.get().fetch_sequence(expand(mapped_region(read), max_flank_search_));
+            if (includes(target, query)) {
+                zero_tail_base_qualities(read, soft_clipped_tail_length);
+            }
+        }
+    }
+}
+
+Mask3PrimeShiftedSoftClippedHeads::Mask3PrimeShiftedSoftClippedHeads(const ReferenceGenome& reference,
+                                                                     AlignedRead::NucleotideSequence::size_type min_clip_length,
+                                                                     GenomicRegion::Size max_flank_search)
+: reference_ {reference}
+, min_clip_length_ {min_clip_length}
+, max_flank_search_ {max_flank_search}
+{}
+
+namespace {
+
+auto expand_lhs_region(const AlignedRead& read, const GenomicRegion::Distance n)
+{
+    return expand_lhs(mapped_region(read), std::min(n, static_cast<GenomicRegion::Distance>(mapped_begin(read))));
+}
+
+auto expand_rhs_region(const AlignedRead& read, const GenomicRegion::Size n)
+{
+    return expand_rhs(mapped_region(read), n);
+}
+
+auto expand_3prime_region(const AlignedRead& read, const GenomicRegion::Size n)
+{
+    return is_forward_strand(read) ? expand_rhs_region(read, n) : expand_lhs_region(read, n);
+}
+
+} // namespace
+
+void Mask3PrimeShiftedSoftClippedHeads::operator()(AlignedRead& read) const
+{
+    const auto soft_clipped_head_length = get_soft_clip_head_size(read);
+    if (soft_clipped_head_length >= min_clip_length_) {
+        const auto clip = copy_head_sequence(read, soft_clipped_head_length);
+        const auto context_region = expand_3prime_region(read, max_flank_search_);
+        const auto context = reference_.get().fetch_sequence(context_region);
+        if (includes(context, clip)) {
+            zero_head_base_qualities(read, soft_clipped_head_length);
         }
     }
 }
@@ -234,10 +367,10 @@ void MaskTemplateAdapters::operator()(ReadReferenceVector& read_template) const
     if (template_size < 2) {
         return;
     } else if (template_size == 2) {
-        if (read_template.front().get().is_marked_reverse_mapped()) {
-            mask_adapter_contamination(read_template.back(), read_template.front());
-        } else {
+        if (is_forward_strand(read_template.front())) {
             mask_adapter_contamination(read_template.front(), read_template.back());
+        } else {
+            mask_adapter_contamination(read_template.back(), read_template.front());
         }
     } else {
         // TODO
@@ -299,10 +432,10 @@ void MaskStrandOfDuplicatedBases::operator()(ReadReferenceVector& read_template)
     if (template_size < 2) {
         return;
     } else if (template_size == 2) {
-        if (read_template.front().get().is_marked_reverse_mapped()) {
-            mask_strand_of_duplicated_bases(read_template.back(), read_template.front());
-        } else {
+        if (is_forward_strand(read_template.front())) {
             mask_strand_of_duplicated_bases(read_template.front(), read_template.back());
+        } else {
+            mask_strand_of_duplicated_bases(read_template.back(), read_template.front());
         }
     } else {
         // TODO
@@ -392,10 +525,10 @@ void MaskClippedDuplicatedBases::operator()(ReadReferenceVector& read_template) 
     if (template_size < 2) {
         return;
     } else if (template_size == 2) {
-        if (read_template.front().get().is_marked_reverse_mapped()) {
-            mask_both_strands_of_clipped_duplicated_bases(read_template.back(), read_template.front());
-        } else {
+        if (is_forward_strand(read_template.front())) {
             mask_both_strands_of_clipped_duplicated_bases(read_template.front(), read_template.back());
+        } else {
+            mask_both_strands_of_clipped_duplicated_bases(read_template.back(), read_template.front());
         }
     } else {
         // TODO

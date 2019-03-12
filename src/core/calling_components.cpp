@@ -491,7 +491,7 @@ GenomeCallingComponents::Components::Components(ReferenceGenome&& reference, Rea
 , regions {get_search_regions(options, this->reference, this->read_manager)}
 , contigs {get_contigs(this->regions, this->reference, options::get_contig_output_order(options))}
 , reads_profile {profile_reads(this->samples, this->regions, this->read_manager)}
-, read_pipe {options::make_read_pipe(this->read_manager, this->samples, options)}
+, read_pipe {options::make_read_pipe(this->read_manager, this->reference, this->samples, options)}
 , caller_factory {options::make_caller_factory(this->reference, this->read_pipe, this->regions, options, this->reads_profile)}
 , filter_read_pipe {}
 , output {std::move(output)}
@@ -578,7 +578,7 @@ void GenomeCallingComponents::Components::setup_writers(const options::OptionMap
 void GenomeCallingComponents::Components::setup_filter_read_pipe(const options::OptionMap& options)
 {
     if (!options::use_calling_read_pipe_for_call_filtering(options)) {
-        filter_read_pipe = options::make_call_filter_read_pipe(read_manager, samples, options);
+        filter_read_pipe = options::make_call_filter_read_pipe(read_manager, reference, samples, options);
     }
 }
 

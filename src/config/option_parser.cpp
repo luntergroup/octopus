@@ -226,6 +226,14 @@ OptionMap parse_options(const int argc, const char** argv)
     ("overlap-masking",
      po::value<bool>()->default_value(true),
      "Enable read segment overlap masking")
+     
+    ("mask-inverted-soft-clipping",
+    po::value<bool>()->default_value(false),
+    "Mask soft clipped sequence that is an inverted copy of a proximate sequence")
+    
+    ("mask-3prime-shifted-soft-clipped-heads",
+    po::value<bool>()->default_value(false),
+    "Mask soft clipped read head sequence that is a copy of a proximate 3' sequence")
     ;
     
     po::options_description filters("Read filtering");
