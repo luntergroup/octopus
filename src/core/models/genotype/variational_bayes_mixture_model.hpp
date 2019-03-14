@@ -44,7 +44,7 @@ using ProbabilityVector    = std::vector<double>;
 using LogProbabilityVector = std::vector<double>;
 
 template <std::size_t K>
-using VBAlpha = std::array<double, K>;
+using VBAlpha = std::array<float, K>;
 template <std::size_t K>
 using VBAlphaVector = std::vector<VBAlpha<K>>;
 
@@ -101,7 +101,7 @@ struct VBLatents
 
 namespace detail {
 
-using VBExpandedLikelihood = std::vector<double>; // One element per genotype
+using VBExpandedLikelihood = std::vector<float>; // One element per genotype
 using VBExpandedGenotype = std::vector<VBExpandedLikelihood>; // One element per read
 template <std::size_t K>
 using VBExpandedGenotypeVector = std::array<VBExpandedGenotype, K>; // One element per haplotype in genotype
