@@ -174,30 +174,6 @@ inline auto digamma_diff(const T a, const T b)
     return digamma(a) - digamma(b);
 }
 
-template <typename T>
-inline T log_sum_exp(const std::array<T, 1>& logs)
-{
-    return logs[0];
-}
-
-template <typename T>
-inline T log_sum_exp(const std::array<T, 2>& logs)
-{
-    return maths::log_sum_exp(logs[0], logs[1]);
-}
-
-template <typename T>
-inline T log_sum_exp(const std::array<T, 3>& logs)
-{
-    return maths::log_sum_exp(logs[0], logs[1], logs[2]);
-}
-
-template <typename T, std::size_t K>
-T log_sum_exp(const std::array<T, K>& logs)
-{
-    return maths::log_sum_exp(logs);
-}
-
 template <typename T, std::size_t K>
 auto compute_digamma_diffs(const std::array<T, K>& alphas)
 {
