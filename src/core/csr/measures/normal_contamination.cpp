@@ -33,6 +33,11 @@ std::unique_ptr<Measure> NormalContamination::do_clone() const
 
 namespace {
 
+auto extract_called_alleles(const VcfRecord& call, const VcfRecord::SampleName& sample)
+{
+    return get_called_alleles(call, sample, ReferencePadPolicy::trim_alt_alleles).first;
+}
+
 template <typename Container>
 void sort_unique(Container& values)
 {
@@ -45,10 +50,10 @@ auto get_somatic_alleles(const VcfRecord& somatic, const std::vector<SampleName>
 {
     std::vector<Allele> somatic_sample_alleles {}, normal_sample_alleles {};
     for (const auto& sample : somatic_samples) {
-        utils::append(get_called_alleles(somatic, sample, true).first, somatic_sample_alleles);
+        utils::append(extract_called_alleles(somatic, sample), somatic_sample_alleles);
     }
     for (const auto& sample : normal_samples) {
-        utils::append(get_called_alleles(somatic, sample, true).first, normal_sample_alleles);
+        utils::append(extract_called_alleles(somatic, sample), normal_sample_alleles);
     }
     sort_unique(somatic_sample_alleles); sort_unique(normal_sample_alleles);
     std::vector<Allele> result {};

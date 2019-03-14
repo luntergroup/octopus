@@ -79,7 +79,7 @@ Measure::ResultType MedianBaseQuality::do_evaluate(const VcfRecord& call, const 
         boost::optional<int> sample_result {};
         if (is_evaluable(call, sample)) {
             std::vector<Allele> alleles; bool has_ref;
-            std::tie(alleles, has_ref) = get_called_alleles(call, sample, true);
+            std::tie(alleles, has_ref) = get_called_alleles(call, sample);
             if (has_ref) alleles.erase(std::cbegin(alleles));
             if (!alleles.empty()) {
                 const auto sample_allele_support = compute_allele_support(alleles, assignments, sample);

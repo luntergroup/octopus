@@ -32,7 +32,7 @@ Measure::ResultType SupplementaryFraction::do_evaluate(const VcfRecord& call, co
     result.reserve(samples.size());
     for (const auto& sample : samples) {
         std::vector<Allele> alleles; bool has_ref;
-        std::tie(alleles, has_ref) = get_called_alleles(call, sample, true);
+        std::tie(alleles, has_ref) = get_called_alleles(call, sample);
         if (has_ref) alleles.erase(std::cbegin(alleles));
         boost::optional<double> sample_result {};
         if (!alleles.empty()) {

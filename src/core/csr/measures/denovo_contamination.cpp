@@ -63,9 +63,9 @@ void sort_unique(Container& values)
 
 auto get_denovo_alleles(const VcfRecord& denovo, const Trio& trio)
 {
-    auto parent_alleles = concat(get_called_alleles(denovo, trio.mother(), true).first,
-                                 get_called_alleles(denovo, trio.father(), true).first);
-    auto child_alleles = get_called_alleles(denovo, trio.child(), true).first;
+    auto parent_alleles = concat(get_called_alleles(denovo, trio.mother()).first,
+                                 get_called_alleles(denovo, trio.father()).first);
+    auto child_alleles = get_called_alleles(denovo, trio.child()).first;
     sort_unique(parent_alleles); sort_unique(child_alleles);
     std::vector<Allele> result {};
     result.reserve(child_alleles.size());

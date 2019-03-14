@@ -145,7 +145,7 @@ Measure::ResultType MappingQualityDivergence::do_evaluate(const VcfRecord& call,
         boost::optional<int> sample_result {};
         if (call.is_heterozygous(sample)) {
             std::vector<Allele> alleles; bool has_ref;
-            std::tie(alleles, has_ref) = get_called_alleles(call, sample, true);
+            std::tie(alleles, has_ref) = get_called_alleles(call, sample);
             if (!alleles.empty()) {
                 const auto sample_allele_support = compute_allele_support(alleles, assignments, sample);
                 const auto mapping_qualities = extract_mapping_qualities(sample_allele_support);

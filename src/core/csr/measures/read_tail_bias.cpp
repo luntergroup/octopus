@@ -126,7 +126,7 @@ Measure::ResultType ReadTailBias::do_evaluate(const VcfRecord& call, const Facet
     const TailDefinition tail_def {tail_fraction_};
     for (const auto& sample : samples) {
         std::vector<Allele> alleles; bool has_ref;
-        std::tie(alleles, has_ref) = get_called_alleles(call, sample, true);
+        std::tie(alleles, has_ref) = get_called_alleles(call, sample);
         if (!alleles.empty()) {
             const auto allele_support = compute_allele_support(alleles, assignments, sample);
             result.push_back(calculate_max_tail_bias(allele_support, tail_def));
