@@ -38,7 +38,7 @@ public:
     using MixtureConcentrationArray = std::vector<MixtureConcentrationVector>; // One element per sample
     
     using Sigma = std::vector<double>; // One element per group
-    using GroupResponsabilityVector = std::vector<Sigma>; // One element per sample
+    using GroupResponsibilityVector = std::vector<Sigma>; // One element per sample
     
     struct Inferences
     {
@@ -46,7 +46,7 @@ public:
         LogProbabilityVector genotype_log_posteriors;
         GroupConcentrationVector group_concentrations;
         MixtureConcentrationArray mixture_concentrations;
-        GroupResponsabilityVector group_responsabilities;
+        GroupResponsibilityVector group_responsibilities;
         double approx_log_evidence;
     };
     
@@ -75,8 +75,8 @@ public:
     
 private:
     using Tau = std::vector<double>; // One element per read
-    using ComponentResponsabilityVector = std::vector<Tau>; // One element per haplotype in genotype (max)
-    using ComponentResponsabilityMatrix = std::vector<ComponentResponsabilityVector>; // One element per sample
+    using ComponentResponsibilityVector = std::vector<Tau>; // One element per haplotype in genotype (max)
+    using ComponentResponsibilityMatrix = std::vector<ComponentResponsibilityVector>; // One element per sample
     
     Options options_;
     
@@ -86,54 +86,54 @@ private:
              const GroupConcentrationVector& group_concentrations,
              const MixtureConcentrationArray& mixture_concentrations,
              LogProbabilityVector& genotype_log_posteriors) const;
-    GroupResponsabilityVector
-    init_responsabilities(const GroupConcentrationVector& group_concentrations,
+    GroupResponsibilityVector
+    init_responsibilities(const GroupConcentrationVector& group_concentrations,
                           const MixtureConcentrationArray& mixture_concentrations,
                           const ProbabilityVector& genotype_priors,
                           const HaplotypeLikelihoodMatrix& log_likelihoods) const;
     void
-    update_responsabilities(GroupResponsabilityVector& result,
+    update_responsibilities(GroupResponsibilityVector& result,
                             const GroupConcentrationVector& group_concentrations,
                             const MixtureConcentrationArray& mixture_concentrations,
                             const ProbabilityVector& genotype_posteriors,
-                            const ComponentResponsabilityMatrix& component_responsabilities,
+                            const ComponentResponsibilityMatrix& component_responsibilities,
                             const HaplotypeLikelihoodMatrix& log_likelihoods) const;
-    ComponentResponsabilityMatrix
-    init_responsabilities(const GroupConcentrationVector& group_concentrations,
+    ComponentResponsibilityMatrix
+    init_responsibilities(const GroupConcentrationVector& group_concentrations,
                           const MixtureConcentrationArray& mixture_concentrations,
                           const ProbabilityVector& genotype_priors,
-                          const GroupResponsabilityVector& group_responsabilities,
+                          const GroupResponsibilityVector& group_responsibilities,
                           const HaplotypeLikelihoodMatrix& log_likelihoods) const;
     void
-    update_responsabilities(ComponentResponsabilityMatrix& result,
+    update_responsibilities(ComponentResponsibilityMatrix& result,
                             const GroupConcentrationVector& group_concentrations,
                             const MixtureConcentrationArray& mixture_concentrations,
                             const ProbabilityVector& genotype_posteriors,
-                            const GroupResponsabilityVector& group_responsabilities,
+                            const GroupResponsibilityVector& group_responsibilities,
                             const HaplotypeLikelihoodMatrix& log_likelihoods) const;
     void
     update_genotype_log_posteriors(LogProbabilityVector& result,
                                    const LogProbabilityVector& genotype_log_priors,
-                                   const GroupResponsabilityVector& group_responsabilities,
-                                   const ComponentResponsabilityMatrix& component_responsabilities,
+                                   const GroupResponsibilityVector& group_responsibilities,
+                                   const ComponentResponsibilityMatrix& component_responsibilities,
                                    const HaplotypeLikelihoodMatrix& log_likelihoods) const;
     LogProbability
-    marginalise(const GroupResponsabilityVector& group_responsabilities,
-                const ComponentResponsabilityMatrix& component_responsabilities,
+    marginalise(const GroupResponsibilityVector& group_responsibilities,
+                const ComponentResponsibilityMatrix& component_responsibilities,
                 const HaplotypeLikelihoodMatrix& log_likelihoods,
                 std::size_t g) const noexcept;
     LogProbability
-    marginalise(const ComponentResponsabilityVector& responsabilities,
+    marginalise(const ComponentResponsibilityVector& responsibilities,
                 const HaplotypeLikelihoodVector& log_likelihoods) const noexcept;
     void
     update_group_concentrations(GroupConcentrationVector& result,
                                 const GroupConcentrationVector& prior_group_concentrations,
-                                const GroupResponsabilityVector& group_responsabilities) const;
+                                const GroupResponsibilityVector& group_responsibilities) const;
     void
     update_mixture_concentrations(MixtureConcentrationArray& result,
                                   const MixtureConcentrationArray& prior_mixture_concentrations,
-                                  const GroupResponsabilityVector& group_responsabilities,
-                                  const ComponentResponsabilityMatrix& component_responsabilities) const;
+                                  const GroupResponsibilityVector& group_responsibilities,
+                                  const ComponentResponsibilityMatrix& component_responsibilities) const;
     double
     calculate_evidence(const GroupConcentrationVector& prior_group_concentrations,
                        const GroupConcentrationVector& posterior_group_concentrations,
@@ -142,16 +142,16 @@ private:
                        const LogProbabilityVector& genotype_log_priors,
                        const LogProbabilityVector& genotype_log_posteriors,
                        const ProbabilityVector& genotype_posteriors,
-                       const GroupResponsabilityVector& group_responsabilities,
-                       const ComponentResponsabilityMatrix& component_responsabilities,
+                       const GroupResponsibilityVector& group_responsibilities,
+                       const ComponentResponsibilityMatrix& component_responsibilities,
                        const HaplotypeLikelihoodMatrix& log_likelihoods) const;
     
     // debug
     void print_concentrations(const GroupConcentrationVector& concentrations) const;
     void print_concentrations(const MixtureConcentrationArray& concentrations) const;
     void print(const ProbabilityVector& probabilities) const;
-    void print(const GroupResponsabilityVector& responsabilities) const;
-    void print(const ComponentResponsabilityMatrix& responsabilities) const;
+    void print(const GroupResponsibilityVector& responsibilities) const;
+    void print(const ComponentResponsibilityMatrix& responsibilities) const;
     void print(const HaplotypeLikelihoodMatrix& log_likelihoods) const;
 };
 
