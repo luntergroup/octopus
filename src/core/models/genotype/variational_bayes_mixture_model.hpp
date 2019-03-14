@@ -238,9 +238,9 @@ update_responsibilities_helper(VBResponsibilityVector<K>& result,
         for (unsigned k {0}; k < K; ++k) {
             ln_rho[k] = al[k] + marginalise(genotype_probabilities, read_likelihoods, k, n);
         }
-        const auto ln_rho_norm = log_sum_exp(ln_rho);
+        const auto ln_rho_norm = maths::fast_log_sum_exp(ln_rho);
         for (unsigned k {0}; k < K; ++k) {
-            result[k][n] = std::exp(ln_rho[k] - ln_rho_norm);
+            result[k][n] = maths::fast_exp(ln_rho[k] - ln_rho_norm);
         }
     }
 }
