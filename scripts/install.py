@@ -84,14 +84,11 @@ def git_clone(project):
     call(['git', 'clone', project])
 
 def get_homebrew_name():
-    if is_osx():
-        return 'homebrew'
-    else:
-        return 'brew'
+    return 'brew'
 
 def download_homebrew():
     if is_osx():
-        git_clone('https://github.com/mxcl/homebrew.git')
+        git_clone('https://github.com/Homebrew/brew')
     else:
         git_clone('https://github.com/Linuxbrew/brew.git')
 
