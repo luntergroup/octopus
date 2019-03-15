@@ -67,13 +67,18 @@ fs::path expand_user_path(const fs::path& path)
     return path;
 }
 
-fs::path resolve_path(const fs::path& path, const fs::path& working_directory)
+fs::path resolve_path(const fs::path& path, const fs::path& working_directory, const PathResolvePolicy policy)
 {
     if (is_shorthand_user_path(path)) {
         return expand_user_path(path); // must be a root path
     }
+    const auto wd_full_path = working_directory / path;
     if (fs::exists(path)) {
-        return fs::canonical(path); // must be a root path
+        if (fs::exists(wd_full_path) && policy == PathResolvePolicy::prefer_working_directory) {
+            return wd_full_path;
+        } else {
+            return fs::canonical(path); // must be a root path
+        }
     }
     const auto parent_dir = path.parent_path();
     if (fs::exists(parent_dir) && fs::is_directory(parent_dir)) {
@@ -85,9 +90,7 @@ fs::path resolve_path(const fs::path& path, const fs::path& working_directory)
         }
         return path; // must be yet-to-be-created root path
     }
-    auto result = working_directory;
-    result /= path;
-    return result;
+    return wd_full_path;
 }
 
 } // namespace octopus
