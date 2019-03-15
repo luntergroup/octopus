@@ -23,7 +23,7 @@ VcfHeader::Builder make_header_template()
     
     result.add_format("GT", "1", "String", "Genotype");
     result.add_format("DP", "1", "Integer", "Read depth at this position for this sample");
-    result.add_format("FT", "1", "String", "Sample genotype filter indicating if this genotype was “called”");
+    result.add_format("FT", "1", "String", "Sample genotype filter indicating if this genotype was 'called'");
     result.add_format("GQ", "1", "Integer", "Conditional genotype quality (phred-scaled)");
     result.add_format("PS", "1", "String", "Phase set");
     result.add_format("PQ", "1", "Integer", "Phasing quality");
