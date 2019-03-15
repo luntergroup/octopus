@@ -812,20 +812,20 @@ template <typename NumericType = float, typename RealType,
           typename = std::enable_if_t<std::is_floating_point<RealType>::value>>
 NumericType probability_true_to_phred(const RealType p)
 {
-    return -10.0 * std::log10(std::max(1.0 - p, std::numeric_limits<RealType>::epsilon()));
+    return NumericType{-10} * std::log10(std::max(RealType {1} - p, std::numeric_limits<RealType>::epsilon()));
 }
 
 template <typename NumericType = float, typename RealType,
           typename = std::enable_if_t<std::is_floating_point<RealType>::value>>
 NumericType probability_true_to_phred(const RealType p, const unsigned precision)
 {
-    return round(static_cast<NumericType>(-10.0 * std::log10(std::max(1.0 - p, std::numeric_limits<RealType>::epsilon()))), precision);
+    return round(static_cast<NumericType>(RealType {-10} * std::log10(std::max(RealType {1} - p, std::numeric_limits<RealType>::epsilon()))), precision);
 }
 
 template <typename RealType = double, typename NumericType>
 RealType phred_to_probability(const NumericType phred)
 {
-    return 1.0 - std::pow(10.0, -1.0 * static_cast<RealType>(phred) / 10.0);
+    return RealType {1} - std::pow(RealType {10}, RealType {-1} * static_cast<RealType>(phred) / RealType {10});
 }
 
 template <typename MapType>
