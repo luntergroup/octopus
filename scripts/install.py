@@ -107,7 +107,7 @@ def get_required_dependencies():
         result.append(latest_llvm)
     else:
         result.append(latest_gcc)
-    result += ['boost', 'htslib']
+    result += ['boost', 'htslib', 'gmp']
     return result
 
 def get_brewed_compiler_binaries(homebrew_dir):
