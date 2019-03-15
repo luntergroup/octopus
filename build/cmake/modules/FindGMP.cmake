@@ -15,7 +15,7 @@
 # Copyright (c) 2016 Jack Poulson, <jack.poulson@gmail.com>
 # Redistribution and use is allowed according to the terms of the BSD license.
 
-find_path(GMP_INCLUDES NAMES gmp.h PATHS $ENV{GMPDIR} ${INCLUDE_INSTALL_DIR})
+find_path(GMP_INCLUDES NAMES gmp.h PATHS ${GMPlib_ROOT} $ENV{GMPDIR} ${INCLUDE_INSTALL_DIR} PATH_SUFFIXES include)
 
 # Set GMP_FIND_VERSION to 5.1.0 if no minimum version is specified
 if(NOT GMP_FIND_VERSION)
@@ -32,7 +32,7 @@ if(NOT GMP_FIND_VERSION)
         "${GMP_FIND_VERSION_MAJOR}.${GMP_FIND_VERSION_MINOR}.${GMP_FIND_VERSION_PATCH}")
 endif()
 
-message("GMP_INCLUDES=${GMP_INCLUDES}")
+message(STATUS "GMP_INCLUDES=${GMP_INCLUDES}")
 if(GMP_INCLUDES)
     # Since the GMP version macros may be in a file included by gmp.h of the form
     # gmp-.*[_]?.*.h (e.g., gmp-x86_64.h), we search each of them.
@@ -68,7 +68,7 @@ if(GMP_INCLUDES)
     endif()
 endif()
 
-find_library(GMP_LIBRARIES gmp PATHS $ENV{GMPDIR} ${LIB_INSTALL_DIR})
+find_library(GMP_LIBRARIES gmp PATHS ${GMPlib_ROOT} $ENV{GMPDIR} ${LIB_INSTALL_DIR} PATH_SUFFIXES lib)
 
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(GMP DEFAULT_MSG
