@@ -82,7 +82,7 @@ using VBGenotypeVector = std::vector<VBGenotype<K>>; // Per element per genotype
 template <std::size_t K>
 using VBReadLikelihoodMatrix = std::vector<VBGenotypeVector<K>>; // One element per sample
 
-using VBTau = std::vector<double>; // One element per read
+using VBTau = std::vector<VBReadLikelihoodArray::BaseType::value_type>; // One element per read
 template <std::size_t K>
 using VBResponsibilityVector = std::array<VBTau, K>; // One element per haplotype in genotype (i.e. K)
 template <std::size_t K>
