@@ -604,11 +604,16 @@ if (BUILD_TESTING)
     find_package (Boost 1.65 REQUIRED COMPONENTS ${REQUIRED_BOOST_LIBRARIES} REQUIRED)
     message(STATUS "Boost include dir: " ${Boost_INCLUDE_DIR})
     message(STATUS "Boost libraries: " ${Boost_LIBRARIES})
-    target_include_directories (Octopus PUBLIC ${Boost_INCLUDE_DIR})
-    target_link_libraries (Octopus ${Boost_LIBRARIES})
+    find_package(GMP REQUIRED)
     find_package (HTSlib 1.4 REQUIRED)
-    target_include_directories (Octopus PUBLIC ${HTSlib_INCLUDE_DIRS})
-    target_link_libraries (Octopus ${HTSlib_LIBRARIES})
+    find_package(Threads REQUIRED)
+    target_include_directories (Octopus PUBLIC
+        ${octopus_SOURCE_DIR}/lib
+        ${octopus_SOURCE_DIR}/src
+        ${Boost_INCLUDE_DIR}
+        ${GMP_INCLUDE_DIR}
+        ${HTSlib_INCLUDE_DIRS})
+    target_link_libraries (Octopus tandem ranger ${Boost_LIBRARIES} ${GMP_LIBRARIES} ${HTSlib_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
 elseif (CMAKE_BUILD_TYPE MATCHES Debug)
     add_executable(octopus-debug main.cpp ${OCTOPUS_SOURCES} ${INCLUDE_SOURCES})
     target_compile_features(octopus-debug PRIVATE cxx_thread_local)
@@ -624,13 +629,16 @@ elseif (CMAKE_BUILD_TYPE MATCHES Debug)
     find_package (Boost 1.65 REQUIRED COMPONENTS ${REQUIRED_BOOST_LIBRARIES} REQUIRED)
     message(STATUS "Boost include dir: " ${Boost_INCLUDE_DIR})
     message(STATUS "Boost libraries: " ${Boost_LIBRARIES})
-    target_include_directories (octopus-debug PUBLIC ${Boost_INCLUDE_DIR})
-    target_link_libraries (octopus-debug ${Boost_LIBRARIES})
+    find_package(GMP REQUIRED)
     find_package (HTSlib 1.4 REQUIRED)
-    target_include_directories (octopus-debug PUBLIC ${HTSlib_INCLUDE_DIRS})
-    target_link_libraries (octopus-debug ${HTSlib_LIBRARIES})
     find_package(Threads REQUIRED)
-    target_link_libraries(octopus-debug ${CMAKE_THREAD_LIBS_INIT})
+    target_include_directories (octopus-debug PUBLIC
+        ${octopus_SOURCE_DIR}/lib
+        ${octopus_SOURCE_DIR}/src
+        ${Boost_INCLUDE_DIR}
+        ${GMP_INCLUDE_DIR}
+        ${HTSlib_INCLUDE_DIRS})
+    target_link_libraries (octopus-debug tandem ranger ${Boost_LIBRARIES} ${GMP_LIBRARIES} ${HTSlib_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
     configure_file (
         "${PROJECT_SOURCE_DIR}/src/config/system.h.in"
         "${PROJECT_BINARY_DIR}/generated/system.hpp"
@@ -641,8 +649,6 @@ elseif (CMAKE_BUILD_TYPE MATCHES RelWithDebInfo)
     add_executable(octopus-sanitize main.cpp ${OCTOPUS_SOURCES} ${INCLUDE_SOURCES})
     target_compile_features(octopus-sanitize PRIVATE cxx_thread_local)
     target_compile_options(octopus-sanitize PRIVATE ${SanitizeFlags})
-    target_include_directories(octopus-sanitize PUBLIC ${octopus_SOURCE_DIR}/lib ${octopus_SOURCE_DIR}/src)
-    target_link_libraries(octopus-sanitize tandem ranger ${SanitizeFlags})
     if (NOT BUILD_SHARED_LIBS)
         message(STATUS "Linking against boost static libraries")
         set(Boost_USE_STATIC_LIBS ON)
@@ -653,13 +659,16 @@ elseif (CMAKE_BUILD_TYPE MATCHES RelWithDebInfo)
     find_package (Boost 1.65 REQUIRED COMPONENTS ${REQUIRED_BOOST_LIBRARIES} REQUIRED)
     message(STATUS "Boost include dir: " ${Boost_INCLUDE_DIR})
     message(STATUS "Boost libraries: " ${Boost_LIBRARIES})
-    target_include_directories (octopus-sanitize PUBLIC ${Boost_INCLUDE_DIR})
-    target_link_libraries (octopus-sanitize ${Boost_LIBRARIES} ${SanitizeFlags})
+    find_package(GMP REQUIRED)
     find_package (HTSlib 1.4 REQUIRED)
-    target_include_directories (octopus-sanitize PUBLIC ${HTSlib_INCLUDE_DIRS})
-    target_link_libraries (octopus-sanitize ${HTSlib_LIBRARIES} ${SanitizeFlags})
     find_package(Threads REQUIRED)
-    target_link_libraries(octopus-sanitize ${CMAKE_THREAD_LIBS_INIT} ${SanitizeFlags})
+    target_include_directories (octopus-sanitize PUBLIC
+        ${octopus_SOURCE_DIR}/lib
+        ${octopus_SOURCE_DIR}/src
+        ${Boost_INCLUDE_DIR}
+        ${GMP_INCLUDE_DIR}
+        ${HTSlib_INCLUDE_DIRS})
+    target_link_libraries (octopus-sanitize tandem ranger ${Boost_LIBRARIES} ${GMP_LIBRARIES} ${HTSlib_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${SanitizeFlags})
     configure_file (
         "${PROJECT_SOURCE_DIR}/src/config/system.h.in"
         "${PROJECT_BINARY_DIR}/generated/system.hpp"
@@ -669,8 +678,6 @@ else()
     add_executable(octopus main.cpp ${OCTOPUS_SOURCES} ${INCLUDE_SOURCES})
     target_compile_features(octopus PRIVATE cxx_thread_local)
     target_compile_options(octopus PRIVATE -ffast-math -funroll-loops -march=native)
-    target_include_directories(octopus PUBLIC ${octopus_SOURCE_DIR}/lib ${octopus_SOURCE_DIR}/src)
-    target_link_libraries(octopus tandem ranger)
     if (NOT BUILD_SHARED_LIBS)
         message(STATUS "Linking against boost static libraries")
         set(Boost_USE_STATIC_LIBS ON)
@@ -681,13 +688,16 @@ else()
     find_package (Boost 1.65 REQUIRED COMPONENTS ${REQUIRED_BOOST_LIBRARIES} REQUIRED)
     message(STATUS "Boost include dir: " ${Boost_INCLUDE_DIR})
     message(STATUS "Boost libraries: " ${Boost_LIBRARIES})
-    target_include_directories (octopus PUBLIC ${Boost_INCLUDE_DIR})
-    target_link_libraries (octopus ${Boost_LIBRARIES})
+    find_package(GMP REQUIRED)
     find_package (HTSlib 1.4 REQUIRED)
-    target_include_directories (octopus PUBLIC ${HTSlib_INCLUDE_DIRS})
-    target_link_libraries (octopus ${HTSlib_LIBRARIES})
     find_package(Threads REQUIRED)
-    target_link_libraries(octopus ${CMAKE_THREAD_LIBS_INIT})
+    target_include_directories (octopus PUBLIC
+        ${octopus_SOURCE_DIR}/lib
+        ${octopus_SOURCE_DIR}/src
+        ${Boost_INCLUDE_DIR}
+        ${GMP_INCLUDE_DIR}
+        ${HTSlib_INCLUDE_DIRS})
+    target_link_libraries (octopus tandem ranger ${Boost_LIBRARIES} ${GMP_LIBRARIES} ${HTSlib_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
     check_ipo_supported(RESULT ipo_supported OUTPUT output)
     if(ipo_supported)
         message(STATUS "IPO is supported!")
