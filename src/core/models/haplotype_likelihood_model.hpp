@@ -31,6 +31,7 @@ namespace octopus {
 class HaplotypeLikelihoodModel
 {
 public:
+    using LogProbability = double;
     using Penalty = hmm::MutationModel::Penalty;
     
     struct Config
@@ -56,7 +57,7 @@ public:
     {
         MappingPosition mapping_position;
         CigarString cigar;
-        double likelihood;
+        LogProbability likelihood;
     };
     
     HaplotypeLikelihoodModel();
@@ -85,9 +86,9 @@ public:
     void clear() noexcept;
     
     // ln p(read | haplotype, model)
-    double evaluate(const AlignedRead& read) const;
-    double evaluate(const AlignedRead& read, const MappingPositionVector& mapping_positions) const;
-    double evaluate(const AlignedRead& read, MappingPositionItr first_mapping_position, MappingPositionItr last_mapping_position) const;
+    LogProbability evaluate(const AlignedRead& read) const;
+    LogProbability evaluate(const AlignedRead& read, const MappingPositionVector& mapping_positions) const;
+    LogProbability evaluate(const AlignedRead& read, MappingPositionItr first_mapping_position, MappingPositionItr last_mapping_position) const;
     
     Alignment align(const AlignedRead& read) const;
     Alignment align(const AlignedRead& read, const MappingPositionVector& mapping_positions) const;

@@ -31,7 +31,8 @@ class HaplotypeLikelihoodArray
 public:
     using FlankState = HaplotypeLikelihoodModel::FlankState;
     
-    using LikelihoodVector     = std::vector<double>;
+    using LogProbability       = HaplotypeLikelihoodModel::LogProbability;
+    using LikelihoodVector     = std::vector<LogProbability>;
     using LikelihoodVectorRef  = std::reference_wrapper<const LikelihoodVector>;
     using HaplotypeRef         = std::reference_wrapper<const Haplotype>;
     using SampleLikelihoodMap  = std::unordered_map<HaplotypeRef, LikelihoodVectorRef>;
@@ -164,12 +165,12 @@ void print_read_haplotype_likelihoods(S&& stream,
             }
             debug::print_variant_alleles(stream, haplotype);
             stream << '\n';
-            std::vector<std::pair<ReadReference, double>> likelihoods {};
+            std::vector<std::pair<ReadReference, HaplotypeLikelihoodArray::LogProbability >> likelihoods {};
             likelihoods.reserve(sample_reads.second.size());
             std::transform(std::cbegin(sample_reads.second), std::cend(sample_reads.second),
                            std::cbegin(haplotype_likelihoods(sample, haplotype)),
                            std::back_inserter(likelihoods),
-                           [] (const AlignedRead& read, const double likelihood) {
+                           [] (const AlignedRead& read, const auto likelihood) {
                                return std::make_pair(std::cref(read), likelihood);
                            });
             const auto mth = std::next(std::begin(likelihoods), m);
