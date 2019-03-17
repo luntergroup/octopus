@@ -663,7 +663,6 @@ void CancerCaller::evaluate_cnv_model(Latents& latents, const HaplotypeLikelihoo
     CNVModel::AlgorithmParameters params {};
     if (parameters_.max_vb_seeds) params.max_seeds = *parameters_.max_vb_seeds;
     params.target_max_memory = this->target_max_memory();
-    CNVModel cnv_model {samples_, cnv_model_priors};
     CNVModel cnv_model {samples_, cnv_model_priors, params};
     if (latents.germline_genotype_indices_) {
         cnv_model.prime(latents.haplotypes_);
