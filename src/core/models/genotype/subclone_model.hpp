@@ -32,6 +32,7 @@ public:
         double epsilon          = 0.05;
         unsigned max_seeds      = 12;
         boost::optional<MemoryFootprint> target_max_memory = boost::none;
+        ExecutionPolicy execution_policy = ExecutionPolicy::seq;
     };
     
     struct Priors
@@ -297,6 +298,9 @@ run_variational_bayes_helper(const std::vector<SampleName>& samples,
         if (estimated_memory_default > *params.target_max_memory) {
             vb_params.save_memory = true;
         }
+    }
+    if (params.execution_policy == ExecutionPolicy::par) {
+        vb_params.parallel_execution = true;
     }
     const auto vb_prior_alphas = flatten<K, G, GI, GPM>(prior_alphas, samples);
     const auto log_likelihoods = flatten<K>(genotypes, samples, haplotype_log_likelihoods);

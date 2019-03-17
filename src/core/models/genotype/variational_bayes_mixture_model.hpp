@@ -17,9 +17,11 @@
 #include <boost/optional.hpp>
 #include <boost/math/special_functions/digamma.hpp>
 
+#include "core/models/haplotype_likelihood_array.hpp"
 #include "utils/maths.hpp"
 #include "utils/memory_footprint.hpp"
-#include "core/models/haplotype_likelihood_array.hpp"
+#include "utils/parallel_transform.hpp"
+
 
 /**
  *
@@ -37,6 +39,7 @@ struct VariationalBayesParameters
     double epsilon = 0.05;
     unsigned max_iterations = 1000;
     bool save_memory = false;
+    bool parallel_execution = false;
 };
 
 using ProbabilityVector    = std::vector<double>;
@@ -508,16 +511,22 @@ run_variational_bayes(const VBAlphaVector<K>& prior_alphas,
     result.reserve(seeds.size());
     if (run_vb_with_matrix_inversion(log_likelihoods, params, seeds)) {
         const auto inverted_log_likelihoods = invert(log_likelihoods);
-        for (auto& seed : seeds) {
-            result.push_back(detail::run_variational_bayes(prior_alphas, genotype_log_priors,
-                                                           log_likelihoods, inverted_log_likelihoods,
-                                                           std::move(seed), params));
+        const auto func = [&] (auto&& seed) { return detail::run_variational_bayes(prior_alphas, genotype_log_priors, log_likelihoods,
+                                                                                   inverted_log_likelihoods, std::move(seed), params); };
+        if (params.parallel_execution) {
+            parallel_transform(std::make_move_iterator(std::begin(seeds)), std::make_move_iterator(std::end(seeds)),
+                               std::back_inserter(result), func);
+        } else {
+            for (auto& seed : seeds) result.push_back(func(std::move(seed)));
         }
     } else {
-        for (auto& seed : seeds) {
-            result.push_back(detail::run_variational_bayes(prior_alphas, genotype_log_priors,
-                                                           log_likelihoods,
-                                                           std::move(seed), params));
+        const auto func = [&] (auto&& seed) { return detail::run_variational_bayes(prior_alphas, genotype_log_priors, log_likelihoods,
+                                                                                   std::move(seed), params); };
+        if (params.parallel_execution) {
+            parallel_transform(std::make_move_iterator(std::begin(seeds)), std::make_move_iterator(std::end(seeds)),
+                               std::back_inserter(result), func);
+        } else {
+            for (auto& seed : seeds) result.push_back(func(std::move(seed)));
         }
     }
     return result;
