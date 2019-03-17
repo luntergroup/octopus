@@ -1788,6 +1788,7 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
     vc_builder.set_likelihood_model(make_likelihood_model(options, read_profile));
     const auto target_working_memory = get_target_working_memory(options);
     if (target_working_memory) vc_builder.set_target_memory_footprint(*target_working_memory);
+    vc_builder.set_execution_policy(get_thread_execution_policy(options));
     return CallerFactory {std::move(vc_builder)};
 }
 

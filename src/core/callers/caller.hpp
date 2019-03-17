@@ -117,6 +117,7 @@ public:
         bool allow_model_filtering;
         bool protect_reference_haplotype;
         boost::optional<MemoryFootprint> target_max_memory;
+        ExecutionPolicy execution_policy;
     };
     
 private:
@@ -144,6 +145,7 @@ protected:
     using ReadPileupMap = std::unordered_map<SampleName, ReadPileups>;
     
     boost::optional<MemoryFootprint> target_max_memory() const noexcept;
+    ExecutionPolicy exucution_policy() const noexcept;
 
 private:
     virtual std::unique_ptr<Latents>
