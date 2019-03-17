@@ -406,6 +406,11 @@ boost::optional<MemoryFootprint> Caller::target_max_memory() const noexcept
     return parameters_.target_max_memory;
 }
 
+ExecutionPolicy Caller::exucution_policy() const noexcept
+{
+    return parameters_.execution_policy;
+}
+
 Caller::GeneratorStatus
 Caller::generate_active_haplotypes(const GenomicRegion& call_region,
                                    HaplotypeGenerator& haplotype_generator,

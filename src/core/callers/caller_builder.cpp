@@ -123,6 +123,12 @@ CallerBuilder& CallerBuilder::set_target_memory_footprint(MemoryFootprint memory
     return *this;
 }
 
+CallerBuilder& CallerBuilder::set_execution_policy(ExecutionPolicy policy) noexcept
+{
+    params_.general.execution_policy = policy;
+    return *this;
+}
+
 CallerBuilder& CallerBuilder::set_min_variant_posterior(Phred<double> posterior) noexcept
 {
     params_.min_variant_posterior = posterior;
