@@ -36,7 +36,7 @@ struct VariationalBayesParameters
 {
     double epsilon = 0.05;
     unsigned max_iterations = 1000;
-    double save_memory = false;
+    bool save_memory = false;
 };
 
 using ProbabilityVector    = std::vector<double>;
