@@ -319,13 +319,13 @@ void MaskInvertedSoftClippedReadEnds::operator()(AlignedRead& read) const
             if (match_itr != std::cend(target)) {
                 std::size_t aligned_inverted_extension {0};
                 if (is_forward_strand(read)) {
-                    const auto aligned_seq_ritr = std::next(std::crbegin(read.sequence()), soft_clipped_head_length);
+                    const auto aligned_seq_ritr = std::next(std::crbegin(read.sequence()), soft_clipped_tail_length);
                     auto p = std::mismatch(aligned_seq_ritr, std::crend(read.sequence()),
-                                           std::next(match_itr, soft_clipped_head_length), std::cend(target),
+                                           std::next(match_itr, soft_clipped_tail_length), std::cend(target),
                                            [] (auto a, auto b) { return utils::complement(a) == b; });
                     aligned_inverted_extension = std::distance(aligned_seq_ritr, p.first);
                 } else {
-                    const auto aligned_seq_itr = std::next(std::cbegin(read.sequence()), soft_clipped_head_length);
+                    const auto aligned_seq_itr = std::next(std::cbegin(read.sequence()), soft_clipped_tail_length);
                     auto p = std::mismatch(aligned_seq_itr, std::cend(read.sequence()),
                                            std::make_reverse_iterator(match_itr), std::crend(target),
                                            [] (auto a, auto b) { return utils::complement(a) == b; });
@@ -376,7 +376,8 @@ void Mask3PrimeShiftedSoftClippedHeads::operator()(AlignedRead& read) const
             std::size_t aligned_shifted_extension {0};
             if (is_forward_strand(read)) {
                 const auto aligned_seq_itr = std::next(std::cbegin(read.sequence()), soft_clipped_head_length);
-                auto p = std::mismatch(aligned_seq_itr, std::cend(read.sequence()), match_itr, std::cend(context));
+                auto p = std::mismatch(aligned_seq_itr, std::cend(read.sequence()),
+                                       std::next(match_itr, soft_clipped_head_length), std::cend(context));
                 aligned_shifted_extension = std::distance(aligned_seq_itr, p.first);
             } else {
                 const auto aligned_seq_ritr = std::next(std::crbegin(read.sequence()), soft_clipped_head_length);
