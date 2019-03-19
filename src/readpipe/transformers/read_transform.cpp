@@ -276,9 +276,9 @@ auto copy_soft_clipped_tail_sequence(const AlignedRead& read)
 }
 
 template <typename Range1, typename Range2>
-bool includes(const Range1& target, const Range2& query)
+auto search(const Range1& target, const Range2& query)
 {
-    return std::search(std::cbegin(target), std::cend(target), std::cbegin(query), std::cend(query)) != std::cend(target);
+    return std::search(std::cbegin(target), std::cend(target), std::cbegin(query), std::cend(query));
 }
 
 } // namespace
@@ -291,8 +291,23 @@ void MaskInvertedSoftClippedReadEnds::operator()(AlignedRead& read) const
             auto query = copy_head_sequence(read, soft_clipped_head_length);
             utils::reverse_complement(query);
             auto target = reference_.get().fetch_sequence(expand(mapped_region(read), max_flank_search_));
-            if (includes(target, query)) {
-                zero_head_base_qualities(read, soft_clipped_head_length);
+            const auto match_itr = search(target, query);
+            if (match_itr != std::cend(target)) {
+                std::size_t aligned_inverted_extension {0};
+                if (is_forward_strand(read)) {
+                    const auto aligned_seq_itr = std::next(std::cbegin(read.sequence()), soft_clipped_head_length);
+                    auto p = std::mismatch(aligned_seq_itr, std::cend(read.sequence()),
+                                           std::make_reverse_iterator(match_itr), std::crend(target),
+                                           [] (auto a, auto b) { return utils::complement(a) == b; });
+                    aligned_inverted_extension = std::distance(aligned_seq_itr, p.first);
+                } else {
+                    const auto aligned_seq_ritr = std::next(std::crbegin(read.sequence()), soft_clipped_head_length);
+                    auto p = std::mismatch(aligned_seq_ritr, std::crend(read.sequence()),
+                                           std::next(match_itr, soft_clipped_head_length), std::cend(target),
+                                           [] (auto a, auto b) { return utils::complement(a) == b; });
+                    aligned_inverted_extension = std::distance(aligned_seq_ritr, p.first);
+                }
+                zero_head_base_qualities(read, soft_clipped_head_length + aligned_inverted_extension);
             }
         }
         const auto soft_clipped_tail_length = get_soft_clip_tail_size(read);
@@ -300,8 +315,23 @@ void MaskInvertedSoftClippedReadEnds::operator()(AlignedRead& read) const
             auto query = copy_tail_sequence(read, soft_clipped_tail_length);
             utils::reverse_complement(query);
             auto target = reference_.get().fetch_sequence(expand(mapped_region(read), max_flank_search_));
-            if (includes(target, query)) {
-                zero_tail_base_qualities(read, soft_clipped_tail_length);
+            const auto match_itr = search(target, query);
+            if (match_itr != std::cend(target)) {
+                std::size_t aligned_inverted_extension {0};
+                if (is_forward_strand(read)) {
+                    const auto aligned_seq_ritr = std::next(std::crbegin(read.sequence()), soft_clipped_head_length);
+                    auto p = std::mismatch(aligned_seq_ritr, std::crend(read.sequence()),
+                                           std::next(match_itr, soft_clipped_head_length), std::cend(target),
+                                           [] (auto a, auto b) { return utils::complement(a) == b; });
+                    aligned_inverted_extension = std::distance(aligned_seq_ritr, p.first);
+                } else {
+                    const auto aligned_seq_itr = std::next(std::cbegin(read.sequence()), soft_clipped_head_length);
+                    auto p = std::mismatch(aligned_seq_itr, std::cend(read.sequence()),
+                                           std::make_reverse_iterator(match_itr), std::crend(target),
+                                           [] (auto a, auto b) { return utils::complement(a) == b; });
+                    aligned_inverted_extension = std::distance(aligned_seq_itr, p.first);
+                }
+                zero_tail_base_qualities(read, soft_clipped_tail_length + aligned_inverted_extension);
             }
         }
     }
@@ -341,7 +371,19 @@ void Mask3PrimeShiftedSoftClippedHeads::operator()(AlignedRead& read) const
         const auto clip = copy_head_sequence(read, soft_clipped_head_length);
         const auto context_region = expand_3prime_region(read, max_flank_search_);
         const auto context = reference_.get().fetch_sequence(context_region);
-        if (includes(context, clip)) {
+        const auto match_itr = search(context, clip);
+        if (match_itr != std::cend(context)) {
+            std::size_t aligned_shifted_extension {0};
+            if (is_forward_strand(read)) {
+                const auto aligned_seq_itr = std::next(std::cbegin(read.sequence()), soft_clipped_head_length);
+                auto p = std::mismatch(aligned_seq_itr, std::cend(read.sequence()), match_itr, std::cend(context));
+                aligned_shifted_extension = std::distance(aligned_seq_itr, p.first);
+            } else {
+                const auto aligned_seq_ritr = std::next(std::crbegin(read.sequence()), soft_clipped_head_length);
+                auto p = std::mismatch(aligned_seq_ritr, std::crend(read.sequence()),
+                                       std::make_reverse_iterator(match_itr), std::crend(context));
+                aligned_shifted_extension = std::distance(aligned_seq_ritr, p.first);
+            }
             zero_head_base_qualities(read, soft_clipped_head_length);
         }
     }
