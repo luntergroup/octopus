@@ -384,7 +384,7 @@ void Mask3PrimeShiftedSoftClippedHeads::operator()(AlignedRead& read) const
                                        std::make_reverse_iterator(match_itr), std::crend(context));
                 aligned_shifted_extension = std::distance(aligned_seq_ritr, p.first);
             }
-            zero_head_base_qualities(read, soft_clipped_head_length);
+            zero_head_base_qualities(read, soft_clipped_head_length + aligned_shifted_extension);
         }
     }
 }
