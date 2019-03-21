@@ -54,7 +54,7 @@ private:
     MixtureVector mixtures_, log_mixtures_;
     std::vector<HaplotypeLikelihoodArray::LikelihoodVectorRef> indexed_likelihoods_;
     mutable std::vector<HaplotypeLikelihoodArray::LikelihoodVectorRef> likelihood_refs_;
-    mutable std::vector<LogProbability> buffer_;
+    mutable std::vector<HaplotypeLikelihoodArray::LogProbability> buffer_;
 };
 
 template <typename Container1, typename Container2>

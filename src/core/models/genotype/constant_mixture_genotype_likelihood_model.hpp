@@ -43,7 +43,7 @@ private:
     const HaplotypeLikelihoodArray& likelihoods_;
     std::vector<HaplotypeLikelihoodArray::LikelihoodVectorRef> indexed_likelihoods_;
     mutable std::vector<HaplotypeLikelihoodArray::LikelihoodVectorRef> likelihood_refs_;
-    mutable std::vector<LogProbability> buffer_;
+    mutable std::vector<HaplotypeLikelihoodArray::LogProbability> buffer_;
     
     // These are just for optimisation
     LogProbability evaluate_haploid(const Genotype<Haplotype>& genotype) const;

@@ -57,7 +57,7 @@ SingleCellModel::evaluate(const std::vector<Genotype<Haplotype>>& genotypes,
             Inferences::GroupInferences group {};
             group.sample_attachment_posteriors.resize(samples_.size());
             for (std::size_t sample_idx {0}; sample_idx < samples_.size(); ++sample_idx) {
-                group.sample_attachment_posteriors[sample_idx] = vb_inferences.group_responsabilities[sample_idx][group_idx];
+                group.sample_attachment_posteriors[sample_idx] = vb_inferences.group_responsibilities[sample_idx][group_idx];
             }
             // Marginalise over genotypes
             group.genotype_posteriors.resize(genotypes.size());

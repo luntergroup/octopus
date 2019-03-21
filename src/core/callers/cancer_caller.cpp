@@ -15,7 +15,7 @@
 
 #include <boost/iterator/zip_iterator.hpp>
 #include <boost/tuple/tuple.hpp>
-#include <boost/multiprecision/cpp_dec_float.hpp>
+#include <boost/multiprecision/gmp.hpp>
 
 #include "basics/genomic_region.hpp"
 #include "containers/probability_matrix.hpp"
@@ -1028,7 +1028,7 @@ VariantPosteriorVector compute_candidate_posteriors(const std::vector<Variant>& 
 
 // segregation probability
 
-using BigFloat = boost::multiprecision::number<boost::multiprecision::cpp_dec_float<1000>>;
+using BigFloat = boost::multiprecision::mpf_float_1000;
 
 BigFloat marginalise(const Allele& allele, const std::vector<Genotype<Haplotype>>& genotypes, const std::vector<double>& probabilities)
 {

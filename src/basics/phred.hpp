@@ -85,8 +85,8 @@ auto probability_false_to_phred(const Q p)
     return Phred<Q> {typename Phred<Q>::Probability {p}};
 }
 
-template <typename T, unsigned Digits10>
-Phred<T> probability_true_to_phred(boost::multiprecision::number<boost::multiprecision::cpp_dec_float<Digits10>> probability_true)
+template <typename T, typename Backend>
+Phred<T> probability_true_to_phred(boost::multiprecision::number<Backend> probability_true)
 {
     using BigFloat = decltype(probability_true);
     using boost::multiprecision::nextafter;
@@ -99,11 +99,10 @@ Phred<T> probability_true_to_phred(boost::multiprecision::number<boost::multipre
     return Phred<T> {phred_probability_false.template convert_to<T>()};
 }
 
-template <typename T, unsigned Digits10>
-Phred<T> ln_probability_true_to_phred(boost::multiprecision::number<boost::multiprecision::cpp_dec_float<Digits10>> ln_probability_true)
+template <typename T, typename Backend>
+Phred<T> ln_probability_true_to_phred(const boost::multiprecision::number<Backend>& ln_probability_true)
 {
-    const decltype(ln_probability_true) probability_true {boost::multiprecision::exp(ln_probability_true)};
-    return probability_true_to_phred<T, Digits10>(probability_true);
+    return probability_true_to_phred<T, Backend>(boost::multiprecision::exp(ln_probability_true));
 }
 
 template <typename Q>

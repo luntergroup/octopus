@@ -43,6 +43,7 @@ $ octopus -R hs37d5.fa -I NA12878.bam -T 1 to MT -o NA12878.octopus.vcf.gz --for
 * Git 2.5 or greater
 * Boost 1.65 or greater
 * htslib 1.4 or greater
+* GMP 5.1.0 or greater
 * CMake 3.9 or greater
 * Optional:
     * Python3 or greater
@@ -56,6 +57,7 @@ $ brew update
 $ brew install git
 $ brew install --with-clang llvm
 $ brew install boost
+$ brew install gmp
 $ brew install cmake
 $ brew tap homebrew/science # required for htslib
 $ brew install htslib
@@ -72,6 +74,7 @@ Depending on your Ubuntu distribution, some requirements can be installed with `
 $ sudo add-apt-repository ppa:ubuntu-toolchain-r/test
 $ sudo apt-get update && sudo apt-get upgrade
 $ sudo apt-get install gcc-7
+$ sudo apt-get install libgmp3-dev
 $ sudo apt-get install git-all
 $ sudo apt-get install python3
 ```
