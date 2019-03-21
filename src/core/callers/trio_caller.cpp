@@ -595,7 +595,7 @@ T compute_segregation_posterior_complement_uncached(const Allele& allele, const 
 auto compute_segregation_posterior_uncached(const Allele& allele, const TrioProbabilityVector& trio_posteriors)
 {
     const auto p = compute_segregation_posterior_complement_uncached(allele, trio_posteriors);
-    return probability_to_phred(p);
+    return probability_false_to_phred(p);
 }
 
 template <typename T = double>
@@ -616,7 +616,7 @@ auto compute_segregation_posterior_cached(const Allele& allele, const TrioProbab
     GenotypePtrBoolMap genotype_cache {};
     genotype_cache.reserve(trio_posteriors.size());
     const auto p = compute_segregation_posterior_complement_cached(allele, trio_posteriors, haplotype_cache, genotype_cache);
-    return probability_to_phred(p);
+    return probability_false_to_phred(p);
 }
 
 auto compute_segregation_posterior(const Allele& allele, const TrioProbabilityVector& trio_posteriors)
@@ -671,7 +671,7 @@ auto compute_denovo_posterior_uncached(const Allele& allele, const TrioProbabili
                              0.0, [&allele] (const auto curr, const auto& p) {
         return curr + (is_denovo(allele, p) ? 0.0 : p.probability);
     });
-    return probability_to_phred(p);
+    return probability_false_to_phred(p);
 }
 
 auto compute_denovo_posterior_cached(const Allele& allele, const TrioProbabilityVector& trio_posteriors)
@@ -684,7 +684,7 @@ auto compute_denovo_posterior_cached(const Allele& allele, const TrioProbability
                              0.0, [&] (const auto curr, const auto& p) {
         return curr + (is_denovo(allele, p, haplotype_cache, genotype_cache) ? 0.0 : p.probability);
     });
-    return probability_to_phred(p);
+    return probability_false_to_phred(p);
 }
 
 auto compute_denovo_posterior(const Allele& allele, const TrioProbabilityVector& trio_posteriors)
@@ -888,7 +888,7 @@ auto compute_posterior(const Genotype<Allele>& genotype, const GenotypeProbabili
                              [&genotype] (const double curr, const auto& p) {
                                  return curr + (contains(p.first, genotype) ? 0.0 : p.second);
                              });
-    return probability_to_phred(p);
+    return probability_false_to_phred(p);
 }
 
 struct GenotypePosterior

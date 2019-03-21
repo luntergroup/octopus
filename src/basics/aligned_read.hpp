@@ -68,6 +68,8 @@ public:
         
         std::size_t get_hash() const;
         
+        friend bool operator==(const AlignedRead::Segment& lhs, const AlignedRead::Segment& rhs) noexcept;
+        
     private:
         using FlagBits = std::bitset<2>;
         
@@ -127,6 +129,9 @@ public:
     bool is_marked_qc_fail() const noexcept;
     bool is_marked_duplicate() const noexcept;
     bool is_marked_supplementary_alignment() const noexcept;
+    
+    friend bool operator==(const AlignedRead& lhs, const AlignedRead& rhs) noexcept;
+    friend bool operator<(const AlignedRead& lhs, const AlignedRead& rhs) noexcept;
     
 private:
     static constexpr std::size_t numFlags_ = 10;
@@ -260,11 +265,6 @@ MemoryFootprint footprint(const Range& reads) noexcept
 
 bool operator==(const AlignedRead& lhs, const AlignedRead& rhs) noexcept;
 bool operator<(const AlignedRead& lhs, const AlignedRead& rhs) noexcept;
-
-struct IsDuplicate
-{
-    bool operator()(const AlignedRead& lhs, const AlignedRead& rhs) const noexcept;
-};
 
 bool operator==(const AlignedRead::Segment& lhs, const AlignedRead::Segment& rhs) noexcept;
 

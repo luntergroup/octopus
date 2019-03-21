@@ -71,7 +71,7 @@ void HaplotypeLikelihoodArray::populate(const ReadMap& reads,
         likelihood_model_.reset(haplotype, flank_state);
         auto read_hash_itr = std::cbegin(read_hashes);
         for (const auto& t : read_iterators_) { // for each sample
-            *itr = std::vector<double>(t.num_reads);
+            *itr = std::vector<LogProbability>(t.num_reads);
             std::transform(t.first, t.last, std::cbegin(*read_hash_itr), std::begin(*itr),
                            [&] (const AlignedRead& read, const auto& read_hashes) {
                                const auto last_mapping_position = map_query_to_target(read_hashes, haplotype_hashes,
@@ -196,7 +196,7 @@ std::vector<std::reference_wrapper<const Haplotype>>
 rank_haplotypes(const std::vector<Haplotype>& haplotypes, const SampleName& sample,
                 const HaplotypeLikelihoodArray& haplotype_likelihoods)
 {
-    std::vector<std::pair<std::reference_wrapper<const Haplotype>, double>> ranks {};
+    std::vector<std::pair<std::reference_wrapper<const Haplotype>, HaplotypeLikelihoodArray::LogProbability>> ranks {};
     ranks.reserve(haplotypes.size());
     for (const auto& haplotype : haplotypes) {
         const auto& likelihoods = haplotype_likelihoods(sample, haplotype);

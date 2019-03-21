@@ -12,7 +12,10 @@
 #include <iostream>
 #include <functional>
 
+#include <boost/multiprecision/cpp_dec_float.hpp>
+
 #include "concepts/comparable.hpp"
+#include "utils/maths.hpp"
 
 namespace octopus {
 
@@ -77,9 +80,29 @@ private:
 };
 
 template <typename Q>
-auto probability_to_phred(const Q p)
+auto probability_false_to_phred(const Q p)
 {
     return Phred<Q> {typename Phred<Q>::Probability {p}};
+}
+
+template <typename T, typename Backend>
+Phred<T> probability_true_to_phred(boost::multiprecision::number<Backend> probability_true)
+{
+    using BigFloat = decltype(probability_true);
+    using boost::multiprecision::nextafter;
+    if (probability_true <= 0.0) probability_true = nextafter(BigFloat {0.0}, BigFloat {1.0});
+    if (probability_true >= 1.0) probability_true = nextafter(BigFloat {1.0}, BigFloat {0.0});
+    const BigFloat probability_false {BigFloat {1.0} - probability_true};
+    const BigFloat ln_probability_false {boost::multiprecision::log(probability_false)};
+    const BigFloat phred_probability_false {ln_probability_false / -maths::constants::ln10Div10<>};
+    assert(phred_probability_false >= 0.0);
+    return Phred<T> {phred_probability_false.template convert_to<T>()};
+}
+
+template <typename T, typename Backend>
+Phred<T> ln_probability_true_to_phred(const boost::multiprecision::number<Backend>& ln_probability_true)
+{
+    return probability_true_to_phred<T, Backend>(boost::multiprecision::exp(ln_probability_true));
 }
 
 template <typename Q>

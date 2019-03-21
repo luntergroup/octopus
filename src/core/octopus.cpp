@@ -50,6 +50,7 @@
 #include "io/variant/vcf.hpp"
 #include "utils/timing.hpp"
 #include "exceptions/program_error.hpp"
+#include "exceptions/system_error.hpp"
 #include "csr/filters/variant_call_filter.hpp"
 #include "csr/filters/variant_call_filter_factory.hpp"
 #include "readpipe/buffered_read_pipe.hpp"
@@ -165,6 +166,28 @@ std::string get_caller_name(const GenomeCallingComponents& components)
     return test_caller->name(); // There can only be one caller type per run
 }
 
+auto my_hardware_concurrency()
+{
+    // From https://stackoverflow.com/a/31362324/2970186
+    std::ifstream cpuinfo {"/proc/cpuinfo"};
+    return std::count(std::istream_iterator<std::string> {cpuinfo},
+                      std::istream_iterator<std::string> {},
+                      std::string {"processor"});
+}
+
+unsigned hardware_concurrency()
+{
+    unsigned int cores = std::thread::hardware_concurrency();
+    return cores ? cores : my_hardware_concurrency();
+}
+
+class UnknownHardwareConcurrency : public SystemError
+{
+    std::string do_where() const override { return "hardware_concurrency"; }
+    std::string do_why() const override { return "Unable to detect the number of hardware threads"; };
+    std::string do_help() const override { return "Explicitly set the number of threads in the command line input"; };
+};
+
 void log_startup_info(const GenomeCallingComponents& components)
 {
     logging::InfoLogger log {};
@@ -186,16 +209,23 @@ void log_startup_info(const GenomeCallingComponents& components)
     str.pop_back(); // the extra whitespace
     log << str;
     stream(log) << "Invoked calling model: " << get_caller_name(components);
-    const auto search_size = utils::format_with_commas(sum_region_sizes(components.search_regions()));
-    const auto num_threads = components.num_threads();
-    if (num_threads) {
-        if (*num_threads == 1) {
-            stream(log) << "Processing " << search_size << "bp with a single thread";
+    {
+        const auto search_size = utils::format_with_commas(sum_region_sizes(components.search_regions()));
+        const auto num_threads = components.num_threads();
+        auto ls = stream(log);
+        if (num_threads) {
+            if (*num_threads == 1) {
+                ls << "Processing " << search_size << "bp with a single thread";
+            } else {
+                ls << "Processing " << search_size << "bp with " << *num_threads << " threads";
+            }
         } else {
-            stream(log) << "Processing " << search_size << "bp with " << *num_threads << " threads";
+            ls << "Processing " << search_size << "bp with automatic thread management";
         }
-    } else {
-        stream(log) << "Processing " << search_size << "bp with automatic thread management";
+        const auto cores = hardware_concurrency();
+        if (cores > 0) {
+            ls << " (" << cores << " cores detected)";
+        }
     }
     auto sl = stream(log);
     auto output_path = components.output().path();
@@ -682,33 +712,16 @@ std::thread make_task_maker_thread(TaskMap& tasks, GenomeCallingComponents& comp
                         num_threads, make_execution_policy(components), std::ref(sync)};
 }
 
-void log_num_cores(const unsigned num_cores)
-{
-    auto debug_log = logging::get_debug_log();
-    if (debug_log) stream(*debug_log) << "Detected " << num_cores << " system cores";
-}
-
-void warn_undetected_cores()
-{
-    logging::WarningLogger log {};
-    log << "Unable to detect the number of system cores,"
-    " it may be better to run with a user number if the number of cores is known";
-}
-
 unsigned calculate_num_task_threads(const GenomeCallingComponents& components)
 {
     if (components.num_threads()) {
         return *components.num_threads();
     }
-    // TODO: come up with a better calculation
-    const auto num_cores = std::thread::hardware_concurrency();
-    if (num_cores > 0) {
-        log_num_cores(num_cores);
-        return num_cores;
-    } else {
-        warn_undetected_cores();
-        return std::min(components.read_manager().num_files(), 8u);
+    const auto num_cores = hardware_concurrency();
+    if (num_cores == 0) {
+        throw UnknownHardwareConcurrency {};
     }
+    return num_cores;
 }
 
 Task pop(TaskMap& tasks, TaskMakerSyncPacket& sync)

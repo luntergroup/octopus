@@ -33,6 +33,11 @@ std::unique_ptr<Measure> NormalContamination::do_clone() const
 
 namespace {
 
+auto extract_called_alleles(const VcfRecord& call, const VcfRecord::SampleName& sample)
+{
+    return get_called_alleles(call, sample, ReferencePadPolicy::trim_alt_alleles).first;
+}
+
 template <typename Container>
 void sort_unique(Container& values)
 {
@@ -45,10 +50,10 @@ auto get_somatic_alleles(const VcfRecord& somatic, const std::vector<SampleName>
 {
     std::vector<Allele> somatic_sample_alleles {}, normal_sample_alleles {};
     for (const auto& sample : somatic_samples) {
-        utils::append(get_called_alleles(somatic, sample, true).first, somatic_sample_alleles);
+        utils::append(extract_called_alleles(somatic, sample), somatic_sample_alleles);
     }
     for (const auto& sample : normal_samples) {
-        utils::append(get_called_alleles(somatic, sample, true).first, normal_sample_alleles);
+        utils::append(extract_called_alleles(somatic, sample), normal_sample_alleles);
     }
     sort_unique(somatic_sample_alleles); sort_unique(normal_sample_alleles);
     std::vector<Allele> result {};
@@ -121,13 +126,15 @@ Measure::ResultType NormalContamination::do_evaluate(const VcfRecord& call, cons
         const auto somatic_haplotypes = get_somatic_haplotypes(call, genotypes, somatic_samples, normal_samples);
         const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments"));
         Genotype<Haplotype> somatic_genotype {static_cast<unsigned>(somatic_haplotypes.size() + 1)};
-        HaplotypeProbabilityMap haplotype_priors {};
-        haplotype_priors.reserve(somatic_haplotypes.size() + 1);
         for (const auto& haplotype : somatic_haplotypes) {
             somatic_genotype.emplace(haplotype);
-            haplotype_priors[haplotype] = -1;
         }
         for (const auto& sample : normal_samples) {
+            HaplotypeProbabilityMap haplotype_priors {};
+            haplotype_priors.reserve(somatic_haplotypes.size() + 1);
+            for (const auto& haplotype : somatic_haplotypes) {
+                haplotype_priors[haplotype] = -1;
+            }
             for (const auto& p : assignments.support.at(sample)) {
                 const auto overlapped_reads = copy_overlapped(p.second, call);
                 if (!overlapped_reads.empty()) {
@@ -163,9 +170,6 @@ Measure::ResultType NormalContamination::do_evaluate(const VcfRecord& call, cons
                             haplotype_priors[haplptype] = 0;
                         }
                         const auto support = compute_haplotype_support(dummy, ambiguous_reads, haplotype_priors);
-                        for (const auto& haplotype : called_genotype) {
-                            haplotype_priors.erase(haplotype);
-                        }
                         for (const auto& somatic : somatic_haplotypes) {
                             if (support.count(somatic) == 1) {
                                 *result += support.at(somatic).size();

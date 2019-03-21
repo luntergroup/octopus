@@ -115,7 +115,7 @@ Measure::ResultType ReadSideBias::do_evaluate(const VcfRecord& call, const Facet
     result.reserve(samples.size());
     for (const auto& sample : samples) {
         std::vector<Allele> alleles; bool has_ref;
-        std::tie(alleles, has_ref) = get_called_alleles(call, sample, true);
+        std::tie(alleles, has_ref) = get_called_alleles(call, sample);
         if (!alleles.empty()) {
             const auto allele_support = compute_allele_support(alleles, assignments, sample);
             auto position_bias = calculate_position_bias(allele_support);

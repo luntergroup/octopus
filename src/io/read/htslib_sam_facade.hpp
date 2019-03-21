@@ -99,7 +99,7 @@ public:
 private:
     using HtsTid = std::int32_t;
     
-    static constexpr std::size_t defaultReserve_ {10'000'000};
+    static constexpr std::size_t defaultReserve_ {1'000'000};
     
     struct HtsFileDeleter
     {

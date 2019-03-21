@@ -406,6 +406,11 @@ boost::optional<MemoryFootprint> Caller::target_max_memory() const noexcept
     return parameters_.target_max_memory;
 }
 
+ExecutionPolicy Caller::exucution_policy() const noexcept
+{
+    return parameters_.execution_policy;
+}
+
 Caller::GeneratorStatus
 Caller::generate_active_haplotypes(const GenomicRegion& call_region,
                                    HaplotypeGenerator& haplotype_generator,
@@ -746,7 +751,7 @@ void Caller::set_model_posteriors(std::vector<CallWrapper>& calls, const Latents
         const auto mp = calculate_model_posterior(haplotypes, haplotype_likelihoods, latents);
         if (mp) {
             for (auto& call : calls) {
-                call->set_model_posterior(probability_to_phred(1 - *mp));
+                call->set_model_posterior(probability_false_to_phred(1 - *mp));
             }
         }
     }

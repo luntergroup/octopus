@@ -144,14 +144,15 @@ bool HaplotypeLikelihoodModel::can_use_flank_state() const noexcept
     return config_.use_flank_state;
 }
 
-double HaplotypeLikelihoodModel::evaluate(const AlignedRead& read) const
+HaplotypeLikelihoodModel::LogProbability
+HaplotypeLikelihoodModel::evaluate(const AlignedRead& read) const
 {
     const static MappingPositionVector empty {};
     return this->evaluate(read, std::cbegin(empty), std::cend(empty));
 }
 
-double HaplotypeLikelihoodModel::evaluate(const AlignedRead& read,
-                                          const MappingPositionVector& mapping_positions) const
+HaplotypeLikelihoodModel::LogProbability
+HaplotypeLikelihoodModel::evaluate(const AlignedRead& read, const MappingPositionVector& mapping_positions) const
 {
     return this->evaluate(read, std::cbegin(mapping_positions), std::cend(mapping_positions));
 }
@@ -179,14 +180,16 @@ bool is_in_range(const std::size_t mapping_position, const AlignedRead& read, co
 } // namespace
 
 template <typename InputIt>
-double max_score(const AlignedRead& read, const Haplotype& haplotype,
-                 InputIt first_mapping_position, InputIt last_mapping_position,
-                 const hmm::MutationModel& model)
+HaplotypeLikelihoodModel::LogProbability
+max_score(const AlignedRead& read, const Haplotype& haplotype,
+          InputIt first_mapping_position, InputIt last_mapping_position,
+          const hmm::MutationModel& model)
 {
     assert(contains(haplotype, read));
+    using LogProbability = HaplotypeLikelihoodModel::LogProbability;
     using PositionType = typename std::iterator_traits<InputIt>::value_type;
     const auto original_mapping_position = static_cast<PositionType>(begin_distance(haplotype, read));
-    auto max_log_probability = std::numeric_limits<double>::lowest();
+    auto max_log_probability = std::numeric_limits<LogProbability>::lowest();
     bool is_original_position_mapped {false}, has_in_range_mapping_position {false};
     std::for_each(first_mapping_position, last_mapping_position, [&] (const auto position) {
         if (position == original_mapping_position) {
@@ -195,14 +198,14 @@ double max_score(const AlignedRead& read, const Haplotype& haplotype,
         if (is_in_range(position, read, haplotype)) {
             has_in_range_mapping_position = true;
             auto p = hmm::evaluate(read.sequence(), haplotype.sequence(), read.base_qualities(), position, model);
-            max_log_probability = std::max(p, max_log_probability);
+            max_log_probability = std::max(static_cast<LogProbability>(p), max_log_probability);
         }
     });
     if (!is_original_position_mapped && is_in_range(original_mapping_position, read, haplotype)) {
         has_in_range_mapping_position = true;
         auto p = hmm::evaluate(read.sequence(), haplotype.sequence(), read.base_qualities(),
                                original_mapping_position, model);
-        max_log_probability = std::max(p, max_log_probability);
+        max_log_probability = std::max(static_cast<LogProbability>(p), max_log_probability);
     }
     if (!has_in_range_mapping_position) {
         const auto min_shift = num_out_of_range_bases(original_mapping_position, read, haplotype);
@@ -224,13 +227,14 @@ double max_score(const AlignedRead& read, const Haplotype& haplotype,
         max_log_probability = hmm::evaluate(read.sequence(), haplotype.sequence(), read.base_qualities(),
                                             final_mapping_position, model);
     }
-    assert(max_log_probability > std::numeric_limits<double>::lowest() && max_log_probability <= 0);
+    assert(max_log_probability > std::numeric_limits<LogProbability>::lowest() && max_log_probability <= 0);
     return max_log_probability;
 }
 
-double HaplotypeLikelihoodModel::evaluate(const AlignedRead& read,
-                                          MappingPositionItr first_mapping_position,
-                                          MappingPositionItr last_mapping_position) const
+HaplotypeLikelihoodModel::LogProbability
+HaplotypeLikelihoodModel::evaluate(const AlignedRead& read,
+                                   MappingPositionItr first_mapping_position,
+                                   MappingPositionItr last_mapping_position) const
 {
     if (haplotype_ == nullptr) {
         throw std::runtime_error {"HaplotypeLikelihoodModel: no buffered Haplotype"};
@@ -291,10 +295,11 @@ compute_optimal_alignment(const AlignedRead& read, const Haplotype& haplotype,
                           const hmm::MutationModel& model)
 {
     assert(contains(haplotype, read));
+    using LogProbability = HaplotypeLikelihoodModel::LogProbability;
     using PositionType = typename std::iterator_traits<InputIt>::value_type;
     const auto original_mapping_position = static_cast<PositionType>(begin_distance(haplotype, read));
     HaplotypeLikelihoodModel::Alignment result {};
-    result.likelihood = std::numeric_limits<double>::lowest();
+    result.likelihood = std::numeric_limits<LogProbability>::lowest();
     bool is_original_position_mapped {false}, has_in_range_mapping_position {false};
     std::for_each(first_mapping_position, last_mapping_position, [&] (const auto position) {
         if (position == original_mapping_position) {
@@ -343,7 +348,7 @@ compute_optimal_alignment(const AlignedRead& read, const Haplotype& haplotype,
         result.cigar = std::move(alignment.cigar);
         result.mapping_position = alignment.target_offset;
     }
-    assert(result.likelihood > std::numeric_limits<double>::lowest() && result.likelihood <= 0);
+    assert(result.likelihood > std::numeric_limits<LogProbability>::lowest() && result.likelihood <= 0);
     return result;
 }
 

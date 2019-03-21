@@ -8,7 +8,7 @@ project(octopus)
 
 set(octopus_VERSION_MAJOR 0)
 set(octopus_VERSION_MINOR 6)
-set(octopus_VERSION_PATCH 2)
+set(octopus_VERSION_PATCH 3)
 set(octopus_VERSION_RELEASE beta)
 
 # Get the current working branch

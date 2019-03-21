@@ -19,7 +19,8 @@ ConstantMixtureGenotypeLikelihoodModel::ConstantMixtureGenotypeLikelihoodModel(c
 : likelihoods_ {likelihoods}
 {}
 
-ConstantMixtureGenotypeLikelihoodModel::ConstantMixtureGenotypeLikelihoodModel(const HaplotypeLikelihoodArray& likelihoods, const std::vector<Haplotype>& haplotypes)
+ConstantMixtureGenotypeLikelihoodModel::ConstantMixtureGenotypeLikelihoodModel(const HaplotypeLikelihoodArray& likelihoods,
+                                                                               const std::vector<Haplotype>& haplotypes)
 : ConstantMixtureGenotypeLikelihoodModel {likelihoods}
 {
     this->prime(haplotypes);
@@ -52,7 +53,8 @@ bool ConstantMixtureGenotypeLikelihoodModel::is_primed() const noexcept
 
 // ln p(read | genotype)  = ln sum {haplotype in genotype} p(read | haplotype) - ln ploidy
 // ln p(reads | genotype) = sum {read in reads} ln p(read | genotype)
-ConstantMixtureGenotypeLikelihoodModel::LogProbability ConstantMixtureGenotypeLikelihoodModel::evaluate(const Genotype<Haplotype>& genotype) const
+ConstantMixtureGenotypeLikelihoodModel::LogProbability
+ConstantMixtureGenotypeLikelihoodModel::evaluate(const Genotype<Haplotype>& genotype) const
 {
     assert(likelihoods_.is_primed());
     // These cases are just for optimisation
@@ -96,7 +98,8 @@ static constexpr auto ln(const unsigned n)
 
 } // namespace
 
-ConstantMixtureGenotypeLikelihoodModel::LogProbability ConstantMixtureGenotypeLikelihoodModel::evaluate(const GenotypeIndex& genotype) const
+ConstantMixtureGenotypeLikelihoodModel::LogProbability
+ConstantMixtureGenotypeLikelihoodModel::evaluate(const GenotypeIndex& genotype) const
 {
     assert(is_primed());
     const auto ploidy = static_cast<unsigned>(genotype.size());
@@ -106,72 +109,76 @@ ConstantMixtureGenotypeLikelihoodModel::LogProbability ConstantMixtureGenotypeLi
     for (std::size_t read_idx {0}; read_idx < num_likelihoods; ++read_idx) {
         std::transform(std::cbegin(genotype), std::cend(genotype), std::begin(buffer_),
                        [=] (auto haplotype_idx) noexcept { return indexed_likelihoods_[haplotype_idx].get()[read_idx]; });
-        result += maths::log_sum_exp(buffer_) - ln<>(ploidy);
+        result += maths::log_sum_exp(buffer_) - ln<LogProbability>(ploidy);
     }
     return result;
 }
 
 // private methods
 
-ConstantMixtureGenotypeLikelihoodModel::LogProbability ConstantMixtureGenotypeLikelihoodModel::evaluate_haploid(const Genotype<Haplotype>& genotype) const
+ConstantMixtureGenotypeLikelihoodModel::LogProbability
+ConstantMixtureGenotypeLikelihoodModel::evaluate_haploid(const Genotype<Haplotype>& genotype) const
 {
     const auto& log_likelihoods = likelihoods_[genotype[0]];
-    return std::accumulate(std::cbegin(log_likelihoods), std::cend(log_likelihoods), 0.0);
+    return std::accumulate(std::cbegin(log_likelihoods), std::cend(log_likelihoods), LogProbability {0});
 }
 
-ConstantMixtureGenotypeLikelihoodModel::LogProbability ConstantMixtureGenotypeLikelihoodModel::evaluate_diploid(const Genotype<Haplotype>& genotype) const
+ConstantMixtureGenotypeLikelihoodModel::LogProbability
+ConstantMixtureGenotypeLikelihoodModel::evaluate_diploid(const Genotype<Haplotype>& genotype) const
 {
     const auto& log_likelihoods1 = likelihoods_[genotype[0]];
     if (genotype.is_homozygous()) {
-        return std::accumulate(std::cbegin(log_likelihoods1), std::cend(log_likelihoods1), 0.0);
+        return std::accumulate(std::cbegin(log_likelihoods1), std::cend(log_likelihoods1), LogProbability {0});
     }
     const auto& log_likelihoods2 = likelihoods_[genotype[1]];
     return std::inner_product(std::cbegin(log_likelihoods1), std::cend(log_likelihoods1),
-                              std::cbegin(log_likelihoods2), 0.0, std::plus<> {},
-                              [] (const auto a, const auto b) -> double {
-                                  return maths::log_sum_exp(a, b) - ln<>(2);
+                              std::cbegin(log_likelihoods2), LogProbability {0}, std::plus<> {},
+                              [] (const auto a, const auto b) -> LogProbability {
+                                  return maths::log_sum_exp(a, b) - ln<decltype(a)>(2);
                               });
 }
 
-ConstantMixtureGenotypeLikelihoodModel::LogProbability ConstantMixtureGenotypeLikelihoodModel::evaluate_triploid(const Genotype<Haplotype>& genotype) const
+ConstantMixtureGenotypeLikelihoodModel::LogProbability
+ConstantMixtureGenotypeLikelihoodModel::evaluate_triploid(const Genotype<Haplotype>& genotype) const
 {
     using std::cbegin; using std::cend;
     const auto& log_likelihoods1 = likelihoods_[genotype[0]];
     if (genotype.is_homozygous()) {
-        return std::accumulate(cbegin(log_likelihoods1), cend(log_likelihoods1), 0.0);
+        return std::accumulate(cbegin(log_likelihoods1), cend(log_likelihoods1), LogProbability {0});
     }
     if (genotype.zygosity() == 3) {
         const auto& log_likelihoods2 = likelihoods_[genotype[1]];
         const auto& log_likelihoods3 = likelihoods_[genotype[2]];
         return maths::inner_product(cbegin(log_likelihoods1), cend(log_likelihoods1),
                                     cbegin(log_likelihoods2), cbegin(log_likelihoods3),
-                                    0.0, std::plus<> {},
-                                    [] (const auto a, const auto b, const auto c) -> double {
-                                        return maths::log_sum_exp(a, b, c) - ln<>(3);
+                                    LogProbability {0}, std::plus<> {},
+                                    [] (const auto a, const auto b, const auto c) -> LogProbability {
+                                        return maths::log_sum_exp(a, b, c) - ln<decltype(a)>(3);
                                     });
     }
     if (genotype[0] != genotype[1]) {
         const auto& log_likelihoods2 = likelihoods_[genotype[1]];
         return std::inner_product(cbegin(log_likelihoods1), cend(log_likelihoods1),
-                                  cbegin(log_likelihoods2), 0.0, std::plus<> {},
-                                  [] (const auto a, const auto b) -> double {
-                                      return maths::log_sum_exp(a, ln<>(2) + b) - ln<>(3);
+                                  cbegin(log_likelihoods2), LogProbability {0}, std::plus<> {},
+                                  [] (const auto a, const auto b) -> LogProbability {
+                                      return maths::log_sum_exp(a, ln<decltype(a)>(2) + b) - ln<decltype(a)>(3);
                                   });
     }
     const auto& log_likelihoods3 = likelihoods_[genotype[2]];
     return std::inner_product(cbegin(log_likelihoods1), cend(log_likelihoods1),
-                              cbegin(log_likelihoods3), 0.0, std::plus<> {},
-                              [] (const auto a, const auto b) -> double {
-                                  return maths::log_sum_exp(ln<>(2) + a, b) - ln<>(3);
+                              cbegin(log_likelihoods3), LogProbability {0}, std::plus<> {},
+                              [] (const auto a, const auto b) -> LogProbability {
+                                  return maths::log_sum_exp(ln<decltype(a)>(2) + a, b) - ln<decltype(a)>(3);
                               });
 }
 
-ConstantMixtureGenotypeLikelihoodModel::LogProbability ConstantMixtureGenotypeLikelihoodModel::evaluate_tetraploid(const Genotype<Haplotype>& genotype) const
+ConstantMixtureGenotypeLikelihoodModel::LogProbability
+ConstantMixtureGenotypeLikelihoodModel::evaluate_tetraploid(const Genotype<Haplotype>& genotype) const
 {
     const auto z = genotype.zygosity();
     const auto& log_likelihoods1 = likelihoods_[genotype[0]];
     if (z == 1) {
-        return std::accumulate(std::cbegin(log_likelihoods1), std::cend(log_likelihoods1), 0.0);
+        return std::accumulate(std::cbegin(log_likelihoods1), std::cend(log_likelihoods1), LogProbability {0});
     }
     if (z == 4) {
         const auto& log_likelihoods2 = likelihoods_[genotype[1]];
@@ -179,9 +186,9 @@ ConstantMixtureGenotypeLikelihoodModel::LogProbability ConstantMixtureGenotypeLi
         const auto& log_likelihoods4 = likelihoods_[genotype[3]];
         return maths::inner_product(std::cbegin(log_likelihoods1), std::cend(log_likelihoods1),
                                     std::cbegin(log_likelihoods2), std::cbegin(log_likelihoods3),
-                                    std::cbegin(log_likelihoods4), 0.0, std::plus<> {},
-                                    [] (const auto a, const auto b, const auto c, const auto d) -> double {
-                                        return maths::log_sum_exp({a, b, c, d}) - ln<>(4);
+                                    std::cbegin(log_likelihoods4), LogProbability {0}, std::plus<> {},
+                                    [] (const auto a, const auto b, const auto c, const auto d) -> LogProbability {
+                                        return maths::log_sum_exp({a, b, c, d}) - ln<decltype(a)>(4);
                                     });
     }
     
@@ -190,30 +197,30 @@ ConstantMixtureGenotypeLikelihoodModel::LogProbability ConstantMixtureGenotypeLi
     return 0;
 }
 
-ConstantMixtureGenotypeLikelihoodModel::LogProbability ConstantMixtureGenotypeLikelihoodModel::evaluate_polyploid(const Genotype<Haplotype>& genotype) const
+ConstantMixtureGenotypeLikelihoodModel::LogProbability
+ConstantMixtureGenotypeLikelihoodModel::evaluate_polyploid(const Genotype<Haplotype>& genotype) const
 {
     const auto ploidy = genotype.ploidy();
     const auto z = genotype.zygosity();
     const auto& log_likelihoods1 = likelihoods_[genotype[0]];
     if (z == 1) {
-        return std::accumulate(std::cbegin(log_likelihoods1), std::cend(log_likelihoods1), 0.0);
+        return std::accumulate(std::cbegin(log_likelihoods1), std::cend(log_likelihoods1), LogProbability {0});
     }
     if (z == 2) {
-        const double lnpm1 {std::log(ploidy - 1)};
         const auto unique_haplotypes = genotype.copy_unique_ref();
         const auto& log_likelihoods2 = likelihoods_[unique_haplotypes.back()];
-        
+        const auto lnpm1 = static_cast<HaplotypeLikelihoodArray::LogProbability>(std::log(ploidy - 1));
         if (genotype.count(unique_haplotypes.front()) == 1) {
             return std::inner_product(std::cbegin(log_likelihoods1), std::cend(log_likelihoods1),
-                                      std::cbegin(log_likelihoods2), 0.0, std::plus<> {},
-                                      [ploidy, lnpm1] (const auto a, const auto b) -> double {
-                                          return maths::log_sum_exp(a, lnpm1 + b) - ln<>(ploidy);
+                                      std::cbegin(log_likelihoods2), LogProbability {0}, std::plus<> {},
+                                      [ploidy, lnpm1] (const auto a, const auto b) -> LogProbability {
+                                          return maths::log_sum_exp(a, lnpm1 + b) - ln<decltype(a)>(ploidy);
                                       });
         }
         return std::inner_product(std::cbegin(log_likelihoods1), std::cend(log_likelihoods1),
-                                  std::cbegin(log_likelihoods2), 0.0, std::plus<> {},
-                                  [ploidy, lnpm1] (const auto a, const auto b) -> double {
-                                      return maths::log_sum_exp(lnpm1 + a, b) - ln<>(ploidy);
+                                  std::cbegin(log_likelihoods2), LogProbability {0}, std::plus<> {},
+                                  [ploidy, lnpm1] (const auto a, const auto b) -> LogProbability {
+                                      return maths::log_sum_exp(lnpm1 + a, b) - ln<decltype(a)>(ploidy);
                                   });
     }
     likelihood_refs_.reserve(ploidy);
@@ -227,7 +234,7 @@ ConstantMixtureGenotypeLikelihoodModel::LogProbability ConstantMixtureGenotypeLi
     for (std::size_t read_idx {0}; read_idx < num_likelihoods; ++read_idx) {
         std::transform(std::cbegin(likelihood_refs_), std::cend(likelihood_refs_), std::begin(buffer_),
                        [read_idx] (const auto& likelihoods) noexcept { return likelihoods.get()[read_idx]; });
-        result += maths::log_sum_exp(buffer_) - ln<>(ploidy);
+        result += maths::log_sum_exp(buffer_) - ln<LogProbability>(ploidy);
     }
     likelihood_refs_.clear();
     return result;

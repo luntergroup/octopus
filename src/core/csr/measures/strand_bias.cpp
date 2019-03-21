@@ -173,7 +173,7 @@ Measure::ResultType StrandBias::do_evaluate(const VcfRecord& call, const FacetMa
         boost::optional<double> sample_result {};
         if (is_evaluable(call, sample)) {
             std::vector<Allele> alleles; bool has_ref;
-            std::tie(alleles, has_ref) = get_called_alleles(call, sample, true);
+            std::tie(alleles, has_ref) = get_called_alleles(call, sample);
             assert(!alleles.empty());
             const auto sample_allele_support = compute_allele_support(alleles, assignments, sample);
             const auto direction_counts = get_direction_counts(sample_allele_support, mapped_region(call));

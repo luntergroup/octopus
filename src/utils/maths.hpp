@@ -26,6 +26,8 @@
 #include <boost/math/distributions/geometric.hpp>
 #include <boost/math/distributions/binomial.hpp>
 
+#include "fmath.hpp"
+
 namespace octopus { namespace maths {
 
 namespace constants
@@ -227,17 +229,41 @@ RealType rmq(const Container& values)
     return rmq<RealType>(std::cbegin(values), std::cend(values));
 }
 
-template <typename RealType,
-          typename = std::enable_if_t<std::is_floating_point<RealType>::value>>
-RealType log_sum_exp(const RealType a, const RealType b)
+inline float fast_exp(const float x) noexcept
 {
-    const auto r = std::minmax(a, b);
-    return r.second + std::log(1.0 + std::exp(r.first - r.second));
+    return fmath::exp(x);
 }
 
 template <typename RealType,
           typename = std::enable_if_t<std::is_floating_point<RealType>::value>>
-RealType log_sum_exp(const RealType a, const RealType b, const RealType c)
+inline RealType fast_exp(const RealType x) noexcept
+{
+    return std::exp(x);
+}
+
+inline float fast_log(const float x) noexcept
+{
+    return fmath::log(x);
+}
+
+template <typename RealType,
+          typename = std::enable_if_t<std::is_floating_point<RealType>::value>>
+inline RealType fast_log(const RealType x) noexcept
+{
+    return std::log(x);
+}
+
+template <typename RealType,
+          typename = std::enable_if_t<std::is_floating_point<RealType>::value>>
+inline RealType log_sum_exp(const RealType a, const RealType b)
+{
+    const auto r = std::minmax(a, b);
+    return r.second + std::log(RealType {1} + std::exp(r.first - r.second));
+}
+
+template <typename RealType,
+          typename = std::enable_if_t<std::is_floating_point<RealType>::value>>
+inline RealType log_sum_exp(const RealType a, const RealType b, const RealType c)
 {
     const auto max = std::max({a, b, c});
     return max + std::log(std::exp(a - max) + std::exp(b - max) + std::exp(c - max));
@@ -245,7 +271,7 @@ RealType log_sum_exp(const RealType a, const RealType b, const RealType c)
 
 template <typename RealType,
           typename = std::enable_if_t<std::is_floating_point<RealType>::value>>
-RealType log_sum_exp(std::initializer_list<RealType> il)
+inline RealType log_sum_exp(std::initializer_list<RealType> il)
 {
     const auto max = std::max(il);
     return max + std::log(std::accumulate(std::cbegin(il), std::cend(il), RealType {0},
@@ -256,7 +282,7 @@ RealType log_sum_exp(std::initializer_list<RealType> il)
 
 template <typename ForwardIt,
           typename = std::enable_if_t<!std::is_floating_point<ForwardIt>::value>>
-auto log_sum_exp(ForwardIt first, ForwardIt last)
+inline auto log_sum_exp(ForwardIt first, ForwardIt last)
 {
     assert(first != last);
     using RealType = typename std::iterator_traits<ForwardIt>::value_type;
@@ -267,10 +293,98 @@ auto log_sum_exp(ForwardIt first, ForwardIt last)
                                           }));
 }
 
+template <typename RealType,
+          typename = std::enable_if_t<std::is_floating_point<RealType>::value>>
+inline RealType log_sum_exp(const std::array<RealType, 1>& logs)
+{
+    return logs[0];
+}
+
+template <typename RealType,
+          typename = std::enable_if_t<std::is_floating_point<RealType>::value>>
+inline RealType log_sum_exp(const std::array<RealType, 2>& logs)
+{
+    return log_sum_exp(logs[0], logs[1]);
+}
+
+template <typename RealType,
+          typename = std::enable_if_t<std::is_floating_point<RealType>::value>>
+inline RealType log_sum_exp(const std::array<RealType, 3>& logs)
+{
+    return log_sum_exp(logs[0], logs[1], logs[2]);
+}
+
 template <typename Container>
-auto log_sum_exp(const Container& values)
+inline auto log_sum_exp(const Container& values)
 {
     return log_sum_exp(std::cbegin(values), std::cend(values));
+}
+
+template <typename RealType,
+          typename = std::enable_if_t<std::is_floating_point<RealType>::value>>
+inline RealType fast_log_sum_exp(const RealType a, const RealType b) noexcept
+{
+    const auto r = std::minmax(a, b);
+    return r.second + fast_log(RealType {1} + fast_exp(r.first - r.second));
+}
+
+template <typename RealType,
+          typename = std::enable_if_t<std::is_floating_point<RealType>::value>>
+inline RealType fast_log_sum_exp(const RealType a, const RealType b, const RealType c) noexcept
+{
+    const auto max = std::max({a, b, c});
+    return max + fast_log(fast_exp(a - max) + fast_exp(b - max) + fast_exp(c - max));
+}
+
+template <typename RealType,
+          typename = std::enable_if_t<std::is_floating_point<RealType>::value>>
+inline RealType fast_log_sum_exp(std::initializer_list<RealType> il) noexcept
+{
+    const auto max = std::max(il);
+    return max + fast_log(std::accumulate(std::cbegin(il), std::cend(il), RealType {0},
+                                          [max] (const auto curr, const auto x) noexcept {
+                                              return curr + fast_exp(x - max);
+                                          }));
+}
+
+template <typename ForwardIt,
+          typename = std::enable_if_t<!std::is_floating_point<ForwardIt>::value>>
+inline auto fast_log_sum_exp(ForwardIt first, ForwardIt last) noexcept
+{
+    assert(first != last);
+    using RealType = typename std::iterator_traits<ForwardIt>::value_type;
+    const auto max = *std::max_element(first, last);
+    return max + fast_log(std::accumulate(first, last, RealType {0},
+                                          [max] (const auto curr, const auto x) noexcept {
+                                              return curr + fast_exp(x - max);
+                                          }));
+}
+
+template <typename RealType,
+          typename = std::enable_if_t<std::is_floating_point<RealType>::value>>
+inline RealType fast_log_sum_exp(const std::array<RealType, 1>& logs) noexcept
+{
+    return logs[0];
+}
+
+template <typename RealType,
+          typename = std::enable_if_t<std::is_floating_point<RealType>::value>>
+inline RealType fast_log_sum_exp(const std::array<RealType, 2>& logs) noexcept
+{
+    return fast_log_sum_exp(logs[0], logs[1]);
+}
+
+template <typename RealType,
+          typename = std::enable_if_t<std::is_floating_point<RealType>::value>>
+inline RealType fast_log_sum_exp(const std::array<RealType, 3>& logs) noexcept
+{
+    return fast_log_sum_exp(logs[0], logs[1], logs[2]);
+}
+
+template <typename Container>
+inline auto fast_log_sum_exp(const Container& values) noexcept
+{
+    return fast_log_sum_exp(std::cbegin(values), std::cend(values));
 }
 
 template <typename T, typename IntegerType,
@@ -696,22 +810,22 @@ dirichlet_mle(std::vector<RealType> pi, const RealType precision,
 
 template <typename NumericType = float, typename RealType,
           typename = std::enable_if_t<std::is_floating_point<RealType>::value>>
-NumericType probability_to_phred(const RealType p)
+NumericType probability_true_to_phred(const RealType p)
 {
-    return -10.0 * std::log10(std::max(1.0 - p, std::numeric_limits<RealType>::epsilon()));
+    return NumericType{-10} * std::log10(std::max(RealType {1} - p, std::numeric_limits<RealType>::epsilon()));
 }
 
 template <typename NumericType = float, typename RealType,
           typename = std::enable_if_t<std::is_floating_point<RealType>::value>>
-NumericType probability_to_phred(const RealType p, const unsigned precision)
+NumericType probability_true_to_phred(const RealType p, const unsigned precision)
 {
-    return round(static_cast<NumericType>(-10.0 * std::log10(std::max(1.0 - p, std::numeric_limits<RealType>::epsilon()))), precision);
+    return round(static_cast<NumericType>(RealType {-10} * std::log10(std::max(RealType {1} - p, std::numeric_limits<RealType>::epsilon()))), precision);
 }
 
 template <typename RealType = double, typename NumericType>
 RealType phred_to_probability(const NumericType phred)
 {
-    return 1.0 - std::pow(10.0, -1.0 * static_cast<RealType>(phred) / 10.0);
+    return RealType {1} - std::pow(RealType {10}, RealType {-1} * static_cast<RealType>(phred) / RealType {10});
 }
 
 template <typename MapType>

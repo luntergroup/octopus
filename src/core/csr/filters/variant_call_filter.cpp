@@ -14,6 +14,7 @@
 #include <thread>
 
 #include <boost/range/combine.hpp>
+#include <boost/multiprecision/gmp.hpp>
 
 #include "config/common.hpp"
 #include "containers/mappable_flat_set.hpp"
@@ -143,13 +144,18 @@ VariantCallFilter::merge(const ClassificationList& sample_classifications, const
         result.reasons.erase(std::unique(std::begin(result.reasons), std::end(result.reasons)), std::end(result.reasons));
         result.reasons.shrink_to_fit();
     }
+    std::vector<Phred<double>> sample_classification_qualities {};
+    sample_classification_qualities.reserve(sample_classifications.size());
     for (const auto& sample_classification : sample_classifications) {
         if (sample_classification.quality) {
-            if (result.quality) {
-                result.quality = std::max(*result.quality, *sample_classification.quality);
-            } else {
-                result.quality = sample_classification.quality;
-            }
+            sample_classification_qualities.push_back(*sample_classification.quality);
+        }
+    }
+    if (!sample_classification_qualities.empty()) {
+        if (sample_classification_qualities.size() == 1) {
+            result.quality = sample_classification_qualities.front();
+        } else {
+            result.quality = combine_sample_qualities(sample_classification_qualities);
         }
     }
     return result;
@@ -334,6 +340,28 @@ bool VariantCallFilter::is_soft_filtered(const ClassificationList& sample_classi
 {
     return std::all_of(std::cbegin(sample_classifications), std::cend(sample_classifications),
                        [] (const auto& c) { return c.category != Classification::Category::unfiltered; });
+}
+
+Phred<double> ln_probability_true_to_phred(const double ln_prob_true)
+{
+    assert(ln_prob_true < 0);
+    if (ln_prob_true <= -1e-10) {
+        return Phred<double> {maths::probability_true_to_phred<double>(std::exp(ln_prob_true))};
+    } else {
+        using BigFloat = boost::multiprecision::mpf_float_500;
+        return octopus::ln_probability_true_to_phred<double>(BigFloat {ln_prob_true});
+    }
+}
+
+Phred<double> VariantCallFilter::combine_sample_qualities(const std::vector<Phred<double>>& qualities) const
+{
+    if (std::any_of(std::cbegin(qualities), std::cend(qualities), [] (auto p) { return p.score() <= 0; })) {
+        return Phred<double> {0.0};
+    }
+    std::vector<double> log_probs(qualities.size());
+    std::transform(std::cbegin(qualities), std::cend(qualities), std::begin(log_probs),
+                   [] (auto p) { return std::log(p.probability_true()); });
+    return ln_probability_true_to_phred(std::accumulate(std::cbegin(log_probs), std::cend(log_probs), 0.0));
 }
 
 VcfHeader VariantCallFilter::make_header(const VcfReader& source) const

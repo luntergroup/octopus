@@ -169,7 +169,7 @@ auto extract_genotype(const VcfRecord& call, const SampleName& sample)
 } // namespace
 
 std::pair<std::vector<Allele>, bool>
-get_called_alleles(const VcfRecord& call, const VcfRecord::SampleName& sample, const bool trim_padding)
+get_called_alleles(const VcfRecord& call, const VcfRecord::SampleName& sample, const ReferencePadPolicy ref_pad_policy)
 {
     auto genotype = get_genotype(call, sample);
     remove_missing_alleles(genotype);
@@ -182,7 +182,7 @@ get_called_alleles(const VcfRecord& call, const VcfRecord::SampleName& sample, c
     std::vector<Allele> result {};
     result.reserve(genotype.size());
     bool has_ref {false};
-    if (trim_padding) {
+    if (ref_pad_policy != ReferencePadPolicy::leave) {
         auto first_itr = std::begin(genotype);
         const auto ref_itr = std::find(first_itr, std::end(genotype), call.ref());
         if (ref_itr != std::end(genotype)) {
@@ -214,9 +214,12 @@ get_called_alleles(const VcfRecord& call, const VcfRecord::SampleName& sample, c
         }
         if (has_ref) {
             auto& ref = genotype.front();
-            ref.erase(std::cbegin(ref), std::next(std::cbegin(ref), *max_ref_pad));
-            auto allele_region = expand_lhs(call_region, -*max_ref_pad);
-            result.emplace_back(std::move(allele_region), std::move(ref));
+            if (ref_pad_policy == ReferencePadPolicy::trim_all_alleles) {
+                ref.erase(std::cbegin(ref), std::next(std::cbegin(ref), *max_ref_pad));
+                result.emplace_back(expand_lhs(call_region, -*max_ref_pad), std::move(ref));
+            } else {
+                result.emplace_back(call_region, std::move(ref));
+            }
             std::rotate(std::rbegin(result), std::next(std::rbegin(result)), std::rend(result));
         }
         if (!unknwown_pad_allele_indices.empty()) {

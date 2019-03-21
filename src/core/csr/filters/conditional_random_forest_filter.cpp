@@ -70,16 +70,16 @@ ConditionalRandomForestFilter::ConditionalRandomForestFilter(FacetFactory facet_
                     [] () { return std::make_unique<ranger::ForestProbability>(); });
 }
 
-const std::string ConditionalRandomForestFilter::call_qual_name_ = "RFQUAL";
+const std::string ConditionalRandomForestFilter::genotype_quality_name_ = "RFQUAL";
 
 boost::optional<std::string> ConditionalRandomForestFilter::genotype_quality_name() const
 {
-    return call_qual_name_;
+    return genotype_quality_name_;
 }
 
 void ConditionalRandomForestFilter::annotate(VcfHeader::Builder& header) const
 {
-    header.add_format(call_qual_name_, "1", "Float", "Empirical quality score from random forest classifier");
+    header.add_format(genotype_quality_name_, "1", "Float", "Empirical quality score from random forest classifier");
     header.add_filter("RF", "Random Forest filtered");
 }
 
@@ -331,7 +331,7 @@ VariantCallFilter::Classification ConditionalRandomForestFilter::classify(const 
             result.category = Classification::Category::soft_filtered;
             result.reasons.assign({"RF"});
         }
-        result.quality = probability_to_phred(std::max(prob_false, 1e-10));
+        result.quality = probability_false_to_phred(std::max(prob_false, 1e-10));
     } else {
         result.category = Classification::Category::hard_filtered;
     }

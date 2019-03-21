@@ -87,11 +87,7 @@ const CigarString& AlignedRead::cigar() const noexcept
 
 AlignedRead::Direction AlignedRead::direction() const noexcept
 {
-    if (is_marked_reverse_mapped()) {
-        return Direction::reverse;
-    } else {
-        return Direction::forward;
-    }
+    return is_marked_reverse_mapped() ? Direction::reverse : Direction::forward;
 }
 
 bool AlignedRead::has_other_segment() const noexcept
@@ -266,7 +262,7 @@ bool is_forward_strand(const AlignedRead& read) noexcept
 
 bool is_reverse_strand(const AlignedRead& read) noexcept
 {
-    return !is_forward_strand(read);
+    return read.direction() == AlignedRead::Direction::reverse;
 }
 
 bool is_primary_alignment(const AlignedRead& read) noexcept
@@ -412,62 +408,67 @@ MemoryFootprint footprint(const AlignedRead& read) noexcept
     return sizeof(AlignedRead) + calculate_dynamic_bytes(read);
 }
 
-bool operator==(const AlignedRead& lhs, const AlignedRead& rhs) noexcept
+bool operator==(const AlignedRead::Segment& lhs, const AlignedRead::Segment& rhs) noexcept
 {
-    return lhs.mapping_quality() == rhs.mapping_quality()
-        && lhs.mapped_region()   == rhs.mapped_region()
-        && lhs.cigar()           == rhs.cigar()
-        && lhs.sequence()        == rhs.sequence()
-        && lhs.base_qualities()  == rhs.base_qualities();
+    return lhs.contig_name() == rhs.contig_name()
+           && lhs.begin() == rhs.begin()
+           && lhs.flags_ == rhs.flags_
+           && lhs.inferred_template_length() == rhs.inferred_template_length();
 }
 
-bool operator<(const AlignedRead& lhs, const AlignedRead& rhs) noexcept
-{
-    if (lhs.mapped_region() == rhs.mapped_region()) {
-        if (lhs.mapping_quality() == rhs.mapping_quality()) {
-            if (lhs.cigar() == rhs.cigar()) {
-                if (lhs.sequence() == rhs.sequence()) {
-                    return lhs.base_qualities() < rhs.base_qualities();
-                } else {
-                    return lhs.sequence() < rhs.sequence();
-                }
-            } else {
-                return lhs.cigar() < rhs.cigar();
-            }
-        } else {
-            return lhs.mapping_quality() < rhs.mapping_quality();
-        }
-    } else {
-        return lhs.mapped_region() < rhs.mapped_region();
-    }
-}
-
-bool next_segments_are_duplicates(const AlignedRead& lhs, const AlignedRead& rhs) noexcept
+bool other_segments_equal(const AlignedRead& lhs, const AlignedRead& rhs) noexcept
 {
     if (lhs.has_other_segment()) {
-        if (rhs.has_other_segment()) {
-            return lhs.next_segment() == rhs.next_segment();
-        } else {
-            return false;
-        }
+        return rhs.has_other_segment() && lhs.next_segment() == rhs.next_segment();
     } else {
         return !rhs.has_other_segment();
     }
 }
 
-bool IsDuplicate::operator()(const AlignedRead& lhs, const AlignedRead& rhs) const noexcept
+bool operator==(const AlignedRead& lhs, const AlignedRead& rhs) noexcept
 {
-    return lhs.mapped_region() == rhs.mapped_region()
-        && lhs.cigar() == rhs.cigar()
-        && lhs.is_marked_reverse_mapped() == rhs.is_marked_reverse_mapped()
-        && next_segments_are_duplicates(lhs, rhs);
+    return lhs.mapping_quality() == rhs.mapping_quality()
+        && lhs.flags_ == rhs.flags_
+        && lhs.mapped_region()   == rhs.mapped_region()
+        && lhs.cigar()           == rhs.cigar()
+        && lhs.sequence()        == rhs.sequence()
+        && lhs.base_qualities()  == rhs.base_qualities()
+        && lhs.read_group()      == rhs.read_group()
+        && lhs.name()            == rhs.name()
+        && other_segments_equal(lhs, rhs);
 }
 
-bool operator==(const AlignedRead::Segment& lhs, const AlignedRead::Segment& rhs) noexcept
+bool operator<(const AlignedRead& lhs, const AlignedRead& rhs) noexcept
 {
-    return lhs.contig_name() == rhs.contig_name()
-        && lhs.begin() == rhs.begin()
-        && lhs.inferred_template_length() == rhs.inferred_template_length();
+    if (lhs.mapped_region() == rhs.mapped_region()) {
+        if (lhs.direction() == rhs.direction()) {
+            if (lhs.mapping_quality() == rhs.mapping_quality()) {
+                if (lhs.cigar() == rhs.cigar()) {
+                    if (lhs.sequence() == rhs.sequence()) {
+                        if (lhs.read_group() == rhs.read_group()) {
+                            if (lhs.name() == rhs.name()) {
+                                return lhs.base_qualities() < rhs.base_qualities();
+                            } else {
+                                return lhs.name() < rhs.name();
+                            }
+                        } else {
+                            return lhs.read_group() < rhs.read_group();
+                        }
+                    } else {
+                        return lhs.sequence() < rhs.sequence();
+                    }
+                } else {
+                    return lhs.cigar() < rhs.cigar();
+                }
+            } else {
+                return lhs.mapping_quality() < rhs.mapping_quality();
+            }
+        } else {
+            return lhs.direction() == AlignedRead::Direction::forward; // put forward strand reads first
+        }
+    } else {
+        return lhs.mapped_region() < rhs.mapped_region();
+    }
 }
 
 std::ostream& operator<<(std::ostream& os, const AlignedRead::BaseQualityVector& qualities)
