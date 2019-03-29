@@ -33,8 +33,8 @@ public:
     
     ConditionalThresholdVariantCallFilter(const ConditionalThresholdVariantCallFilter&)            = delete;
     ConditionalThresholdVariantCallFilter& operator=(const ConditionalThresholdVariantCallFilter&) = delete;
-    ConditionalThresholdVariantCallFilter(ConditionalThresholdVariantCallFilter&&)                 = default;
-    ConditionalThresholdVariantCallFilter& operator=(ConditionalThresholdVariantCallFilter&&)      = default;
+    ConditionalThresholdVariantCallFilter(ConditionalThresholdVariantCallFilter&&)                 = delete;
+    ConditionalThresholdVariantCallFilter& operator=(ConditionalThresholdVariantCallFilter&&)      = delete;
     
     virtual ~ConditionalThresholdVariantCallFilter() override = default;
 

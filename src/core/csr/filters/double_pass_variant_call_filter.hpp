@@ -32,8 +32,8 @@ public:
     
     DoublePassVariantCallFilter(const DoublePassVariantCallFilter&)            = delete;
     DoublePassVariantCallFilter& operator=(const DoublePassVariantCallFilter&) = delete;
-    DoublePassVariantCallFilter(DoublePassVariantCallFilter&&)                 = default;
-    DoublePassVariantCallFilter& operator=(DoublePassVariantCallFilter&&)      = default;
+    DoublePassVariantCallFilter(DoublePassVariantCallFilter&&)                 = delete;
+    DoublePassVariantCallFilter& operator=(DoublePassVariantCallFilter&&)      = delete;
     
     virtual ~DoublePassVariantCallFilter() override = default;
 

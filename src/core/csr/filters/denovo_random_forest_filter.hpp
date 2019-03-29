@@ -41,8 +41,8 @@ public:
     
     DeNovoRandomForestVariantCallFilter(const DeNovoRandomForestVariantCallFilter&)            = delete;
     DeNovoRandomForestVariantCallFilter& operator=(const DeNovoRandomForestVariantCallFilter&) = delete;
-    DeNovoRandomForestVariantCallFilter(DeNovoRandomForestVariantCallFilter&&)                 = default;
-    DeNovoRandomForestVariantCallFilter& operator=(DeNovoRandomForestVariantCallFilter&&)      = default;
+    DeNovoRandomForestVariantCallFilter(DeNovoRandomForestVariantCallFilter&&)                 = delete;
+    DeNovoRandomForestVariantCallFilter& operator=(DeNovoRandomForestVariantCallFilter&&)      = delete;
     
     virtual ~DeNovoRandomForestVariantCallFilter() override = default;
 

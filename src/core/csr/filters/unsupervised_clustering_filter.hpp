@@ -27,8 +27,8 @@ public:
     
     UnsupervisedClusteringFilter(const UnsupervisedClusteringFilter&)            = delete;
     UnsupervisedClusteringFilter& operator=(const UnsupervisedClusteringFilter&) = delete;
-    UnsupervisedClusteringFilter(UnsupervisedClusteringFilter&&)                 = default;
-    UnsupervisedClusteringFilter& operator=(UnsupervisedClusteringFilter&&)      = default;
+    UnsupervisedClusteringFilter(UnsupervisedClusteringFilter&&)                 = delete;
+    UnsupervisedClusteringFilter& operator=(UnsupervisedClusteringFilter&&)      = delete;
     
     virtual ~UnsupervisedClusteringFilter() override = default;
     

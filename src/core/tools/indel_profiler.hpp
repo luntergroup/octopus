@@ -54,10 +54,10 @@ public:
     IndelProfiler(ProfileConfig config);
     IndelProfiler(ProfileConfig config, PerformanceConfig performance_config);
     
-    IndelProfiler(const IndelProfiler&)            = default;
-    IndelProfiler& operator=(const IndelProfiler&) = default;
-    IndelProfiler(IndelProfiler&&)                 = default;
-    IndelProfiler& operator=(IndelProfiler&&)      = default;
+    IndelProfiler(const IndelProfiler&)            = delete;
+    IndelProfiler& operator=(const IndelProfiler&) = delete;
+    IndelProfiler(IndelProfiler&&)                 = delete;
+    IndelProfiler& operator=(IndelProfiler&&)      = delete;
     
     ~IndelProfiler() = default;
     

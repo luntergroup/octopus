@@ -40,8 +40,8 @@ public:
     
     DeNovoThresholdVariantCallFilter(const DeNovoThresholdVariantCallFilter&)            = delete;
     DeNovoThresholdVariantCallFilter& operator=(const DeNovoThresholdVariantCallFilter&) = delete;
-    DeNovoThresholdVariantCallFilter(DeNovoThresholdVariantCallFilter&&)                 = default;
-    DeNovoThresholdVariantCallFilter& operator=(DeNovoThresholdVariantCallFilter&&)      = default;
+    DeNovoThresholdVariantCallFilter(DeNovoThresholdVariantCallFilter&&)                 = delete;
+    DeNovoThresholdVariantCallFilter& operator=(DeNovoThresholdVariantCallFilter&&)      = delete;
     
     virtual ~DeNovoThresholdVariantCallFilter() override = default;
 

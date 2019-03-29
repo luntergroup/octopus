@@ -29,9 +29,9 @@ public:
                                            const std::vector<Haplotype>& haplotypes);
     
     VariableMixtureGenotypeLikelihoodModel(const VariableMixtureGenotypeLikelihoodModel&)            = default;
-    VariableMixtureGenotypeLikelihoodModel& operator=(const VariableMixtureGenotypeLikelihoodModel&) = default;
+    VariableMixtureGenotypeLikelihoodModel& operator=(const VariableMixtureGenotypeLikelihoodModel&) = delete;
     VariableMixtureGenotypeLikelihoodModel(VariableMixtureGenotypeLikelihoodModel&&)                 = default;
-    VariableMixtureGenotypeLikelihoodModel& operator=(VariableMixtureGenotypeLikelihoodModel&&)      = default;
+    VariableMixtureGenotypeLikelihoodModel& operator=(VariableMixtureGenotypeLikelihoodModel&&)      = delete;
     
     ~VariableMixtureGenotypeLikelihoodModel() = default;
     

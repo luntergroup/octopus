@@ -196,7 +196,7 @@ Haplotype::Haplotype(R&& region, ForwardIt first_allele, ForwardIt last_allele,
 class Haplotype::Builder
 {
 public:
-    Builder() = default;
+    Builder() = delete;
     
     explicit Builder(const GenomicRegion& region, const ReferenceGenome& reference);
     

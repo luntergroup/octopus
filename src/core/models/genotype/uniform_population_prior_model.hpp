@@ -21,10 +21,10 @@ public:
     
     UniformPopulationPriorModel() = default;
     
-    UniformPopulationPriorModel(const UniformPopulationPriorModel&)            = default;
-    UniformPopulationPriorModel& operator=(const UniformPopulationPriorModel&) = default;
-    UniformPopulationPriorModel(UniformPopulationPriorModel&&)                 = default;
-    UniformPopulationPriorModel& operator=(UniformPopulationPriorModel&&)      = default;
+    UniformPopulationPriorModel(const UniformPopulationPriorModel&)            = delete;
+    UniformPopulationPriorModel& operator=(const UniformPopulationPriorModel&) = delete;
+    UniformPopulationPriorModel(UniformPopulationPriorModel&&)                 = delete;
+    UniformPopulationPriorModel& operator=(UniformPopulationPriorModel&&)      = delete;
     
     virtual ~UniformPopulationPriorModel() = default;
 

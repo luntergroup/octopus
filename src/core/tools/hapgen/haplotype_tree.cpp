@@ -280,6 +280,36 @@ void HaplotypeTree::splice(const Allele& allele)
     return splice(demote(allele));
 }
 
+namespace {
+
+template <typename InputIterator, typename Compare>
+decltype(auto) min_value(InputIterator first, InputIterator last, Compare comp)
+{
+    auto result = *first;
+    ++first;
+    for (; first != last; ++first) {
+        if (comp(*first, result)) {
+            result = *first;
+        }
+    }
+    return result;
+}
+
+template <typename InputIterator, typename Compare>
+decltype(auto) max_value(InputIterator first, InputIterator last, Compare comp)
+{
+    auto result = *first;
+    ++first;
+    for (; first != last; ++first) {
+        if (comp(result, *first)) {
+            result = *first;
+        }
+    }
+    return result;
+}
+
+} // namespace
+
 GenomicRegion HaplotypeTree::encompassing_region() const
 {
     if (tree_region_) return *tree_region_;
@@ -287,14 +317,10 @@ GenomicRegion HaplotypeTree::encompassing_region() const
         throw std::runtime_error {"HaplotypeTree::encompassing_region called on empty tree"};
     }
     const auto p = boost::adjacent_vertices(root_, tree_);
-    const auto leftmost = *std::min_element(p.first, p.second,
-                                            [this] (const auto& lhs, const auto& rhs) {
-                                                return begins_before(tree_[lhs], tree_[rhs]);
-                                            });
-    const auto rightmost = *std::max_element(std::cbegin(haplotype_leafs_), std::cend(haplotype_leafs_),
-                                             [this] (const auto& lhs, const auto& rhs) {
-                                                 return ends_before(tree_[lhs], tree_[rhs]);
-                                             });
+    const auto leftmost = min_value(p.first, p.second, [this] (const auto& lhs, const auto& rhs) {
+                                    return begins_before(tree_[lhs], tree_[rhs]); });
+    const auto rightmost = max_value(std::cbegin(haplotype_leafs_), std::cend(haplotype_leafs_),
+                                    [this] (const auto& lhs, const auto& rhs) { return ends_before(tree_[lhs], tree_[rhs]); });
     tree_region_ = GenomicRegion {contig_, octopus::encompassing_region(tree_[leftmost], tree_[rightmost])};
     return *tree_region_;
 }

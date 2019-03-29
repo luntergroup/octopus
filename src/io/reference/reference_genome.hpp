@@ -30,8 +30,7 @@ public:
     
     ReferenceGenome(const ReferenceGenome&);
     ReferenceGenome& operator=(ReferenceGenome);
-    ReferenceGenome(ReferenceGenome&&)            = default;
-    ReferenceGenome& operator=(ReferenceGenome&&) = default;
+    ReferenceGenome(ReferenceGenome&&) = default;
     
     ~ReferenceGenome() = default;
     

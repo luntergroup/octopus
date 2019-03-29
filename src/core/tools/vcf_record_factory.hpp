@@ -24,9 +24,9 @@ public:
                      std::vector<SampleName> samples, bool sites_only);
     
     VcfRecordFactory(const VcfRecordFactory&)            = default;
-    VcfRecordFactory& operator=(const VcfRecordFactory&) = default;
+    VcfRecordFactory& operator=(const VcfRecordFactory&) = delete;
     VcfRecordFactory(VcfRecordFactory&&)                 = default;
-    VcfRecordFactory& operator=(VcfRecordFactory&&)      = default;
+    VcfRecordFactory& operator=(VcfRecordFactory&&)      = delete;
     
     ~VcfRecordFactory() = default;
     

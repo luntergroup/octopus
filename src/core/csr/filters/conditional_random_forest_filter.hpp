@@ -39,8 +39,8 @@ public:
     
     ConditionalRandomForestFilter(const ConditionalRandomForestFilter&)            = delete;
     ConditionalRandomForestFilter& operator=(const ConditionalRandomForestFilter&) = delete;
-    ConditionalRandomForestFilter(ConditionalRandomForestFilter&&)                 = default;
-    ConditionalRandomForestFilter& operator=(ConditionalRandomForestFilter&&)      = default;
+    ConditionalRandomForestFilter(ConditionalRandomForestFilter&&)                 = delete;
+    ConditionalRandomForestFilter& operator=(ConditionalRandomForestFilter&&)      = delete;
     
     virtual ~ConditionalRandomForestFilter() override = default;
 

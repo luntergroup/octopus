@@ -33,7 +33,6 @@ public:
     VariantGenerator(const VariantGenerator&);
     VariantGenerator& operator=(VariantGenerator);
     VariantGenerator(VariantGenerator&&)            = default;
-    VariantGenerator& operator=(VariantGenerator&&) = default;
     
     virtual ~VariantGenerator() = default;
     

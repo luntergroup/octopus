@@ -70,8 +70,8 @@ private:
     
     VcfHeader header_;
     
-    const std::vector<std::string> samples_;
-    const std::streampos first_record_pos_; // must go after header_!
+    std::vector<std::string> samples_;
+    std::streampos first_record_pos_; // must go after header_!
     
     void reset_vcf() const; // logically const
 };

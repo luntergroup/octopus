@@ -27,8 +27,8 @@ public:
     
     SinglePassVariantCallFilter(const SinglePassVariantCallFilter&)            = delete;
     SinglePassVariantCallFilter& operator=(const SinglePassVariantCallFilter&) = delete;
-    SinglePassVariantCallFilter(SinglePassVariantCallFilter&&)                 = default;
-    SinglePassVariantCallFilter& operator=(SinglePassVariantCallFilter&&)      = default;
+    SinglePassVariantCallFilter(SinglePassVariantCallFilter&&)                 = delete;
+    SinglePassVariantCallFilter& operator=(SinglePassVariantCallFilter&&)      = delete;
     
     virtual ~SinglePassVariantCallFilter() override = default;
     

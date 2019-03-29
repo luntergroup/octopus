@@ -60,8 +60,8 @@ public:
     
     VariantCallFilter(const VariantCallFilter&)            = delete;
     VariantCallFilter& operator=(const VariantCallFilter&) = delete;
-    VariantCallFilter(VariantCallFilter&&)                 = default;
-    VariantCallFilter& operator=(VariantCallFilter&&)      = default;
+    VariantCallFilter(VariantCallFilter&&)                 = delete;
+    VariantCallFilter& operator=(VariantCallFilter&&)      = delete;
     
     virtual ~VariantCallFilter() = default;
     

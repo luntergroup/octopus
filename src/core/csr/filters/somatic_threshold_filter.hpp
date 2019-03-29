@@ -39,8 +39,8 @@ public:
     
     SomaticThresholdVariantCallFilter(const SomaticThresholdVariantCallFilter&)            = delete;
     SomaticThresholdVariantCallFilter& operator=(const SomaticThresholdVariantCallFilter&) = delete;
-    SomaticThresholdVariantCallFilter(SomaticThresholdVariantCallFilter&&)                 = default;
-    SomaticThresholdVariantCallFilter& operator=(SomaticThresholdVariantCallFilter&&)      = default;
+    SomaticThresholdVariantCallFilter(SomaticThresholdVariantCallFilter&&)                 = delete;
+    SomaticThresholdVariantCallFilter& operator=(SomaticThresholdVariantCallFilter&&)      = delete;
     
     virtual ~SomaticThresholdVariantCallFilter() override = default;
 

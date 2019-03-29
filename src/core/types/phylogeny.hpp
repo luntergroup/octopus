@@ -29,8 +29,7 @@ public:
     
     Phylogeny(const Phylogeny&);
     Phylogeny& operator=(Phylogeny);
-    Phylogeny(Phylogeny&&)                 = default;
-    Phylogeny& operator=(Phylogeny&&)      = default;
+    Phylogeny(Phylogeny&&) = default;
     
     ~Phylogeny() = default;
     

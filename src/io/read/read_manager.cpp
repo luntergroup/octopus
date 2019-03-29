@@ -56,6 +56,23 @@ ReadManager::ReadManager(ReadManager&& other)
     samples_                        = move(other.samples_);
 }
 
+ReadManager& ReadManager::operator=(ReadManager&& other)
+{
+    if (this != &other) {
+        std::unique_lock<std::mutex> lock_lhs {mutex_, std::defer_lock}, lock_rhs {other.mutex_, std::defer_lock};
+        std::lock(lock_lhs, lock_rhs);
+        using std::move;
+        max_open_files_                 = move(other.max_open_files_);
+        num_files_                      = move(other.num_files_);
+        closed_readers_                 = move(other.closed_readers_);
+        open_readers_                   = move(other.open_readers_);
+        reader_paths_containing_sample_ = move(other.reader_paths_containing_sample_);
+        possible_regions_in_readers_    = move(other.possible_regions_in_readers_);
+        samples_                        = move(other.samples_);
+    }
+    return *this;
+}
+
 void swap(ReadManager& lhs, ReadManager& rhs) noexcept
 {
     if (&lhs == &rhs) return;

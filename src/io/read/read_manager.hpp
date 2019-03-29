@@ -44,7 +44,7 @@ public:
     ReadManager(const ReadManager&)            = delete;
     ReadManager& operator=(const ReadManager&) = delete;
     ReadManager(ReadManager &&);
-    ReadManager& operator=(ReadManager &&)     = default;
+    ReadManager& operator=(ReadManager &&);
     
     ~ReadManager() = default;
     

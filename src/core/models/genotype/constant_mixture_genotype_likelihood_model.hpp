@@ -24,9 +24,9 @@ public:
                                            const std::vector<Haplotype>& haplotypes);
     
     ConstantMixtureGenotypeLikelihoodModel(const ConstantMixtureGenotypeLikelihoodModel&)            = default;
-    ConstantMixtureGenotypeLikelihoodModel& operator=(const ConstantMixtureGenotypeLikelihoodModel&) = default;
+    ConstantMixtureGenotypeLikelihoodModel& operator=(const ConstantMixtureGenotypeLikelihoodModel&) = delete;
     ConstantMixtureGenotypeLikelihoodModel(ConstantMixtureGenotypeLikelihoodModel&&)                 = default;
-    ConstantMixtureGenotypeLikelihoodModel& operator=(ConstantMixtureGenotypeLikelihoodModel&&)      = default;
+    ConstantMixtureGenotypeLikelihoodModel& operator=(ConstantMixtureGenotypeLikelihoodModel&&)      = delete;
     
     ~ConstantMixtureGenotypeLikelihoodModel() = default;
     

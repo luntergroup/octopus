@@ -48,10 +48,10 @@ public:
     BAMRealigner() = default;
     BAMRealigner(Config config);
     
-    BAMRealigner(const BAMRealigner&)            = default;
-    BAMRealigner& operator=(const BAMRealigner&) = default;
-    BAMRealigner(BAMRealigner&&)                 = default;
-    BAMRealigner& operator=(BAMRealigner&&)      = default;
+    BAMRealigner(const BAMRealigner&)            = delete;
+    BAMRealigner& operator=(const BAMRealigner&) = delete;
+    BAMRealigner(BAMRealigner&&)                 = delete;
+    BAMRealigner& operator=(BAMRealigner&&)      = delete;
     
     ~BAMRealigner() = default;
     

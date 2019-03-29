@@ -29,10 +29,10 @@ public:
     CoalescentPopulationPriorModel(CoalescentModel segregation_model);
     CoalescentPopulationPriorModel(CoalescentModel segregation_model, HardyWeinbergModel genotype_model);
     
-    CoalescentPopulationPriorModel(const CoalescentPopulationPriorModel&)            = default;
-    CoalescentPopulationPriorModel& operator=(const CoalescentPopulationPriorModel&) = default;
-    CoalescentPopulationPriorModel(CoalescentPopulationPriorModel&&)                 = default;
-    CoalescentPopulationPriorModel& operator=(CoalescentPopulationPriorModel&&)      = default;
+    CoalescentPopulationPriorModel(const CoalescentPopulationPriorModel&)            = delete;
+    CoalescentPopulationPriorModel& operator=(const CoalescentPopulationPriorModel&) = delete;
+    CoalescentPopulationPriorModel(CoalescentPopulationPriorModel&&)                 = delete;
+    CoalescentPopulationPriorModel& operator=(CoalescentPopulationPriorModel&&)      = delete;
     
     virtual ~CoalescentPopulationPriorModel() = default;
 

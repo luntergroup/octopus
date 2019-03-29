@@ -141,7 +141,7 @@ struct ContigCallingComponents
 {
     std::reference_wrapper<const ReferenceGenome> reference;
     std::reference_wrapper<const ReadManager> read_manager;
-    const InputRegionMap::mapped_type regions;
+    InputRegionMap::mapped_type regions;
     std::reference_wrapper<const std::vector<SampleName>> samples;
     std::unique_ptr<const Caller> caller;
     std::size_t read_buffer_size;

@@ -26,10 +26,10 @@ public:
                              ConcurrencyPolicy threading,
                              boost::optional<ProgressMeter&> progress = boost::none);
     
-    PassingVariantCallFilter(const PassingVariantCallFilter&)           = delete;
+    PassingVariantCallFilter(const PassingVariantCallFilter&)            = delete;
     PassingVariantCallFilter& operator=(const PassingVariantCallFilter&) = delete;
-    PassingVariantCallFilter(PassingVariantCallFilter&&)                 = default;
-    PassingVariantCallFilter& operator=(PassingVariantCallFilter&&)      = default;
+    PassingVariantCallFilter(PassingVariantCallFilter&&)                 = delete;
+    PassingVariantCallFilter& operator=(PassingVariantCallFilter&&)      = delete;
     
     virtual ~PassingVariantCallFilter() override = default;
 

@@ -41,8 +41,8 @@ public:
     
     SomaticRandomForestVariantCallFilter(const SomaticRandomForestVariantCallFilter&)            = delete;
     SomaticRandomForestVariantCallFilter& operator=(const SomaticRandomForestVariantCallFilter&) = delete;
-    SomaticRandomForestVariantCallFilter(SomaticRandomForestVariantCallFilter&&)                 = default;
-    SomaticRandomForestVariantCallFilter& operator=(SomaticRandomForestVariantCallFilter&&)      = default;
+    SomaticRandomForestVariantCallFilter(SomaticRandomForestVariantCallFilter&&)                 = delete;
+    SomaticRandomForestVariantCallFilter& operator=(SomaticRandomForestVariantCallFilter&&)      = delete;
     
     virtual ~SomaticRandomForestVariantCallFilter() override = default;
 
