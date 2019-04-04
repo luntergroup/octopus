@@ -88,6 +88,22 @@ private:
 
 // non-member methods
 
+template <typename InputIterator, typename T = unsigned>
+CoverageTracker<RegionType<typename std::iterator_traits<InputIterator>::value_type>, T>
+make_coverage_tracker(InputIterator first, InputIterator last)
+{
+    using RegionTp = RegionType<typename std::iterator_traits<InputIterator>::value_type>;
+    CoverageTracker<RegionTp, T> result {};
+    std::for_each(first, last, [&result] (const auto& mappable) { result.add(mappable); });
+    return result;
+}
+
+template <typename Range, typename T = unsigned>
+auto make_coverage_tracker(const Range& mappables)
+{
+    return make_coverage_tracker<typename Range::const_iterator, T>(std::cbegin(mappables), std::cend(mappables));
+}
+
 template <typename Region>
 std::vector<Region> get_covered_regions(const CoverageTracker<Region>& tracker, const Region& region)
 {
