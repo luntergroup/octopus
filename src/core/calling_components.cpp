@@ -479,6 +479,8 @@ class InputVCFError : public UserError
 
 public:
     InputVCFError(fs::path vcf_path) : vcf_path_ {std::move(vcf_path)} {}
+    
+    virtual ~InputVCFError() override = default;
 };
 
 } // namespace
