@@ -77,7 +77,7 @@ ReadPipe make_call_filter_read_pipe(ReadManager& read_manager, const ReferenceGe
 
 boost::optional<fs::path> get_output_path(const OptionMap& options);
 
-boost::optional<fs::path> create_temp_file_directory(const OptionMap& options);
+fs::path create_temp_file_directory(const OptionMap& options);
 
 bool is_legacy_vcf_requested(const OptionMap& options);
 

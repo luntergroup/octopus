@@ -1994,18 +1994,107 @@ boost::optional<fs::path> get_output_path(const OptionMap& options)
     return boost::none;
 }
 
-boost::optional<fs::path> create_temp_file_directory(const OptionMap& options)
+class UnwritableTempDirectory : public SystemError
+{
+    std::string do_where() const override { return "create_temp_file_directory"; }
+    std::string do_why() const override
+    {
+        std::ostringstream ss{};
+        ss << "Failed to create temporary directory " << directory_;
+        if (error_) {
+            switch (error_->value()) {
+                case boost::system::errc::permission_denied: {
+                    ss << ": permission denied";
+                    break;
+                }
+                case boost::system::errc::read_only_file_system: {
+                    ss << ": read only file system";
+                    break;
+                }
+                case boost::system::errc::not_enough_memory: {
+                    ss << ": not enough memory";
+                    break;
+                }
+                case boost::system::errc::filename_too_long: {
+                    ss << ": bad path";
+                    break;
+                }
+                case boost::system::errc::io_error: {
+                    ss << ": io error";
+                    break;
+                }
+                default: {
+                    ss << ": unexpected error (error code - " << *error_ << ")";
+                    break;
+                }
+            }
+        }
+        return ss.str();
+    }
+    std::string do_help() const override
+    {
+        std::ostringstream ss {};
+        if (error_) {
+            switch(error_->value()) {
+                case boost::system::errc::permission_denied: {
+                    ss << "Check user has write permissions to " << directory_.parent_path()
+                       << " or select another temp directory location";
+                    break;
+                }
+                case boost::system::errc::read_only_file_system: {
+                    ss << "Check user has write permissions to " << directory_.parent_path()
+                       << " or select another temp directory location";
+                    break;
+                }
+                case boost::system::errc::not_enough_memory: {
+                    ss << "Ensure sufficient disk quota is available";
+                    break;
+                }
+                case boost::system::errc::filename_too_long: {
+                    ss << "Specify another temp directory name";
+                    break;
+                }
+                default: {
+                    ss << "Send a debug report to " << config::BugReport;
+                    break;
+                }
+            }
+        }
+        return ss.str();
+    }
+    
+    fs::path directory_;
+    boost::optional<boost::system::error_code> error_;
+
+public:
+    UnwritableTempDirectory(fs::path directory)
+    : directory_ {std::move(directory)}
+    , error_ {}
+    {}
+    UnwritableTempDirectory(fs::path directory, boost::system::error_code error)
+    : directory_ {std::move(directory)}
+    , error_ {error}
+    {}
+    
+    virtual ~UnwritableTempDirectory() override = default;
+};
+
+fs::path create_temp_file_directory(const OptionMap& options)
 {
     const auto working_directory = get_working_directory(options);
     auto result = working_directory;
     const fs::path temp_dir_base_name {options.at("temp-directory-prefix").as<fs::path>()};
     result /= temp_dir_base_name;
-    constexpr unsigned temp_dir_name_count_limit {10000};
+    constexpr unsigned temp_dir_name_count_limit {10'000};
     unsigned temp_dir_counter {2};
-    
     logging::WarningLogger log {};
-    
-    while (fs::exists(result) && temp_dir_counter <= temp_dir_name_count_limit) {
+    boost::system::error_code error_code {};
+    while (!fs::create_directory(result, error_code) && temp_dir_counter <= temp_dir_name_count_limit) {
+        if (error_code != boost::system::errc::success) {
+            // if create_directory returns false and error code is not set then directory already exists
+            // https://stackoverflow.com/a/51804969/2970186
+            throw UnwritableTempDirectory {result, error_code};
+        }
         if (fs::is_empty(result)) {
             stream(log) << "Found empty temporary directory " << result
             << ", it may need to be deleted manually";
@@ -2014,18 +2103,11 @@ boost::optional<fs::path> create_temp_file_directory(const OptionMap& options)
         result /= temp_dir_base_name.string() + "-" + std::to_string(temp_dir_counter);
         ++temp_dir_counter;
     }
-    
     if (temp_dir_counter > temp_dir_name_count_limit) {
         log << "There are many temporary directories in working directory indicating an error"
         " - new directory request blocked";
-        return boost::none;
+        throw UnwritableTempDirectory {result};
     }
-    
-    if (!fs::create_directory(result)) {
-        stream(log) << "Failed to create temporary directory " << result << " - check permissions";
-        return boost::none;
-    }
-    
     return result;
 }
 
