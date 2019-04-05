@@ -1,7 +1,7 @@
 // Copyright (c) 2015-2019 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
-#include "dense_variation_detector.hpp"
+#include "bad_region_detector.hpp"
 
 #include <deque>
 #include <array>
@@ -21,15 +21,112 @@
 #include "utils/mappable_algorithms.hpp"
 #include "utils/read_stats.hpp"
 #include "utils/maths.hpp"
+#include "utils/append.hpp"
 
 #include <iostream>
 
 namespace octopus { namespace coretools {
 
-DenseVariationDetector::DenseVariationDetector(Parameters params, boost::optional<ReadSetProfile> reads_profile)
+BadRegionDetector::BadRegionDetector(Parameters params, boost::optional<ReadSetProfile> reads_profile)
 : params_ {params}
 , reads_profile_ {std::move(reads_profile)}
 {}
+
+std::vector<BadRegionDetector::BadRegion>
+BadRegionDetector::detect(const MappableFlatSet<Variant>& candidate_variants, const ReadMap& reads,
+                               boost::optional<const ReadPipe::Report&> reads_report) const
+{
+    auto candidate_bad_regions = get_candidate_bad_regions(candidate_variants, reads, reads_report);
+    if (candidate_bad_regions.empty()) return {};
+    const auto candidate_bad_regions_states = compute_states(candidate_bad_regions, candidate_variants, reads, reads_report);
+    const auto is_bad_state = [this] (const auto& state) { return is_bad(state); };
+    auto bad_state_itr = std::find_if(std::cbegin(candidate_bad_regions_states), std::cend(candidate_bad_regions_states), is_bad_state);
+    std::vector<BadRegion> result {};
+    result.reserve(result.size());
+    while (bad_state_itr != std::cend(candidate_bad_regions_states)) {
+        const auto state_idx = static_cast<std::size_t>(std::distance(std::cbegin(candidate_bad_regions_states), bad_state_itr));
+        auto next_bad_state_itr = std::find_if(std::next(bad_state_itr), std::cend(candidate_bad_regions_states), is_bad_state);
+        if (next_bad_state_itr != std::cend(candidate_bad_regions_states) && next_bad_state_itr == std::next(bad_state_itr)) {
+            auto connecting_region = *intervening_region(candidate_bad_regions[state_idx], candidate_bad_regions[state_idx + 1]);
+            auto connecting_state = compute_state(connecting_region, candidate_variants, reads, reads_report);
+            if (is_bad(connecting_state)) {
+                result.push_back({std::move(connecting_region), BadRegion::RecommendedAction::restrict_lagging});
+            }
+        }
+        result.push_back({std::move(candidate_bad_regions[state_idx]), BadRegion::RecommendedAction::skip});
+        bad_state_itr = next_bad_state_itr;
+    }
+    return result;
+}
+
+namespace {
+
+template <typename Range, typename T>
+std::size_t find_index(const Range& values, const T& value)
+{
+    return std::distance(std::cbegin(values), std::find(std::cbegin(values), std::cend(values), value));
+}
+
+auto find_high_depth_regions(const GenomicRegion& target_region, const ReadPipe::Report::DepthMap& read_depths, const ReadSetProfile& profile)
+{
+    std::vector<GenomicRegion> sample_high_depth_regions {};
+    const auto num_samples = read_depths.size();
+    assert(read_depths.size() <= profile.samples.size());
+    sample_high_depth_regions.reserve(num_samples);
+    for (const auto& p : read_depths) {
+        const auto sample_depths = p.second.get(target_region);
+        const auto sample_idx = find_index(profile.samples, p.first);
+        assert(sample_idx < profile.sample_median_positive_depth.size());
+        const auto depth_threshold = static_cast<unsigned>(5 * profile.sample_median_positive_depth[sample_idx]);
+        utils::append(find_high_coverage_regions(sample_depths, target_region, depth_threshold), sample_high_depth_regions);
+    }
+    if (num_samples == 1) {
+        return sample_high_depth_regions;
+    } else {
+        std::sort(std::begin(sample_high_depth_regions), std::end(sample_high_depth_regions));
+        return extract_covered_regions(sample_high_depth_regions);
+    }
+}
+
+auto find_high_depth_regions(const GenomicRegion& target_region, const ReadMap& reads, const ReadSetProfile& profile)
+{
+    ReadPipe::Report::DepthMap depths {};
+    depths.reserve(reads.size());
+    for (const auto& p : reads) depths.emplace(p.first, make_coverage_tracker(p.second));
+    return find_high_depth_regions(target_region, depths, profile);
+}
+
+auto find_high_depth_regions(const ReadMap& reads, const ReadSetProfile& profile,
+                             boost::optional<const ReadPipe::Report&> reads_reports)
+{
+    const auto target_region = encompassing_region(reads);
+    if (reads_reports) {
+        return find_high_depth_regions(target_region, reads_reports->raw_depths, profile);
+    } else {
+        return find_high_depth_regions(target_region, reads, profile);
+    }
+}
+
+void merge(std::vector<GenomicRegion> src, std::vector<GenomicRegion>& dst)
+{
+    auto itr = utils::append(std::move(src), dst);
+    std::inplace_merge(std::begin(dst), itr, std::end(dst));
+}
+
+
+} // namespace
+
+std::vector<GenomicRegion>
+BadRegionDetector::get_candidate_bad_regions(const MappableFlatSet<Variant>& candidate_variants, const ReadMap& reads,
+                                             boost::optional<const ReadPipe::Report&> reads_report) const
+{
+    auto result = get_candidate_dense_regions(candidate_variants, reads, reads_report);
+    if (reads_profile_) {
+        merge(find_high_depth_regions(reads, *reads_profile_, reads_report), result);
+        result = extract_covered_regions(result);
+    }
+    return result;
+}
 
 namespace {
 
@@ -194,132 +291,29 @@ auto find_dense_regions(const MappableFlatSet<Variant>& variants, const ReadMap&
                        auto joined_block_count = sum_block_counts(contained);
                        return AlleleBlock {joined_block_region, joined_block_count};
                    });
-    MappableFlatSet<GenomicRegion> result {};
+    std::vector<GenomicRegion> result {};
     const auto join_threshold = max_shared_dense_zones * dense_zone_log_count_threshold;
     for (const auto& block : dense_blocks) {
         if (block.log_count > join_threshold) {
-            result.insert(GenomicRegion {contig, block.region});
+            result.push_back(GenomicRegion {contig, block.region});
         }
     }
     return result;
-}
-
-struct RegionState
-{
-    GenomicRegion region;
-    unsigned variant_count;
-    double variant_density;
-    unsigned mean_read_depth;
-    AlignedRead::MappingQuality rmq_mapping_quality, median_mapping_quality;
-};
-
-auto compute_state(const GenomicRegion& region, const MappableFlatSet<Variant>& variants, const ReadMap& reads)
-{
-    RegionState result {};
-    result.region = region;
-    result.rmq_mapping_quality = rmq_mapping_quality(reads, region);
-    result.median_mapping_quality = median_mapping_quality(reads, region);
-    result.mean_read_depth = mean_coverage(reads, region) / reads.size();
-    result.variant_count = count_overlapped(variants, region);
-    result.variant_density = static_cast<double>(result.variant_count) / size(region);
-    return result;
-}
-
-auto compute_states(const MappableFlatSet<GenomicRegion>& regions, const MappableFlatSet<Variant>& variants, const ReadMap& reads)
-{
-    std::vector<RegionState> result {};
-    result.reserve(regions.size());
-    for (const auto& region : regions) {
-        result.push_back(compute_state(region, variants, reads));
-    }
-    return result;
-}
-
-bool should_join(const RegionState& lhs_state, const RegionState& connecting_state, const RegionState& rhs_state)
-{
-    if (connecting_state.variant_density > std::min(lhs_state.variant_density, rhs_state.variant_density) / 2) {
-        return true;
-    }
-    if (size(connecting_state.region) > std::max(size(lhs_state.region), size(rhs_state.region))) {
-        return false;
-    }
-    if (connecting_state.median_mapping_quality < std::min(lhs_state.median_mapping_quality, rhs_state.median_mapping_quality)) {
-        return true;
-    }
-    if (connecting_state.mean_read_depth > std::min(lhs_state.mean_read_depth, rhs_state.mean_read_depth)) {
-        return true;
-    }
-    return false;
-}
-
-auto join_dense_regions(const MappableFlatSet<GenomicRegion>& dense_regions,
-                        const MappableFlatSet<Variant>& variants, const ReadMap& reads)
-{
-    if (dense_regions.size() > 1) {
-        std::vector<GenomicRegion> final_regions {};
-        final_regions.reserve(dense_regions.size());
-        const auto dense_states = compute_states(dense_regions, variants, reads);
-        final_regions.push_back(dense_regions.front());
-        for (std::size_t i {1}; i < dense_regions.size(); ++i) {
-            const auto connecting_region = *intervening_region(dense_regions[i - 1], dense_regions[i]);
-            const auto connecting_state = compute_state(connecting_region, variants, reads);
-            if (should_join(dense_states[i - 1], connecting_state, dense_states[i])) {
-                final_regions.push_back(connecting_region);
-            }
-            final_regions.push_back(dense_regions[i]);
-        }
-        return extract_covered_regions(final_regions);
-    } else {
-        return std::vector<GenomicRegion> {dense_regions.front()};
-    }
 }
 
 } // namespace
 
-std::vector<DenseVariationDetector::DenseRegion>
-DenseVariationDetector::detect(const MappableFlatSet<Variant>& variants, const ReadMap& reads,
-                               boost::optional<const ReadPipe::Report&> reads_report) const
+std::vector<GenomicRegion>
+BadRegionDetector::get_candidate_dense_regions(const MappableFlatSet<Variant>& candidates, const ReadMap& reads,
+                                               boost::optional<const ReadPipe::Report&> reads_report) const
 {
     const auto average_read_length = mean_read_length(reads);
     auto expected_log_count = get_max_expected_log_allele_count_per_base();
     const auto dense_zone_log_count_threshold = expected_log_count * average_read_length;
-    auto dense_regions = find_dense_regions(variants, reads, dense_zone_log_count_threshold, 1);
-    if (dense_regions.empty()) return {};
-    auto joined_dense_regions = join_dense_regions(dense_regions, variants, reads);
-    std::vector<DenseRegion> result {};
-    result.reserve(joined_dense_regions.size());
-    double max_expected_coverage {};
-    if (reads_profile_) {
-        max_expected_coverage = 2 * (std::max(reads_profile_->mean_depth, reads_profile_->median_depth) / reads.size()) + 2 * reads_profile_->depth_stdev;
-    } else {
-        max_expected_coverage = 2 * (mean_coverage(reads) / reads.size());
-    }
-    for (const auto& region : joined_dense_regions) {
-        const auto state = compute_state(region, variants, reads);
-        auto total_mean_depth = state.mean_read_depth;
-        if (reads_report) {
-            const auto num_downsampled_reads = count_downsampled_reads(reads_report->downsample_report, region);
-            const auto mean_downsample_depth = static_cast<double>(num_downsampled_reads) / size(state.region);
-            total_mean_depth += mean_downsample_depth;
-        }
-        if (state.variant_count > 100 && size(state.region) > average_read_length && total_mean_depth > max_expected_coverage) {
-            result.push_back({region, DenseRegion::RecommendedAction::skip});
-        } else if (state.variant_count > 50
-            && reads_profile_
-            && std::min(state.median_mapping_quality, state.rmq_mapping_quality)
-              < std::max(reads_profile_->median_mapping_quality, reads_profile_->rmq_mapping_quality)
-            && state.mean_read_depth > 1000) {
-            if (params_.density_tolerance == Parameters::Tolerance::low) {
-                result.push_back({region, DenseRegion::RecommendedAction::skip});
-            } else {
-                result.push_back({region, DenseRegion::RecommendedAction::restrict_lagging});
-            }
-        }
-    }
-    return result;
+    return find_dense_regions(candidates, reads, dense_zone_log_count_threshold, 1);
 }
 
-double DenseVariationDetector::get_max_expected_log_allele_count_per_base() const noexcept
+double BadRegionDetector::get_max_expected_log_allele_count_per_base() const noexcept
 {
     using Tolerance = Parameters::Tolerance;
     double stdev_multiplier {1};
@@ -330,6 +324,71 @@ double DenseVariationDetector::get_max_expected_log_allele_count_per_base() cons
         default: stdev_multiplier = 6;
     }
     return params_.heterozygosity + stdev_multiplier * params_.heterozygosity_stdev;
+}
+
+BadRegionDetector::RegionState
+BadRegionDetector::compute_state(const GenomicRegion& region, const MappableFlatSet<Variant>& variants,
+                                 const ReadMap& reads, boost::optional<const ReadPipe::Report&> reads_report) const
+{
+    RegionState result {};
+    result.region = region;
+    result.median_mapping_quality = median_mapping_quality(reads, region);
+    result.sample_mean_read_depths.reserve(reads.size());
+    result.sample_mean_read_depths.reserve(reads.size());
+    if (reads_report) {
+        for (const auto& p : reads_report->raw_depths) {
+            result.sample_mean_read_depths.emplace(p.first, p.second.mean(region));
+        }
+    } else {
+        for (const auto& p : reads) {
+            result.sample_mean_read_depths.emplace(p.first, mean_coverage(p.second, region));
+        }
+    }
+    result.variant_count = count_contained(variants, region);
+    result.variant_density = static_cast<double>(result.variant_count) / size(region);
+    result.max_read_length = max_read_length(reads);
+    return result;
+}
+
+std::vector<BadRegionDetector::RegionState>
+BadRegionDetector::compute_states(const std::vector<GenomicRegion>& regions, const MappableFlatSet<Variant>& variants,
+                                  const ReadMap& reads, boost::optional<const ReadPipe::Report&> reads_report) const
+{
+    std::vector<RegionState> result {};
+    result.reserve(regions.size());
+    for (const auto& region : regions) {
+        result.push_back(compute_state(region, variants, reads, reads_report));
+    }
+    return result;
+}
+
+double BadRegionDetector::calculate_probability_good(const RegionState& state) const
+{
+    // Basic idea
+    // larger regions -> lower probability
+    // lower mapping quality -> higher probability
+    // higher variant density -> higher probability
+    // higher depth -> higher probability
+    double result {1};
+    if (reads_profile_) {
+        for (std::size_t s {0}; s < reads_profile_->samples.size(); ++s) {
+            auto mu = 5 * std::max(reads_profile_->sample_median_positive_depth[s], reads_profile_->sample_mean_positive_depth[s]);
+            auto sigma = reads_profile_->sample_depth_stdev[s];
+            result *= maths::normal_sf<double>(state.sample_mean_read_depths.at(reads_profile_->samples[s]), mu, sigma);
+        }
+    }
+    const auto density_mean = size(state.region) * (params_.heterozygosity + 2 * params_.heterozygosity_stdev);
+    result *= maths::poisson_sf(state.variant_count, density_mean);
+    if (state.median_mapping_quality < 40) {
+        result /= 2;
+    }
+    return result;
+}
+
+bool BadRegionDetector::is_bad(const RegionState& state) const
+{
+    const auto lower_bound = 0.01 * std::pow(0.9, state.sample_mean_read_depths.size() - 1);
+    return state.variant_count > 0 && calculate_probability_good(state) < lower_bound;
 }
 
 } // namespace coretools

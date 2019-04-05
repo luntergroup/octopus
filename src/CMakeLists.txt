@@ -476,8 +476,8 @@ set(CORE_SOURCES
     core/tools/hapgen/haplotype_generator.cpp
     core/tools/hapgen/haplotype_tree.hpp
     core/tools/hapgen/haplotype_tree.cpp
-    core/tools/hapgen/dense_variation_detector.hpp
-    core/tools/hapgen/dense_variation_detector.cpp
+    core/tools/hapgen/bad_region_detector.hpp
+    core/tools/hapgen/bad_region_detector.cpp
     
     core/tools/phaser/phaser.hpp
     core/tools/phaser/phaser.cpp
