@@ -143,6 +143,7 @@ profile_reads(const std::vector<SampleName>& samples,
     ReadSetProfile result {};
     result.mean_read_bytes = maths::mean(bytes);
     result.read_bytes_stdev = maths::stdev(bytes);
+    result.samples = samples;
     result.sample_mean_depth.resize(samples.size());
     result.sample_median_depth.resize(samples.size());
     result.sample_depth_stdev.resize(samples.size());
