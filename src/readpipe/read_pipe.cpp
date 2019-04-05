@@ -135,10 +135,16 @@ ReadMap ReadPipe::fetch_reads(const GenomicRegion& region, boost::optional<Repor
     for (const auto& sample : samples_) {
         result.emplace(std::piecewise_construct, std::forward_as_tuple(sample), std::forward_as_tuple());
     }
+    if (report) report->raw_depths.reserve(samples_.size());
     for (const auto& batch : batch_samples(samples_)) {
         auto batch_reads = fetch_batch(source_, batch, region);
         if (debug_log_) {
             stream(*debug_log_) << "Fetched " << count_reads(batch_reads) << " unfiltered reads from " << region;
+        }
+        if (report) {
+            for (const auto& p : batch_reads) {
+                report->raw_depths.emplace(p.first, make_coverage_tracker(p.second));
+            }
         }
         transform_reads(batch_reads, prefilter_transformer_);
         if (debug_log_) {
