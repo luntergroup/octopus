@@ -62,6 +62,8 @@ void init(MeasureMakerMap& measure_makers)
     measure_makers[name<BaseMismatchFraction>()]        = [] () { return make_wrapped_measure<BaseMismatchFraction>(); };
     measure_makers[name<AssignedDepth>()]               = [] () { return make_wrapped_measure<AssignedDepth>(); };
     measure_makers[name<DuplicateConcordance>()]        = [] () { return make_wrapped_measure<DuplicateConcordance>(); };
+    measure_makers[name<DuplicateAlleleDepth>()]        = [] () { return make_wrapped_measure<DuplicateAlleleDepth>(); };
+    measure_makers[name<DuplicateAlleleFraction>()]     = [] () { return make_wrapped_measure<DuplicateAlleleFraction>(); };
 }
 
 class BadParameterList : public UserError
