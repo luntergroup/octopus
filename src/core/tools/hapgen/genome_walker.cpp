@@ -45,9 +45,20 @@ bool is_sandwich_allele(BidirIt first, BidirIt allele, BidirIt last)
 }
 
 template <typename BidirIt>
+bool is_indel(const BidirIt first_itr, const BidirIt target_itr)
+{
+    bool result {false};
+    std::find_if(std::make_reverse_iterator(target_itr), std::make_reverse_iterator(first_itr),
+                 [&] (const auto& allele) {
+        if (is_indel(allele)) result = true;
+        return result || !is_same_region(allele, *target_itr); });
+    return result;
+}
+
+template <typename BidirIt>
 bool is_indel_boundary(BidirIt first, BidirIt allele, BidirIt last)
 {
-    if (allele != first && allele != last && std::next(allele) != last && is_indel(*allele)) {
+    if (allele != first && allele != last && std::next(allele) != last && is_indel(first, allele)) {
         auto itr = std::find_if(std::make_reverse_iterator(std::prev(allele)), std::make_reverse_iterator(first),
                                 [allele] (const auto& a) { return !overlaps(a, *allele) || is_indel(a); });
         return itr != std::make_reverse_iterator(first) && overlaps(*itr, *allele) && is_indel(*itr);
@@ -60,7 +71,7 @@ template <typename BidirIt>
 bool is_interacting_indel(BidirIt first, BidirIt allele, BidirIt last,
                           const GenomicRegion::Size max_gap = 3)
 {
-    if (allele != first && allele != last && std::next(allele) != last && is_indel(*allele)) {
+    if (allele != first && allele != last && std::next(allele) != last && is_indel(first, allele)) {
         const auto interaction_region = expand_lhs(mapped_region(*allele), std::min(reference_distance(*allele), max_gap));
         auto itr = std::find_if(std::make_reverse_iterator(std::prev(allele)), std::make_reverse_iterator(first),
                                 [&interaction_region] (const auto& a) { return overlaps(a, interaction_region); });
