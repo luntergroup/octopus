@@ -389,6 +389,8 @@ set(CORE_SOURCES
     core/csr/measures/base_mismatch_fraction.cpp
     core/csr/measures/assigned_depth.hpp
     core/csr/measures/assigned_depth.cpp
+    core/csr/measures/duplicate_concordance.hpp
+    core/csr/measures/duplicate_concordance.cpp
 
     core/models/haplotype_likelihood_array.hpp
     core/models/haplotype_likelihood_array.cpp

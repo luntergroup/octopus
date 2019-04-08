@@ -48,5 +48,6 @@
 #include "core/csr/measures/base_mismatch_count.hpp"
 #include "core/csr/measures/base_mismatch_fraction.hpp"
 #include "core/csr/measures/assigned_depth.hpp"
+#include "core/csr/measures/duplicate_concordance.hpp"
 
 #endif
