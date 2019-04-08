@@ -23,7 +23,7 @@ public:
     {
         enum class Tolerance { low, normal, high };
         double heterozygosity, heterozygosity_stdev;
-        Tolerance density_tolerance = Tolerance::normal;
+        Tolerance tolerance = Tolerance::normal;
     };
     
     struct BadRegion

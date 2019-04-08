@@ -317,7 +317,7 @@ double BadRegionDetector::get_max_expected_log_allele_count_per_base() const noe
 {
     using Tolerance = Parameters::Tolerance;
     double stdev_multiplier {1};
-    switch (params_.density_tolerance) {
+    switch (params_.tolerance) {
         case Tolerance::low: stdev_multiplier = 3; break;
         case Tolerance::high: stdev_multiplier = 7; break;
         case Tolerance::normal:
@@ -365,20 +365,33 @@ BadRegionDetector::compute_states(const std::vector<GenomicRegion>& regions, con
 double BadRegionDetector::calculate_probability_good(const RegionState& state) const
 {
     // Basic idea
-    // larger regions -> lower probability
     // lower mapping quality -> higher probability
     // higher variant density -> higher probability
     // higher depth -> higher probability
     double result {1};
     if (reads_profile_) {
         for (std::size_t s {0}; s < reads_profile_->samples.size(); ++s) {
-            auto mu = 5 * std::max(reads_profile_->sample_median_positive_depth[s], reads_profile_->sample_mean_positive_depth[s]);
+            double tolerance_factor;
+            switch (params_.tolerance) {
+                case Parameters::Tolerance::high: tolerance_factor = 6; break;
+                case Parameters::Tolerance::normal: tolerance_factor = 5; break;
+                case Parameters::Tolerance::low: tolerance_factor = 4; break;
+            }
+            auto mu = tolerance_factor * std::max(reads_profile_->sample_median_positive_depth[s], reads_profile_->sample_mean_positive_depth[s]);
             auto sigma = reads_profile_->sample_depth_stdev[s];
             result *= maths::normal_sf<double>(state.sample_mean_read_depths.at(reads_profile_->samples[s]), mu, sigma);
         }
     }
-    const auto density_mean = size(state.region) * (params_.heterozygosity + 2 * params_.heterozygosity_stdev);
-    result *= maths::poisson_sf(state.variant_count, density_mean);
+    {
+        double tolerance_factor;
+        switch (params_.tolerance) {
+            case Parameters::Tolerance::high: tolerance_factor = 60; break;
+            case Parameters::Tolerance::normal: tolerance_factor = 50; break;
+            case Parameters::Tolerance::low: tolerance_factor = 40; break;
+        }
+        const auto density_mean = size(state.region) * (params_.heterozygosity + tolerance_factor * params_.heterozygosity_stdev);
+        result *= maths::poisson_sf(state.variant_count, density_mean);
+    }
     if (state.median_mapping_quality < 40) {
         result /= 2;
     }
@@ -387,8 +400,31 @@ double BadRegionDetector::calculate_probability_good(const RegionState& state) c
 
 bool BadRegionDetector::is_bad(const RegionState& state) const
 {
-    const auto lower_bound = 0.01 * std::pow(0.9, state.sample_mean_read_depths.size() - 1);
-    return state.variant_count > 0 && calculate_probability_good(state) < lower_bound;
+    GenomicRegion::Size min_region_size {100};
+    unsigned min_alleles {0};
+    double tolerance_factor;
+    switch (params_.tolerance) {
+        case Parameters::Tolerance::high: {
+            min_alleles = 20;
+            tolerance_factor = 0.001;
+            min_region_size = 200;
+            break;
+        }
+        case Parameters::Tolerance::normal: {
+            min_alleles = 10;
+            tolerance_factor = 0.01;
+            break;
+        }
+        case Parameters::Tolerance::low: {
+            min_alleles = 5;
+            tolerance_factor = 0.1;
+            break;
+        }
+    }
+    auto min_good_prob = tolerance_factor * std::pow(0.9, state.sample_mean_read_depths.size() - 1);
+    return state.variant_count > min_alleles
+        && size(state.region) > min_region_size
+        && calculate_probability_good(state) < min_good_prob;
 }
 
 } // namespace coretools

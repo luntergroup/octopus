@@ -437,6 +437,10 @@ OptionMap parse_options(const int argc, const char** argv)
     ("protect-reference-haplotype",
      po::value<bool>()->default_value(true),
      "Protect the reference haplotype from filtering")
+    
+    ("bad-region-tolerance",
+     po::value<BadRegionTolerance>()->default_value(BadRegionTolerance::normal),
+     "Tolerance for 'bad' region skipping - regions that are likely uncallable and will slow down calling [low, normal, high]")
     ;
     
     po::options_description caller("Calling (general)");
@@ -1300,6 +1304,36 @@ std::ostream& operator<<(std::ostream& out, const NormalContaminationRisk& risk)
             out << "low";
             break;
         case NormalContaminationRisk::high:
+            out << "high";
+            break;
+    }
+    return out;
+}
+
+std::istream& operator>>(std::istream& in, BadRegionTolerance& result)
+{
+    std::string token;
+    in >> token;
+    if (token == "low")
+        result = BadRegionTolerance::low;
+    else if (token == "normal")
+        result = BadRegionTolerance::normal;
+    else if (token == "high")
+        result = BadRegionTolerance::high;
+    else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token, "bad-region-tolerance"};
+    return in;
+}
+
+std::ostream& operator<<(std::ostream& out, const BadRegionTolerance& tolerance)
+{
+    switch (tolerance) {
+        case BadRegionTolerance::low:
+            out << "low";
+            break;
+        case BadRegionTolerance::normal:
+            out << "normal";
+            break;
+        case BadRegionTolerance::high:
             out << "high";
             break;
     }

@@ -1311,22 +1311,6 @@ auto get_max_haplotypes(const OptionMap& options)
     }
 }
 
-bool have_low_tolerance_for_dense_regions(const OptionMap& options, const boost::optional<ReadSetProfile>& input_reads_profile)
-{
-    if (is_cancer_calling(options)) {
-        if (as_unsigned("max-somatic-haplotypes", options) < 2) {
-            return false;
-        }
-        if (input_reads_profile) {
-            const auto approx_average_depth = maths::median(input_reads_profile->sample_median_positive_depth);
-            if (approx_average_depth > 2000) {
-                return true;
-            }
-        }
-    }
-    return false;
-}
-
 auto get_dense_variation_detector(const OptionMap& options, const boost::optional<ReadSetProfile>& input_reads_profile)
 {
     auto snp_heterozygosity = options.at("snp-heterozygosity").as<float>();
@@ -1341,8 +1325,11 @@ auto get_dense_variation_detector(const OptionMap& options, const boost::optiona
         heterozygosity_stdev *= (1.0 /  options.at("min-expected-somatic-frequency").as<float>());
     }
     coretools::BadRegionDetector::Parameters params {heterozygosity, heterozygosity_stdev};
-    if (have_low_tolerance_for_dense_regions(options, input_reads_profile)) {
-        params.density_tolerance = coretools::BadRegionDetector::Parameters::Tolerance::low;
+    using Tolerance = coretools::BadRegionDetector::Parameters::Tolerance;
+    switch (options.at("bad-region-tolerance").as<BadRegionTolerance>()) {
+        case BadRegionTolerance::high: params.tolerance = Tolerance::high;
+        case BadRegionTolerance::normal: params.tolerance = Tolerance::normal;
+        case BadRegionTolerance::low: params.tolerance = Tolerance::low;
     }
     return coretools::BadRegionDetector {params, input_reads_profile};
 }

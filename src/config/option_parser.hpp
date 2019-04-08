@@ -35,6 +35,7 @@ enum class RefCallType { positional, blocked };
 enum class ExtensionLevel { conservative, normal, optimistic, aggressive };
 enum class PhasingLevel { minimal, conservative, moderate, normal, aggressive };
 enum class NormalContaminationRisk { low, high };
+enum class BadRegionTolerance { low, normal, high };
 
 std::istream& operator>>(std::istream& in, ContigOutputOrder& coo);
 std::ostream& operator<<(std::ostream& os, const ContigOutputOrder& coo);
@@ -48,6 +49,8 @@ std::istream& operator>>(std::istream& in, PhasingLevel& pl);
 std::ostream& operator<<(std::ostream& os, const PhasingLevel& pl);
 std::istream& operator>>(std::istream& in, NormalContaminationRisk& risk);
 std::ostream& operator<<(std::ostream& os, const NormalContaminationRisk& risk);
+std::istream& operator>>(std::istream& in, BadRegionTolerance& risk);
+std::ostream& operator<<(std::ostream& os, const BadRegionTolerance& risk);
 
 } // namespace Options
 } // namespace octopus
