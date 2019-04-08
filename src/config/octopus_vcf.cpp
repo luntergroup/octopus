@@ -69,7 +69,9 @@ static const std::unordered_map<std::string, std::string> filter_descriptions
 {spec::filter::alleleDepth, "Low empirical allele depth"},
 {spec::filter::somaticMappingQuality, "Low somatic mapping quality"},
 {spec::filter::lowAssignedDepth, "Assigned depth is low"},
-{spec::filter::lowDuplicateConcordance, "Duplicate read concordance is low"}
+{spec::filter::lowDuplicateConcordance, "Duplicate read concordance is low"},
+{spec::filter::highDuplicateAlleleDepth, "Number of duplicate reads supporting allele is high"},
+{spec::filter::highDuplicateAlleleFraction, "High fraction of reads supporting allele are duplicates"}
 };
 
 VcfHeader::Builder& add_filter(VcfHeader::Builder& builder, const std::string& key)

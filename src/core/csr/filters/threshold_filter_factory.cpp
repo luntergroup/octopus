@@ -93,6 +93,8 @@ void init(MeasureToFilterKeyMap& filter_names)
     filter_names[name<MedianSomaticMappingQuality>()] = somaticMappingQuality;
     filter_names[name<AssignedDepth>()]               = lowAssignedDepth;
     filter_names[name<DuplicateConcordance>()]        = lowDuplicateConcordance;
+    filter_names[name<DuplicateAlleleDepth>()]        = highDuplicateAlleleDepth;
+    filter_names[name<DuplicateAlleleFraction>()]     = highDuplicateAlleleFraction;
 }
 
 auto get_vcf_filter_name(const MeasureWrapper& measure, const std::string& comparator, const double threshold_target)

@@ -63,6 +63,8 @@ VCF_SPEC_CONSTANT lowClassificationConfidence {"CC"};
 VCF_SPEC_CONSTANT somaticMappingQuality {"SMQ"};
 VCF_SPEC_CONSTANT lowAssignedDepth {"ADP"};
 VCF_SPEC_CONSTANT lowDuplicateConcordance {"LDC"};
+VCF_SPEC_CONSTANT highDuplicateAlleleDepth {"DAD"};
+VCF_SPEC_CONSTANT highDuplicateAlleleFraction {"DAF"};
 
 } // namespace filter
 
