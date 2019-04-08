@@ -190,6 +190,8 @@ set(UTILS_SOURCES
     utils/system_utils.cpp
     utils/k_medoids.hpp
     utils/random_select.hpp
+    utils/read_duplicates.hpp
+    utils/read_duplicates.cpp
 )
 
 set(CORE_SOURCES

@@ -14,6 +14,7 @@
 #include "basics/cigar_string.hpp"
 #include "basics/aligned_read.hpp"
 #include "basics/mappable_reference_wrapper.hpp"
+#include "utils/read_duplicates.hpp"
 
 namespace octopus { namespace readpipe
 {
@@ -257,20 +258,6 @@ private:
     virtual BidirIt do_partition(BidirIt first, BidirIt last) const = 0;
 };
 
-bool primary_segments_are_duplicates(const AlignedRead& lhs, const AlignedRead& rhs) noexcept;
-bool other_segments_are_duplicates(const AlignedRead& lhs, const AlignedRead& rhs) noexcept;
-
-struct IsDuplicate
-{
-    bool operator()(const AlignedRead& lhs, const AlignedRead& rhs) const noexcept;
-};
-
-template <typename Range>
-bool no_duplicates(const AlignedRead& read, const Range& reads) noexcept
-{
-    return std::none_of(std::cbegin(reads), std::cend(reads), [&read] (auto other_itr) { return IsDuplicate{}(read, *other_itr); });
-}
-
 template <typename ForwardIt>
 struct IsNotDuplicate : ContextReadFilter<ForwardIt>
 {
@@ -280,26 +267,7 @@ struct IsNotDuplicate : ContextReadFilter<ForwardIt>
     
     ForwardIt do_remove(ForwardIt first, ForwardIt last) const override
     {
-        // Recall that reads come sorted w.r.t operator< and it is therefore not guaranteed that 'duplicate'
-        // reads (according to IsDuplicate) will be adjacent to one another. In particular, operator< only
-        // guarantees that the read segment described in the A
-        first = std::adjacent_find(first, last, [] (const auto& lhs, const auto& rhs) { return primary_segments_are_duplicates(lhs, rhs); });
-        if (first != last) {
-            std::vector<ForwardIt> buffer {first++};
-            buffer.reserve(100);
-            for (auto itr = first; itr != last; ++itr) {
-                if (primary_segments_are_duplicates(*itr, *buffer.front())) { // can check any read in buffer
-                    if (no_duplicates(*itr, buffer)) {
-                        if (itr != first) *first = std::move(*itr);
-                        buffer.emplace_back(first++);
-                    }
-                } else {
-                    if (itr != first) *first = std::move(*itr);
-                    buffer.assign({first++});
-                }
-            }
-        }
-        return first;
+        return remove_duplicates(first, last);
     }
     
     ForwardIt do_partition(ForwardIt first, ForwardIt last) const override
