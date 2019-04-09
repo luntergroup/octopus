@@ -73,17 +73,48 @@ void pop_front(std::vector<T>& v)
     v.erase(std::cbegin(v));
 }
 
-auto calculate_support(const std::vector<AlignedRead>& duplicate_reads, const AlleleSupportMap& allele_support)
+auto compute_alternative_allele_support(const VcfRecord& call, const VcfRecord::SampleName& sample, const Facet::SupportMaps& assignments)
+{
+    std::vector<Allele> alleles; bool has_ref;
+    std::tie(alleles, has_ref) = get_called_alleles(call, sample);
+    if (has_ref) pop_front(alleles); // ref always first
+    return compute_allele_support(alleles, assignments, sample);
+}
+
+bool other_segments_equal(const AlignedRead& lhs, const AlignedRead& rhs) noexcept
+{
+    if (lhs.has_other_segment()) {
+        return rhs.has_other_segment() && lhs.next_segment() == rhs.next_segment();
+    } else {
+        return !rhs.has_other_segment();
+    }
+}
+
+bool are_realigned_equal(const AlignedRead& lhs, const AlignedRead& rhs) noexcept
+{
+    return lhs.mapping_quality()    == rhs.mapping_quality()
+           && lhs.name()            == rhs.name()
+           && lhs.sequence()        == rhs.sequence()
+           && lhs.base_qualities()  == rhs.base_qualities()
+           && lhs.read_group()      == rhs.read_group()
+           && lhs.flags()           == rhs.flags()
+           && other_segments_equal(lhs, rhs);
+}
+
+bool is_duplicate(const AlignedRead& realigned_read, const std::vector<AlignedRead>& duplicate_reads)
+{
+    // Duplicate realigned reads may have different mapping position and cigar to the raw duplicate reads
+    const auto is_duplicate = [&] (const auto& read) { return are_realigned_equal(read, realigned_read); };
+    return std::find_if(std::cbegin(duplicate_reads), std::cend(duplicate_reads), is_duplicate) != std::cend(duplicate_reads);
+}
+
+auto count_duplicate_support(const std::vector<AlignedRead>& duplicate_reads, const AlleleSupportMap& allele_support)
 {
     unsigned min_support {}, result {};
     for (const auto& p : allele_support) {
         if (min_support == 0 || p.second.size() < min_support) {
-            result = 0;
-            for (const auto& supporting_read : p.second) {
-                if (std::find(std::cbegin(duplicate_reads), std::cend(duplicate_reads), supporting_read.get()) != std::cend(duplicate_reads)) {
-                    ++result;
-                }
-            }
+            const auto is_duplicate_helper = [&] (const auto& read) { return is_duplicate(read, duplicate_reads); };
+            result = std::count_if(std::cbegin(p.second), std::cend(p.second), is_duplicate_helper);
             min_support = p.second.size();
             if (result > 1) --result; // One 'duplicate' read is not actually a duplicate
         }
@@ -106,12 +137,9 @@ Measure::ResultType DuplicateAlleleDepth::do_evaluate(const VcfRecord& call, con
             sample_result = 0;
             const auto duplicate_reads = find_duplicate_overlapped_reads(reads.at(sample), mapped_region(call));
             if (!duplicate_reads.empty()) {
-                std::vector<Allele> alleles; bool has_ref;
-                std::tie(alleles, has_ref) = get_called_alleles(call, sample);
-                if (has_ref) pop_front(alleles); // ref always first
-                const auto allele_support = compute_allele_support(alleles, assignments, sample);
+                const auto allele_support = compute_alternative_allele_support(call, sample, assignments);
                 for (const auto& duplicates : duplicate_reads) {
-                    *sample_result += calculate_support(duplicates, allele_support);
+                    *sample_result += count_duplicate_support(duplicates, allele_support);
                 }
             }
         }

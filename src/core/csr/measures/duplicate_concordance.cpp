@@ -62,6 +62,33 @@ auto find_duplicate_overlapped_reads(const ReadContainer& reads, const GenomicRe
     return result;
 }
 
+bool other_segments_equal(const AlignedRead& lhs, const AlignedRead& rhs) noexcept
+{
+    if (lhs.has_other_segment()) {
+        return rhs.has_other_segment() && lhs.next_segment() == rhs.next_segment();
+    } else {
+        return !rhs.has_other_segment();
+    }
+}
+
+bool are_realigned_equal(const AlignedRead& lhs, const AlignedRead& rhs) noexcept
+{
+    return lhs.mapping_quality()    == rhs.mapping_quality()
+           && lhs.name()            == rhs.name()
+           && lhs.sequence()        == rhs.sequence()
+           && lhs.base_qualities()  == rhs.base_qualities()
+           && lhs.read_group()      == rhs.read_group()
+           && lhs.flags()           == rhs.flags()
+           && other_segments_equal(lhs, rhs);
+}
+
+bool is_duplicate(const AlignedRead& realigned_read, const std::vector<AlignedRead>& duplicate_reads)
+{
+    // Duplicate realigned reads may have different mapping position and cigar to the raw duplicate reads
+    const auto is_duplicate = [&] (const auto& read) { return are_realigned_equal(read, realigned_read); };
+    return std::find_if(std::cbegin(duplicate_reads), std::cend(duplicate_reads), is_duplicate) != std::cend(duplicate_reads);
+}
+
 double calculate_support_concordance(const std::vector<AlignedRead>& duplicate_reads, const AlleleSupportMap& allele_support)
 {
     assert(duplicate_reads.size() > 1);
@@ -69,12 +96,8 @@ double calculate_support_concordance(const std::vector<AlignedRead>& duplicate_r
     unsigned total_duplicate_support {0};
     support_counts.reserve(allele_support.size());
     for (const auto& p : allele_support) {
-        unsigned duplicate_support {0};
-        for (const auto& supporting_read : p.second) {
-            if (std::find(std::cbegin(duplicate_reads), std::cend(duplicate_reads), supporting_read.get()) != std::cend(duplicate_reads)) {
-                ++duplicate_support;
-            }
-        }
+        const auto is_duplicate_helper = [&] (const auto& read) { return is_duplicate(read, duplicate_reads); };
+        const auto duplicate_support = std::count_if(std::cbegin(p.second), std::cend(p.second), is_duplicate_helper);
         if (duplicate_support > 0) {
             support_counts.push_back(duplicate_support);
             total_duplicate_support += duplicate_support;
