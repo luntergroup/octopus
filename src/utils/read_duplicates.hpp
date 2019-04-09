@@ -41,12 +41,15 @@ std::vector<std::vector<ForwardIt>>
 find_duplicates(ForwardIt first, const ForwardIt last)
 {
     std::vector<std::vector<ForwardIt>> result {};
+    std::vector<ForwardIt> buffer {};
     // Recall that reads come sorted w.r.t operator< and it is therefore not guaranteed that 'duplicate'
     // reads (according to IsDuplicate) will be adjacent to one another. In particular, operator< only
     // guarantees that duplicate read segment described in the AlignedRead object will be adjacent.
     const static auto are_primary_dups = [] (const auto& lhs, const auto& rhs) { return primary_segments_are_duplicates(lhs, rhs); };
     for (first = std::adjacent_find(first, last, are_primary_dups); first != last; first = std::adjacent_find(first, last, are_primary_dups)) {
-        std::vector<ForwardIt> buffer {first, std::next(first)};
+        buffer.reserve(8);
+        if (first->has_other_segment()) buffer.push_back(first);
+        if (std::next(first)->has_other_segment()) buffer.push_back(std::next(first));
         const AlignedRead& primary_dup_read {*first};
         std::advance(first, 2);
         for (; first != last && primary_segments_are_duplicates(*first, primary_dup_read); ++first) {
@@ -56,7 +59,7 @@ find_duplicates(ForwardIt first, const ForwardIt last)
         const static auto are_dups = [] (ForwardIt lhs, ForwardIt rhs) { return are_duplicates(*lhs, *rhs); };
         for (auto dup_itr = std::adjacent_find(buffer.cbegin(), buffer.cend(), are_dups); dup_itr != buffer.cend();
                  dup_itr = std::adjacent_find(dup_itr, buffer.cend(), are_dups)) {
-            std::vector<ForwardIt> duplicates {dup_itr, std::next(dup_itr)};
+            std::vector<ForwardIt> duplicates {dup_itr, std::next(dup_itr, 2)};
             const AlignedRead& duplicate_read {**dup_itr};
             std::advance(dup_itr, 2);
             for (; dup_itr != buffer.cend() && are_duplicates(**dup_itr, duplicate_read); ++dup_itr) {
@@ -64,6 +67,7 @@ find_duplicates(ForwardIt first, const ForwardIt last)
             }
             result.push_back(std::move(duplicates));
         }
+        buffer.clear();
     }
     return result;
 }
