@@ -438,6 +438,21 @@ bool operator==(const AlignedRead& lhs, const AlignedRead& rhs) noexcept
         && other_segments_equal(lhs, rhs);
 }
 
+bool operator==(const AlignedRead::Flags& lhs, const AlignedRead::Flags& rhs) noexcept
+{
+    return lhs.multiple_segment_template    == rhs.multiple_segment_template
+        && lhs.all_segments_in_read_aligned == rhs.all_segments_in_read_aligned
+        && lhs.unmapped                     == rhs.unmapped
+        && lhs.reverse_mapped               == rhs.reverse_mapped
+        && lhs.secondary_alignment          == rhs.secondary_alignment
+        && lhs.qc_fail                      == rhs.qc_fail
+        && lhs.duplicate                    == rhs.duplicate
+        && lhs.supplementary_alignment      == rhs.supplementary_alignment
+        && lhs.first_template_segment       == rhs.first_template_segment
+        && lhs.last_template_segment        == rhs.last_template_segment;
+        
+}
+
 bool operator<(const AlignedRead& lhs, const AlignedRead& rhs) noexcept
 {
     if (lhs.mapped_region() == rhs.mapped_region()) {

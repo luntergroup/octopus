@@ -268,6 +268,8 @@ bool operator<(const AlignedRead& lhs, const AlignedRead& rhs) noexcept;
 
 bool operator==(const AlignedRead::Segment& lhs, const AlignedRead::Segment& rhs) noexcept;
 
+bool operator==(const AlignedRead::Flags& lhs, const AlignedRead::Flags& rhs) noexcept;
+
 std::ostream& operator<<(std::ostream& os, const AlignedRead::BaseQualityVector& qualities);
 std::ostream& operator<<(std::ostream& os, const AlignedRead& read);
 
