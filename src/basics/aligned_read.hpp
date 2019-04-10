@@ -124,11 +124,15 @@ public:
     bool is_marked_all_segments_in_read_aligned() const noexcept;
     bool is_marked_multiple_segment_template() const noexcept;
     bool is_marked_unmapped() const noexcept;
+    bool is_marked_next_segment_unmapped() const noexcept;
     bool is_marked_reverse_mapped() const noexcept;
+    bool is_marked_next_segment_reverse_mapped() const noexcept;
     bool is_marked_secondary_alignment() const noexcept;
     bool is_marked_qc_fail() const noexcept;
     bool is_marked_duplicate() const noexcept;
     bool is_marked_supplementary_alignment() const noexcept;
+    bool is_marked_first_template_segment() const noexcept;
+    bool is_marked_last_template_segment() const noexcept;
     
     friend bool operator==(const AlignedRead& lhs, const AlignedRead& rhs) noexcept;
     friend bool operator<(const AlignedRead& lhs, const AlignedRead& rhs) noexcept;

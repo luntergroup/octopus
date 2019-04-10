@@ -132,9 +132,19 @@ bool AlignedRead::is_marked_unmapped() const noexcept
     return flags_[2];
 }
 
+bool AlignedRead::is_marked_next_segment_unmapped() const noexcept
+{
+    return has_other_segment() && next_segment().is_marked_unmapped();
+}
+
 bool AlignedRead::is_marked_reverse_mapped() const noexcept
 {
     return flags_[3];
+}
+
+bool AlignedRead::is_marked_next_segment_reverse_mapped() const noexcept
+{
+    return has_other_segment() && next_segment().is_marked_reverse_mapped();
 }
 
 bool AlignedRead::is_marked_secondary_alignment() const noexcept
@@ -155,6 +165,16 @@ bool AlignedRead::is_marked_duplicate() const noexcept
 bool AlignedRead::is_marked_supplementary_alignment() const noexcept
 {
     return flags_[7];
+}
+
+bool AlignedRead::is_marked_first_template_segment() const noexcept
+{
+    return flags_[8];
+}
+
+bool AlignedRead::is_marked_last_template_segment() const noexcept
+{
+    return flags_[9];
 }
 
 // private methods
