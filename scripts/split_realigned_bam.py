@@ -34,7 +34,7 @@ def main(options):
     in_bam = ps.AlignmentFile(options.bam)
     out_bam_prefix = Path(options.output)
     variant_out_bams = [ps.AlignmentFile(str(out_bam_prefix) + '_0.bam', 'wb', template=in_bam)]
-    ref_out_bam = None if options.assigned_only else ps.AlignmentFile(str(out_bam_prefix) + '.bam', 'wb', template=in_bam)
+    ref_out_bam = None if options.assigned_only else ps.AlignmentFile(str(out_bam_prefix) + '_R.bam', 'wb', template=in_bam)
     
     for read in in_bam:
         haplotype_id = get_haplotype_id(read)
