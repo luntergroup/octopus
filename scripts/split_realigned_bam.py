@@ -13,7 +13,7 @@ def get_haplotype_id(read):
         return None
 
 def bam_index_exists(bam_fname):
-    return isfile(bam_fname.with_suffix(bam_fname.suffix + '.bai'))
+    return isfile(str(bam_fname.with_suffix(bam_fname.suffix + '.bai')))
 
 def index_bam(bam_fname, sort_if_needed=False):
     ps.index(str(bam_fname))
