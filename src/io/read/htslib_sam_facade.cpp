@@ -987,18 +987,19 @@ void set_flag(bool set, std::uint16_t mask, std::uint16_t& result) noexcept
 
 void set_flags(const AlignedRead& read, bam1_t* result) noexcept
 {
-    const auto flags = read.flags();
     auto& bitset = result->core.flag;
-    set_flag(flags.multiple_segment_template,    BAM_FPAIRED, bitset);
-    set_flag(flags.all_segments_in_read_aligned, BAM_FPROPER_PAIR, bitset);
-    set_flag(flags.unmapped,                     BAM_FUNMAP, bitset);
-    set_flag(flags.reverse_mapped,               BAM_FREVERSE, bitset);
-    set_flag(flags.secondary_alignment,          BAM_FSECONDARY, bitset);
-    set_flag(flags.qc_fail,                      BAM_FQCFAIL, bitset);
-    set_flag(flags.duplicate,                    BAM_FDUP, bitset);
-    set_flag(flags.supplementary_alignment,      BAM_FSUPPLEMENTARY, bitset);
-    set_flag(flags.first_template_segment,       BAM_FREAD1, bitset);
-    set_flag(flags.last_template_segment,        BAM_FREAD2, bitset);
+    set_flag(read.is_marked_multiple_segment_template(),    BAM_FPAIRED, bitset);
+    set_flag(read.is_marked_all_segments_in_read_aligned(), BAM_FPROPER_PAIR, bitset);
+    set_flag(read.is_marked_unmapped(),                     BAM_FUNMAP, bitset);
+    set_flag(read.is_marked_next_segment_unmapped(),        BAM_FMUNMAP, bitset);
+    set_flag(read.is_marked_reverse_mapped(),               BAM_FREVERSE, bitset);
+    set_flag(read.is_marked_next_segment_reverse_mapped(),  BAM_FMREVERSE, bitset);
+    set_flag(read.is_marked_secondary_alignment(),          BAM_FSECONDARY, bitset);
+    set_flag(read.is_marked_qc_fail(),                      BAM_FQCFAIL, bitset);
+    set_flag(read.is_marked_duplicate(),                    BAM_FDUP, bitset);
+    set_flag(read.is_marked_supplementary_alignment(),      BAM_FSUPPLEMENTARY, bitset);
+    set_flag(read.is_marked_first_template_segment(),       BAM_FREAD1, bitset);
+    set_flag(read.is_marked_last_template_segment(),        BAM_FREAD2, bitset);
 }
 
 void set_segment(const AlignedRead& read, const std::int32_t tid, bam1_t* result)
