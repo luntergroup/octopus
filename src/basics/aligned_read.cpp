@@ -515,19 +515,76 @@ std::ostream& operator<<(std::ostream& os, const AlignedRead::BaseQualityVector&
     return os;
 }
 
+namespace {
+
+/*! @abstract the read is paired in sequencing, no matter whether it is mapped in a pair */
+static constexpr std::uint16_t BAM_FPAIRED =       1;
+/*! @abstract the read is mapped in a proper pair */
+static constexpr std::uint16_t BAM_FPROPER_PAIR =  2;
+/*! @abstract the read itself is unmapped; conflictive with BAM_FPROPER_PAIR */
+static constexpr std::uint16_t BAM_FUNMAP =        4;
+/*! @abstract the mate is unmapped */
+static constexpr std::uint16_t BAM_FMUNMAP =       8;
+/*! @abstract the read is mapped to the reverse strand */
+static constexpr std::uint16_t BAM_FREVERSE =     16;
+/*! @abstract the mate is mapped to the reverse strand */
+static constexpr std::uint16_t BAM_FMREVERSE =    32;
+/*! @abstract this is read1 */
+static constexpr std::uint16_t BAM_FREAD1 =       64;
+/*! @abstract this is read2 */
+static constexpr std::uint16_t BAM_FREAD2 =      128;
+/*! @abstract not primary alignment */
+static constexpr std::uint16_t BAM_FSECONDARY =  256;
+/*! @abstract QC failure */
+static constexpr std::uint16_t BAM_FQCFAIL =     512;
+/*! @abstract optical or PCR duplicate */
+static constexpr std::uint16_t BAM_FDUP =       1024;
+/*! @abstract supplementary alignment */
+static constexpr std::uint16_t BAM_FSUPPLEMENTARY = 2048;
+
+void set_flag(bool set, std::uint16_t mask, std::uint16_t& result) noexcept
+{
+    constexpr std::uint16_t zeros {0}, ones = -1;
+    result |= (set ? ones : zeros) & mask;
+}
+
+auto compute_flag_bits(const AlignedRead& read) noexcept
+{
+    std::uint16_t result {};
+    set_flag(read.is_marked_multiple_segment_template(),    BAM_FPAIRED, result);
+    set_flag(read.is_marked_all_segments_in_read_aligned(), BAM_FPROPER_PAIR, result);
+    set_flag(read.is_marked_unmapped(),                     BAM_FUNMAP, result);
+    set_flag(read.is_marked_next_segment_unmapped(),        BAM_FMUNMAP, result);
+    set_flag(read.is_marked_reverse_mapped(),               BAM_FREVERSE, result);
+    set_flag(read.is_marked_next_segment_reverse_mapped(),  BAM_FMREVERSE, result);
+    set_flag(read.is_marked_secondary_alignment(),          BAM_FSECONDARY, result);
+    set_flag(read.is_marked_qc_fail(),                      BAM_FQCFAIL, result);
+    set_flag(read.is_marked_duplicate(),                    BAM_FDUP, result);
+    set_flag(read.is_marked_supplementary_alignment(),      BAM_FSUPPLEMENTARY, result);
+    set_flag(read.is_marked_first_template_segment(),       BAM_FREAD1, result);
+    set_flag(read.is_marked_last_template_segment(),        BAM_FREAD2, result);
+    return result;
+}
+
+} // namespace
+
 std::ostream& operator<<(std::ostream& os, const AlignedRead& read)
 {
-    os << read.name() << ' ';
-    os << read.mapped_region() << ' ';
-    os << read.sequence() << ' ';
-    os << read.base_qualities() << ' ';
-    os << read.cigar() << ' ';
-    os << static_cast<unsigned>(read.mapping_quality()) << ' ';
+    os << read.name() << '\t';
+    os << compute_flag_bits(read) << '\t';
+    os << contig_name(read) << '\t';
+    os << mapped_begin(read) << '\t';
+    os << static_cast<unsigned>(read.mapping_quality()) << '\t';
+    os << read.cigar() << '\t';
     if (read.has_other_segment()) {
-        os << read.next_segment().contig_name() << ' ';
-        os << read.next_segment().begin() << ' ';
-        os << read.next_segment().inferred_template_length();
+        os << read.next_segment().contig_name() << '\t';
+        os << read.next_segment().begin() << '\t';
+        os << read.next_segment().inferred_template_length() << '\t';
+    } else {
+        os << "*\t0\t0\t";
     }
+    os << read.sequence() << '\t';
+    os << read.base_qualities() << '\t';
     return os;
 }
 
