@@ -57,6 +57,8 @@ set(BASICS_SOURCES
     basics/read_pileup.cpp
     basics/tandem_repeat.hpp
     basics/tandem_repeat.cpp
+    basics/aligned_template.hpp
+    basics/aligned_template.cpp
 )
 
 set(CONTAINERS_SOURCES
