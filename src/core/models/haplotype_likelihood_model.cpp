@@ -275,6 +275,22 @@ HaplotypeLikelihoodModel::evaluate(const AlignedRead& read,
     }
 }
 
+HaplotypeLikelihoodModel::LogProbability
+HaplotypeLikelihoodModel::evaluate(const AlignedTemplate& reads) const
+{
+    return std::accumulate(std::cbegin(reads), std::cend(reads), LogProbability {0},
+                           [this] (LogProbability curr, const AlignedRead& read) { return curr + this->evaluate(read); });
+}
+
+HaplotypeLikelihoodModel::LogProbability
+HaplotypeLikelihoodModel::evaluate(const AlignedTemplate& reads, const std::vector<MappingPositionVector>& mapping_positions) const
+{
+    assert(reads.size() == mapping_positions.size());
+    return std::inner_product(std::cbegin(reads), std::cend(reads), std::cbegin(mapping_positions), LogProbability {0},
+                              std::plus<> {}, [this] (const AlignedRead& read, const MappingPositionVector& mapping_positions)
+                              { return this->evaluate(read, mapping_positions); });
+}
+
 HaplotypeLikelihoodModel::Alignment
 HaplotypeLikelihoodModel::align(const AlignedRead& read) const
 {
