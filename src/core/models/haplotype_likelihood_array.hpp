@@ -14,6 +14,7 @@
 #include "config/common.hpp"
 #include "core/types/haplotype.hpp"
 #include "basics/aligned_read.hpp"
+#include "basics/aligned_template.hpp"
 #include "utils/kmer_mapper.hpp"
 #include "haplotype_likelihood_model.hpp"
 
@@ -54,6 +55,8 @@ public:
     
     void populate(const ReadMap& reads, const std::vector<Haplotype>& haplotypes,
                   boost::optional<FlankState> flank_state = boost::none);
+    void populate(const TemplateMap& reads, const std::vector<Haplotype>& haplotypes,
+                  boost::optional<FlankState> flank_state = boost::none);
     
     std::size_t num_likelihoods(const SampleName& sample) const;
     
@@ -90,6 +93,13 @@ private:
         Iterator first, last;
         std::size_t num_reads;
     };
+    struct TemplatePacket
+    {
+        using Iterator = TemplateMap::mapped_type::const_iterator;
+        TemplatePacket(Iterator first, Iterator last);
+        Iterator first, last;
+        std::size_t num_templates;
+    };
     
     std::unordered_map<Haplotype, std::vector<LikelihoodVector>, HaplotypeHash> cache_;
     std::unordered_map<SampleName, std::size_t> sample_indices_;
@@ -98,9 +108,11 @@ private:
     
     // Just to optimise population
     std::vector<ReadPacket> read_iterators_;
+    std::vector<TemplatePacket> template_iterators_;
     std::vector<std::size_t> mapping_positions_;
     
     void set_read_iterators_and_sample_indices(const ReadMap& reads);
+    void set_template_iterators_and_sample_indices(const TemplateMap& reads);
 };
 
 template <typename S, typename Container>

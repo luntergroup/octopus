@@ -37,6 +37,12 @@ HaplotypeLikelihoodArray::ReadPacket::ReadPacket(Iterator first, Iterator last)
 , num_reads {static_cast<std::size_t>(std::distance(first, last))}
 {}
 
+HaplotypeLikelihoodArray::TemplatePacket::TemplatePacket(Iterator first, Iterator last)
+: first {first}
+, last {last}
+, num_templates {static_cast<std::size_t>(std::distance(first, last))}
+{}
+
 void HaplotypeLikelihoodArray::populate(const ReadMap& reads,
                                         const std::vector<Haplotype>& haplotypes,
                                         boost::optional<FlankState> flank_state)
@@ -82,6 +88,65 @@ void HaplotypeLikelihoodArray::populate(const ReadMap& reads,
                                return likelihood_model_.evaluate(read, first_mapping_position, last_mapping_position);
                            });
             ++read_hash_itr;
+            ++itr;
+        }
+        clear_kmer_hash_table(haplotype_hashes);
+    }
+    likelihood_model_.clear();
+    read_iterators_.clear();
+}
+
+void HaplotypeLikelihoodArray::populate(const TemplateMap& reads, const std::vector<Haplotype>& haplotypes,
+                                        boost::optional<FlankState> flank_state)
+{
+    cache_.clear();
+    if (cache_.bucket_count() < haplotypes.size()) {
+        cache_.rehash(haplotypes.size());
+    }
+    set_template_iterators_and_sample_indices(reads);
+    assert(reads.size() == template_iterators_.size());
+    const auto num_samples = reads.size();
+    // Precompute all read hashes so we don't have to recompute for each haplotype
+    std::vector<std::vector<std::vector<KmerPerfectHashes>>> template_hashes {};
+    template_hashes.reserve(num_samples);
+    for (const auto& t : template_iterators_) {
+        std::vector<std::vector<KmerPerfectHashes>> sample_read_hashes {};
+        sample_read_hashes.reserve(t.num_templates);
+        std::transform(t.first, t.last, std::back_inserter(sample_read_hashes), [] (const AlignedTemplate& reads) {
+            std::vector<KmerPerfectHashes> result {};
+            result.reserve(reads.size());
+            for (const auto& read : reads) result.push_back(compute_kmer_hashes<mapperKmerSize>(read.sequence()));
+            return result;
+        });
+        template_hashes.emplace_back(std::move(sample_read_hashes));
+    }
+    auto haplotype_hashes = init_kmer_hash_table<mapperKmerSize>();
+    thread_local std::vector<HaplotypeLikelihoodModel::MappingPositionVector> mapping_positions {};
+    for (const auto& haplotype : haplotypes) {
+        populate_kmer_hash_table<mapperKmerSize>(haplotype.sequence(), haplotype_hashes);
+        auto haplotype_mapping_counts = init_mapping_counts(haplotype_hashes);
+        auto itr = std::begin(cache_.emplace(std::piecewise_construct,
+                                             std::forward_as_tuple(haplotype),
+                                             std::forward_as_tuple(num_samples)).first->second);
+        likelihood_model_.reset(haplotype, flank_state);
+        auto template_hash_itr = std::cbegin(template_hashes);
+        for (const auto& t : template_iterators_) { // for each sample
+            *itr = std::vector<LogProbability>(t.num_templates);
+            std::transform(t.first, t.last, std::cbegin(*template_hash_itr), std::begin(*itr),
+                           [&] (const AlignedTemplate& read_template, const auto& template_hashes) {
+                               mapping_positions.resize(read_template.size());
+                               for (std::size_t i {0}; i < template_hashes.size(); ++i) {
+                                   mapping_positions[i].resize(maxMappingPositions);
+                                   mapping_positions[i].erase(map_query_to_target(template_hashes[i], haplotype_hashes,
+                                                                                  haplotype_mapping_counts,
+                                                                                  std::begin(mapping_positions[i]),
+                                                                                  maxMappingPositions),
+                                                              std::end(mapping_positions[i]));
+                               }
+                               reset_mapping_counts(haplotype_mapping_counts);
+                               return likelihood_model_.evaluate(read_template, mapping_positions);
+                           });
+            ++template_hash_itr;
             ++itr;
         }
         clear_kmer_hash_table(haplotype_hashes);
@@ -166,6 +231,24 @@ void HaplotypeLikelihoodArray::set_read_iterators_and_sample_indices(const ReadM
     std::size_t i {0};
     for (const auto& p : reads) {
         read_iterators_.emplace_back(std::cbegin(p.second), std::cend(p.second));
+        sample_indices_.emplace(p.first, i++);
+    }
+}
+
+void HaplotypeLikelihoodArray::set_template_iterators_and_sample_indices(const TemplateMap& reads)
+{
+    template_iterators_.clear();
+    sample_indices_.clear();
+    const auto num_samples = reads.size();
+    if (template_iterators_.capacity() < num_samples) {
+        template_iterators_.reserve(num_samples);
+    }
+    if (sample_indices_.bucket_count() < num_samples) {
+        sample_indices_.rehash(num_samples);
+    }
+    std::size_t i {0};
+    for (const auto& p : reads) {
+        template_iterators_.emplace_back(std::cbegin(p.second), std::cend(p.second));
         sample_indices_.emplace(p.first, i++);
     }
 }
