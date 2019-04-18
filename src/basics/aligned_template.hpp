@@ -122,16 +122,6 @@ make_read_templates(ForwardIterator first_read_itr, ForwardIterator last_read_it
     return result_itr;
 }
 
-template <typename Range>
-auto make_read_templates(const Range& reads)
-{
-    std::vector<AlignedTemplate> result {};
-    result.reserve(reads.size());
-    make_read_templates(std::cbegin(reads), std::cend(reads), std::back_inserter(result));
-    std::sort(std::begin(result), std::end(result));
-    return result;
-}
-
-} // namespace
+} // namespace octopus
 
 #endif

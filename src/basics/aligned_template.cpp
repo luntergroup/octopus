@@ -41,4 +41,4 @@ bool is_rightmost_segment(const AlignedRead& read) noexcept
     return !read.is_marked_multiple_segment_template() || (is_reverse_strand(read) && read.is_marked_last_template_segment());
 }
 
-} // namespace
+} // namespace octopus
