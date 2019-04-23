@@ -159,7 +159,7 @@ bool HaplotypeTree::is_unique(const Haplotype& haplotype) const
 HaplotypeTree& HaplotypeTree::extend(const ContigAllele& allele)
 {
     for (auto leaf_itr = std::cbegin(haplotype_leafs_); leaf_itr != std::cend(haplotype_leafs_); ++leaf_itr) {
-        leaf_itr = extend_haplotype(leaf_itr, allele);
+        leaf_itr = extend_haplotype(leaf_itr, allele).first;
     }
     haplotype_leaf_cache_.clear();
     tree_region_ = boost::none;
@@ -172,6 +172,19 @@ HaplotypeTree& HaplotypeTree::extend(const Allele& allele)
         throw std::domain_error {"HaplotypeTree: trying to extend with Allele on different contig"};
     }
     return extend(demote(allele));
+}
+
+HaplotypeTree& HaplotypeTree::extend(const Haplotype& haplotype)
+{
+    if (contig_name(haplotype) != contig_) {
+        throw std::domain_error {"HaplotypeTree: trying to extend with Haplotype on different contig"};
+    }
+    for (auto leaf_itr = std::cbegin(haplotype_leafs_); leaf_itr != std::cend(haplotype_leafs_); ++leaf_itr) {
+        leaf_itr = extend_haplotype(leaf_itr, haplotype);
+    }
+    haplotype_leaf_cache_.clear();
+    tree_region_ = boost::none;
+    return *this;
 }
 
 template <typename Container, typename V>
@@ -545,15 +558,9 @@ HaplotypeTree::Vertex HaplotypeTree::remove_backward(const Vertex v)
     return u;
 }
 
-bool HaplotypeTree::allele_exists(const Vertex leaf, const ContigAllele& allele) const
-{
-    const auto p = boost::adjacent_vertices(leaf, tree_);
-    return std::any_of(p.first, p.second, [this, &allele] (const Vertex v) { return tree_[v] == allele; });
-}
-
 HaplotypeTree::Vertex HaplotypeTree::find_allele_before(Vertex v, const ContigAllele& allele) const
 {
-    while (v != root_ && overlaps(allele, tree_[v])) {
+    while (v != root_ && !is_before(tree_[v], allele)) {
         if (is_same_region(allele, tree_[v])) { // for insertions
             v = get_previous_allele(v);
             break;
@@ -563,14 +570,34 @@ HaplotypeTree::Vertex HaplotypeTree::find_allele_before(Vertex v, const ContigAl
     return v;
 }
 
-HaplotypeTree::LeafIterator
+HaplotypeTree::Vertex HaplotypeTree::find_allele_on_branch(const LeafIterator leaf, const ContigAllele& allele) const
+{
+    Vertex v {*leaf};
+    while (v != root_ && !begins_before(tree_[v], allele)) {
+        if (allele == tree_[v]) {
+            return v;
+        }
+        v = get_previous_allele(v);
+    }
+    return root_;
+}
+
+bool HaplotypeTree::allele_exists(const Vertex leaf, const ContigAllele& allele) const
+{
+    const auto p = boost::adjacent_vertices(leaf, tree_);
+    return std::any_of(p.first, p.second, [this, &allele] (const Vertex v) { return tree_[v] == allele; });
+}
+
+std::pair<HaplotypeTree::LeafIterator, bool>
 HaplotypeTree::extend_haplotype(LeafIterator leaf_itr, const ContigAllele& new_allele)
 {
+    bool added {false};
     if (*leaf_itr == root_) {
         const auto new_leaf = boost::add_vertex(new_allele, tree_);
         boost::add_edge(*leaf_itr, new_leaf, tree_);
         leaf_itr = haplotype_leafs_.erase(leaf_itr);
         leaf_itr = haplotype_leafs_.insert(leaf_itr, new_leaf);
+        added = true;
     } else {
         const auto& leaf_allele = tree_[*leaf_itr];
         if (can_add_to_branch(new_allele, leaf_allele)) {
@@ -579,6 +606,7 @@ HaplotypeTree::extend_haplotype(LeafIterator leaf_itr, const ContigAllele& new_a
                 boost::add_edge(*leaf_itr, new_leaf, tree_);
                 leaf_itr = haplotype_leafs_.erase(leaf_itr);
                 leaf_itr = haplotype_leafs_.insert(leaf_itr, new_leaf);
+                added = true;
             } else if (overlaps(new_allele, leaf_allele)) {
                 const auto branch_point = find_allele_before(*leaf_itr, new_allele);
                 if ((branch_point == root_ || can_add_to_branch(new_allele, tree_[branch_point]))
@@ -586,10 +614,37 @@ HaplotypeTree::extend_haplotype(LeafIterator leaf_itr, const ContigAllele& new_a
                     const auto new_leaf = boost::add_vertex(new_allele, tree_);
                     boost::add_edge(branch_point, new_leaf, tree_);
                     haplotype_leafs_.insert(leaf_itr, new_leaf);
+                    added = true;
                 }
             }
         }
     }
+    return std::make_pair(leaf_itr, added);
+}
+
+HaplotypeTree::LeafIterator
+HaplotypeTree::extend_haplotype(LeafIterator leaf_itr, const Haplotype& haplotype)
+{
+    const auto p = haplotype.alleles();
+    std::for_each (p.first, p.second, [&] (const auto& allele) {
+        if (*leaf_itr == root_ || is_after(allele, tree_[*leaf_itr])) {
+            const auto new_leaf = boost::add_vertex(allele, tree_);
+            boost::add_edge(*leaf_itr, new_leaf, tree_);
+            leaf_itr = haplotype_leafs_.erase(leaf_itr);
+            leaf_itr = haplotype_leafs_.insert(leaf_itr, new_leaf);
+        } else {
+            const auto existing = find_allele_on_branch(leaf_itr, allele);
+            if (existing == root_) {
+                const auto branch_point = find_allele_before(*leaf_itr, allele);
+                if ((branch_point == root_ || can_add_to_branch(allele, tree_[branch_point]))
+                    && !allele_exists(branch_point, allele)) {
+                    const auto new_leaf = boost::add_vertex(allele, tree_);
+                    boost::add_edge(branch_point, new_leaf, tree_);
+                    haplotype_leafs_.insert(leaf_itr, new_leaf);
+                }
+            }
+        }
+    });
     return leaf_itr;
 }
 

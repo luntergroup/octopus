@@ -63,6 +63,7 @@ public:
     // Only extends existing leafs
     HaplotypeTree& extend(const ContigAllele& allele);
     HaplotypeTree& extend(const Allele& allele);
+    HaplotypeTree& extend(const Haplotype& haplotype);
     
     // Splices into the tree wherever allele can be made a new leaf
     void splice(const ContigAllele& allele);
@@ -116,8 +117,10 @@ private:
     Vertex remove_backward(Vertex v);
     Vertex get_previous_allele(Vertex allele) const;
     Vertex find_allele_before(Vertex v, const ContigAllele& allele) const;
+    Vertex find_allele_on_branch(LeafIterator leaf, const ContigAllele& allele) const;
     bool allele_exists(Vertex leaf, const ContigAllele& allele) const;
-    LeafIterator extend_haplotype(LeafIterator leaf, const ContigAllele& new_allele);
+    std::pair<LeafIterator, bool> extend_haplotype(LeafIterator leaf, const ContigAllele& new_allele);
+    LeafIterator extend_haplotype(LeafIterator leaf, const Haplotype& other);
     Haplotype extract_haplotype(Vertex leaf, const GenomicRegion& region) const;
     HaplotypeLength extract_haplotype_length(Vertex leaf, const GenomicRegion& region) const;
     bool define_same_haplotype(Vertex leaf1, Vertex leaf2) const;
