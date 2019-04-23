@@ -114,8 +114,13 @@ private:
     NucleotideSequence sequence_;
     std::size_t cached_hash_;
     std::reference_wrapper<const ReferenceGenome> reference_;
-    
+
+public:
     using AlleleIterator = decltype(explicit_alleles_)::const_iterator;
+    
+    std::pair<AlleleIterator, AlleleIterator> alleles() const noexcept;
+
+private:
     
     void append(NucleotideSequence& result, const ContigAllele& allele) const;
     void append(NucleotideSequence& result, AlleleIterator first, AlleleIterator last) const;

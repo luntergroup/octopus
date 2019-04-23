@@ -335,6 +335,12 @@ std::size_t Haplotype::get_hash() const noexcept
     return cached_hash_;
 }
 
+std::pair<Haplotype::AlleleIterator, Haplotype::AlleleIterator>
+Haplotype::alleles() const noexcept
+{
+    return std::make_pair(std::cbegin(explicit_alleles_), std::cend(explicit_alleles_));
+}
+
 // private methods
 
 void Haplotype::append(NucleotideSequence& result, const ContigAllele& allele) const
