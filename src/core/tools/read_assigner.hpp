@@ -15,6 +15,7 @@
 #include "config/common.hpp"
 #include "basics/mappable_reference_wrapper.hpp"
 #include "basics/aligned_read.hpp"
+#include "basics/aligned_template.hpp"
 #include "basics/cigar_string.hpp"
 #include "core/types/haplotype.hpp"
 #include "core/types/genotype.hpp"
@@ -27,6 +28,8 @@ class HaplotypeLikelihoodModel;
 using HaplotypeProbabilityMap = std::unordered_map<Haplotype, double>;
 using ReadSupportSet = std::vector<AlignedRead>;
 using HaplotypeSupportMap = std::unordered_map<Haplotype, ReadSupportSet>;
+using TemplateSupportSet = std::vector<AlignedTemplate>;
+using HaplotypeTemplateSupportMap = std::unordered_map<Haplotype, TemplateSupportSet>;
 using AlignedReadConstReference = MappableReferenceWrapper<const AlignedRead>;
 using ReadRefSupportSet = std::vector<AlignedReadConstReference>;
 using AlleleSupportMap = std::unordered_map<Allele, ReadRefSupportSet>;
@@ -36,10 +39,24 @@ struct AmbiguousRead : public Mappable<AmbiguousRead>
     AlignedRead read;
     boost::optional<std::vector<Haplotype>> haplotypes = boost::none;
     AmbiguousRead(AlignedRead read) : read {std::move(read)} {}
+    AmbiguousRead(AlignedRead read, std::vector<Haplotype> haplotypes)
+    : read {std::move(read)}, haplotypes {std::move(haplotypes)} {}
     const auto& mapped_region() const noexcept { return octopus::mapped_region(read); }
 };
 
 using AmbiguousReadList = std::deque<AmbiguousRead>;
+
+struct AmbiguousTemplate : public Mappable<AmbiguousTemplate>
+{
+    AlignedTemplate read_template;
+    boost::optional<std::vector<Haplotype>> haplotypes = boost::none;
+    AmbiguousTemplate(AlignedTemplate read_template) : read_template {std::move(read_template)} {}
+    AmbiguousTemplate(AlignedTemplate read_template, std::vector<Haplotype> haplotypes)
+    : read_template {std::move(read_template)}, haplotypes {std::move(haplotypes)} {}
+    const auto& mapped_region() const noexcept { return octopus::mapped_region(read_template); }
+};
+
+using AmbiguousTemplateList = std::deque<AmbiguousTemplate>;
 
 struct AssignmentConfig
 {
@@ -48,6 +65,8 @@ struct AssignmentConfig
     AmbiguousRecord ambiguous_record = AmbiguousRecord::haplotypes_if_three_or_more_options;
 };
 
+// AlignedRead
+
 HaplotypeSupportMap
 compute_haplotype_support(const Genotype<Haplotype>& genotype,
                           const std::vector<AlignedRead>& reads,
@@ -90,6 +109,53 @@ HaplotypeSupportMap
 compute_haplotype_support(const Genotype<Haplotype>& genotype,
                           const std::vector<AlignedRead>& reads,
                           AmbiguousReadList& ambiguous,
+                          HaplotypeLikelihoodModel model,
+                          AssignmentConfig config = AssignmentConfig {});
+
+// AlignedTemplate
+
+HaplotypeTemplateSupportMap
+compute_haplotype_support(const Genotype<Haplotype>& genotype,
+                          const std::vector<AlignedTemplate>& reads,
+                          const HaplotypeProbabilityMap& log_priors,
+                          AssignmentConfig config = AssignmentConfig {});
+
+HaplotypeTemplateSupportMap
+compute_haplotype_support(const Genotype<Haplotype>& genotype,
+                          const std::vector<AlignedTemplate>& reads,
+                          AssignmentConfig config = AssignmentConfig {});
+
+HaplotypeTemplateSupportMap
+compute_haplotype_support(const Genotype<Haplotype>& genotype,
+                          const std::vector<AlignedTemplate>& reads,
+                          AmbiguousTemplateList& ambiguous,
+                          const HaplotypeProbabilityMap& log_priors,
+                          AssignmentConfig config = AssignmentConfig {});
+
+HaplotypeTemplateSupportMap
+compute_haplotype_support(const Genotype<Haplotype>& genotype,
+                          const std::vector<AlignedTemplate>& reads,
+                          AmbiguousTemplateList& ambiguous,
+                          AssignmentConfig config = AssignmentConfig {});
+
+HaplotypeTemplateSupportMap
+compute_haplotype_support(const Genotype<Haplotype>& genotype,
+                          const std::vector<AlignedTemplate>& reads,
+                          HaplotypeLikelihoodModel model,
+                          AssignmentConfig config = AssignmentConfig {});
+
+HaplotypeTemplateSupportMap
+compute_haplotype_support(const Genotype<Haplotype>& genotype,
+                          const std::vector<AlignedTemplate>& reads,
+                          AmbiguousTemplateList& ambiguous,
+                          const HaplotypeProbabilityMap& log_priors,
+                          HaplotypeLikelihoodModel model,
+                          AssignmentConfig config = AssignmentConfig {});
+
+HaplotypeTemplateSupportMap
+compute_haplotype_support(const Genotype<Haplotype>& genotype,
+                          const std::vector<AlignedTemplate>& reads,
+                          AmbiguousTemplateList& ambiguous,
                           HaplotypeLikelihoodModel model,
                           AssignmentConfig config = AssignmentConfig {});
 
