@@ -61,19 +61,19 @@ private:
     unsigned do_min_callable_ploidy() const override;
     unsigned do_max_callable_ploidy() const override;
     
-    std::size_t do_remove_duplicates(std::vector<Haplotype>& haplotypes) const override;
+    std::size_t do_remove_duplicates(HaplotypeBlock& haplotypes) const override;
     
     std::unique_ptr<Caller::Latents>
-    infer_latents(const std::vector<Haplotype>& haplotypes,
+    infer_latents(const HaplotypeBlock& haplotypes,
                   const HaplotypeLikelihoodArray& haplotype_likelihoods) const override;
     
     boost::optional<double>
-    calculate_model_posterior(const std::vector<Haplotype>& haplotypes,
+    calculate_model_posterior(const HaplotypeBlock& haplotypes,
                               const HaplotypeLikelihoodArray& haplotype_likelihoods,
                               const Caller::Latents& latents) const override;
     
     boost::optional<double>
-    calculate_model_posterior(const std::vector<Haplotype>& haplotypes,
+    calculate_model_posterior(const HaplotypeBlock& haplotypes,
                               const HaplotypeLikelihoodArray& haplotype_likelihoods,
                               const Latents& latents) const;
     
@@ -91,8 +91,8 @@ private:
     call_reference(const std::vector<Allele>& alleles, const Latents& latents,
                    const ReadPileupMap& pileups) const;
     
-    std::unique_ptr<PopulationPriorModel> make_prior_model(const std::vector<Haplotype>& haplotypes) const;
-    std::unique_ptr<GenotypePriorModel> make_single_sample_prior_model(const std::vector<Haplotype>& haplotypes) const;
+    std::unique_ptr<PopulationPriorModel> make_prior_model(const HaplotypeBlock& haplotypes) const;
+    std::unique_ptr<GenotypePriorModel> make_single_sample_prior_model(const HaplotypeBlock& haplotypes) const;
 };
 
 class TrioCaller::Latents : public Caller::Latents
@@ -101,11 +101,11 @@ public:
     using ModelInferences = model::TrioModel::InferredLatents;
     friend TrioCaller;
     
-    Latents(const std::vector<Haplotype>& haplotypes,
+    Latents(const HaplotypeBlock& haplotypes,
             std::vector<Genotype<Haplotype>>&& genotypes,
             ModelInferences&& latents,
             const Trio& trio);
-    Latents(const std::vector<Haplotype>& haplotypes,
+    Latents(const HaplotypeBlock& haplotypes,
             std::vector<Genotype<Haplotype>>&& maternal_genotypes,
             std::vector<Genotype<Haplotype>>&& paternal_genotypes,
             unsigned child_ploidy,
@@ -130,9 +130,9 @@ private:
     void set_genotype_posteriors(const Trio& trio);
     void set_genotype_posteriors_shared_genotypes(const Trio& trio);
     void set_genotype_posteriors_unique_genotypes(const Trio& trio);
-    void set_haplotype_posteriors(const std::vector<Haplotype>& haplotypes);
-    void set_haplotype_posteriors_shared_genotypes(const std::vector<Haplotype>& haplotypes);
-    void set_haplotype_posteriors_unique_genotypes(const std::vector<Haplotype>& haplotypes);
+    void set_haplotype_posteriors(const HaplotypeBlock& haplotypes);
+    void set_haplotype_posteriors_shared_genotypes(const HaplotypeBlock& haplotypes);
+    void set_haplotype_posteriors_unique_genotypes(const HaplotypeBlock& haplotypes);
 };
 
 } // namespace octopus

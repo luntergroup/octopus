@@ -17,7 +17,7 @@ SomaticMutationModel::SomaticMutationModel(Parameters params, std::size_t num_ha
 : model_ {params, num_haplotypes_hint, caching}
 {}
 
-void SomaticMutationModel::prime(std::vector<Haplotype> haplotypes)
+void SomaticMutationModel::prime(MappableBlock<Haplotype> haplotypes)
 {
     model_.prime(std::move(haplotypes));
 }

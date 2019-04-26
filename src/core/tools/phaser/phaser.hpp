@@ -13,14 +13,15 @@
 #include <boost/optional.hpp>
 
 #include "config/common.hpp"
-#include "basics/genomic_region.hpp"
-#include "containers/probability_matrix.hpp"
 #include "concepts/mappable.hpp"
 #include "concepts/mappable_range.hpp"
-#include "utils/mappable_algorithms.hpp"
+#include "basics/genomic_region.hpp"
+#include "basics/phred.hpp"
+#include "containers/probability_matrix.hpp"
+#include "containers/mappable_block.hpp"
 #include "core/types/haplotype.hpp"
 #include "core/types/genotype.hpp"
-#include "basics/phred.hpp"
+#include "utils/mappable_algorithms.hpp"
 
 namespace octopus {
 
@@ -44,11 +45,11 @@ public:
     
     ~Phaser() = default;
     
-    boost::optional<PhaseSet> try_phase(const std::vector<Haplotype>& haplotypes,
+    boost::optional<PhaseSet> try_phase(const MappableBlock<Haplotype>& haplotypes,
                                         const GenotypePosteriorMap& genotype_posteriors,
                                         const std::vector<GenomicRegion>& regions) const;
     
-    PhaseSet force_phase(const std::vector<Haplotype>& haplotypes,
+    PhaseSet force_phase(const MappableBlock<Haplotype>& haplotypes,
                          const GenotypePosteriorMap& genotype_posteriors,
                          const std::vector<GenomicRegion>& regions,
                          boost::optional<GenotypeCallMap> genotype_calls = boost::none) const;

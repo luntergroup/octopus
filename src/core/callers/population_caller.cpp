@@ -70,13 +70,13 @@ unsigned PopulationCaller::do_max_callable_ploidy() const
     return *std::max_element(std::cbegin(parameters_.ploidies), std::cend(parameters_.ploidies));
 }
 
-std::size_t PopulationCaller::do_remove_duplicates(std::vector<Haplotype>& haplotypes) const
+std::size_t PopulationCaller::do_remove_duplicates(HaplotypeBlock& haplotypes) const
 {
     if (parameters_.deduplicate_haplotypes_with_germline_model) {
         if (haplotypes.size() < 2) return 0;
         CoalescentModel::Parameters model_params {};
         if (parameters_.prior_model_params) model_params = *parameters_.prior_model_params;
-        Haplotype reference {mapped_region(haplotypes.front()), reference_.get()};
+        Haplotype reference {mapped_region(haplotypes), reference_.get()};
         CoalescentModel model {std::move(reference), model_params, haplotypes.size(), CoalescentModel::CachingStrategy::none};
         const CoalescentProbabilityGreater cmp {std::move(model)};
         return octopus::remove_duplicates(haplotypes, cmp);
@@ -91,8 +91,8 @@ namespace {
 
 using InverseGenotypeTable = std::vector<std::vector<std::size_t>>;
 
-auto make_inverse_genotype_table(const std::vector<Haplotype>& haplotypes,
-                                 const std::vector<Genotype<Haplotype>>& genotypes)
+auto make_inverse_genotype_table(const MappableBlock<Haplotype>& haplotypes,
+                                 const MappableBlock<Genotype<Haplotype>>& genotypes)
 {
     assert(!haplotypes.empty() && !genotypes.empty());
     using HaplotypeReference = std::reference_wrapper<const Haplotype>;
@@ -126,8 +126,8 @@ using GM = model::PopulationModel;
 using GenotypeMarginalPosteriorVector = std::vector<double>;
 using GenotypeMarginalPosteriorMatrix = std::vector<GenotypeMarginalPosteriorVector>;
 
-auto calculate_haplotype_posteriors(const std::vector<Haplotype>& haplotypes,
-                                    const std::vector<Genotype<Haplotype>>& genotypes,
+auto calculate_haplotype_posteriors(const MappableBlock<Haplotype>& haplotypes,
+                                    const MappableBlock<Genotype<Haplotype>>& genotypes,
                                     const GenotypeMarginalPosteriorMatrix& genotype_posteriors,
                                     const InverseGenotypeTable& inverse_genotypes)
 {
@@ -160,8 +160,8 @@ auto calculate_haplotype_posteriors(const std::vector<Haplotype>& haplotypes,
 } // namespace
 
 PopulationCaller::Latents::Latents(const std::vector<SampleName>& samples,
-                                   const std::vector<Haplotype>& haplotypes,
-                                   std::vector<Genotype<Haplotype>>&& genotypes,
+                                   const HaplotypeBlock& haplotypes,
+                                   MappableBlock<Genotype<Haplotype>>&& genotypes,
                                    IndependenceModelInferences&& inferences)
 {
     auto inverse_genotypes = make_inverse_genotype_table(haplotypes, genotypes);
@@ -176,8 +176,8 @@ PopulationCaller::Latents::Latents(const std::vector<SampleName>& samples,
 }
 
 PopulationCaller::Latents::Latents(const std::vector<SampleName>& samples,
-                                   const std::vector<Haplotype>& haplotypes,
-                                   std::unordered_map<unsigned, std::vector<Genotype<Haplotype>>>&& genotypes,
+                                   const HaplotypeBlock& haplotypes,
+                                   std::unordered_map<unsigned, MappableBlock<Genotype<Haplotype>>>&& genotypes,
                                    IndependenceModelInferences&& inferences)
 : genotypes_ {std::move(genotypes)}
 {
@@ -185,8 +185,8 @@ PopulationCaller::Latents::Latents(const std::vector<SampleName>& samples,
 }
 
 PopulationCaller::Latents::Latents(const std::vector<SampleName>& samples,
-                                   const std::vector<Haplotype>& haplotypes,
-                                   std::vector<Genotype<Haplotype>>&& genotypes,
+                                   const HaplotypeBlock& haplotypes,
+                                   MappableBlock<Genotype<Haplotype>>&& genotypes,
                                    ModelInferences&& inferences)
 : model_latents_ {std::move(inferences)}
 {
@@ -203,8 +203,8 @@ PopulationCaller::Latents::Latents(const std::vector<SampleName>& samples,
 }
 
 PopulationCaller::Latents::Latents(const std::vector<SampleName>& samples,
-                                   const std::vector<Haplotype>& haplotypes,
-                                   std::unordered_map<unsigned, std::vector<Genotype<Haplotype>>>&& genotypes,
+                                   const HaplotypeBlock& haplotypes,
+                                   std::unordered_map<unsigned, MappableBlock<Genotype<Haplotype>>>&& genotypes,
                                    ModelInferences&& inferences)
 : genotypes_ {std::move(genotypes)}
 , model_latents_ {std::move(inferences)}
@@ -224,9 +224,11 @@ PopulationCaller::Latents::genotype_posteriors() const noexcept
     return genotype_posteriors_;
 }
 
-using GenotypesMap = std::unordered_map<unsigned, std::vector<Genotype<Haplotype>>>;
+using GenotypeBlock = MappableBlock<Genotype<Haplotype>>;
+using GenotypeBlockReference = std::reference_wrapper<const GenotypeBlock>;
+using GenotypesMap = std::unordered_map<unsigned, GenotypeBlock>;
 
-auto generate_unique_genotypes(const std::vector<Haplotype>& haplotypes, std::vector<unsigned> ploidies)
+auto generate_unique_genotypes(const MappableBlock<Haplotype>& haplotypes, std::vector<unsigned> ploidies)
 {
     std::sort(std::begin(ploidies), std::end(ploidies));
     ploidies.erase(std::unique(std::begin(ploidies), std::end(ploidies)), std::end(ploidies));
@@ -237,11 +239,9 @@ auto generate_unique_genotypes(const std::vector<Haplotype>& haplotypes, std::ve
     return result;
 }
 
-using GenotypeVectorReference = std::reference_wrapper<const std::vector<Genotype<Haplotype>>>;
-
 auto assign_samples_to_genotypes(std::vector<unsigned> ploidies, const GenotypesMap& genotypes)
 {
-    std::vector<GenotypeVectorReference> result {};
+    std::vector<GenotypeBlockReference> result {};
     result.reserve(ploidies.size());
     for (auto ploidy : ploidies) {
         result.emplace_back(genotypes.at(ploidy));
@@ -250,7 +250,7 @@ auto assign_samples_to_genotypes(std::vector<unsigned> ploidies, const Genotypes
 }
 
 std::unique_ptr<PopulationCaller::Caller::Latents>
-PopulationCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
+PopulationCaller::infer_latents(const HaplotypeBlock& haplotypes,
                                 const HaplotypeLikelihoodArray& haplotype_likelihoods) const
 {
     if (use_independence_model()) {
@@ -741,7 +741,7 @@ bool PopulationCaller::use_independence_model() const noexcept
 }
 
 std::unique_ptr<Caller::Latents>
-PopulationCaller::infer_latents_with_joint_model(const std::vector<Haplotype>& haplotypes,
+PopulationCaller::infer_latents_with_joint_model(const HaplotypeBlock& haplotypes,
                                                  const HaplotypeLikelihoodArray& haplotype_likelihoods) const
 {
     const auto prior_model = make_joint_prior_model(haplotypes);
@@ -762,7 +762,7 @@ PopulationCaller::infer_latents_with_joint_model(const std::vector<Haplotype>& h
 }
 
 std::unique_ptr<Caller::Latents>
-PopulationCaller::infer_latents_with_independence_model(const std::vector<Haplotype>& haplotypes,
+PopulationCaller::infer_latents_with_independence_model(const HaplotypeBlock& haplotypes,
                                                         const HaplotypeLikelihoodArray& haplotype_likelihoods) const
 {
     const auto prior_model = make_independent_prior_model(haplotypes);
@@ -780,11 +780,11 @@ PopulationCaller::infer_latents_with_independence_model(const std::vector<Haplot
     }
 }
 
-std::unique_ptr<PopulationPriorModel> PopulationCaller::make_joint_prior_model(const std::vector<Haplotype>& haplotypes) const
+std::unique_ptr<PopulationPriorModel> PopulationCaller::make_joint_prior_model(const HaplotypeBlock& haplotypes) const
 {
     if (parameters_.prior_model_params) {
         return std::make_unique<CoalescentPopulationPriorModel>(CoalescentModel{
-        Haplotype {mapped_region(haplotypes.front()), reference_},
+        Haplotype {mapped_region(haplotypes), reference_},
         *parameters_.prior_model_params
         });
     } else {
@@ -792,11 +792,11 @@ std::unique_ptr<PopulationPriorModel> PopulationCaller::make_joint_prior_model(c
     }
 }
 
-std::unique_ptr<GenotypePriorModel> PopulationCaller::make_independent_prior_model(const std::vector<Haplotype>& haplotypes) const
+std::unique_ptr<GenotypePriorModel> PopulationCaller::make_independent_prior_model(const HaplotypeBlock& haplotypes) const
 {
     if (parameters_.prior_model_params) {
         return std::make_unique<CoalescentGenotypePriorModel>(CoalescentModel {
-        Haplotype {mapped_region(haplotypes.front()), reference_},
+        Haplotype {mapped_region(haplotypes), reference_},
         *parameters_.prior_model_params, haplotypes.size(), CoalescentModel::CachingStrategy::address
         });
     } else {

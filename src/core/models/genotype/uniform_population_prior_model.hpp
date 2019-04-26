@@ -47,7 +47,7 @@ private:
     {
         return 1.0;
     }
-    void do_prime(const std::vector<Haplotype>& haplotypes) override
+    void do_prime(const HaplotypeBlock& haplotypes) override
     {
         is_primed_ = true;
     }

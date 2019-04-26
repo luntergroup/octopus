@@ -60,7 +60,7 @@ DeNovoModel::Parameters DeNovoModel::parameters() const
     return params_;
 }
 
-void DeNovoModel::prime(std::vector<Haplotype> haplotypes)
+void DeNovoModel::prime(MappableBlock<Haplotype> haplotypes)
 {
     if (is_primed()) throw std::runtime_error {"DeNovoModel: already primed"};
     constexpr std::size_t max_unguardered {50};

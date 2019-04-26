@@ -17,6 +17,7 @@
 #include "config/common.hpp"
 #include "basics/genomic_region.hpp"
 #include "containers/mappable_flat_set.hpp"
+#include "containers/mappable_block.hpp"
 #include "core/types/allele.hpp"
 #include "readpipe/read_pipe.hpp"
 #include "logging/logging.hpp"
@@ -49,10 +50,15 @@ public:
         boost::optional<double> max_expected_log_allele_count_per_base = boost::none;
     };
     
+    enum class Mode { allele, haplotype, allele_and_haplotype };
+    
     class HaplotypeOverflow;
     class Builder;
     
-    using HaplotypePacket = std::tuple<std::vector<Haplotype>, boost::optional<GenomicRegion>, boost::optional<GenomicRegion>>;
+    using HaplotypeBlock = HaplotypeTree::HaplotypeBlock;
+    using HaplotypePacket = std::tuple<HaplotypeBlock,
+                                       boost::optional<GenomicRegion>,
+                                       boost::optional<GenomicRegion>>;
     
     HaplotypeGenerator() = delete;
     
@@ -69,7 +75,7 @@ public:
     HaplotypeGenerator& operator=(HaplotypeGenerator&&)      = default;
     
     ~HaplotypeGenerator() = default;
-    
+            
     // Generates the next HaplotypePacket, this will always move the generated
     // active region forward. The next generated region is automatically calculated
     // (i.e the region given by peek_next_active_region) unless jump has
@@ -137,7 +143,7 @@ private:
     std::set<std::vector<ContigRegion>> previous_holdout_regions_;
     
     Allele rightmost_allele_;
-    
+                
     mutable boost::optional<logging::DebugLogger> debug_log_;
     mutable boost::optional<logging::TraceLogger> trace_log_;
     

@@ -20,6 +20,7 @@
 
 #include "core/types/haplotype.hpp"
 #include "core/types/variant.hpp"
+#include "containers/mappable_block.hpp"
 #include "indel_mutation_model.hpp"
 
 namespace octopus {
@@ -53,7 +54,7 @@ public:
     
     void set_reference(Haplotype reference);
     
-    void prime(std::vector<Haplotype> haplotypes);
+    void prime(MappableBlock<Haplotype> haplotypes);
     void unprime() noexcept;
     bool is_primed() const noexcept;
     
@@ -78,7 +79,7 @@ private:
     Haplotype reference_;
     IndelMutationModel::ContextIndelModel indel_heterozygosity_model_;
     Parameters params_;
-    std::vector<Haplotype> haplotypes_;
+    MappableBlock<Haplotype> haplotypes_;
     CachingStrategy caching_;
     
     mutable std::vector<VariantReference> site_buffer1_, site_buffer2_;

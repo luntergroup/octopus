@@ -55,7 +55,7 @@ void CoalescentModel::set_reference(Haplotype reference)
     }
 }
 
-void CoalescentModel::prime(std::vector<Haplotype> haplotypes)
+void CoalescentModel::prime(MappableBlock<Haplotype> haplotypes)
 {
     haplotypes_ = std::move(haplotypes);
     index_cache_.assign(haplotypes_.size(), boost::none);

@@ -70,19 +70,19 @@ private:
     unsigned do_min_callable_ploidy() const override;
     unsigned do_max_callable_ploidy() const override;
     
-    std::size_t do_remove_duplicates(std::vector<Haplotype>& haplotypes) const override;
+    std::size_t do_remove_duplicates(HaplotypeBlock& haplotypes) const override;
     
     std::unique_ptr<Caller::Latents>
-    infer_latents(const std::vector<Haplotype>& haplotypes,
+    infer_latents(const HaplotypeBlock& haplotypes,
                   const HaplotypeLikelihoodArray& haplotype_likelihoods) const override;
     
     boost::optional<double>
-    calculate_model_posterior(const std::vector<Haplotype>& haplotypes,
+    calculate_model_posterior(const HaplotypeBlock& haplotypes,
                               const HaplotypeLikelihoodArray& haplotype_likelihoods,
                               const Caller::Latents& latents) const override;
     
     boost::optional<double>
-    calculate_model_posterior(const std::vector<Haplotype>& haplotypes,
+    calculate_model_posterior(const HaplotypeBlock& haplotypes,
                               const HaplotypeLikelihoodArray& haplotype_likelihoods,
                               const Latents& latents) const;
     
@@ -100,7 +100,7 @@ private:
     call_reference(const std::vector<Allele>& alleles, const Latents& latents,
                    const ReadPileupMap& pileup) const;
     
-    std::unique_ptr<GenotypePriorModel> make_prior_model(const std::vector<Haplotype>& haplotypes) const;
+    std::unique_ptr<GenotypePriorModel> make_prior_model(const HaplotypeBlock& haplotypes) const;
 };
 
 class CellCaller::Latents : public Caller::Latents
@@ -112,7 +112,7 @@ public:
     Latents() = delete;
     
     Latents(const CellCaller& caller,
-            std::vector<Haplotype> haplotypes,
+            HaplotypeBlock haplotypes,
             std::vector<Genotype<Haplotype>> genotypes,
             std::vector<model::SingleCellModel::Inferences> inferences);
     
@@ -124,7 +124,7 @@ private:
     mutable std::shared_ptr<HaplotypeProbabilityMap> haplotype_posteriors_;
     
     const CellCaller& caller_;
-    std::vector<Haplotype> haplotypes_;
+    HaplotypeBlock haplotypes_;
     std::vector<Genotype<Haplotype>> genotypes_;
     std::vector<model::SingleCellModel::Inferences> phylogeny_inferences_;
     std::vector<double> phylogeny_posteriors_;

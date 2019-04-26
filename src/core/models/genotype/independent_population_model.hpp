@@ -16,6 +16,7 @@
 #include "individual_model.hpp"
 #include "core/models/haplotype_likelihood_array.hpp"
 #include "containers/probability_matrix.hpp"
+#include "containers/mappable_block.hpp"
 #include "logging/logging.hpp"
 
 namespace octopus { namespace model {
@@ -24,7 +25,7 @@ class IndependentPopulationModel
 {
 public:
     using SampleVector            = std::vector<SampleName>;
-    using GenotypeVector          = std::vector<Genotype<Haplotype>>;
+    using GenotypeVector          = MappableBlock<Genotype<Haplotype>>;
     using GenotypeVectorReference = std::reference_wrapper<const GenotypeVector>;
     
     struct Latents

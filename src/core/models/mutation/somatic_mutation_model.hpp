@@ -8,6 +8,7 @@
 #include <functional>
 
 #include "core/types/haplotype.hpp"
+#include "containers/mappable_block.hpp"
 #include "denovo_model.hpp"
 
 namespace octopus {
@@ -32,7 +33,7 @@ public:
     
     ~SomaticMutationModel() = default;
     
-    void prime(std::vector<Haplotype> haplotypes);
+    void prime(MappableBlock<Haplotype> haplotypes);
     void unprime() noexcept;
     bool is_primed() const noexcept;
     
