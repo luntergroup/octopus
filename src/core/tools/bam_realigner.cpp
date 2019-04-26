@@ -174,8 +174,58 @@ auto realign_and_annotate(const std::vector<AlignedRead>& reads, const Haplotype
     return result;
 }
 
+auto make_read_templates(const std::vector<AlignedRead>& reads)
+{
+    std::vector<AlignedTemplate> result {};
+    make_read_templates(std::cbegin(reads), std::cend(reads), std::inserter(result, std::begin(result)));
+    return result;
+}
+
+std::size_t count_reads(const std::vector<AlignedTemplate>& templates) noexcept
+{
+    return std::accumulate(std::cbegin(templates), std::cend(templates), std::size_t {0},
+                           [] (auto curr, const auto& reads) { return curr + reads.size(); });
+}
+
+HaplotypeSupportMap
+compute_haplotype_support_helper(const Genotype<Haplotype>& genotype, const std::vector<AlignedTemplate>& templates,
+                                 AmbiguousReadList& unassigned_reads)
+{
+    AssignmentConfig assigner_config {};
+    assigner_config.ambiguous_record = AssignmentConfig::AmbiguousRecord::haplotypes;
+    AmbiguousTemplateList unassigned_templates {};
+    const auto template_support = compute_haplotype_support(genotype, templates, unassigned_templates, assigner_config);
+    HaplotypeSupportMap result {};
+    result.reserve(template_support.size());
+    for (const auto& p : template_support) {
+        result[p.first].reserve(count_reads(p.second));
+        for (const auto& template_reads : p.second) {
+            std::copy(std::cbegin(template_reads), std::cend(template_reads), std::back_inserter(result[p.first]));
+        }
+    }
+    for (const auto& unassigned_template : unassigned_templates) {
+        for (const auto& read : unassigned_template.read_template) {
+            assert(unassigned_template.haplotypes);
+            unassigned_reads.emplace_back(read, *unassigned_template.haplotypes);
+        }
+    }
+    return result;
+}
+
+HaplotypeSupportMap
+compute_haplotype_support_helper(const Genotype<Haplotype>& genotype, const std::vector<AlignedRead>& reads,
+                                 AmbiguousReadList& unassigned_reads, bool use_read_templates)
+{
+    if (use_read_templates) {
+        const auto templates = make_read_templates(reads);
+        return compute_haplotype_support_helper(genotype, templates, unassigned_reads);
+    } else {
+        return compute_haplotype_support(genotype, reads, unassigned_reads);
+    }
+}
+
 auto assign_and_realign(const std::vector<AlignedRead>& reads, const Genotype<Haplotype>& genotype,
-                        const ReferenceGenome& reference, BAMRealigner::Report& report)
+                        const ReferenceGenome& reference, const bool use_read_templates, BAMRealigner::Report& report)
 {
     std::vector<AnnotatedAlignedRead> result {};
     if (!reads.empty()) {
@@ -184,9 +234,7 @@ auto assign_and_realign(const std::vector<AlignedRead>& reads, const Genotype<Ha
             utils::append(realign_and_annotate(reads, genotype[0], reference, genotype.ploidy()), result);
         } else {
             AmbiguousReadList unassigned_reads {};
-            AssignmentConfig assigner_config {};
-            assigner_config.ambiguous_record = AssignmentConfig::AmbiguousRecord::haplotypes;
-            auto support = compute_haplotype_support(genotype, reads, unassigned_reads, assigner_config);
+            auto support = compute_haplotype_support_helper(genotype, reads, unassigned_reads, use_read_templates);
             int haplotype_id {0};
             for (auto& p : support) {
                 if (!p.second.empty()) {
@@ -257,7 +305,7 @@ BAMRealigner::realign(ReadReader& src, VcfReader& variants, ReadWriter& dst,
                                       std::make_move_iterator(overlapped_reads.end()));
                 sample_reads_itr = sample.reads.erase(overlapped_reads.begin(), overlapped_reads.end());
                 auto bad_reads = to_annotated(remove_unalignable_reads(genotype_reads));
-                auto realignments = assign_and_realign(genotype_reads, genotype, reference, report);
+                auto realignments = assign_and_realign(genotype_reads, genotype, reference, config_.use_read_templates, report);
                 report.n_reads_unassigned += bad_reads.size();
                 move_merge(bad_reads, realignments);
                 move_merge(realignments, realigned_reads);
