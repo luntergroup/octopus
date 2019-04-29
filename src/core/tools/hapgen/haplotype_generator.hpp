@@ -52,7 +52,11 @@ public:
     class HaplotypeOverflow;
     class Builder;
     
-    using HaplotypePacket = std::tuple<std::vector<Haplotype>, boost::optional<GenomicRegion>, boost::optional<GenomicRegion>>;
+    struct HaplotypePacket
+    {
+        std::vector<Haplotype> haplotypes;
+        boost::optional<GenomicRegion> active_region, backtrack_region;
+    };
     
     HaplotypeGenerator() = delete;
     

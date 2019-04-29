@@ -219,14 +219,14 @@ bool has_rhs_sandwich_insertion(const MappableFlatSet<Allele>& alleles, const Ge
 HaplotypeGenerator::HaplotypePacket HaplotypeGenerator::generate()
 {
     if (alleles_.empty()) {
-        return std::make_tuple(std::vector<Haplotype> {}, boost::none, boost::none);
+        return {{}, boost::none, boost::none};
     }
     populate_tree();
     const auto haplotype_region = calculate_haplotype_region();
     assert(contains(haplotype_region, active_region_));
     auto haplotypes = tree_.extract_haplotypes(haplotype_region);
     if (!(is_lagging_enabled() || in_holdout_mode())) tree_.clear();
-    return std::make_tuple(std::move(haplotypes), active_region_, holdout_region_);
+    return {std::move(haplotypes), active_region_, holdout_region_};
 }
 
 boost::optional<GenomicRegion> HaplotypeGenerator::peek_next_active_region() const
