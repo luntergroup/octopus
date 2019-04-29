@@ -700,46 +700,6 @@ bool StrictLess::operator()(const Haplotype& lhs, const Haplotype& rhs) const
     }
 }
 
-unsigned remove_duplicates(std::vector<Haplotype>& haplotypes)
-{
-    return remove_duplicates(haplotypes, IsLessComplex {});
-}
-
-unsigned remove_duplicates(std::vector<Haplotype>& haplotypes, Haplotype reference)
-{
-    IsLessComplex cmp {std::move(reference)};
-    return remove_duplicates(haplotypes, cmp);
-}
-
-unsigned unique_least_complex(std::vector<Haplotype>& haplotypes, boost::optional<Haplotype> reference)
-{
-    using std::begin; using std::end;
-    std::sort(begin(haplotypes), end(haplotypes), StrictLess {});
-    auto first_dup  = begin(haplotypes);
-    const auto last = end(haplotypes);
-    const IsLessComplex cmp {std::move(reference)};
-    while (true) {
-        first_dup = std::adjacent_find(first_dup, last);
-        if (first_dup == last) break;
-        auto least_complex = (cmp(*first_dup, *std::next(first_dup))) ? first_dup : std::next(first_dup);
-        auto last_dup = std::next(first_dup, 2);
-        for (; last_dup != last; ++last_dup) {
-            if (*last_dup != *first_dup) {
-                break;
-            }
-            if (cmp(*last_dup, *least_complex)) {
-                least_complex = last_dup;
-            }
-        }
-        std::iter_swap(first_dup, least_complex);
-        first_dup = last_dup;
-    }
-    const auto it = std::unique(begin(haplotypes), end(haplotypes));
-    const auto result = std::distance(it, end(haplotypes));
-    haplotypes.erase(it, last);
-    return static_cast<unsigned>(result);
-}
-
 bool are_equal_in_region(const Haplotype& lhs, const Haplotype& rhs, const GenomicRegion& region)
 {
     return copy<Haplotype>(lhs, region) == copy<Haplotype>(rhs, region);

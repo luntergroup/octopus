@@ -65,10 +65,10 @@ private:
     unsigned do_min_callable_ploidy() const override;
     unsigned do_max_callable_ploidy() const override;
     
-    std::size_t do_remove_duplicates(std::vector<Haplotype>& haplotypes) const override;
+    std::size_t do_remove_duplicates(HaplotypeBlock& haplotypes) const override;
     
     std::unique_ptr<Caller::Latents>
-    infer_latents(const std::vector<Haplotype>& haplotypes,
+    infer_latents(const HaplotypeBlock& haplotypes,
                   const HaplotypeLikelihoodArray& haplotype_likelihoods) const override;
     
     std::vector<std::unique_ptr<VariantCall>>
@@ -83,13 +83,13 @@ private:
     
     bool use_independence_model() const noexcept;
     std::unique_ptr<Caller::Latents>
-    infer_latents_with_joint_model(const std::vector<Haplotype>& haplotypes,
+    infer_latents_with_joint_model(const HaplotypeBlock& haplotypes,
                                    const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
     std::unique_ptr<Caller::Latents>
-    infer_latents_with_independence_model(const std::vector<Haplotype>& haplotypes,
+    infer_latents_with_independence_model(const HaplotypeBlock& haplotypes,
                                           const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
-    std::unique_ptr<PopulationPriorModel> make_joint_prior_model(const std::vector<Haplotype>& haplotypes) const;
-    std::unique_ptr<GenotypePriorModel> make_independent_prior_model(const std::vector<Haplotype>& haplotypes) const;
+    std::unique_ptr<PopulationPriorModel> make_joint_prior_model(const HaplotypeBlock& haplotypes) const;
+    std::unique_ptr<GenotypePriorModel> make_independent_prior_model(const HaplotypeBlock& haplotypes) const;
 };
 
 class PopulationCaller::Latents : public Caller::Latents
@@ -104,30 +104,30 @@ public:
     friend PopulationCaller;
     
     Latents(const std::vector<SampleName>& samples,
-            const std::vector<Haplotype>&,
-            std::vector<Genotype<Haplotype>>&& genotypes,
+            const HaplotypeBlock&,
+            MappableBlock<Genotype<Haplotype>>&& genotypes,
             IndependenceModelInferences&&);
     
     Latents(const std::vector<SampleName>& samples,
-            const std::vector<Haplotype>&,
-            std::unordered_map<unsigned, std::vector<Genotype<Haplotype>>>&& genotypes,
+            const HaplotypeBlock&,
+            std::unordered_map<unsigned, MappableBlock<Genotype<Haplotype>>>&& genotypes,
             IndependenceModelInferences&&);
     
     Latents(const std::vector<SampleName>& samples,
-            const std::vector<Haplotype>&,
-            std::vector<Genotype<Haplotype>>&& genotypes,
+            const HaplotypeBlock&,
+            MappableBlock<Genotype<Haplotype>>&& genotypes,
             ModelInferences&&);
     
     Latents(const std::vector<SampleName>& samples,
-            const std::vector<Haplotype>&,
-            std::unordered_map<unsigned, std::vector<Genotype<Haplotype>>>&& genotypes,
+            const HaplotypeBlock&,
+            std::unordered_map<unsigned, MappableBlock<Genotype<Haplotype>>>&& genotypes,
             ModelInferences&&);
     
     std::shared_ptr<HaplotypeProbabilityMap> haplotype_posteriors() const noexcept override;
     std::shared_ptr<GenotypeProbabilityMap> genotype_posteriors() const noexcept override;
 
 private:
-    std::unordered_map<unsigned, std::vector<Genotype<Haplotype>>> genotypes_;
+    std::unordered_map<unsigned, MappableBlock<Genotype<Haplotype>>> genotypes_;
     ModelInferences model_latents_;
     std::shared_ptr<GenotypeProbabilityMap> genotype_posteriors_;
     std::shared_ptr<HaplotypeProbabilityMap> haplotype_posteriors_;

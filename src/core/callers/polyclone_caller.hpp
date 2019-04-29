@@ -73,19 +73,19 @@ private:
     unsigned do_min_callable_ploidy() const override;
     unsigned do_max_callable_ploidy() const override;
     
-    std::size_t do_remove_duplicates(std::vector<Haplotype>& haplotypes) const override;
+    std::size_t do_remove_duplicates(HaplotypeBlock& haplotypes) const override;
     
     std::unique_ptr<Caller::Latents>
-    infer_latents(const std::vector<Haplotype>& haplotypes,
+    infer_latents(const HaplotypeBlock& haplotypes,
                   const HaplotypeLikelihoodArray& haplotype_likelihoods) const override;
     
     boost::optional<double>
-    calculate_model_posterior(const std::vector<Haplotype>& haplotypes,
+    calculate_model_posterior(const HaplotypeBlock& haplotypes,
                               const HaplotypeLikelihoodArray& haplotype_likelihoods,
                               const Caller::Latents& latents) const override;
     
     boost::optional<double>
-    calculate_model_posterior(const std::vector<Haplotype>& haplotypes,
+    calculate_model_posterior(const HaplotypeBlock& haplotypes,
                               const HaplotypeLikelihoodArray& haplotype_likelihoods,
                               const Latents& latents) const;
     
@@ -105,7 +105,7 @@ private:
     
     const SampleName& sample() const noexcept;
     
-    std::unique_ptr<GenotypePriorModel> make_prior_model(const std::vector<Haplotype>& haplotypes) const;
+    std::unique_ptr<GenotypePriorModel> make_prior_model(const HaplotypeBlock& haplotypes) const;
     
     // debug
     void log(const Latents& latents) const;

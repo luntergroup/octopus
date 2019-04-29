@@ -338,20 +338,22 @@ GenomicRegion HaplotypeTree::encompassing_region() const
     return *tree_region_;
 }
 
-std::vector<Haplotype> HaplotypeTree::extract_haplotypes() const
+HaplotypeTree::HaplotypeBlock
+HaplotypeTree::extract_haplotypes() const
 {
     if (is_empty()) {
-        return {};
+        return {tree_region_ ? *tree_region_ : GenomicRegion {contig_, 0, 0}};
     } else {
         return extract_haplotypes(encompassing_region());
     }
 }
 
-std::vector<Haplotype> HaplotypeTree::extract_haplotypes(const GenomicRegion& region) const
+HaplotypeTree::HaplotypeBlock
+HaplotypeTree::extract_haplotypes(const GenomicRegion& region) const
 {
     haplotype_leaf_cache_.clear();
     haplotype_leaf_cache_.reserve(num_haplotypes());
-    std::vector<Haplotype> result {};
+    HaplotypeBlock result {region};
     if (is_empty() || !overlaps(region, encompassing_region())) return result;
     result.reserve(num_haplotypes());
     for (const auto leaf : haplotype_leafs_) {
@@ -640,7 +642,7 @@ HaplotypeTree::extend_haplotype(LeafIterator leaf_itr, const Haplotype& haplotyp
                     && !allele_exists(branch_point, allele)) {
                     const auto new_leaf = boost::add_vertex(allele, tree_);
                     boost::add_edge(branch_point, new_leaf, tree_);
-                    haplotype_leafs_.insert(leaf_itr, new_leaf);
+                    leaf_itr = haplotype_leafs_.insert(leaf_itr, new_leaf);
                 }
             }
         }

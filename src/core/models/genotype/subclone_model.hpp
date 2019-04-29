@@ -15,6 +15,7 @@
 #include "core/types/genotype.hpp"
 #include "core/types/cancer_genotype.hpp"
 #include "core/models/haplotype_likelihood_array.hpp"
+#include "containers/mappable_block.hpp"
 #include "exceptions/unimplemented_feature_error.hpp"
 #include "variational_bayes_mixture_model.hpp"
 #include "genotype_prior_model.hpp"
@@ -75,7 +76,7 @@ public:
     
     const Priors& priors() const noexcept;
     
-    void prime(const std::vector<Haplotype>& haplotypes);
+    void prime(const MappableBlock<Haplotype>& haplotypes);
     void unprime() noexcept;
     bool is_primed() const noexcept;
     
@@ -90,7 +91,7 @@ private:
     std::vector<SampleName> samples_;
     Priors priors_;
     AlgorithmParameters parameters_;
-    const std::vector<Haplotype>* haplotypes_;
+    const MappableBlock<Haplotype>* haplotypes_;
 };
 
 using SubcloneModel = SubcloneModelBase<Genotype<Haplotype>, GenotypeIndex, GenotypePriorModel>;
@@ -115,7 +116,7 @@ const typename SubcloneModelBase<G, GI, GPM>::Priors& SubcloneModelBase<G, GI, G
 }
 
 template <typename G, typename GI, typename GPM>
-void SubcloneModelBase<G, GI, GPM>::prime(const std::vector<Haplotype>& haplotypes)
+void SubcloneModelBase<G, GI, GPM>::prime(const MappableBlock<Haplotype>& haplotypes)
 {
     haplotypes_ = std::addressof(haplotypes);
 }
@@ -138,7 +139,7 @@ template <typename GI>
 struct IndexData
 {
     const std::vector<GI>& genotype_indices;
-    const std::vector<Haplotype>* haplotypes;
+    const MappableBlock<Haplotype>* haplotypes;
 };
 
 template <typename G, typename GI, typename GPM>

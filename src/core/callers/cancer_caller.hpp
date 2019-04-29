@@ -107,19 +107,19 @@ private:
     unsigned do_min_callable_ploidy() const override;
     unsigned do_max_callable_ploidy() const override;
     
-    std::size_t do_remove_duplicates(std::vector<Haplotype>& haplotypes) const override;
+    std::size_t do_remove_duplicates(HaplotypeBlock& haplotypes) const override;
     
     std::unique_ptr<Caller::Latents>
-    infer_latents(const std::vector<Haplotype>& haplotypes,
+    infer_latents(const HaplotypeBlock& haplotypes,
                   const HaplotypeLikelihoodArray& haplotype_likelihoods) const override;
     
     boost::optional<double>
-    calculate_model_posterior(const std::vector<Haplotype>& haplotypes,
+    calculate_model_posterior(const HaplotypeBlock& haplotypes,
                               const HaplotypeLikelihoodArray& haplotype_likelihoods,
                               const Caller::Latents& latents) const override;
     
     boost::optional<double>
-    calculate_model_posterior(const std::vector<Haplotype>& haplotypes,
+    calculate_model_posterior(const HaplotypeBlock& haplotypes,
                               const HaplotypeLikelihoodArray& haplotype_likelihoods,
                               const Latents& latents) const;
     
@@ -142,7 +142,7 @@ private:
     using GermlineGenotypeProbabilityMap = std::unordered_map<GermlineGenotypeReference, double>;
     using ProbabilityVector              = std::vector<double>;
     
-    void generate_germline_genotypes(Latents& latents, const std::vector<Haplotype>& haplotypes) const;
+    void generate_germline_genotypes(Latents& latents, const HaplotypeBlock& haplotypes) const;
     void generate_cancer_genotypes(Latents& latents, const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
     void generate_cancer_genotypes_with_clean_normal(Latents& latents, const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
     void generate_cancer_genotypes_with_contaminated_normal(Latents& latents, const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
@@ -161,7 +161,7 @@ private:
     void set_cancer_genotype_prior_model(Latents& latents) const;
     void fit_somatic_model(Latents& latents, const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
     
-    std::unique_ptr<GenotypePriorModel> make_germline_prior_model(const std::vector<Haplotype>& haplotypes) const;
+    std::unique_ptr<GenotypePriorModel> make_germline_prior_model(const HaplotypeBlock& haplotypes) const;
     CNVModel::Priors get_cnv_model_priors(const GenotypePriorModel& prior_model) const;
     SomaticModel::Priors get_somatic_model_priors(const CancerGenotypePriorModel& prior_model, unsigned somatic_ploidy) const;
     SomaticModel::Priors get_noise_model_priors(const CancerGenotypePriorModel& prior_model, unsigned somatic_ploidy) const;
@@ -189,14 +189,14 @@ public:
     
     Latents() = delete;
     
-    Latents(const std::vector<Haplotype>& haplotypes, const std::vector<SampleName>& samples,
+    Latents(const HaplotypeBlock& haplotypes, const std::vector<SampleName>& samples,
             const CancerCaller::Parameters& parameters);
     
     std::shared_ptr<HaplotypeProbabilityMap> haplotype_posteriors() const override;
     std::shared_ptr<GenotypeProbabilityMap> genotype_posteriors() const override;
     
 private:
-    std::reference_wrapper<const std::vector<Haplotype>> haplotypes_;
+    std::reference_wrapper<const HaplotypeBlock> haplotypes_;
     std::reference_wrapper<const std::vector<SampleName>> samples_;
     std::reference_wrapper<const CancerCaller::Parameters> parameters_;
     

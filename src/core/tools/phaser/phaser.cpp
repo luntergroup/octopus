@@ -122,7 +122,7 @@ double calculate_entropy(const PhaseComplementSet& phase_set, const Map& genotyp
     return std::max(0.0, -std::accumulate(std::cbegin(phase_set), std::cend(phase_set), 0.0,
                                           [&genotype_posteriors, norm] (const auto curr, const auto& genotype) {
                                               const auto p = genotype_posteriors.at(genotype) / norm;
-                                              return curr + p * std::log2(p);
+                                              return curr + p * std::log2(std::max(p, std::numeric_limits<double>::min()));
                                           }));
 }
 
@@ -130,7 +130,7 @@ template <typename Map>
 double calculate_relative_entropy(const PhaseComplementSet& phase_set, const Map& genotype_posteriors)
 {
     if (phase_set.size() < 2) return 1.0;
-    return 1.0 - calculate_entropy(phase_set, genotype_posteriors) / maximum_entropy(phase_set.size());
+    return 1.0 - std::min(calculate_entropy(phase_set, genotype_posteriors) / maximum_entropy(2), 1.0);
 }
 
 template <typename Map>
@@ -150,12 +150,13 @@ Phred<double> calculate_phase_score(const PhaseComplementSets& phase_sets, const
     }};
 }
 
-auto min_phase_score(const double p)
+auto min_phase_score(double p)
 {
     if (maths::almost_one(p)) {
         static const Phred<double> max_possible_score {Phred<double>::Probability {0.0}};
         return max_possible_score;
     } else {
+        p = std::max(p, 0.5);
         const auto e = -(p * std::log2(p) + (1.0 - p) * std::log2(1.0 - p)) / maximum_entropy(2);
         return Phred<double> {Phred<double>::Probability {std::max(e, 0.0)}};
     }
@@ -192,7 +193,7 @@ auto copy_and_marginalise(const Container& genotypes,
 } // namespace
 
 boost::optional<Phaser::PhaseSet>
-Phaser::try_phase(const std::vector<Haplotype>& haplotypes,
+Phaser::try_phase(const MappableBlock<Haplotype>& haplotypes,
                   const GenotypePosteriorMap& genotype_posteriors,
                   const std::vector<GenomicRegion>& regions) const
 {
@@ -235,7 +236,7 @@ force_phase_sample(const GenomicRegion& region,
 }
 
 Phaser::PhaseSet
-Phaser::force_phase(const std::vector<Haplotype>& haplotypes,
+Phaser::force_phase(const MappableBlock<Haplotype>& haplotypes,
                     const GenotypePosteriorMap& genotype_posteriors,
                     const std::vector<GenomicRegion>& regions,
                     boost::optional<GenotypeCallMap> genotype_calls) const
@@ -244,7 +245,7 @@ Phaser::force_phase(const std::vector<Haplotype>& haplotypes,
     assert(!genotype_posteriors.empty1());
     assert(!genotype_posteriors.empty2());
     assert(std::is_sorted(std::cbegin(regions), std::cend(regions)));
-    const auto& haplotype_region = haplotypes.front().mapped_region();
+    const auto& haplotype_region = mapped_region(haplotypes);
     const auto genotypes = extract_genotypes(genotype_posteriors);
     const auto partitions = extract_covered_regions(regions);
     PhaseSet result {haplotype_region};

@@ -188,6 +188,22 @@ HaplotypeGenerator::HaplotypeGenerator(const ReferenceGenome& reference,
     }
 }
 
+auto make_haplotype_blocks(std::vector<Haplotype> haplotypes)
+{
+    auto blocks = segment_by_overlapped_move(haplotypes);
+    std::deque<MappableBlock<Haplotype>> result {};
+    for (auto& block : blocks) {
+        const auto block_region = encompassing_region(block);
+        for (Haplotype& haplotype : block) {
+            if (!is_same_region(haplotype, block_region)) {
+                haplotype = remap(haplotype, block_region);
+            }
+        }
+        result.emplace_back(std::move(block));
+    }
+    return result;
+}
+
 namespace {
 
 template <typename ForwardIt, typename MappableTp>
@@ -219,7 +235,7 @@ bool has_rhs_sandwich_insertion(const MappableFlatSet<Allele>& alleles, const Ge
 HaplotypeGenerator::HaplotypePacket HaplotypeGenerator::generate()
 {
     if (alleles_.empty()) {
-        return {{}, boost::none, boost::none};
+        return {{active_region_}, boost::none, boost::none};
     }
     populate_tree();
     const auto haplotype_region = calculate_haplotype_region();
