@@ -44,7 +44,7 @@ HaplotypeLikelihoodArray::TemplatePacket::TemplatePacket(Iterator first, Iterato
 {}
 
 void HaplotypeLikelihoodArray::populate(const ReadMap& reads,
-                                        const std::vector<Haplotype>& haplotypes,
+                                        const MappableBlock<Haplotype>& haplotypes,
                                         boost::optional<FlankState> flank_state)
 {
     // This code is not very pretty because it is a bottleneck for the entire application.
@@ -96,7 +96,7 @@ void HaplotypeLikelihoodArray::populate(const ReadMap& reads,
     read_iterators_.clear();
 }
 
-void HaplotypeLikelihoodArray::populate(const TemplateMap& reads, const std::vector<Haplotype>& haplotypes,
+void HaplotypeLikelihoodArray::populate(const TemplateMap& reads, const MappableBlock<Haplotype>& haplotypes,
                                         boost::optional<FlankState> flank_state)
 {
     cache_.clear();
@@ -255,10 +255,11 @@ void HaplotypeLikelihoodArray::set_template_iterators_and_sample_indices(const T
 
 // non-member methods
 
-HaplotypeLikelihoodArray merge_samples(const std::vector<SampleName>& samples,
-                                       const SampleName& new_sample,
-                                       const std::vector<Haplotype>& haplotypes,
-                                       const HaplotypeLikelihoodArray& haplotype_likelihoods)
+HaplotypeLikelihoodArray
+merge_samples(const std::vector<SampleName>& samples,
+              const SampleName& new_sample,
+              const MappableBlock<Haplotype>& haplotypes,
+              const HaplotypeLikelihoodArray& haplotype_likelihoods)
 {
     HaplotypeLikelihoodArray result {static_cast<unsigned>(haplotypes.size()), {new_sample}};
     for (const auto& haplotype : haplotypes) {
@@ -276,7 +277,7 @@ HaplotypeLikelihoodArray merge_samples(const std::vector<SampleName>& samples,
 namespace debug {
 
 std::vector<std::reference_wrapper<const Haplotype>>
-rank_haplotypes(const std::vector<Haplotype>& haplotypes, const SampleName& sample,
+rank_haplotypes(const MappableBlock<Haplotype>& haplotypes, const SampleName& sample,
                 const HaplotypeLikelihoodArray& haplotype_likelihoods)
 {
     std::vector<std::pair<std::reference_wrapper<const Haplotype>, HaplotypeLikelihoodArray::LogProbability>> ranks {};
@@ -296,7 +297,7 @@ rank_haplotypes(const std::vector<Haplotype>& haplotypes, const SampleName& samp
     return result;
 }
 
-void print_read_haplotype_likelihoods(const std::vector<Haplotype>& haplotypes,
+void print_read_haplotype_likelihoods(const MappableBlock<Haplotype>& haplotypes,
                                       const ReadMap& reads,
                                       const HaplotypeLikelihoodArray& haplotype_likelihoods,
                                       const std::size_t n)

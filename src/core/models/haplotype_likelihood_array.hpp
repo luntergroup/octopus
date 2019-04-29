@@ -12,9 +12,10 @@
 #include <boost/optional.hpp>
 
 #include "config/common.hpp"
-#include "core/types/haplotype.hpp"
 #include "basics/aligned_read.hpp"
 #include "basics/aligned_template.hpp"
+#include "containers/mappable_block.hpp"
+#include "core/types/haplotype.hpp"
 #include "utils/kmer_mapper.hpp"
 #include "haplotype_likelihood_model.hpp"
 
@@ -53,9 +54,9 @@ public:
     
     ~HaplotypeLikelihoodArray() = default;
     
-    void populate(const ReadMap& reads, const std::vector<Haplotype>& haplotypes,
+    void populate(const ReadMap& reads, const MappableBlock<Haplotype>& haplotypes,
                   boost::optional<FlankState> flank_state = boost::none);
-    void populate(const TemplateMap& reads, const std::vector<Haplotype>& haplotypes,
+    void populate(const TemplateMap& reads, const MappableBlock<Haplotype>& haplotypes,
                   boost::optional<FlankState> flank_state = boost::none);
     
     std::size_t num_likelihoods(const SampleName& sample) const;
@@ -133,20 +134,21 @@ void HaplotypeLikelihoodArray::erase(const Container& haplotypes)
 
 // non-member methods
 
-HaplotypeLikelihoodArray merge_samples(const std::vector<SampleName>& samples,
-                                       const SampleName& new_sample,
-                                       const std::vector<Haplotype>& haplotypes,
-                                       const HaplotypeLikelihoodArray& haplotype_likelihoods);
+HaplotypeLikelihoodArray 
+merge_samples(const std::vector<SampleName>& samples,
+              const SampleName& new_sample,
+              const MappableBlock<Haplotype>& haplotypes,
+              const HaplotypeLikelihoodArray& haplotype_likelihoods);
 
 namespace debug {
 
 std::vector<std::reference_wrapper<const Haplotype>>
-rank_haplotypes(const std::vector<Haplotype>& haplotypes, const SampleName& sample,
+rank_haplotypes(const MappableBlock<Haplotype>& haplotypes, const SampleName& sample,
                 const HaplotypeLikelihoodArray& haplotype_likelihoods);
 
 template <typename S>
 void print_read_haplotype_likelihoods(S&& stream,
-                                     const std::vector<Haplotype>& haplotypes,
+                                     const MappableBlock<Haplotype>& haplotypes,
                                      const ReadMap& reads,
                                      const HaplotypeLikelihoodArray& haplotype_likelihoods,
                                      const std::size_t n = 5)
@@ -206,7 +208,7 @@ void print_read_haplotype_likelihoods(S&& stream,
     }
 }
 
-void print_read_haplotype_likelihoods(const std::vector<Haplotype>& haplotypes,
+void print_read_haplotype_likelihoods(const MappableBlock<Haplotype>& haplotypes,
                                       const ReadMap& reads,
                                       const HaplotypeLikelihoodArray& haplotype_likelihoods,
                                       std::size_t n = 5);
