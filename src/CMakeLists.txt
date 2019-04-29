@@ -67,6 +67,7 @@ set(CONTAINERS_SOURCES
     containers/mappable_map.hpp
     containers/matrix_map.hpp
     containers/probability_matrix.hpp
+    containers/mappable_block.hpp
 )
 
 set(LOGGING_SOURCES
