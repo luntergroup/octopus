@@ -297,14 +297,6 @@ rank_haplotypes(const MappableBlock<Haplotype>& haplotypes, const SampleName& sa
     return result;
 }
 
-void print_read_haplotype_likelihoods(const MappableBlock<Haplotype>& haplotypes,
-                                      const ReadMap& reads,
-                                      const HaplotypeLikelihoodArray& haplotype_likelihoods,
-                                      const std::size_t n)
-{
-    print_read_haplotype_likelihoods(std::cout, haplotypes, reads, haplotype_likelihoods, n);
-}
-
 } // namespace debug
 
 } // namespace octopus
