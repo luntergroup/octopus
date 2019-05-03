@@ -43,6 +43,7 @@ public:
     {
         enum class Lagging { none, conservative, moderate, normal, aggressive } lagging = Lagging::normal;
         enum class Extension { conservative, normal, optimistic, aggressive } extension = Extension::normal;
+        enum class Backtrack { none, normal, aggressive } backtrack = Backtrack::normal;
         struct HaplotypeLimits { unsigned target = 128, holdout = 2048, overflow = 8192; } haplotype_limits;
         unsigned max_holdout_depth = 2;
         Haplotype::MappingDomain::Size min_flank_pad = 30;
@@ -102,6 +103,9 @@ public:
     // sub-haplotypes.
     template <typename Container> void remove(const Container& haplotypes);
     
+    // Remove all active haplotypes in the given region
+    void remove(const GenomicRegion& region);
+    
     // Returns true if calling remove will change the next active region.
     bool removal_has_impact() const;
     
@@ -145,21 +149,31 @@ private:
     std::set<std::vector<ContigRegion>> previous_holdout_regions_;
     
     Allele rightmost_allele_;
-                
+    
+    std::deque<HaplotypeBlock> haplotype_blocks_;
+    
     mutable boost::optional<logging::DebugLogger> debug_log_;
     mutable boost::optional<logging::TraceLogger> trace_log_;
     
     bool is_lagging_enabled() const noexcept;
     bool is_lagging_enabled(const GenomicRegion& region) const;
+    bool is_backtracking_enabled() const noexcept;
+    bool partial_backtrack_active() const noexcept;
     bool is_active_region_lagged() const;
     void reset_next_active_region() const noexcept;
     GenomicRegion find_max_lagged_region() const;
     void update_next_active_region() const;
     void update_lagged_next_active_region() const;
-    void remove_passed_alleles();
+    void prepare_for_next_active_region();
     void populate_tree();
     void populate_tree_with_novel_alleles();
     void populate_tree_with_holdouts();
+    unsigned populate_tree_with_cached_haplotypes(unsigned max_haplotypes);
+    void populate_tree_with_cached_haplotypes();
+    bool can_populate_tree_with_cached_haplotype(unsigned max_haplotypes) const;
+    bool can_populate_tree_with_cached_haplotype() const;
+    bool should_populate_tree_with_cached_haplotype() const;
+    std::size_t max_cached_haplotypes() const;
     bool in_holdout_mode() const noexcept;
     const GenomicRegion& top_holdout_region() const;
     bool can_try_extracting_holdouts(const GenomicRegion& region) const noexcept;
@@ -170,6 +184,12 @@ private:
     void clear_holdouts() noexcept;
     void resolve_sandwich_insertion();
     GenomicRegion calculate_haplotype_region() const;
+    bool is_finished() const noexcept;
+    void cleanup_tree();
+    void cache_active_haplotypes(const GenomicRegion& region);
+    void cache_active_haplotypes();
+    boost::optional<GenomicRegion> haplotype_block_region() const;
+    boost::optional<GenomicRegion> backtrack_region() const;
 };
 
 class HaplotypeGenerator::HaplotypeOverflow : public std::runtime_error
@@ -204,18 +224,7 @@ void HaplotypeGenerator::remove(const Container& haplotypes)
 {
     if (haplotypes.empty()) return;
     reset_next_active_region();
-    if (!is_active_region_lagged() || haplotypes.size() == tree_.num_haplotypes()) {
-        tree_.clear();
-        if (!in_holdout_mode()) {
-            alleles_.erase_overlapped(active_region_);
-        } else {
-            // TODO: in this case we must be more selective and only erase those alleles
-            // which are not present in the remaining haplotype set
-            alleles_.erase_overlapped(active_region_);
-        }
-    } else {
-        prune_all(haplotypes, tree_);
-    }
+    prune_all(haplotypes, tree_);
 }
 
 class HaplotypeGenerator::Builder
@@ -234,6 +243,7 @@ public:
     
     Builder& set_lagging_policy(Policies::Lagging policy) noexcept;
     Builder& set_extension_policy(Policies::Extension policy) noexcept;
+    Builder& set_backtrack_policy(Policies::Backtrack policy) noexcept;
     Builder& set_target_limit(unsigned n) noexcept;
     Builder& set_holdout_limit(unsigned n) noexcept;
     Builder& set_overflow_limit(unsigned n) noexcept;
