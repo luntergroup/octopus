@@ -537,6 +537,14 @@ OptionMap parse_options(const int argc, const char** argv)
     ("max-vb-seeds",
      po::value<int>()->default_value(12),
      "Maximum number of seeds to use for Variational Bayes algorithms")
+    
+    ("paired-reads",
+     po::bool_switch()->default_value(false),
+     "Use paired read information during variant calling")
+    
+    ("linked-reads",
+     po::bool_switch()->default_value(false),
+     "Use linked read information during variant calling")
          
     ("min-phase-score",
      po::value<Phred<double>>()->default_value(Phred<double> {10.0}),

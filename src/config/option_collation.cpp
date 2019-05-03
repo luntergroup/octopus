@@ -1702,6 +1702,11 @@ bool is_experimental_caller(const std::string& caller) noexcept
     return caller == "population" || caller == "polyclone" || caller == "cell";
 }
 
+bool use_paired_reads(const OptionMap& options)
+{
+    return options.at("paired-reads").as<bool>();
+}
+
 CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& read_pipe,
                                   const InputRegionMap& regions, const OptionMap& options,
                                   const boost::optional<ReadSetProfile> read_profile)
@@ -1800,6 +1805,7 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
     const auto target_working_memory = get_target_working_memory(options);
     if (target_working_memory) vc_builder.set_target_memory_footprint(*target_working_memory);
     vc_builder.set_execution_policy(get_thread_execution_policy(options));
+    vc_builder.set_use_paired_reads(use_paired_reads(options));
     return CallerFactory {std::move(vc_builder)};
 }
 

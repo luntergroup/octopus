@@ -129,6 +129,12 @@ CallerBuilder& CallerBuilder::set_execution_policy(ExecutionPolicy policy) noexc
     return *this;
 }
 
+CallerBuilder& CallerBuilder::set_use_paired_reads(bool use) noexcept
+{
+    params_.general.use_paired_reads = use;
+    return *this;
+}
+
 CallerBuilder& CallerBuilder::set_min_variant_posterior(Phred<double> posterior) noexcept
 {
     params_.min_variant_posterior = posterior;
