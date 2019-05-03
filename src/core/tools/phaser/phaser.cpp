@@ -201,20 +201,14 @@ force_phase_sample(const GenomicRegion& region,
 {
     auto first_partition = std::cbegin(partitions);
     auto last_partition  = std::cend(partitions);
-    auto phase_set = generate_phase_complement_sets(genotypes, first_partition, last_partition);
-    auto phase_score = calculate_phase_score(phase_set, genotype_posteriors);
-    if (phase_score >= min_phase_score) {
-        return {Phaser::PhaseSet::PhaseRegion {region, phase_score}};
-    }
     Phaser::PhaseSet::SamplePhaseRegions result {};
-    --last_partition;
     std::vector<Genotype<Haplotype>> chunks;
     GenotypeChunkPosteriorMap chunk_posteriors;
     while (first_partition != std::cend(partitions)) {
         auto curr_region = encompassing_region(first_partition, last_partition);
         std::tie(chunks, chunk_posteriors) = copy_and_marginalise(genotypes, genotype_posteriors, curr_region);
-        phase_set = generate_phase_complement_sets(chunks, first_partition, last_partition);
-        phase_score = calculate_phase_score(phase_set, chunk_posteriors);
+        auto phase_set = generate_phase_complement_sets(chunks, first_partition, last_partition);
+        auto phase_score = calculate_phase_score(phase_set, chunk_posteriors);
         if (phase_score >= min_phase_score || std::distance(first_partition, last_partition) == 1) {
             result.emplace_back(encompassing_region(first_partition, last_partition), phase_score);
             first_partition = last_partition;
