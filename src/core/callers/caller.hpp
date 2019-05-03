@@ -13,6 +13,7 @@
 #include <set>
 
 #include <boost/optional.hpp>
+#include <boost/variant.hpp>
 
 #include "config/common.hpp"
 #include "basics/genomic_region.hpp"
@@ -120,6 +121,7 @@ public:
         bool protect_reference_haplotype;
         boost::optional<MemoryFootprint> target_max_memory;
         ExecutionPolicy execution_policy;
+        bool use_paired_reads, use_linked_reads;
     };
     
 private:
@@ -170,6 +172,7 @@ private:
     
     // helper methods
     
+    boost::optional<TemplateMap> make_read_templates(const ReadMap& reads) const;
     std::deque<CallWrapper>
     call_variants(const GenomicRegion& call_region,  const MappableFlatSet<Variant>& candidates,
                   const ReadMap& reads, const ReadPipe::Report& read_report, ProgressMeter& progress_meter) const;
@@ -182,9 +185,9 @@ private:
     std::vector<Haplotype>
     filter(HaplotypeBlock& haplotypes, const HaplotypeLikelihoodArray& haplotype_likelihoods,
            const std::deque<Haplotype>& protected_haplotypes) const;
-    bool populate(HaplotypeLikelihoodArray& haplotype_likelihoods, const GenomicRegion& active_region,
-                  const HaplotypeBlock& haplotypes, const MappableFlatSet<Variant>& candidates,
-                  const ReadMap& active_reads) const;
+    bool compute_haplotype_likelihoods(HaplotypeLikelihoodArray& haplotype_likelihoods, const GenomicRegion& active_region,
+                                       const HaplotypeBlock& haplotypes, const MappableFlatSet<Variant>& candidates,
+                                       const boost::variant<ReadMap, TemplateMap>& active_reads) const;
     std::vector<std::reference_wrapper<const Haplotype>>
     get_removable_haplotypes(const HaplotypeBlock& haplotypes, const HaplotypeLikelihoodArray& haplotype_likelihoods,
                              const Latents::HaplotypeProbabilityMap& haplotype_posteriors,
@@ -192,7 +195,8 @@ private:
     GeneratorStatus
     generate_active_haplotypes(const GenomicRegion& call_region, HaplotypeGenerator& haplotype_generator,
                                GenomicRegion& active_region, boost::optional<GenomicRegion>& next_active_region,
-                               HaplotypeBlock& haplotypes, HaplotypeBlock& next_haplotypes) const;
+                               HaplotypeBlock& haplotypes, HaplotypeBlock& next_haplotypes, 
+                               boost::optional<GenomicRegion> backtrack_region) const;
     GeneratorStatus
     generate_next_active_haplotypes(HaplotypeBlock& next_haplotypes,
                                     boost::optional<GenomicRegion>& next_active_region,
