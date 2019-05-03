@@ -45,14 +45,11 @@ public:
     
     ~Phaser() = default;
     
-    boost::optional<PhaseSet> try_phase(const MappableBlock<Haplotype>& haplotypes,
-                                        const GenotypePosteriorMap& genotype_posteriors,
-                                        const std::vector<GenomicRegion>& regions) const;
-    
-    PhaseSet force_phase(const MappableBlock<Haplotype>& haplotypes,
-                         const GenotypePosteriorMap& genotype_posteriors,
-                         const std::vector<GenomicRegion>& regions,
-                         boost::optional<GenotypeCallMap> genotype_calls = boost::none) const;
+    PhaseSet
+    phase(const MappableBlock<Haplotype>& haplotypes,
+          const GenotypePosteriorMap& genotype_posteriors,
+          const std::vector<GenomicRegion>& regions,
+          boost::optional<GenotypeCallMap> genotype_calls = boost::none) const;
     
 private:
     Phred<double> min_phase_score_;

@@ -192,15 +192,6 @@ auto copy_and_marginalise(const Container& genotypes,
 
 } // namespace
 
-boost::optional<Phaser::PhaseSet>
-Phaser::try_phase(const MappableBlock<Haplotype>& haplotypes,
-                  const GenotypePosteriorMap& genotype_posteriors,
-                  const std::vector<GenomicRegion>& regions) const
-{
-    // TODO
-    return boost::none;
-}
-
 Phaser::PhaseSet::SamplePhaseRegions
 force_phase_sample(const GenomicRegion& region,
                    const std::vector<GenomicRegion>& partitions,
@@ -236,10 +227,10 @@ force_phase_sample(const GenomicRegion& region,
 }
 
 Phaser::PhaseSet
-Phaser::force_phase(const MappableBlock<Haplotype>& haplotypes,
-                    const GenotypePosteriorMap& genotype_posteriors,
-                    const std::vector<GenomicRegion>& regions,
-                    boost::optional<GenotypeCallMap> genotype_calls) const
+Phaser::phase(const MappableBlock<Haplotype>& haplotypes,
+              const GenotypePosteriorMap& genotype_posteriors,
+              const std::vector<GenomicRegion>& regions,
+              boost::optional<GenotypeCallMap> genotype_calls) const
 {
     assert(!haplotypes.empty());
     assert(!genotype_posteriors.empty1());

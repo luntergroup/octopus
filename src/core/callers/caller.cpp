@@ -897,10 +897,10 @@ void Caller::set_phasing(std::vector<CallWrapper>& calls, const Latents& latents
                          const HaplotypeBlock& haplotypes,
                          const GenomicRegion& call_region) const
 {
-    const auto phase = phaser_.force_phase(haplotypes, *latents.genotype_posteriors(),
-                                           extract_regions(calls), get_genotype_calls(latents));
-    if (debug_log_) debug::print_phase_sets(stream(*debug_log_), phase);
-    octopus::set_phasing(calls, phase, call_region);
+    const auto phasings = phaser_.phase(haplotypes, *latents.genotype_posteriors(),
+                                        extract_regions(calls), get_genotype_calls(latents));
+    if (debug_log_) debug::print_phase_sets(stream(*debug_log_), phasings);
+    octopus::set_phasing(calls, phasings, call_region);
 }
 
 bool Caller::refcalls_requested() const noexcept
