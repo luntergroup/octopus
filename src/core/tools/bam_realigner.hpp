@@ -35,7 +35,7 @@ public:
         bool primary_only = true;
         bool copy_hom_ref_reads = false;
         bool simplify_cigars = false;
-        bool use_read_templates = false;
+        bool use_paired_reads = false;
         MemoryFootprint max_buffer = *parse_footprint("50M");
         boost::optional<unsigned> max_threads = 1;
     };

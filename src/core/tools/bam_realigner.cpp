@@ -170,6 +170,7 @@ auto realign_and_annotate(const std::vector<AlignedRead>& reads, const Haplotype
         if (haplotype_id) {
             result.back().annotate("hi", std::to_string(*haplotype_id));
         }
+        result.back().annotate("PS", to_string(mapped_region(haplotype)));
     }
     return result;
 }
@@ -214,9 +215,9 @@ compute_haplotype_support_helper(const Genotype<Haplotype>& genotype, const std:
 
 HaplotypeSupportMap
 compute_haplotype_support_helper(const Genotype<Haplotype>& genotype, const std::vector<AlignedRead>& reads,
-                                 AmbiguousReadList& unassigned_reads, bool use_read_templates)
+                                 AmbiguousReadList& unassigned_reads, bool use_paired_reads)
 {
-    if (use_read_templates) {
+    if (use_paired_reads) {
         const auto templates = make_read_templates(reads);
         return compute_haplotype_support_helper(genotype, templates, unassigned_reads);
     } else {
@@ -225,7 +226,7 @@ compute_haplotype_support_helper(const Genotype<Haplotype>& genotype, const std:
 }
 
 auto assign_and_realign(const std::vector<AlignedRead>& reads, const Genotype<Haplotype>& genotype,
-                        const ReferenceGenome& reference, const bool use_read_templates, BAMRealigner::Report& report)
+                        const ReferenceGenome& reference, const bool use_paired_reads, BAMRealigner::Report& report)
 {
     std::vector<AnnotatedAlignedRead> result {};
     if (!reads.empty()) {
@@ -234,7 +235,7 @@ auto assign_and_realign(const std::vector<AlignedRead>& reads, const Genotype<Ha
             utils::append(realign_and_annotate(reads, genotype[0], reference, genotype.ploidy()), result);
         } else {
             AmbiguousReadList unassigned_reads {};
-            auto support = compute_haplotype_support_helper(genotype, reads, unassigned_reads, use_read_templates);
+            auto support = compute_haplotype_support_helper(genotype, reads, unassigned_reads, use_paired_reads);
             int haplotype_id {0};
             for (auto& p : support) {
                 if (!p.second.empty()) {
@@ -305,7 +306,7 @@ BAMRealigner::realign(ReadReader& src, VcfReader& variants, ReadWriter& dst,
                                       std::make_move_iterator(overlapped_reads.end()));
                 sample_reads_itr = sample.reads.erase(overlapped_reads.begin(), overlapped_reads.end());
                 auto bad_reads = to_annotated(remove_unalignable_reads(genotype_reads));
-                auto realignments = assign_and_realign(genotype_reads, genotype, reference, config_.use_read_templates, report);
+                auto realignments = assign_and_realign(genotype_reads, genotype, reference, config_.use_paired_reads, report);
                 report.n_reads_unassigned += bad_reads.size();
                 move_merge(bad_reads, realignments);
                 move_merge(realignments, realigned_reads);
