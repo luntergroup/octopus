@@ -1293,11 +1293,11 @@ auto get_lagging_policy(const OptionMap& options)
 {
     using LaggingPolicy = HaplotypeGenerator::Builder::Policies::Lagging;
     if (is_fast_mode(options)) return LaggingPolicy::none;
-    switch (options.at("phasing-level").as<PhasingLevel>()) {
-        case PhasingLevel::conservative: return LaggingPolicy::conservative;
-        case PhasingLevel::moderate: return LaggingPolicy::moderate;
-        case PhasingLevel::normal: return LaggingPolicy::normal;
-        case PhasingLevel::aggressive: return LaggingPolicy::aggressive;
+    switch (options.at("lagging-level").as<LaggingLevel>()) {
+        case LaggingLevel::conservative: return LaggingPolicy::conservative;
+        case LaggingLevel::moderate: return LaggingPolicy::moderate;
+        case LaggingLevel::normal: return LaggingPolicy::normal;
+        case LaggingLevel::aggressive: return LaggingPolicy::aggressive;
         default: return LaggingPolicy::none;
     }
 }
