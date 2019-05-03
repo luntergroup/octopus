@@ -111,7 +111,8 @@ private:
     mutable HaplotypeVertexMultiMap haplotype_leaf_cache_;
     mutable boost::optional<GenomicRegion> tree_region_;
     
-    using LeafIterator  = decltype(haplotype_leafs_)::const_iterator;
+    using LeafIterator = decltype(haplotype_leafs_)::iterator;
+    using LeafConstIterator = decltype(haplotype_leafs_)::const_iterator;
     using CacheIterator = decltype(haplotype_leaf_cache_)::iterator;
     
     bool is_leaf(Vertex v) const;
@@ -129,10 +130,12 @@ private:
     bool define_same_haplotype(Vertex leaf1, Vertex leaf2) const;
     bool is_branch_exact_haplotype(Vertex branch_vertex, const Haplotype& haplotype) const;
     bool is_branch_equal_haplotype(Vertex branch_vertex, const Haplotype& haplotype) const;
-    LeafIterator find_exact_haplotype_leaf(LeafIterator first, LeafIterator last,
-                                           const Haplotype& haplotype) const;
-    LeafIterator find_equal_haplotype_leaf(LeafIterator first, LeafIterator last,
-                                           const Haplotype& haplotype) const;
+    LeafConstIterator
+     find_exact_haplotype_leaf(LeafConstIterator first, LeafConstIterator last,
+                               const Haplotype& haplotype) const;
+    LeafConstIterator 
+    find_equal_haplotype_leaf(LeafConstIterator first, LeafConstIterator last,
+                              const Haplotype& haplotype) const;
     void clear_overlapped(const ContigRegion& region);
     std::pair<Vertex, bool> clear(Vertex leaf, const ContigRegion& region);
     std::pair<Vertex, bool> clear_external(Vertex leaf, const ContigRegion& region);

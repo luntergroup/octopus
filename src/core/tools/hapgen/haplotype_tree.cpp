@@ -158,7 +158,7 @@ bool HaplotypeTree::is_unique(const Haplotype& haplotype) const
 
 HaplotypeTree& HaplotypeTree::extend(const ContigAllele& allele)
 {
-    for (auto leaf_itr = std::cbegin(haplotype_leafs_); leaf_itr != std::cend(haplotype_leafs_); ++leaf_itr) {
+    for (auto leaf_itr = std::begin(haplotype_leafs_); leaf_itr != std::end(haplotype_leafs_); ++leaf_itr) {
         leaf_itr = extend_haplotype(leaf_itr, allele).first;
     }
     haplotype_leaf_cache_.clear();
@@ -179,7 +179,7 @@ HaplotypeTree& HaplotypeTree::extend(const Haplotype& haplotype)
     if (contig_name(haplotype) != contig_) {
         throw std::domain_error {"HaplotypeTree: trying to extend with Haplotype on different contig"};
     }
-    for (auto leaf_itr = std::cbegin(haplotype_leafs_); leaf_itr != std::cend(haplotype_leafs_); ++leaf_itr) {
+    for (auto leaf_itr = std::begin(haplotype_leafs_); leaf_itr != std::end(haplotype_leafs_); ++leaf_itr) {
         leaf_itr = extend_haplotype(leaf_itr, haplotype);
     }
     haplotype_leaf_cache_.clear();
@@ -606,8 +606,7 @@ HaplotypeTree::extend_haplotype(LeafIterator leaf_itr, const ContigAllele& new_a
             if (is_after(new_allele, leaf_allele)) {
                 const auto new_leaf = boost::add_vertex(new_allele, tree_);
                 boost::add_edge(*leaf_itr, new_leaf, tree_);
-                leaf_itr = haplotype_leafs_.erase(leaf_itr);
-                leaf_itr = haplotype_leafs_.insert(leaf_itr, new_leaf);
+                *leaf_itr = new_leaf;
                 added = true;
             } else if (overlaps(new_allele, leaf_allele)) {
                 const auto branch_point = find_allele_before(*leaf_itr, new_allele);
@@ -627,26 +626,25 @@ HaplotypeTree::extend_haplotype(LeafIterator leaf_itr, const ContigAllele& new_a
 HaplotypeTree::LeafIterator
 HaplotypeTree::extend_haplotype(LeafIterator leaf_itr, const Haplotype& haplotype)
 {
-    const auto p = haplotype.alleles();
-    std::for_each (p.first, p.second, [&] (const auto& allele) {
+    for (auto p = haplotype.alleles(); p.first != p.second; ++p.first) {
+        const auto& allele = *p.first;
         if (*leaf_itr == root_ || is_after(allele, tree_[*leaf_itr])) {
             const auto new_leaf = boost::add_vertex(allele, tree_);
             boost::add_edge(*leaf_itr, new_leaf, tree_);
-            leaf_itr = haplotype_leafs_.erase(leaf_itr);
-            leaf_itr = haplotype_leafs_.insert(leaf_itr, new_leaf);
+            *leaf_itr = new_leaf;
         } else {
             const auto existing = find_allele_on_branch(leaf_itr, allele);
             if (existing == root_) {
                 const auto branch_point = find_allele_before(*leaf_itr, allele);
-                if ((branch_point == root_ || can_add_to_branch(allele, tree_[branch_point]))
-                    && !allele_exists(branch_point, allele)) {
+                if (allele_exists(branch_point, allele)) return leaf_itr;
+                if ((branch_point == root_ || can_add_to_branch(allele, tree_[branch_point]))) {
                     const auto new_leaf = boost::add_vertex(allele, tree_);
                     boost::add_edge(branch_point, new_leaf, tree_);
-                    leaf_itr = haplotype_leafs_.insert(leaf_itr, new_leaf);
+                    leaf_itr = haplotype_leafs_.insert(std::next(leaf_itr), new_leaf);
                 }
             }
         }
-    });
+    };
     return leaf_itr;
 }
 
@@ -725,8 +723,8 @@ bool HaplotypeTree::is_branch_equal_haplotype(const Vertex leaf, const Haplotype
             && extract_haplotype(leaf, haplotype.mapped_region()) == haplotype;
 }
 
-HaplotypeTree::LeafIterator
-HaplotypeTree::find_exact_haplotype_leaf(const LeafIterator first, const LeafIterator last,
+HaplotypeTree::LeafConstIterator
+HaplotypeTree::find_exact_haplotype_leaf(const LeafConstIterator first, const LeafConstIterator last,
                                          const Haplotype& haplotype) const
 {
     return std::find_if(first, last,
@@ -735,8 +733,8 @@ HaplotypeTree::find_exact_haplotype_leaf(const LeafIterator first, const LeafIte
                         });
 }
 
-HaplotypeTree::LeafIterator
-HaplotypeTree::find_equal_haplotype_leaf(const LeafIterator first, const LeafIterator last,
+HaplotypeTree::LeafConstIterator
+HaplotypeTree::find_equal_haplotype_leaf(const LeafConstIterator first, const LeafConstIterator last,
                                          const Haplotype& haplotype) const
 {
     return std::find_if(first, last,
