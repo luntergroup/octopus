@@ -211,6 +211,14 @@ private:
     void filter_haplotypes(bool prefilter_had_removal_impact, const HaplotypeBlock& haplotypes,
                            HaplotypeGenerator& haplotype_generator, const HaplotypeLikelihoodArray& haplotype_likelihoods,
                            const Latents& latents, const std::deque<Haplotype>& protected_haplotypes) const;
+    bool try_early_detect_phase_regions(const MappableBlock<Haplotype>& haplotypes,
+                                        const MappableFlatSet<Variant>& candidates,
+                                        const GenomicRegion& active_region,
+                                        const Latents& latents,
+                                        const boost::optional<GenomicRegion>& backtrack_region) const;
+    boost::optional<GenomicRegion>
+    find_phased_head(const MappableBlock<Haplotype>& haplotypes, const MappableFlatSet<Variant>& candidates,
+                     const GenomicRegion& active_region, const Latents& latents) const;
     void call_variants(const GenomicRegion& active_region, const GenomicRegion& call_region,
                        const boost::optional<GenomicRegion>& next_active_region,
                        const boost::optional<GenomicRegion>& backtrack_region,

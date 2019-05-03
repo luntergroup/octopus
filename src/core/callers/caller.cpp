@@ -455,6 +455,13 @@ Caller::call_variants(const GenomicRegion& call_region, const MappableFlatSet<Va
             if (debug_log_) *debug_log_ << "Haplotypes are saturated, clearing lagging";
             haplotype_generator.clear_progress();
         }
+        if (try_early_detect_phase_regions(haplotypes, candidates, active_region, *caller_latents, backtrack_region)) {
+            auto phased_region = find_phased_head(haplotypes, candidates, active_region, *caller_latents);
+            if (phased_region) {
+                if (debug_log_) stream(*debug_log_) << "Detected phased region " << *phased_region << "... removing this from haplotype generator";
+                haplotype_generator.remove(*phased_region);
+            }
+        }
         status = generate_next_active_haplotypes(next_haplotypes, next_active_region, backtrack_region, haplotype_generator);
         if (backtrack_region) {
             // Only protect haplotypes in backtrack - or holdout - regions as these are more likely
@@ -637,17 +644,50 @@ void Caller::filter_haplotypes(bool prefilter_had_removal_impact,
     }
 }
 
-namespace {
-
-bool have_callable_region(const GenomicRegion& active_region,
-                          const boost::optional<GenomicRegion>& next_active_region,
-                          const boost::optional<GenomicRegion>& backtrack_region,
-                          const GenomicRegion& call_region)
+bool Caller::try_early_detect_phase_regions(const MappableBlock<Haplotype>& haplotypes,
+                                            const MappableFlatSet<Variant>& candidates,
+                                            const GenomicRegion& active_region,
+                                            const Latents& latents,
+                                            const boost::optional<GenomicRegion>& backtrack_region) const
 {
-    return (!backtrack_region || begins_before(active_region, *backtrack_region))
-           && (!next_active_region || begins_before(active_region, *next_active_region))
-           && overlaps(active_region, call_region);
+    return !backtrack_region 
+        && count_overlapped(candidates, active_region) > 10
+        && haplotypes.size() > parameters_.max_haplotypes / 2;
 }
+
+std::vector<GenomicRegion>
+find_common_phase_regions(const Phaser::PhaseSet::PhaseRegions& phasings)
+{
+    auto result = extract_regions(std::cbegin(phasings)->second);
+    std::for_each(std::next(std::cbegin(phasings)), std::cend(phasings), [&] (const auto& p) {
+        const auto sample_phase_regions = extract_regions(p.second);
+        std::vector<GenomicRegion> intersect {};
+        intersect.reserve(std::min(result.size(), sample_phase_regions.size()));
+        std::set_intersection(std::cbegin(result), std::cend(result),
+                              std::cbegin(sample_phase_regions), std::cend(sample_phase_regions),
+                              std::back_inserter(intersect));
+        result = std::move(intersect);
+    });
+    return result;
+}
+
+boost::optional<GenomicRegion>
+Caller::find_phased_head(const MappableBlock<Haplotype>& haplotypes, const MappableFlatSet<Variant>& candidates,
+                         const GenomicRegion& active_region, const Latents& latents) const
+{
+    const auto active_candidates = overlap_range(candidates, active_region);
+    const auto viable_phase_regions = extract_mutually_exclusive_regions(active_candidates);
+    const auto phasings = phaser_.phase(haplotypes, *latents.genotype_posteriors(),
+                                        viable_phase_regions, get_genotype_calls(latents));
+    auto common_phase_regions = find_common_phase_regions(phasings.phase_regions);
+    if (common_phase_regions.size() > 1) {
+        return closed_region(active_region, head_region(common_phase_regions.back()));
+    } else {
+        return boost::none;
+    }
+}
+
+namespace {
 
 auto get_passed_region(const GenomicRegion& active_region,
                        const boost::optional<GenomicRegion>& next_active_region,
