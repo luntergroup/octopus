@@ -34,16 +34,17 @@ struct ContigPloidy
 enum class RefCallType { positional, blocked };
 enum class ExtensionLevel { conservative, normal, optimistic, aggressive };
 enum class LaggingLevel { minimal, conservative, moderate, normal, aggressive };
+enum class BacktrackLevel { none, normal, aggressive };
 enum class NormalContaminationRisk { low, high };
 
-std::istream& operator>>(std::istream& in, ContigOutputOrder& coo);
-std::ostream& operator<<(std::ostream& os, const ContigOutputOrder& coo);
-std::istream& operator>>(std::istream& in, ContigPloidy& cp);
-std::ostream& operator<<(std::ostream& os, const ContigPloidy& cp);
-std::istream& operator>>(std::istream& in, RefCallType& rct);
-std::ostream& operator<<(std::ostream& os, const RefCallType& rct);
-std::istream& operator>>(std::istream& in, ExtensionLevel& el);
-std::ostream& operator<<(std::ostream& os, const ExtensionLevel& el);
+std::istream& operator>>(std::istream& in, ContigOutputOrder& order);
+std::ostream& operator<<(std::ostream& os, const ContigOutputOrder& order);
+std::istream& operator>>(std::istream& in, ContigPloidy& plodies);
+std::ostream& operator<<(std::ostream& os, const ContigPloidy& plodies);
+std::istream& operator>>(std::istream& in, RefCallType& type);
+std::ostream& operator<<(std::ostream& os, const RefCallType& type);
+std::istream& operator>>(std::istream& in, ExtensionLevel& level);
+std::ostream& operator<<(std::ostream& os, const ExtensionLevel& level);
 std::istream& operator>>(std::istream& in, BacktrackLevel& level);
 std::ostream& operator<<(std::ostream& os, const BacktrackLevel& level);
 std::istream& operator>>(std::istream& in, LaggingLevel& level);

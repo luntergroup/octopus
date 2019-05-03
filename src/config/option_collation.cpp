@@ -1289,6 +1289,17 @@ auto get_extension_policy(const OptionMap& options)
     }
 }
 
+auto get_backtrack_policy(const OptionMap& options)
+{
+    using BacktrackPolicy = HaplotypeGenerator::Builder::Policies::Backtrack;
+    switch (options.at("backtrack-level").as<BacktrackLevel>()) {
+        case BacktrackLevel::none: return BacktrackPolicy::none;
+        case BacktrackLevel::normal: return BacktrackPolicy::normal;
+        case BacktrackLevel::aggressive: return BacktrackPolicy::aggressive;
+        default: return BacktrackPolicy::none; // to stop GCC warning
+    }
+}
+
 auto get_lagging_policy(const OptionMap& options)
 {
     using LaggingPolicy = HaplotypeGenerator::Builder::Policies::Lagging;
@@ -1357,7 +1368,7 @@ auto make_haplotype_generator_builder(const OptionMap& options, const boost::opt
     const auto holdout_limit     = as_unsigned("haplotype-holdout-threshold", options);
     const auto overflow_limit    = as_unsigned("haplotype-overflow", options);
     const auto max_holdout_depth = as_unsigned("max-holdout-depth", options);
-    return HaplotypeGenerator::Builder().set_extension_policy(get_extension_policy(options))
+    return HaplotypeGenerator::Builder().set_extension_policy(get_extension_policy(options)).set_backtrack_policy(get_backtrack_policy(options))
     .set_target_limit(max_haplotypes).set_holdout_limit(holdout_limit).set_overflow_limit(overflow_limit)
     .set_lagging_policy(lagging_policy).set_max_holdout_depth(max_holdout_depth)
     .set_max_indicator_join_distance(get_max_indicator_join_distance())

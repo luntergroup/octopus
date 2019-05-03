@@ -430,6 +430,10 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<LaggingLevel>()->default_value(LaggingLevel::normal),
      "Level of haplotype lagging. Possible values are: minimal, conservative, moderate, normal, aggressive")
 
+    ("backtrack-level",
+     po::value<BacktrackLevel>()->default_value(BacktrackLevel::none),
+     "Level of backtracking. Possible values are: none, normal, aggressive")
+    
     ("haplotype-extension-threshold,e",
      po::value<Phred<double>>()->default_value(Phred<double> {100.0}, "100"),
      "Haplotypes with posterior probability less than this can be filtered before extension")
@@ -1093,7 +1097,7 @@ void validate(const OptionMap& vm)
     validate_caller(vm);
 }
 
-std::istream& operator>>(std::istream& in, ContigPloidy& result)
+std::istream& operator>>(std::istream& in, ContigPloidy& plodies)
 {
     static const std::regex re {"(?:([^:]*):)?([^=]+)=(\\d+)"};
     
@@ -1103,10 +1107,10 @@ std::istream& operator>>(std::istream& in, ContigPloidy& result)
     
     if (std::regex_match(token, match, re) && match.size() == 4) {
         if (match.length(1) > 0) {
-            result.sample = match.str(1);
+            plodies.sample = match.str(1);
         }
-        result.contig = match.str(2);
-        result.ploidy = boost::lexical_cast<decltype(result.ploidy)>(match.str(3));
+        plodies.contig = match.str(2);
+        plodies.ploidy = boost::lexical_cast<decltype(plodies.ploidy)>(match.str(3));
     } else {
         using Error = po::validation_error;
         throw Error {Error::kind_t::invalid_option_value, token, "contig-ploidies"};
@@ -1115,21 +1119,21 @@ std::istream& operator>>(std::istream& in, ContigPloidy& result)
     return in;
 }
 
-std::ostream& operator<<(std::ostream& out, const ContigPloidy& cp)
+std::ostream& operator<<(std::ostream& out, const ContigPloidy& plodies)
 {
-    if (cp.sample) out << *cp.sample << ':';
-    out << cp.contig << "=" << cp.ploidy;
+    if (plodies.sample) out << *plodies.sample << ':';
+    out << plodies.contig << "=" << plodies.ploidy;
     return out;
 }
 
-std::istream& operator>>(std::istream& in, RefCallType& result)
+std::istream& operator>>(std::istream& in, RefCallType& type)
 {
     std::string token;
     in >> token;
     if (token == "positional")
-        result = RefCallType::positional;
+        type = RefCallType::positional;
     else if (token == "blocked")
-        result = RefCallType::blocked;
+        type = RefCallType::blocked;
     else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token, "refcalls"};
     return in;
 }
@@ -1147,24 +1151,24 @@ std::ostream& operator<<(std::ostream& out, const RefCallType& type)
     return out;
 }
 
-std::istream& operator>>(std::istream& in, ContigOutputOrder& result)
+std::istream& operator>>(std::istream& in, ContigOutputOrder& order)
 {
     std::string token;
     in >> token;
     if (token == "lexicographicalAscending")
-        result = ContigOutputOrder::lexicographicalAscending;
+        order = ContigOutputOrder::lexicographicalAscending;
     else if (token == "lexicographicalDescending")
-        result = ContigOutputOrder::lexicographicalDescending;
+        order = ContigOutputOrder::lexicographicalDescending;
     else if (token == "contigSizeAscending")
-        result = ContigOutputOrder::contigSizeAscending;
+        order = ContigOutputOrder::contigSizeAscending;
     else if (token == "contigSizeDescending")
-        result = ContigOutputOrder::contigSizeDescending;
+        order = ContigOutputOrder::contigSizeDescending;
     else if (token == "asInReference")
-        result = ContigOutputOrder::asInReferenceIndex;
+        order = ContigOutputOrder::asInReferenceIndex;
     else if (token == "asInReferenceReversed")
-        result = ContigOutputOrder::asInReferenceIndexReversed;
+        order = ContigOutputOrder::asInReferenceIndexReversed;
     else if (token == "unspecified")
-        result = ContigOutputOrder::unspecified;
+        order = ContigOutputOrder::unspecified;
     else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token, "contig-output-order"};
     return in;
 }
@@ -1197,18 +1201,18 @@ std::ostream& operator<<(std::ostream& out, const ContigOutputOrder& order)
     return out;
 }
 
-std::istream& operator>>(std::istream& in, ExtensionLevel& result)
+std::istream& operator>>(std::istream& in, ExtensionLevel& level)
 {
     std::string token;
     in >> token;
     if (token == "conservative")
-        result = ExtensionLevel::conservative;
+        level = ExtensionLevel::conservative;
     else if (token == "normal")
-        result = ExtensionLevel::normal;
+        level = ExtensionLevel::normal;
     else if (token == "optimistic")
-        result = ExtensionLevel::optimistic;
+        level = ExtensionLevel::optimistic;
     else if (token == "aggressive")
-        result = ExtensionLevel::aggressive;
+        level = ExtensionLevel::aggressive;
     else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token, "extension-level"};
     return in;
 }
@@ -1232,7 +1236,36 @@ std::ostream& operator<<(std::ostream& out, const ExtensionLevel& level)
     return out;
 }
 
-std::istream& operator>>(std::istream& in, PhasingLevel& result)
+std::istream& operator>>(std::istream& in, BacktrackLevel& level)
+{
+    std::string token;
+    in >> token;
+    if (token == "none")
+        level = BacktrackLevel::none;
+    else if (token == "normal")
+        level = BacktrackLevel::normal;
+    else if (token == "aggressive")
+        level = BacktrackLevel::aggressive;
+    else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token, "backtrack-level"};
+    return in;
+}
+
+std::ostream& operator<<(std::ostream& out, const BacktrackLevel& level)
+{
+    switch (level) {
+    case BacktrackLevel::none:
+        out << "none";
+        break;
+    case BacktrackLevel::normal:
+        out << "normal";
+        break;
+    case BacktrackLevel::aggressive:
+        out << "aggressive";
+        break;
+    }
+    return out;
+}
+
 std::istream& operator>>(std::istream& in, LaggingLevel& level)
 {
     std::string token;
