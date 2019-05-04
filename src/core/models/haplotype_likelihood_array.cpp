@@ -6,9 +6,6 @@
 #include <utility>
 #include <cassert>
 
-#include <iostream> // DEBUG
-#include <iomanip>  // DEBUG
-
 namespace octopus {
 
 // public methods

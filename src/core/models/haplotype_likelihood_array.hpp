@@ -7,7 +7,10 @@
 #include <unordered_map>
 #include <vector>
 #include <algorithm>
+#include <iterator>
 #include <functional>
+#include <iostream>
+#include <iomanip>
 
 #include <boost/optional.hpp>
 
@@ -153,7 +156,7 @@ void print_read_likelihood_helper(S& stream, const AlignedRead& read, const doub
            << mapped_region(read) << " "
            << read.cigar() << ": "
            << likelihood << '\n';
-} 
+}
 template <typename S>
 void print_read_likelihood_helper(S& stream, const AlignedTemplate& reads, const double likelihood)
 {
@@ -164,10 +167,10 @@ void print_read_likelihood_helper(S& stream, const AlignedTemplate& reads, const
     stream << "] :" << likelihood << '\n';
 } 
 
-template <typename S, typename Map>
+template <typename S, typename Read>
 void print_read_haplotype_likelihoods(S&& stream,
                                      const MappableBlock<Haplotype>& haplotypes,
-                                     const Map& reads,
+                                     const MappableMap<SampleName, Read>& reads,
                                      const HaplotypeLikelihoodArray& haplotype_likelihoods,
                                      const std::size_t n = 5)
 {
@@ -183,8 +186,7 @@ void print_read_haplotype_likelihoods(S&& stream,
         stream << "each sample";
     }
     stream << '\n';
-    using ReadType = typename Map::mapped_type::value_type;
-    using ReadReference = std::reference_wrapper<const ReadType>;
+    using ReadReference = std::reference_wrapper<const Read>;
     for (const auto& sample_reads : reads) {
         const auto& sample = sample_reads.first;
         if (!is_single_sample) {
@@ -203,7 +205,7 @@ void print_read_haplotype_likelihoods(S&& stream,
             std::transform(std::cbegin(sample_reads.second), std::cend(sample_reads.second),
                            std::cbegin(haplotype_likelihoods(sample, haplotype)),
                            std::back_inserter(likelihoods),
-                           [] (const ReadType& read, const auto likelihood) {
+                           [] (const Read& read, const auto likelihood) {
                                return std::make_pair(std::cref(read), likelihood);
                            });
             const auto mth = std::next(std::begin(likelihoods), m);
@@ -211,7 +213,7 @@ void print_read_haplotype_likelihoods(S&& stream,
                               [] (const auto& lhs, const auto& rhs) {
                                   return lhs.second > rhs.second;
                               });
-            std::for_each(std::begin(likelihoods), mth, [&] (const auto& p) {
+            std::for_each(std::begin(likelihoods), mth, [&stream, is_single_sample] (const auto& p) {
                 if (is_single_sample) {
                     stream << "\t";
                 } else {
@@ -223,9 +225,9 @@ void print_read_haplotype_likelihoods(S&& stream,
     }
 }
 
-template <typename Map>
+template <typename Read>
 void print_read_haplotype_likelihoods(const MappableBlock<Haplotype>& haplotypes,
-                                      const ReadMap& reads,
+                                      const MappableMap<SampleName, Read>& reads,
                                       const HaplotypeLikelihoodArray& haplotype_likelihoods,
                                       std::size_t n = 5)
 {

@@ -27,7 +27,7 @@ class MappableBlock : public Mappable<MappableBlock<MappableTp, Container>>,
 {
 public:
     using MappableType = MappableTp;
-    using RegionType   = RegionType<MappableType>;
+    using RegionType   = octopus::RegionType<MappableType>;
     
     using allocator_type  = typename Container::allocator_type;
     using value_type      = typename Container::value_type;
