@@ -675,7 +675,8 @@ boost::optional<GenomicRegion>
 Caller::find_phased_head(const MappableBlock<Haplotype>& haplotypes, const MappableFlatSet<Variant>& candidates,
                          const GenomicRegion& active_region, const Latents& latents) const
 {
-    const auto active_candidates = overlap_range(candidates, active_region);
+    if (debug_log_) stream(*debug_log_) << "Trying to find complete phase regions in " << active_region;
+    const auto active_candidates = contained_range(candidates, active_region);
     const auto viable_phase_regions = extract_mutually_exclusive_regions(active_candidates);
     const auto phasings = phaser_.phase(haplotypes, *latents.genotype_posteriors(),
                                         viable_phase_regions, get_genotype_calls(latents));
@@ -937,6 +938,7 @@ void Caller::set_phasing(std::vector<CallWrapper>& calls, const Latents& latents
                          const HaplotypeBlock& haplotypes,
                          const GenomicRegion& call_region) const
 {
+    if (debug_log_) stream(*debug_log_) << "Phasing " << calls.size() << " calls in " << call_region;
     const auto phasings = phaser_.phase(haplotypes, *latents.genotype_posteriors(),
                                         extract_regions(calls), get_genotype_calls(latents));
     if (debug_log_) debug::print_phase_sets(stream(*debug_log_), phasings);
