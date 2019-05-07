@@ -160,12 +160,12 @@ void print_read_likelihood_helper(S& stream, const AlignedRead& read, const doub
 template <typename S>
 void print_read_likelihood_helper(S& stream, const AlignedTemplate& reads, const double likelihood)
 {
-    stream << "[";
+    stream << "[ ";
     for (const auto& read : reads) {
-        stream << read.name() << " " << mapped_region(read) << " " << read.cigar(); 
+        stream <<  "<" << read.name() << " " << mapped_region(read) << " " << read.cigar() << "> "; 
     }
-    stream << "] :" << likelihood << '\n';
-} 
+    stream << "] : " << likelihood << '\n';
+}
 
 template <typename S, typename Read>
 void print_read_haplotype_likelihoods(S&& stream,
