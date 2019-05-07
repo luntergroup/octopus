@@ -291,11 +291,13 @@ bool has_reference(const Container& haplotypes)
     return find_reference(haplotypes) != std::cend(haplotypes);
 }
 
-auto make_read_templates_helper(const ReadContainer& reads)
+TemplateContainer make_read_templates_helper(const ReadContainer& reads)
 {
-    TemplateContainer result {};
-    make_read_templates(std::cbegin(reads), std::cend(reads), std::inserter(result, std::begin(result)));
-    return result;
+    std::vector<AlignedTemplate> buffer {};
+    buffer.reserve(reads.size());
+    make_read_templates(std::cbegin(reads), std::cend(reads), std::back_inserter(buffer));
+    std::sort(std::begin(buffer), std::end(buffer));
+    return {std::make_move_iterator(std::begin(buffer)), std::make_move_iterator(std::end(buffer))};
 }
 
 TemplateMap make_read_templates_helper(const ReadMap& reads)
