@@ -1091,7 +1091,13 @@ unsigned HaplotypeGenerator::populate_tree_with_cached_haplotypes(const unsigned
         const auto itr = std::find_if(std::cbegin(haplotype_blocks_), std::cend(haplotype_blocks_), try_add_block);
         const auto num_blocks_added = static_cast<unsigned>(std::distance(std::cbegin(haplotype_blocks_), itr));
         if (num_blocks_added > 0) {
-            if (debug_log_) stream(*debug_log_) << "Populated haplotype tree with " << num_blocks_added << " of " << haplotype_blocks_.size() << " haplotype blocks";
+            if (debug_log_) {
+                auto log = stream(*debug_log_);
+                log << "Populated haplotype tree with " << num_blocks_added << " of " << haplotype_blocks_.size() << " haplotype blocks:\n";
+                std::for_each(std::cbegin(haplotype_blocks_), itr, [&log] (const auto& block) {
+                     log << mapped_region(block) << " with " << block.size() << " haplotypes\n";
+                });
+            }
             haplotype_blocks_.erase(std::cbegin(haplotype_blocks_), itr);
             active_region_ = tree_.encompassing_region();
         }
