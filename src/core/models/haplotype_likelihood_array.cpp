@@ -132,6 +132,7 @@ void HaplotypeLikelihoodArray::populate(const TemplateMap& reads, const Mappable
             std::transform(t.first, t.last, std::cbegin(*template_hash_itr), std::begin(*itr),
                            [&] (const AlignedTemplate& read_template, const auto& template_hashes) {
                                mapping_positions.resize(read_template.size());
+                               assert(read_template.size() == template_hashes.size());
                                for (std::size_t i {0}; i < template_hashes.size(); ++i) {
                                    mapping_positions[i].resize(maxMappingPositions);
                                    mapping_positions[i].erase(map_query_to_target(template_hashes[i], haplotype_hashes,
@@ -139,8 +140,8 @@ void HaplotypeLikelihoodArray::populate(const TemplateMap& reads, const Mappable
                                                                                   std::begin(mapping_positions[i]),
                                                                                   maxMappingPositions),
                                                               std::end(mapping_positions[i]));
+                                   reset_mapping_counts(haplotype_mapping_counts);
                                }
-                               reset_mapping_counts(haplotype_mapping_counts);
                                return likelihood_model_.evaluate(read_template, mapping_positions);
                            });
             ++template_hash_itr;
