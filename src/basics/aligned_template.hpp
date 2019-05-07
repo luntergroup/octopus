@@ -94,6 +94,7 @@ make_read_templates(ForwardIterator first_read_itr, ForwardIterator last_read_it
                     OutputIterator result_itr)
 {
     std::unordered_map<std::string, std::vector<MappableReferenceWrapper<const AlignedRead>>> buffer {};
+    buffer.reserve(std::distance(first_read_itr, last_read_itr) / 2);
     std::for_each(first_read_itr, last_read_itr, [&] (const AlignedRead& read) {
         if (read.has_other_segment()) {
             const auto& template_id = read.name();
