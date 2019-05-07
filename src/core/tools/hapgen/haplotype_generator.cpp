@@ -340,6 +340,7 @@ bool HaplotypeGenerator::is_active_region_lagged() const
 {
     if (in_holdout_mode()) return true;
     if (!is_lagging_enabled(active_region_)) return false;
+    if (alleles_.empty()) return false;
     const auto next_lagged_region = lagged_walker_->walk(active_region_, reads_, alleles_);
     return overlaps(active_region_, next_lagged_region);
 }
