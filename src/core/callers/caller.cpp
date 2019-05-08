@@ -297,7 +297,7 @@ TemplateContainer make_read_templates_helper(const ReadContainer& reads)
     buffer.reserve(reads.size());
     make_read_templates(std::cbegin(reads), std::cend(reads), std::back_inserter(buffer));
     std::sort(std::begin(buffer), std::end(buffer));
-    return {std::make_move_iterator(std::begin(buffer)), std::make_move_iterator(std::end(buffer))};
+    return {ForwardSortedTag {}, std::make_move_iterator(std::begin(buffer)), std::make_move_iterator(std::end(buffer))};
 }
 
 TemplateMap make_read_templates_helper(const ReadMap& reads)
