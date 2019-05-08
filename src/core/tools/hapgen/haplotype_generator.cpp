@@ -159,6 +159,8 @@ get_walker_policy(policies.extension)
 , active_holdouts_{}
 , holdout_region_{}
 , previous_holdout_regions_{}
+, haplotype_blocks_ {}
+, active_haplotype_blocks_ {}
 , debug_log_{logging::get_debug_log()}
 , trace_log_{logging::get_trace_log()}
 {
@@ -331,9 +333,9 @@ bool HaplotypeGenerator::is_backtracking_enabled() const noexcept
     return policies_.backtrack != Policies::Backtrack::none;
 }
 
-bool HaplotypeGenerator::partial_backtrack_active() const noexcept
+bool HaplotypeGenerator::is_backtrack_active() const noexcept
 {
-    return !haplotype_blocks_.empty() && !in_holdout_mode() && is_before(active_region_, haplotype_blocks_.front());
+    return !active_haplotype_blocks_.empty();
 }
 
 bool HaplotypeGenerator::is_active_region_lagged() const
@@ -936,25 +938,25 @@ void HaplotypeGenerator::populate_tree()
         populate_tree_with_holdouts();
     } else {
         if (alleles_.empty()) {
-            populate_tree_with_cached_haplotypes();
+            extend_tree_with_cached_haplotypes();
         } else {
-            if (partial_backtrack_active()) {
-                populate_tree_with_cached_haplotypes();
+            if (is_backtrack_active() && !haplotype_blocks_.empty()) {
+                extend_tree_with_cached_haplotypes();
             } else {
                 update_next_active_region();
                 if (is_after(*next_active_region_, rightmost_allele_)) {
                     alleles_.clear();
                     if (is_backtracking_enabled()) cache_active_haplotypes();
-                    tree_.clear();
                     active_region_ = *next_active_region_;
                     reset_next_active_region();
-                    populate_tree_with_cached_haplotypes();
+                    clear_and_populate_tree_with_cached_haplotypes();
                 } else {
                     if (!in_holdout_mode()) prepare_for_next_active_region();
                     if (should_populate_tree_with_cached_haplotype()) {
                         reset_next_active_region();
-                        populate_tree_with_cached_haplotypes();
+                        clear_and_populate_tree_with_cached_haplotypes();
                     } else {
+                        active_haplotype_blocks_.clear();
                         populate_tree_with_novel_alleles();
                     }
                 }
@@ -1077,7 +1079,7 @@ std::size_t HaplotypeGenerator::max_cached_haplotypes() const
     return std::accumulate(std::cbegin(haplotype_blocks_), std::cend(haplotype_blocks_), std::size_t {1}, multiplies_size);
 }
 
-unsigned HaplotypeGenerator::populate_tree_with_cached_haplotypes(const unsigned max_haplotypes)
+unsigned HaplotypeGenerator::extend_tree_with_cached_haplotypes(const unsigned max_haplotypes)
 {
     if (!haplotype_blocks_.empty()) {
         const auto try_add_block = [this, max_haplotypes] (const auto& block) {
@@ -1088,17 +1090,20 @@ unsigned HaplotypeGenerator::populate_tree_with_cached_haplotypes(const unsigned
                 return true;
             }
         };
-        const auto itr = std::find_if(std::cbegin(haplotype_blocks_), std::cend(haplotype_blocks_), try_add_block);
-        const auto num_blocks_added = static_cast<unsigned>(std::distance(std::cbegin(haplotype_blocks_), itr));
+        const auto itr = std::find_if(std::begin(haplotype_blocks_), std::end(haplotype_blocks_), try_add_block);
+        const auto num_blocks_added = static_cast<unsigned>(std::distance(std::begin(haplotype_blocks_), itr));
         if (num_blocks_added > 0) {
             if (debug_log_) {
                 auto log = stream(*debug_log_);
                 log << "Populated haplotype tree with " << num_blocks_added << " of " << haplotype_blocks_.size() << " haplotype blocks:\n";
-                std::for_each(std::cbegin(haplotype_blocks_), itr, [&log] (const auto& block) {
+                std::for_each(std::begin(haplotype_blocks_), itr, [&log] (const auto& block) {
                      log << mapped_region(block) << " with " << block.size() << " haplotypes\n";
                 });
             }
-            haplotype_blocks_.erase(std::cbegin(haplotype_blocks_), itr);
+            active_haplotype_blocks_.insert(std::cend(active_haplotype_blocks_),
+                                            std::make_move_iterator(std::begin(haplotype_blocks_)),
+                                            std::make_move_iterator(itr));
+            haplotype_blocks_.erase(std::begin(haplotype_blocks_), itr);
             active_region_ = tree_.encompassing_region();
         }
         return num_blocks_added;
@@ -1106,20 +1111,21 @@ unsigned HaplotypeGenerator::populate_tree_with_cached_haplotypes(const unsigned
     return 0;
 }
 
-void HaplotypeGenerator::populate_tree_with_cached_haplotypes()
+void HaplotypeGenerator::extend_tree_with_cached_haplotypes()
 {
     if (!haplotype_blocks_.empty()) {
-        auto num_blocks_added = populate_tree_with_cached_haplotypes(policies_.haplotype_limits.target);
+        auto num_blocks_added = extend_tree_with_cached_haplotypes(policies_.haplotype_limits.target);
         if (num_blocks_added == 0) {
-            if (debug_log_) stream(*debug_log_) << "Failed to add any of " << haplotype_blocks_.size() << " haplotype blocks... clearing tree and retrying";
-            tree_.clear();
-            num_blocks_added = populate_tree_with_cached_haplotypes(policies_.haplotype_limits.target);
-            if (num_blocks_added == 0) {
-                throw HaplotypeOverflow {active_region_, haplotype_blocks_.size()};
-            }
-            
+            clear_and_populate_tree_with_cached_haplotypes();
         }
     }
+}
+
+void HaplotypeGenerator::clear_and_populate_tree_with_cached_haplotypes()
+{
+    tree_.clear();
+    active_haplotype_blocks_.clear();
+    if (!haplotype_blocks_.empty()) extend_tree_with_cached_haplotypes(policies_.haplotype_limits.target);
 }
 
 bool HaplotypeGenerator::in_holdout_mode() const noexcept
@@ -1444,13 +1450,23 @@ void HaplotypeGenerator::cleanup_tree()
     }
 }
 
+namespace {
+
+template <typename T>
+bool includes(const std::vector<T>& values, const T& value)
+{
+    return std::find(std::cbegin(values), std::cend(values), value) != std::cend(values);
+}
+
+} // namespace
+
 void HaplotypeGenerator::cache_active_haplotypes(const GenomicRegion& region)
 {
     if (!tree_.is_empty()) {
         const auto cache_region = overlapped_region(region, tree_.encompassing_region());
         if (cache_region) {
             auto block = tree_.extract_haplotypes(*cache_region);
-            if (!block.empty()) {
+            if (!block.empty() && !includes(active_haplotype_blocks_, block)) {
                 if (debug_log_) stream(*debug_log_) << "Caching " << block.size() << " haplotypes in " << *cache_region;
                 if (haplotype_blocks_.empty() || is_after(block, haplotype_blocks_.back())) {
                     haplotype_blocks_.push_back(std::move(block));

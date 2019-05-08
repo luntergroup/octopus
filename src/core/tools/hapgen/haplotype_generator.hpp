@@ -151,6 +151,7 @@ private:
     Allele rightmost_allele_;
     
     std::deque<HaplotypeBlock> haplotype_blocks_;
+    std::vector<HaplotypeBlock> active_haplotype_blocks_;
     
     mutable boost::optional<logging::DebugLogger> debug_log_;
     mutable boost::optional<logging::TraceLogger> trace_log_;
@@ -158,7 +159,7 @@ private:
     bool is_lagging_enabled() const noexcept;
     bool is_lagging_enabled(const GenomicRegion& region) const;
     bool is_backtracking_enabled() const noexcept;
-    bool partial_backtrack_active() const noexcept;
+    bool is_backtrack_active() const noexcept;
     bool is_active_region_lagged() const;
     void reset_next_active_region() const noexcept;
     GenomicRegion find_max_lagged_region() const;
@@ -168,8 +169,9 @@ private:
     void populate_tree();
     void populate_tree_with_novel_alleles();
     void populate_tree_with_holdouts();
-    unsigned populate_tree_with_cached_haplotypes(unsigned max_haplotypes);
-    void populate_tree_with_cached_haplotypes();
+    unsigned extend_tree_with_cached_haplotypes(unsigned max_haplotypes);
+    void extend_tree_with_cached_haplotypes();
+    void clear_and_populate_tree_with_cached_haplotypes();
     bool can_populate_tree_with_cached_haplotype(unsigned max_haplotypes) const;
     bool can_populate_tree_with_cached_haplotype() const;
     bool should_populate_tree_with_cached_haplotype() const;
