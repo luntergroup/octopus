@@ -130,7 +130,7 @@ IndividualCaller::infer_latents(const HaplotypeBlock& haplotypes,
     if (debug_log_) stream(*debug_log_) << "There are " << genotypes.size() << " candidate genotypes";
     auto prior_model = make_prior_model(haplotypes);
     prior_model->prime(haplotypes);
-    model::IndividualModel model {*prior_model, debug_log_};
+    model::IndividualModel model {*prior_model, debug_log_, trace_log_};
     model.prime(haplotypes);
     haplotype_likelihoods.prime(sample());
     auto inferences = model.evaluate(genotypes, genotype_indices, haplotype_likelihoods);
