@@ -49,6 +49,10 @@ public:
     
     template <typename InputIterator>
     MappableFlatSet(InputIterator first, InputIterator second);
+    template <typename InputIterator>
+    MappableFlatSet(ForwardSortedTag, InputIterator first, InputIterator second);
+    template <typename InputIterator>
+    MappableFlatSet(BidirectionallySortedTag, InputIterator first, InputIterator second);
     
     MappableFlatSet(std::initializer_list<MappableType> mappables);
     
@@ -182,6 +186,31 @@ MappableFlatSet<MappableType, Allocator>::MappableFlatSet(InputIterator first, I
     std::sort(std::begin(elements_), std::end(elements_));
     elements_.erase(std::unique(std::begin(elements_), std::end(elements_)), std::end(elements_));
     is_bidirectionally_sorted_ = is_bidirectionally_sorted(elements_);
+    max_element_size_ = region_size(*largest_mappable(elements_));
+}
+
+template <typename MappableType, typename Allocator>
+template <typename InputIterator>
+MappableFlatSet<MappableType, Allocator>::MappableFlatSet(ForwardSortedTag, InputIterator first, InputIterator second)
+: elements_ {first, second}
+, is_bidirectionally_sorted_ {true}
+, max_element_size_ {0}
+{
+    if (elements_.empty()) return;
+    elements_.erase(std::unique(std::begin(elements_), std::end(elements_)), std::end(elements_));
+    is_bidirectionally_sorted_ = is_bidirectionally_sorted(elements_);
+    max_element_size_ = region_size(*largest_mappable(elements_));
+}
+
+template <typename MappableType, typename Allocator>
+template <typename InputIterator>
+MappableFlatSet<MappableType, Allocator>::MappableFlatSet(BidirectionallySortedTag, InputIterator first, InputIterator second)
+: elements_ {first, second}
+, is_bidirectionally_sorted_ {true}
+, max_element_size_ {0}
+{
+    if (elements_.empty()) return;
+    elements_.erase(std::unique(std::begin(elements_), std::end(elements_)), std::end(elements_));
     max_element_size_ = region_size(*largest_mappable(elements_));
 }
 
