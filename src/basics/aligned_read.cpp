@@ -109,6 +109,11 @@ AlignedRead::Flags AlignedRead::flags() const noexcept
     return decompress(flags_);
 }
 
+const AlignedRead::NucleotideSequence& AlignedRead::barcode() const noexcept
+{
+    return barcode_sequence_;
+}
+
 void AlignedRead::realign(GenomicRegion new_region, CigarString new_cigar) noexcept
 {
     assert(sequence_size(new_cigar) == sequence_.size());
@@ -372,7 +377,8 @@ AlignedRead copy(const AlignedRead& read, const GenomicRegion& region)
     const auto subqualities_end_itr   = next(subqualities_begin_itr, copy_length);
     AlignedRead::BaseQualityVector sub_qualities {subqualities_begin_itr, subqualities_end_itr};
     return AlignedRead {read.name(), copy_region, std::move(sub_sequence), std::move(sub_qualities),
-                        std::move(contained_cigar_copy), read.mapping_quality(), read.flags(), read.read_group()};
+                        std::move(contained_cigar_copy), read.mapping_quality(), read.flags(), read.read_group(),
+                        read.barcode()};
 }
 
 template <typename T>
@@ -418,6 +424,7 @@ auto calculate_dynamic_bytes(const AlignedRead& read) noexcept
            + sequence_size(read) * sizeof(AlignedRead::BaseQuality)
            + read.cigar().size() * sizeof(CigarOperation)
            + contig_name(read).size() * sizeof(char)
+           + read.barcode().size() * sizeof(char)
            + (read.has_other_segment() ? sizeof(AlignedRead::Segment) : 0);
 }
 
