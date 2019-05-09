@@ -115,7 +115,7 @@ public:
     
     // Discards any equivilant haplotypes that are not in the given set of
     // haplotypes.
-    template <typename Container> void collapse(const Container& haplotypes);
+    void collapse(const HaplotypeBlock& haplotypes);
     
 private:
     struct HoldoutSet
@@ -212,21 +212,14 @@ private:
 };
 
 template <typename Container>
-void HaplotypeGenerator::collapse(const Container& haplotypes)
-{
-    reset_next_active_region();
-    if (!is_active_region_lagged() || tree_.num_haplotypes() == haplotypes.size()) {
-        return;
-    }
-    prune_unique(haplotypes, tree_);
-}
-
-template <typename Container>
 void HaplotypeGenerator::remove(const Container& haplotypes)
 {
     if (haplotypes.empty()) return;
     reset_next_active_region();
     prune_all(haplotypes, tree_);
+    if (debug_log_)
+        stream(*debug_log_) << "There are " << tree_.num_haplotypes() << " left in the tree after pruning "
+                            << haplotypes.size() << " haplotypes";
 }
 
 class HaplotypeGenerator::Builder

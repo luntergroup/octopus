@@ -316,6 +316,17 @@ unsigned HaplotypeGenerator::max_removal_impact() const
     return cur_num_haplotypes;
 }
 
+void HaplotypeGenerator::collapse(const HaplotypeBlock& haplotypes)
+{
+    if ((is_backtracking_enabled() || is_active_region_lagged()) && haplotypes.size() < tree_.num_haplotypes()) {
+        reset_next_active_region();
+        prune_unique(haplotypes, tree_);
+        if (debug_log_)
+            stream(*debug_log_) << "There are " << tree_.num_haplotypes() << " left in the tree after collapsing "
+                                << haplotypes.size() << " haplotypes";
+    }
+}
+
 // private methods
 
 bool HaplotypeGenerator::is_lagging_enabled() const noexcept
@@ -1116,6 +1127,7 @@ void HaplotypeGenerator::extend_tree_with_cached_haplotypes()
     if (!haplotype_blocks_.empty()) {
         auto num_blocks_added = extend_tree_with_cached_haplotypes(policies_.haplotype_limits.target);
         if (num_blocks_added == 0) {
+            if (debug_log_) *debug_log_ << "Failed to extend tree with cached haplotypes";
             clear_and_populate_tree_with_cached_haplotypes();
         }
     }
@@ -1123,6 +1135,8 @@ void HaplotypeGenerator::extend_tree_with_cached_haplotypes()
 
 void HaplotypeGenerator::clear_and_populate_tree_with_cached_haplotypes()
 {
+    if (debug_log_) stream(*debug_log_) << "Clearing tree with " << tree_.num_haplotypes() << " haplotypes and "
+                                        << active_haplotype_blocks_.size() << " active haplotype blocks";
     tree_.clear();
     active_haplotype_blocks_.clear();
     if (!haplotype_blocks_.empty()) extend_tree_with_cached_haplotypes(policies_.haplotype_limits.target);
