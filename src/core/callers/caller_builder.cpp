@@ -135,6 +135,12 @@ CallerBuilder& CallerBuilder::set_use_paired_reads(bool use) noexcept
     return *this;
 }
 
+CallerBuilder& CallerBuilder::set_use_linked_reads(bool use) noexcept
+{
+    params_.general.use_linked_reads = use;
+    return *this;
+}
+
 CallerBuilder& CallerBuilder::set_min_variant_posterior(Phred<double> posterior) noexcept
 {
     params_.min_variant_posterior = posterior;

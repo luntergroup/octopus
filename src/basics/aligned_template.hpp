@@ -7,6 +7,7 @@
 #include <vector>
 #include <unordered_map>
 #include <iterator>
+#include <initializer_list>
 
 #include "concepts/comparable.hpp"
 #include "concepts/equitable.hpp"
@@ -25,6 +26,7 @@ public:
     AlignedTemplate() = default;
     
     AlignedTemplate(const AlignedRead& read);
+    AlignedTemplate(std::initializer_list<MappableReferenceWrapper<const AlignedRead>> reads);
     template <typename InputIterator>
     AlignedTemplate(InputIterator first, InputIterator last);
     
@@ -90,35 +92,56 @@ bool is_rightmost_segment(const AlignedRead& read) noexcept;
 
 template <typename ForwardIterator, typename OutputIterator>
 OutputIterator
-make_read_templates(ForwardIterator first_read_itr, ForwardIterator last_read_itr,
-                    OutputIterator result_itr)
+make_paired_read_templates(ForwardIterator first_read_itr, ForwardIterator last_read_itr,
+                           OutputIterator result_itr)
 {
-    std::unordered_map<std::string, std::vector<MappableReferenceWrapper<const AlignedRead>>> buffer {};
+    std::unordered_map<std::string, MappableReferenceWrapper<const AlignedRead>> buffer {};
     buffer.reserve(std::distance(first_read_itr, last_read_itr) / 2);
     std::for_each(first_read_itr, last_read_itr, [&] (const AlignedRead& read) {
         if (read.has_other_segment()) {
             const auto& template_id = read.name();
             if (template_id.empty()) {
-                throw;
+                throw std::runtime_error {"Read does not have a valid name"};
             }
-            if (is_rightmost_segment(read)) {
-                const auto template_itr = buffer.find(template_id);
-                if (template_itr == std::cend(buffer)) {
-                    *result_itr++ = {read};
-                } else {
-                    template_itr->second.emplace_back(read);
-                    *result_itr++ = {std::cbegin(template_itr->second), std::cend(template_itr->second)};
-                    buffer.erase(template_itr);
-                }
+            const auto template_itr = buffer.find(template_id);
+            if (template_itr == std::cend(buffer)) {
+                buffer.emplace(template_id, read);
             } else {
-                buffer[template_id].emplace_back(read);
+                if (template_itr->second.get() < read) {
+                    *result_itr++ = {{template_itr->second, read}};
+                } else {
+                    *result_itr++ = {{read, template_itr->second}};
+                }
+                buffer.erase(template_itr);
             }
         } else {
             *result_itr++ = {read};
         }
     });
     for (const auto& p : buffer) {
-        *result_itr++ = {std::cbegin(p.second), std::cend(p.second)};
+        *result_itr++ = {p.second};
+    }
+    return result_itr;
+}
+
+template <typename ForwardIterator, typename OutputIterator>
+OutputIterator
+make_linked_read_templates(ForwardIterator first_read_itr, ForwardIterator last_read_itr,
+                           OutputIterator result_itr)
+{
+    std::unordered_map<AlignedRead::NucleotideSequence, std::vector<MappableReferenceWrapper<const AlignedRead>>> buffer {};
+    buffer.reserve(std::distance(first_read_itr, last_read_itr));
+    std::for_each(first_read_itr, last_read_itr, [&] (const AlignedRead& read) {
+        buffer[read.barcode()].emplace_back(read);
+    });
+    for (auto& p : buffer) {
+        std::sort(std::begin(p.second), std::end(p.second));
+        if (!p.first.empty()) {
+            *result_itr++ = {std::cbegin(p.second), std::cend(p.second)};
+        } else {
+            std::transform(std::cbegin(p.second), std::cend(p.second), result_itr,
+                           [] (const auto& read) -> AlignedTemplate { return {read}; });
+        }
     }
     return result_itr;
 }

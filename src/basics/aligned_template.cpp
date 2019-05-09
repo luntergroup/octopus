@@ -10,9 +10,18 @@ AlignedTemplate::AlignedTemplate(const AlignedRead& read)
 , region_ {read.mapped_region()}
 {}
 
+AlignedTemplate::AlignedTemplate(std::initializer_list<MappableReferenceWrapper<const AlignedRead>> reads)
+: template_ {reads}
+{
+    if (template_.empty()) {
+        throw;
+    } else {
+        region_ = encompassing_region(template_);
+    }
+}
+
 const GenomicRegion& AlignedTemplate::mapped_region() const noexcept
 {
-    
     return region_;
 }
 
