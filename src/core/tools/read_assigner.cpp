@@ -98,8 +98,9 @@ void calculate_support(Map& result,
             }
             if (ambiguous) {
                 ambiguous->emplace_back(read);
-                if (config.ambiguous_record != AssignmentConfig::AmbiguousRecord::read_only) {
-                    ambiguous->back().haplotypes = std::vector<Haplotype> {};
+                if (config.ambiguous_record == AssignmentConfig::AmbiguousRecord::haplotypes
+                    || (config.ambiguous_record == AssignmentConfig::AmbiguousRecord::haplotypes_if_three_or_more_options && top.size() >= 3)) {
+                    ambiguous->back().haplotypes.emplace();
                     ambiguous->back().haplotypes->reserve(top.size());
                     for (auto idx : top) ambiguous->back().haplotypes->push_back(haplotypes[idx]);
                 }
