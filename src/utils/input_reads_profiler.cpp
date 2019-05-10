@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <utility>
 #include <cassert>
+#include <iostream>
 
 #include "mappable_algorithms.hpp"
 #include "maths.hpp"
@@ -240,6 +241,40 @@ estimate_mean_read_size(const std::vector<SampleName>& samples,
 std::size_t default_read_size_estimate() noexcept
 {
     return sizeof(AlignedRead) + 300;
+}
+
+std::ostream& operator<<(std::ostream& os, const ReadSetProfile& profile)
+{
+    os << "Bytes:\n";
+    os << "\tmean = " << profile.mean_read_bytes << '\n';
+    os << "\tstdev = " << profile.read_bytes_stdev << '\n';
+    
+    for (std::size_t s {0}; s < profile.sample_mean_depth.size(); ++s) {
+        os << "Sample " << s << " depth:\n";
+        os << "\tmean = " << profile.sample_mean_depth[s] << '\n';
+        os << "\tmean positive = " << profile.sample_mean_positive_depth[s] << '\n';
+        os << "\tmedian = " << profile.sample_median_depth[s] << '\n';
+        os << "\tmedian positive = " << profile.sample_median_positive_depth[s] << '\n';
+        os << "\tstdev = " << profile.sample_depth_stdev[s] << '\n';
+    }
+    
+    os << "Total depth:\n";
+    os << "\tmean = " << profile.mean_depth << '\n';
+    os << "\tmean positive = " << profile.mean_positive_depth << '\n';
+    os << "\tmedian = " << profile.median_depth << '\n';
+    os << "\tmedian positive = " << profile.median_positive_depth << '\n';
+    os << "\tstdev = " << profile.depth_stdev << '\n';
+    
+    os << "Read length:\n";
+    os << "\tmax = " << profile.max_read_length << '\n';
+    os << "\tmedian = " << profile.median_read_length << '\n';
+    
+    os << "Mapping quality:\n";
+    os << "\tmax = " << static_cast<unsigned>(profile.max_mapping_quality + 33) << '\n';
+    os << "\tmedian = " << static_cast<unsigned>(profile.median_mapping_quality + 33) << '\n';
+    os << "\trmq = " << static_cast<unsigned>(profile.rmq_mapping_quality + 33) << '\n';
+    
+    return os;
 }
 
 } // namespace octopus

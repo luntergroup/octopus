@@ -1363,6 +1363,9 @@ void log_run_start(const GenomeCallingComponents& components, const std::string&
     if (debug_log) {
         stream(*debug_log) << "Command line: " << command;
         print_input_regions(stream(*debug_log), components.search_regions());
+        const auto reads_profile = components.reads_profile();
+        if (reads_profile) stream(*debug_log) << "Reads profile:\n" << *reads_profile;
+    }
 }
 
 class CallingBug : public ProgramError
