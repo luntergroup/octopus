@@ -6,6 +6,7 @@
 
 #include <cstddef>
 #include <vector>
+#include <iosfwd>
 
 #include <boost/optional.hpp>
 
@@ -45,6 +46,8 @@ estimate_mean_read_size(const std::vector<SampleName>& samples,
                         unsigned max_sample_size = 1000);
 
 std::size_t default_read_size_estimate() noexcept;
+
+std::ostream& operator<<(std::ostream& os, const ReadSetProfile& profile);
 
 } // namespace octopus
 

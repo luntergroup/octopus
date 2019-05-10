@@ -75,6 +75,7 @@ public:
     boost::optional<Path> filter_request() const;
     boost::optional<Path> bamout() const;
     BAMRealigner::Config bamout_config() const noexcept;
+    boost::optional<ReadSetProfile> reads_profile() const noexcept;
     boost::optional<Path> data_profile() const;
     
 private:

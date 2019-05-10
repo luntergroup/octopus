@@ -173,6 +173,11 @@ BAMRealigner::Config GenomeCallingComponents::bamout_config() const noexcept
     return components_.bamout_config;
 }
 
+boost::optional<ReadSetProfile> GenomeCallingComponents::reads_profile() const noexcept
+{
+    return components_.reads_profile;
+}
+
 boost::optional<GenomeCallingComponents::Path> GenomeCallingComponents::data_profile() const
 {
     return components_.data_profile;
