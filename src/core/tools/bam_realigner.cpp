@@ -276,7 +276,7 @@ auto assign_and_realign(const std::vector<AlignedRead>& reads, const Genotype<Ha
                 random_assigned_reads.reserve(genotype.ploidy());
                 for (AmbiguousRead& ambiguous : unassigned_reads) {
                     assert(ambiguous.haplotypes && !ambiguous.haplotypes->empty());
-                    random_assigned_reads[random_select(*ambiguous.haplotypes)].push_back(std::move(ambiguous.read));
+                    random_assigned_reads[*random_select(*ambiguous.haplotypes)].push_back(std::move(ambiguous.read));
                 }
                 for (auto& p : random_assigned_reads) {
                     utils::append(realign_and_annotate(std::move(p.second), p.first, reference, genotype.ploidy()), result);

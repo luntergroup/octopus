@@ -8,6 +8,7 @@
 #include <vector>
 #include <deque>
 #include <functional>
+#include <memory>
 #include <iosfwd>
 
 #include <boost/optional.hpp>
@@ -37,9 +38,9 @@ using AlleleSupportMap = std::unordered_map<Allele, ReadRefSupportSet>;
 struct AmbiguousRead : public Mappable<AmbiguousRead>
 {
     AlignedRead read;
-    boost::optional<std::vector<Haplotype>> haplotypes = boost::none;
+    boost::optional<std::vector<std::shared_ptr<Haplotype>>> haplotypes = boost::none;
     AmbiguousRead(AlignedRead read) : read {std::move(read)} {}
-    AmbiguousRead(AlignedRead read, std::vector<Haplotype> haplotypes)
+    AmbiguousRead(AlignedRead read, std::vector<std::shared_ptr<Haplotype>> haplotypes)
     : read {std::move(read)}, haplotypes {std::move(haplotypes)} {}
     const auto& mapped_region() const noexcept { return octopus::mapped_region(read); }
 };
@@ -49,9 +50,9 @@ using AmbiguousReadList = std::deque<AmbiguousRead>;
 struct AmbiguousTemplate : public Mappable<AmbiguousTemplate>
 {
     AlignedTemplate read_template;
-    boost::optional<std::vector<Haplotype>> haplotypes = boost::none;
+    boost::optional<std::vector<std::shared_ptr<Haplotype>>> haplotypes = boost::none;
     AmbiguousTemplate(AlignedTemplate read_template) : read_template {std::move(read_template)} {}
-    AmbiguousTemplate(AlignedTemplate read_template, std::vector<Haplotype> haplotypes)
+    AmbiguousTemplate(AlignedTemplate read_template, std::vector<std::shared_ptr<Haplotype>> haplotypes)
     : read_template {std::move(read_template)}, haplotypes {std::move(haplotypes)} {}
     const auto& mapped_region() const noexcept { return octopus::mapped_region(read_template); }
 };
@@ -61,8 +62,7 @@ using AmbiguousTemplateList = std::deque<AmbiguousTemplate>;
 struct AssignmentConfig
 {
     enum class AmbiguousAction { drop, first, random, all } ambiguous_action = AmbiguousAction::drop;
-    enum class AmbiguousRecord { read_only, haplotypes, haplotypes_if_three_or_more_options };
-    AmbiguousRecord ambiguous_record = AmbiguousRecord::haplotypes_if_three_or_more_options;
+    enum class AmbiguousRecord { read_only, haplotypes, haplotypes_if_three_or_more_options } ambiguous_record = AmbiguousRecord::haplotypes_if_three_or_more_options;
 };
 
 // AlignedRead

@@ -73,6 +73,10 @@ void calculate_support(Map& result,
 {
     std::vector<unsigned> top {};
     top.reserve(haplotypes.size());
+    std::vector<std::shared_ptr<Haplotype>> haplotype_ptrs {};
+    if (config.ambiguous_record != AssignmentConfig::AmbiguousRecord::read_only) {
+        haplotype_ptrs.resize(haplotypes.size());
+    }
     for (unsigned i {0}; i < reads.size(); ++i) {
         const auto& read = reads[i];
         find_map_haplotypes(haplotypes, i, likelihoods, log_priors, top);
@@ -102,7 +106,10 @@ void calculate_support(Map& result,
                     || (config.ambiguous_record == AssignmentConfig::AmbiguousRecord::haplotypes_if_three_or_more_options && top.size() >= 3)) {
                     ambiguous->back().haplotypes.emplace();
                     ambiguous->back().haplotypes->reserve(top.size());
-                    for (auto idx : top) ambiguous->back().haplotypes->push_back(haplotypes[idx]);
+                    for (auto idx : top) {
+                        if (!haplotype_ptrs[idx]) haplotype_ptrs[idx] = std::make_shared<Haplotype>(haplotypes[idx]);
+                        ambiguous->back().haplotypes->push_back(haplotype_ptrs[idx]);
+                    }
                 }
             }
         }
@@ -484,17 +491,17 @@ auto copy_included(const std::vector<Allele>& alleles, const Haplotype& haplotyp
 
 struct HaveDifferentAlleles
 {
-    bool operator()(const Haplotype& lhs, const Haplotype& rhs) const
+    bool operator()(const std::shared_ptr<Haplotype>& lhs, const std::shared_ptr<Haplotype>& rhs) const
     {
-        const auto lhs_includes = copy_included(alleles, lhs);
-        const auto rhs_includes = copy_included(alleles, rhs);
+        const auto lhs_includes = copy_included(alleles, *lhs);
+        const auto rhs_includes = copy_included(alleles, *rhs);
         return lhs_includes != rhs_includes;
     }
     HaveDifferentAlleles(const std::vector<Allele>& alleles) : alleles {alleles} {}
     const std::vector<Allele>& alleles;
 };
 
-bool have_common_alleles(const std::vector<Haplotype>& haplotypes, const std::vector<Allele>& alleles)
+bool have_common_alleles(const std::vector<std::shared_ptr<Haplotype>>& haplotypes, const std::vector<Allele>& alleles)
 {
     return std::adjacent_find(std::cbegin(haplotypes), std::cend(haplotypes), HaveDifferentAlleles {alleles}) == std::cend(haplotypes);
 }
@@ -516,7 +523,7 @@ try_assign_ambiguous_reads_to_alleles(const std::vector<Allele>& alleles,
     assigned.reserve(alleles.size());
     for (const auto& ambiguous_read : ambiguous_reads) {
         if (ambiguous_read.haplotypes && have_common_alleles(*ambiguous_read.haplotypes, alleles)) {
-            const auto supported_alleles = copy_included(alleles, ambiguous_read.haplotypes->front());
+            const auto supported_alleles = copy_included(alleles, *ambiguous_read.haplotypes->front());
             for (const auto& allele : supported_alleles) {
                 if (overlaps(ambiguous_read, allele)) {
                     assigned[allele].emplace_back(ambiguous_read.read);
