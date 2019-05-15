@@ -1273,6 +1273,16 @@ auto transform_somatic_calls(SomaticVariantCalls&& somatic_calls, CancerGenotype
     return result;
 }
 
+template <typename Map>
+auto compute_posterior(const Genotype<Allele>& genotype, const Map& genotype_posteriors)
+{
+    auto p = std::accumulate(std::cbegin(genotype_posteriors), std::cend(genotype_posteriors), 0.0,
+                             [&genotype] (const double curr, const auto& p) {
+                                 return curr + (contains(p.first, genotype) ? 0.0 : p.second);
+                             });
+    return probability_false_to_phred(p);
+}
+
 } // namespace
 
 Phred<double>
@@ -1405,17 +1415,13 @@ CancerCaller::call_variants(const std::vector<Variant>& candidates, const Latent
     germline_genotype_calls.reserve(called_germline_regions.size());
     for (const auto& region : called_germline_regions) {
         auto genotype_chunk = copy<Allele>(*called_germline_genotype, region);
-        const auto inv_posterior = std::accumulate(std::cbegin(germline_genotype_posteriors),
-                                                   std::cend(germline_genotype_posteriors), 0.0,
-                                                   [&called_germline_genotype] (const double curr, const auto& p) {
-                                                       return curr + (contains(p.first, *called_germline_genotype) ? 0.0 : p.second);
-                                                   });
+        const auto posterior = compute_posterior(genotype_chunk, germline_genotype_posteriors);
         if (called_somatic_genotype.ploidy() > 0) {
             germline_genotype_calls.emplace_back(std::move(genotype_chunk),
                                                  copy<Allele>(called_somatic_genotype, region),
-                                                 probability_false_to_phred(inv_posterior));
+                                                 posterior);
         } else {
-            germline_genotype_calls.emplace_back(std::move(genotype_chunk), probability_false_to_phred(inv_posterior));
+            germline_genotype_calls.emplace_back(std::move(genotype_chunk), posterior);
         }
     }
     if (debug_log_) {
@@ -1583,6 +1589,35 @@ void CancerCaller::log(const ModelPosteriors& model_posteriors) const
     }
 }
 
+namespace debug {
+
+template <typename S>
+void print_genotype_posteriors(S&& stream,
+                               const std::unordered_map<Genotype<Haplotype>, double>& genotype_posteriors,
+                               const std::size_t n)
+{
+    const auto m = std::min(n, genotype_posteriors.size());
+    if (m == genotype_posteriors.size()) {
+        stream << "Printing all genotype posteriors " << '\n';
+    } else {
+        stream << "Printing top " << m << " genotype posteriors " << '\n';
+    }
+    using GenotypeReference = std::reference_wrapper<const Genotype<Haplotype>>;
+    std::vector<std::pair<GenotypeReference, double>> v {};
+    v.reserve(genotype_posteriors.size());
+    std::copy(std::cbegin(genotype_posteriors), std::cend(genotype_posteriors), std::back_inserter(v));
+    const auto mth = std::next(std::begin(v), m);
+    std::partial_sort(std::begin(v), mth, std::end(v),
+                      [] (const auto& lhs, const auto& rhs) { return lhs.second > rhs.second; });
+    std::for_each(std::begin(v), mth,
+                  [&] (const auto& p) {
+                      print_variant_alleles(stream, p.first);
+                      stream << " " << p.second << '\n';
+                  });
+}
+
+} // namespace debug
+
 void CancerCaller::log(const GenotypeVector& germline_genotypes,
                        const GermlineGenotypeProbabilityMap& germline_genotype_posteriors,
                        const GermlineModel::InferredLatents& germline_inferences,
@@ -1615,6 +1650,9 @@ void CancerCaller::log(const GenotypeVector& germline_genotypes,
         marginal_germline_log << "MAP marginal germline genotype: ";
         debug::print_variant_alleles(marginal_germline_log, map_marginal_germline->first);
         marginal_germline_log << ' ' << map_marginal_germline->second;
+    }
+    if (trace_log_) {
+        debug::print_genotype_posteriors(stream(*trace_log_), germline_genotype_posteriors, -1);
     }
 }
 
