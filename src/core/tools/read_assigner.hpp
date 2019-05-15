@@ -62,7 +62,7 @@ using AmbiguousTemplateList = std::deque<AmbiguousTemplate>;
 struct AssignmentConfig
 {
     enum class AmbiguousAction { drop, first, random, all } ambiguous_action = AmbiguousAction::drop;
-    enum class AmbiguousRecord { read_only, haplotypes, haplotypes_if_three_or_more_options } ambiguous_record = AmbiguousRecord::haplotypes_if_three_or_more_options;
+    enum class AmbiguousRecord { read_only, haplotypes, haplotypes_if_three_or_more_options } ambiguous_record = AmbiguousRecord::haplotypes;
 };
 
 // AlignedRead
