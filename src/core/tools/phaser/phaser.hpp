@@ -32,11 +32,44 @@ public:
     using SampleGenotypePosteriorMap = GenotypePosteriorMap::InnerMap;
     using GenotypeCallMap            = std::unordered_map<SampleName, Genotype<Haplotype>>;
     
-    struct PhaseSet;
+    enum class GenotypeMatchType { exact, unique };
+    
+    struct Config
+    {
+        GenotypeMatchType genotype_match = GenotypeMatchType::exact;
+        Phred<double> min_phase_score = Phred<double> {10};
+        boost::optional<Phred<double>> max_phase_score = Phred<double> {100};
+    };
+    
+    struct PhaseSet
+    {
+        struct PhaseRegion : public Mappable<PhaseRegion>
+        {
+            PhaseRegion() = default;
+            
+            template <typename Region> PhaseRegion(Region&& region, Phred<double> score);
+            
+            GenomicRegion region;
+            Phred<double> score;
+            
+            const GenomicRegion& mapped_region() const noexcept { return region; }
+        };
+        
+        using SamplePhaseRegions = std::vector<PhaseRegion>;
+        using PhaseRegions       = std::unordered_map<SampleName, SamplePhaseRegions>;
+        
+        PhaseSet() = delete;
+        
+        template <typename R> PhaseSet(R&& region);
+        template <typename R, typename T> PhaseSet(R&& region, T&& phase_regions);
+        
+        GenomicRegion region;
+        PhaseRegions phase_regions;
+    };
     
     Phaser() = default;
     
-    explicit Phaser(Phred<double> min_phase_score);
+    Phaser(Config config);
     
     Phaser(const Phaser&)            = default;
     Phaser& operator=(const Phaser&) = default;
@@ -52,34 +85,15 @@ public:
           boost::optional<GenotypeCallMap> genotype_calls = boost::none) const;
     
 private:
-    Phred<double> min_phase_score_;
-    boost::optional<Phred<double>> max_phase_score_ = Phred<double> {100};
-};
-
-struct Phaser::PhaseSet
-{
-    struct PhaseRegion : public Mappable<PhaseRegion>
-    {
-        PhaseRegion() = default;
-        
-        template <typename Region> PhaseRegion(Region&& region, Phred<double> score);
-        
-        GenomicRegion region;
-        Phred<double> score;
-        
-        const GenomicRegion& mapped_region() const noexcept { return region; }
-    };
+    using GenotypeReference = std::reference_wrapper<const Genotype<Haplotype>>;
     
-    using SamplePhaseRegions = std::vector<PhaseRegion>;
-    using PhaseRegions       = std::unordered_map<SampleName, SamplePhaseRegions>;
+    Config config_;
     
-    PhaseSet() = delete;
-    
-    template <typename R> PhaseSet(R&& region);
-    template <typename R, typename T> PhaseSet(R&& region, T&& phase_regions);
-    
-    GenomicRegion region;
-    PhaseRegions phase_regions;
+    PhaseSet::SamplePhaseRegions
+    phase_sample(const GenomicRegion& region,
+                 const std::vector<GenomicRegion>& partitions,
+                 const std::vector<GenotypeReference>& genotypes,
+                 const SampleGenotypePosteriorMap& genotype_posteriors) const;
 };
 
 template <typename Region>
