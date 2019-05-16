@@ -137,6 +137,7 @@ bool all_empty(const ReadMap& reads) noexcept
 HaplotypeGenerator::HaplotypeGenerator(const ReferenceGenome& reference,
                                        const MappableFlatSet<Variant>& candidates,
                                        const ReadMap& reads,
+                                       boost::optional<const TemplateMap&> read_templates,
                                        boost::optional<const ReadPipe::Report&> reads_report,
                                        Policies policies,
                                        DenseVariationDetector dense_variation_detector)
@@ -155,6 +156,7 @@ get_walker_policy(policies.extension)
 , lagged_walker_{}
 , alleles_{decompose(candidates)}
 , reads_{reads}
+, read_templates_ {read_templates}
 , next_active_region_{}
 , active_holdouts_{}
 , holdout_region_{}
@@ -1090,11 +1092,22 @@ std::size_t HaplotypeGenerator::max_cached_haplotypes() const
     return std::accumulate(std::cbegin(haplotype_blocks_), std::cend(haplotype_blocks_), std::size_t {1}, multiplies_size);
 }
 
+bool can_add_block(const MappableBlock<Haplotype>& block,
+                   const HaplotypeTree& tree,
+                   const unsigned max_haplotypes,
+                   const HaplotypeGenerator::Policies::Backtrack backtrack_policy,
+                   const boost::optional<const TemplateMap&> reads)
+{
+    if (tree.num_haplotypes() * block.size() > max_haplotypes) return false;
+    if (backtrack_policy == HaplotypeGenerator::Policies::Backtrack::aggressive) return true;
+    return !reads || tree.is_empty() || has_shared(*reads, tree.encompassing_region(), block);
+}
+
 unsigned HaplotypeGenerator::extend_tree_with_cached_haplotypes(const unsigned max_haplotypes)
 {
     if (!haplotype_blocks_.empty()) {
         const auto try_add_block = [this, max_haplotypes] (const auto& block) {
-            if (tree_.num_haplotypes() * block.size() <= max_haplotypes) {
+            if (can_add_block(block, tree_, max_haplotypes, policies_.backtrack, read_templates_)) {
                 extend_tree(block, tree_);
                 return false;
             } else {
@@ -1600,12 +1613,14 @@ HaplotypeGenerator::Builder& HaplotypeGenerator::Builder::set_dense_variation_de
     return *this;
 }
 
-HaplotypeGenerator HaplotypeGenerator::Builder::build(const ReferenceGenome& reference,
-                                                      const MappableFlatSet<Variant>& candidates,
-                                                      const ReadMap& reads,
-                                                      boost::optional<const ReadPipe::Report&> reads_report) const
+HaplotypeGenerator
+HaplotypeGenerator::Builder::build(const ReferenceGenome& reference,
+                                   const MappableFlatSet<Variant>& candidates,
+                                   const ReadMap& reads,
+                                   boost::optional<const TemplateMap&> read_templates,
+                                   boost::optional<const ReadPipe::Report&> reads_report) const
 {
-    return HaplotypeGenerator {reference, candidates, reads, std::move(reads_report), policies_, dense_variation_detector_};
+    return HaplotypeGenerator {reference, candidates, reads, read_templates, std::move(reads_report), policies_, dense_variation_detector_};
 }
 
 } // namespace coretools

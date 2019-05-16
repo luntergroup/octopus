@@ -408,7 +408,7 @@ Caller::call_variants(const GenomicRegion& call_region, const MappableFlatSet<Va
     }
     const auto read_templates = make_read_templates(reads);
     auto haplotype_likelihoods = make_haplotype_likelihood_cache();
-    auto haplotype_generator = make_haplotype_generator(candidates, reads, read_report);
+    auto haplotype_generator = make_haplotype_generator(candidates, reads, read_templates, read_report);
     GeneratorStatus status;
     HaplotypeBlock haplotypes {call_region}, next_haplotypes {call_region};
     GenomicRegion active_region;
@@ -995,10 +995,17 @@ MappableFlatSet<Variant> Caller::generate_candidate_variants(const GenomicRegion
                                      std::make_move_iterator(std::end(final_candidates))};
 }
 
-HaplotypeGenerator Caller::make_haplotype_generator(const MappableFlatSet<Variant>& candidates,
-                                                    const ReadMap& reads, const ReadPipe::Report& read_report) const
+HaplotypeGenerator 
+Caller::make_haplotype_generator(const MappableFlatSet<Variant>& candidates,
+                                 const ReadMap& reads, 
+                                 const boost::optional<TemplateMap>& read_templates,
+                                 const ReadPipe::Report& read_report) const
 {
-    return haplotype_generator_builder_.build(reference_, candidates, reads, read_report);
+    if (read_templates) {
+        return haplotype_generator_builder_.build(reference_, candidates, reads, *read_templates, read_report);
+    } else {
+        return haplotype_generator_builder_.build(reference_, candidates, reads, boost::none, read_report);
+    }
 }
 
 HaplotypeLikelihoodArray Caller::make_haplotype_likelihood_cache() const

@@ -68,6 +68,7 @@ public:
     HaplotypeGenerator(const ReferenceGenome& reference,
                        const MappableFlatSet<Variant>& candidates,
                        const ReadMap& reads,
+                       boost::optional<const TemplateMap&> read_templates,
                        boost::optional<const ReadPipe::Report&> reads_report,
                        Policies policies,
                        DenseVariationDetector dense_variation_detector);
@@ -138,6 +139,7 @@ private:
     
     MappableFlatSet<Allele> alleles_;
     std::reference_wrapper<const ReadMap> reads_;
+    boost::optional<const TemplateMap&> read_templates_;
     
     MappableFlatSet<GenomicRegion> lagging_exclusion_zones_;
     
@@ -248,10 +250,12 @@ public:
     Builder& set_max_expected_log_allele_count_per_base(double v) noexcept;
     Builder& set_dense_variation_detector(DenseVariationDetector detector) noexcept;
     
-    HaplotypeGenerator build(const ReferenceGenome& reference,
-                             const MappableFlatSet<Variant>& candidates,
-                             const ReadMap& reads,
-                             boost::optional<const ReadPipe::Report&> reads_report = boost::none) const;
+    HaplotypeGenerator
+    build(const ReferenceGenome& reference,
+          const MappableFlatSet<Variant>& candidates,
+          const ReadMap& reads,
+          boost::optional<const TemplateMap&> read_templates = boost::none,
+          boost::optional<const ReadPipe::Report&> reads_report = boost::none) const;
     
 private:
     Policies policies_;
