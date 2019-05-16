@@ -88,8 +88,8 @@ public:
     template <typename String1_, typename GenomicRegion_, typename Seq1_, typename Seq2_,
               typename Qualities_, typename CigarString_, typename String2_>
     AlignedRead(String1_&& name, GenomicRegion_&& reference_region, Seq1_&& sequence, Qualities_&& qualities,
-                CigarString_&& cigar, MappingQuality mapping_quality, const Flags& flags, Seq2_&& barcode,
-                String2_&& read_group);
+                CigarString_&& cigar, MappingQuality mapping_quality, const Flags& flags,
+                String2_&& read_group, Seq2_&& barcode);
     template <typename String1_, typename GenomicRegion_, typename Seq1_, typename Seq2_,
               typename Qualities_, typename CigarString_, typename String2_, typename String3_>
     AlignedRead(String1_&& name, GenomicRegion_&& reference_region, Seq1_&& sequence, Qualities_&& qualities,
@@ -180,8 +180,8 @@ struct AlignedRead::Flags
 template <typename String_, typename GenomicRegion_, typename Seq1, typename Seq2,
           typename Qualities_, typename CigarString_, typename String2_>
 AlignedRead::AlignedRead(String_&& name, GenomicRegion_&& reference_region, Seq1&& sequence, Qualities_&& qualities,
-                         CigarString_&& cigar, MappingQuality mapping_quality, const Flags& flags, Seq2&& barcode,
-                         String2_&& read_group)
+                         CigarString_&& cigar, MappingQuality mapping_quality, const Flags& flags,
+                         String2_&& read_group, Seq2&& barcode)
 : region_ {std::forward<GenomicRegion_>(reference_region)}
 , name_ {std::forward<String_>(name)}
 , sequence_ {std::forward<Seq1>(sequence)}
