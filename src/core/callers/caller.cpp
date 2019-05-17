@@ -957,11 +957,52 @@ void set_phasing(std::vector<CallWrapper>& calls, const Phaser::PhaseSet& phase_
 
 } // namespace
 
+namespace debug {
+
+template <typename S>
+void print_genotype_posteriors(S&& stream,
+                               const SampleName& sample,
+                               const ProbabilityMatrix<Genotype<Haplotype>>::InnerMap& genotype_posteriors,
+                               const std::size_t n)
+{
+    const auto m = std::min(n, genotype_posteriors.size());
+    if (m == genotype_posteriors.size()) {
+        stream << "Printing all genotype posteriors for sample " << sample << '\n';
+    } else {
+        stream << "Printing top " << m << " genotype posteriors for sample " << sample << '\n';
+    }
+    using GenotypeReference = std::reference_wrapper<const Genotype<Haplotype>>;
+    std::vector<std::pair<GenotypeReference, double>> v {};
+    v.reserve(genotype_posteriors.size());
+    std::copy(std::cbegin(genotype_posteriors), std::cend(genotype_posteriors), std::back_inserter(v));
+    const auto mth = std::next(std::begin(v), m);
+    std::partial_sort(std::begin(v), mth, std::end(v),
+                      [] (const auto& lhs, const auto& rhs) { return lhs.second > rhs.second; });
+    std::for_each(std::begin(v), mth,
+                  [&] (const auto& p) {
+                      print_variant_alleles(stream, p.first);
+                      stream << " " << p.second << '\n';
+                  });
+}
+
+template <typename S>
+void print_genotype_posteriors(S&& stream,
+                               const ProbabilityMatrix<Genotype<Haplotype>>& genotype_posteriors,
+                               const std::size_t n = -1)
+{
+    for (const auto& p : genotype_posteriors) {
+        print_genotype_posteriors(stream, p.first, p.second, n);
+    }
+}
+
+} // namespace debug
+
 void Caller::set_phasing(std::vector<CallWrapper>& calls, const Latents& latents,
                          const HaplotypeBlock& haplotypes,
                          const GenomicRegion& call_region) const
 {
     if (debug_log_) stream(*debug_log_) << "Phasing " << calls.size() << " calls in " << call_region;
+    if (trace_log_) debug::print_genotype_posteriors(stream(*trace_log_), *latents.genotype_posteriors());
     const auto phasings = phaser_.phase(haplotypes, *latents.genotype_posteriors(),
                                         extract_regions(calls), get_genotype_calls(latents));
     if (debug_log_) debug::print_phase_sets(stream(*debug_log_), phasings);
