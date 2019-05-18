@@ -1442,18 +1442,12 @@ GenomicRegion HaplotypeGenerator::calculate_haplotype_region() const
         if (begins_before(read_region, active_region_)) {
             lhs_expansion = begin_distance(read_region, active_region_) + min_flank_padding;
         } else {
-            const auto diff = static_cast<GenomicRegion::Size>(begin_distance(active_region_, read_region));
-            if (diff < min_flank_padding) {
-                lhs_expansion = min_flank_padding - diff;
-            }
+            lhs_expansion = min_flank_padding;
         }
         if (ends_before(active_region_, read_region)) {
             rhs_expansion = end_distance(active_region_, read_region) + min_flank_padding;
         } else {
-            const auto diff = static_cast<GenomicRegion::Size>(end_distance(read_region, active_region_));
-            if (diff < min_flank_padding) {
-                rhs_expansion = min_flank_padding - diff;
-            }
+            rhs_expansion = min_flank_padding;
         }
         if (active_region_.begin() < lhs_expansion) {
             rhs_expansion += lhs_expansion - active_region_.begin();
