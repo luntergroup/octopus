@@ -284,7 +284,7 @@ void HaplotypeGenerator::jump(GenomicRegion region)
 void HaplotypeGenerator::remove(const GenomicRegion& region)
 {
     if (debug_log_) stream(*debug_log_) << "Removing haplotypes in " << region;
-    tree_.clear(region);
+    safe_clear_tree(region);
     reset_next_active_region();
 }
 
@@ -943,6 +943,13 @@ void HaplotypeGenerator::prepare_for_next_active_region()
             rightmost_allele_ = alleles_.rightmost();
         }
     }
+}
+
+void HaplotypeGenerator::safe_clear_tree(const GenomicRegion& region)
+{
+    const auto first_removal_region = expand_rhs(region, -1);
+    tree_.clear(first_removal_region);
+    tree_.clear(tail_region(first_removal_region));
 }
 
 void HaplotypeGenerator::populate_tree()

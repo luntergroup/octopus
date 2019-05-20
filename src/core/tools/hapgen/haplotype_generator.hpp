@@ -168,6 +168,7 @@ private:
     void update_next_active_region() const;
     void update_lagged_next_active_region() const;
     void prepare_for_next_active_region();
+    void safe_clear_tree(const GenomicRegion& region);
     void populate_tree();
     void populate_tree_with_novel_alleles();
     void populate_tree_with_holdouts();
