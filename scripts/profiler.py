@@ -7,6 +7,8 @@ from math import log10, ceil
 def aggregate_errors(df, aggregators=['period', 'periods']):
     if len(aggregators) == 0:
         return df
+    if len(df) == 0:
+        return df
     errors_attributes = ['period', 'periods', 'tract_length', 'motif', 'indel_length', 'errors', 'reads']
     errors_df = df[errors_attributes]
     aggregation_functions = {'period': 'first', 'periods': 'first', 'errors': 'sum', 'reads': 'sum', 'tract_length': 'first'}
@@ -108,6 +110,8 @@ def max_lt(seq, val):
     return max(v for v in seq if v < val)
 
 def smooth_empirical_model(open_model, extend_model=10):
+    if len(open_model) < 3:
+        return open_model
     # Rules: open[i] <= open[i + 1] + extend[i + 1]
     head_penalties = open_model[:2]
     max_penalty = max_lt(open_model[2:], 50)
