@@ -45,6 +45,8 @@ set(CORE_TEST_SOURCES
 
     core/tools/global_aligner_tests.cpp
     core/tools/assembler_tests.cpp
+
+    core/models/pair_hmm_tests.cpp
 )
 
 set(OCTOPUS_TEST_SOURCES
