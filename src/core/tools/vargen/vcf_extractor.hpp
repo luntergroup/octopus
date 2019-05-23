@@ -28,6 +28,7 @@ public:
         Variant::MappingDomain::Size max_variant_size = 100;
         bool extract_filtered = false;
         boost::optional<VcfRecord::QualityType> min_quality = boost::none;
+        bool split_complex = false;
     };
     
     VcfExtractor() = delete;
