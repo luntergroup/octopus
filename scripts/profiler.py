@@ -7,6 +7,8 @@ from math import log10, ceil
 def aggregate_errors(df, aggregators=['period', 'periods']):
     if len(aggregators) == 0:
         return df
+    if len(df) == 0:
+        return df
     errors_attributes = ['period', 'periods', 'tract_length', 'motif', 'indel_length', 'errors', 'reads']
     errors_df = df[errors_attributes]
     aggregation_functions = {'period': 'first', 'periods': 'first', 'errors': 'sum', 'reads': 'sum', 'tract_length': 'first'}
@@ -22,7 +24,9 @@ def aggregate_errors(df, aggregators=['period', 'periods']):
         aggregation_functions['indel_length'] = 'first'
     if 'motif' in aggregators:
         aggregation_functions['motif'] = 'first'
-    errors_df = errors_df.groupby(aggregators).aggregate(aggregation_functions, axis='columns')
+    errors_df.reset_index(drop=True, inplace=True)
+    tmp = errors_df.groupby(aggregators)
+    errors_df = tmp.aggregate(aggregation_functions, axis='columns')
     errors_df['error_rate'] = errors_df.apply(lambda row: row.errors / max(row.reads, 1), axis=1)
     errors_attributes.append('error_rate')
     if 'motif' not in aggregators:
@@ -87,8 +91,8 @@ def get_repeat_error_df(profile_df, pattern, max_periods):
             profile_index = 'dinucleotide-motif'
         elif motif_len == 3:
             profile_index = 'trinucleotide-motif'
-    result = profile_df[profile_index].query(query_condition)
-    result['phred_error'] = result.apply(lambda row: rate_to_phred(row['error_rate']), axis=1)
+    result = profile_df[profile_index].query(query_condition).copy()
+    result['phred_error'] = result['error_rate'].apply(rate_to_phred)
     return result
 
 def make_empirical_indel_error_model_helper(profile_df, pattern, max_periods=50):
@@ -106,6 +110,8 @@ def max_lt(seq, val):
     return max(v for v in seq if v < val)
 
 def smooth_empirical_model(open_model, extend_model=10):
+    if len(open_model) < 3:
+        return open_model
     # Rules: open[i] <= open[i + 1] + extend[i + 1]
     head_penalties = open_model[:2]
     max_penalty = max_lt(open_model[2:], 50)
