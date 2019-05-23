@@ -20,7 +20,7 @@ BOOST_AUTO_TEST_CASE(assembler_can_be_constructed_with_reference_sequence)
     
     constexpr unsigned kmerSize {5};
     
-    Assembler assembler {kmerSize, reference};
+    Assembler assembler {{kmerSize}, reference};
     
     BOOST_CHECK(!assembler.is_empty());
     BOOST_CHECK(assembler.is_all_reference());
@@ -32,7 +32,7 @@ BOOST_AUTO_TEST_CASE(reference_sequence_can_be_inserted_into_an_empty_assembler)
     
     constexpr unsigned kmerSize {5};
     
-    Assembler assembler {kmerSize};
+    Assembler assembler {{kmerSize}};
     
     BOOST_REQUIRE(assembler.is_empty());
     
@@ -48,7 +48,7 @@ BOOST_AUTO_TEST_CASE(assemblers_can_be_cleared_and_reused)
     
     constexpr unsigned kmerSize {5};
     
-    Assembler assembler {kmerSize, reference};
+    Assembler assembler {{kmerSize}, reference};
     
     BOOST_REQUIRE(!assembler.is_empty());
     
@@ -67,7 +67,7 @@ BOOST_AUTO_TEST_CASE(assembler_throws_if_reference_sequence_is_inserted_twice)
     
     constexpr unsigned kmerSize {5};
     
-    Assembler assembler {kmerSize, reference};
+    Assembler assembler {{kmerSize}, reference};
     
     BOOST_CHECK_THROW(assembler.insert_reference(reference), std::exception);
 }

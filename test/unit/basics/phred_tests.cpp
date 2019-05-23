@@ -66,7 +66,7 @@ BOOST_AUTO_TEST_CASE(phreds_can_be_constructed_with_probabilities)
     
     double c {0};
     for (auto p : v) {
-        auto phred = probability_to_phred(p);
+        auto phred = probability_false_to_phred(p);
         BOOST_CHECK_CLOSE(phred.score(), 10 * c++, tolerance);
         //BOOST_CHECK_CLOSE(phred.probability_false(), p, tolerance);
     }
