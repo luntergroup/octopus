@@ -91,7 +91,7 @@ align_helper(TestCase test)
     BOOST_CHECK_EQUAL(received.target, expected.target); \
     BOOST_CHECK_EQUAL(received.query, expected.query);
 
-BOOST_AUTO_TEST_CASE(check_alignments)
+BOOST_AUTO_TEST_CASE(sse2_check_alignments)
 {
     TestCase test;
     Alignment expected_alignment;
@@ -168,6 +168,86 @@ BOOST_AUTO_TEST_CASE(check_alignments)
     BOOST_CHECK_EQUAL(align_score_helper<SSE2>(test), expected_alignment.score);
     CHECK_ALIGNMENT(align_helper<SSE2>(test), expected_alignment);
 }
+
+#ifdef __AVX2__
+BOOST_AUTO_TEST_CASE(avx2_check_alignments)
+{
+    TestCase test;
+    Alignment expected_alignment;
+    
+    // test 1
+    test = {
+        "ACGTACGTACGTACGTACGTACGTACGTACGAAAA",
+        "AAAA",
+        {40,40,40,40},
+        {10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10},
+        1,
+        4
+    };
+    expected_alignment = {
+        0,
+        15,
+        "AAAA",
+        "AAAA"
+    };
+    BOOST_CHECK_EQUAL(align_score_helper<AVX2>(test), expected_alignment.score);
+    CHECK_ALIGNMENT(align_helper<AVX2>(test), expected_alignment);
+    
+    // test 2
+    test = {
+        "ACGTACGTACGTACGTACGTACGTACGTACGAATA",
+        "AAAA",
+        {40,40,40,40},
+        {90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90},
+        1,
+        4
+    };
+    expected_alignment = {
+        40,
+        15,
+        "AATA",
+        "AAAA"
+    };
+    BOOST_CHECK_EQUAL(align_score_helper<AVX2>(test), expected_alignment.score);
+    CHECK_ALIGNMENT(align_helper<AVX2>(test), expected_alignment);
+    
+    // test 3
+    test = {
+        "ACGTACGTACGTACGAAGCACGTACGTACGTACGT",
+        "CGGC",
+        {40,40,40,40},
+        {90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,70,90,90,90},
+        1,
+        4
+    };
+    expected_alignment = {
+        71,
+        13,
+        "CGAAGC",
+        "CG--GC"
+    };
+    BOOST_CHECK_EQUAL(align_score_helper<AVX2>(test), expected_alignment.score);
+    CHECK_ALIGNMENT(align_helper<AVX2>(test), expected_alignment);
+    
+    // test 4
+    test = {
+        "CGAAGCACGTACGTACGTAACGTACGTACGTACGT",
+        "CGGC",
+        {40,40,40,40},
+        {90,90,70,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90},
+        1,
+        4
+    };
+    expected_alignment = {
+        71,
+        0,
+        "CGAAGC",
+        "CG--GC"
+    };
+    BOOST_CHECK_EQUAL(align_score_helper<AVX2>(test), expected_alignment.score);
+    CHECK_ALIGNMENT(align_helper<AVX2>(test), expected_alignment);
+}
+#endif /* __AVX2__ */
 
 BOOST_AUTO_TEST_SUITE_END()
 BOOST_AUTO_TEST_SUITE_END()
