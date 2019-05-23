@@ -13,28 +13,36 @@
 #include <iterator>
 #include <cassert>
 #include <emmintrin.h>
+#include <immintrin.h>
 
 #include <boost/container/small_vector.hpp>
 
 namespace octopus { namespace hmm { namespace simd {
-
 struct SSE2 {};
+#ifdef __AVX2__
 struct AVX2 {};
+#endif /* __AVX2__ */
 struct AVX512 {};
 
 template <typename T>
 struct ScoreType
 {
-    using type = T;
+    using type = short;
 };
 template <> struct ScoreType<SSE2>
 {
     using type = short;
 };
+#ifdef __AVX2__
 template <> struct ScoreType<AVX2>
 {
     using type = short;
 };
+#endif /* __AVX2__ */
+//template <> struct ScoreType<AVX512>
+//{
+//    using type = short;
+//};
 
 template <typename T>
 using score_type_t = typename ScoreType<T>::type;
@@ -48,45 +56,55 @@ template <> struct VectorType<SSE2>
 {
     using type = __m128i;
 };
+#ifdef __AVX2__
 template <> struct VectorType<AVX2>
 {
-    using type = std::int16_t;
+    using type = __m256i;
 };
-// template <> struct VectorType<AVX512>
-// {
-//     using type = std::int32_t;
-// };
+#endif /* __AVX2__ */
+//template <> struct VectorType<AVX512>
+//{
+//    using type = __m512i;
+//};
 
 template <typename T>
 using vector_type_t = typename VectorType<T>::type;
 
-inline vector_type_t<SSE2> vectorise(short penalty, SSE2) noexcept
+inline vector_type_t<SSE2> vectorise(score_type_t<SSE2> penalty, SSE2) noexcept
 {
     return _mm_set1_epi16(penalty);
 }
-// vector_type_t<AVX2> vectorise(short penalty, AVX2) noexcept
-// {
-//     return _mm_set1_epi16(penalty);
-// }
+#ifdef __AVX2__
+vector_type_t<AVX2> vectorise(score_type_t<AVX2> penalty, AVX2) noexcept
+{
+ return _mm256_set1_epi16(penalty);
+}
+#endif /* __AVX2__ */
 
-inline vector_type_t<SSE2> vectorise_zero_set_last(short penalty, SSE2) noexcept
+inline vector_type_t<SSE2> vectorise_zero_set_last(score_type_t<SSE2> penalty, SSE2) noexcept
 {
     return _mm_set_epi16(0,0,0,0,0,0,0,penalty);
 }
-inline vector_type_t<AVX2> vectorise_zero_set_last(short penalty, AVX2) noexcept
+#ifdef __AVX2__
+inline vector_type_t<AVX2> vectorise_zero_set_last(score_type_t<AVX2> penalty, AVX2) noexcept
 {
-    return 0;
+    return _mm256_set_epi16(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,penalty);
 }
-
+#endif /* __AVX2__ */
 inline vector_type_t<SSE2> vectorise_reverse(const char* sequence, SSE2) noexcept
 {
     return _mm_set_epi16(sequence[7], sequence[6], sequence[5], sequence[4],
                          sequence[3], sequence[2], sequence[1], sequence[0]);
 }
-// vector_type_t<AVX2> vectorise_reverse(const char* sequence, AVX2) noexcept
-// {
-//     return _mm_set1_epi16(penalty);
-// }
+#ifdef __AVX2__
+vector_type_t<AVX2> vectorise_reverse(const char* sequence, AVX2) noexcept
+{
+ return _mm256_set_epi16(sequence[15], sequence[14], sequence[13], sequence[12],
+                         sequence[11], sequence[10], sequence[9], sequence[8],
+                         sequence[7], sequence[6], sequence[5], sequence[4],
+                         sequence[3], sequence[2], sequence[1], sequence[0]);
+}
+#endif /* __AVX2__ */
 
 inline vector_type_t<SSE2> vectorise_reverse_lshift(const std::int8_t* values, const int shift, SSE2) noexcept
 {
@@ -97,13 +115,25 @@ inline vector_type_t<SSE2> vectorise_reverse_lshift(const std::int8_t value, con
 {
     return vectorise(value << shift, SSE2 {});
 }
+#ifdef __AVX2__
+inline vector_type_t<AVX2> vectorise_reverse_lshift(const std::int8_t* values, const int shift, AVX2) noexcept
+{
+    return _mm256_set_epi16(values[15] << shift, values[14] << shift, values[13] << shift, values[12] << shift,
+                            values[11] << shift, values[10] << shift, values[9] << shift, values[8] << shift,
+                            values[7] << shift, values[6] << shift, values[5] << shift, values[4] << shift,
+                            values[3] << shift, values[2] << shift, values[1] << shift, values[0] << shift);
+}
+inline vector_type_t<AVX2> vectorise_reverse_lshift(const std::int8_t value, const int shift, AVX2) noexcept
+{
+    return vectorise(value << shift, AVX2 {});
+}
+#endif /* __AVX2__ */
 
 template <int imm>
 inline auto simd_extract(const vector_type_t<SSE2> a) noexcept
 {
     return _mm_extract_epi16(a, imm);
 }
-
 inline auto simd_extract(const vector_type_t<SSE2> a, const int n) noexcept
 {
     switch (n) {
@@ -114,21 +144,45 @@ inline auto simd_extract(const vector_type_t<SSE2> a, const int n) noexcept
         case 4:  return simd_extract<4>(a);
         case 5:  return simd_extract<5>(a);
         case 6:  return simd_extract<6>(a);
+        case 7:  return simd_extract<7>(a);
         default: return simd_extract<7>(a);
     }
 }
+#ifdef __AVX2__
+template <int imm>
+inline auto simd_extract(const vector_type_t<AVX2> a) noexcept
+{
+    return _mm256_extract_epi16(a, imm);
+}
+inline auto simd_extract(const vector_type_t<AVX2> a, const int n) noexcept
+{
+    switch (n) {
+        case 0:  return simd_extract<0>(a);
+        case 1:  return simd_extract<1>(a);
+        case 2:  return simd_extract<2>(a);
+        case 3:  return simd_extract<3>(a);
+        case 4:  return simd_extract<4>(a);
+        case 5:  return simd_extract<5>(a);
+        case 6:  return simd_extract<6>(a);
+        case 7:  return simd_extract<7>(a);
+        case 8:  return simd_extract<8>(a);
+        case 9:  return simd_extract<9>(a);
+        case 10:  return simd_extract<10>(a);
+        case 11:  return simd_extract<11>(a);
+        case 12:  return simd_extract<12>(a);
+        case 13:  return simd_extract<13>(a);
+        case 14:  return simd_extract<14>(a);
+        case 15:  return simd_extract<15>(a);
+        default: return simd_extract<15>(a);
+    }
+}
+#endif /* __AVX2__ */
 
 template <int imm, typename T>
 inline vector_type_t<SSE2> simd_insert(const vector_type_t<SSE2>& a, T i) noexcept
 {
     return _mm_insert_epi16(a, i, imm);
 }
-template <int imm, typename T>
-inline vector_type_t<AVX2> simd_insert(const vector_type_t<AVX2>& a, T i) noexcept
-{
-    return a;
-}
-
 template <typename T>
 inline vector_type_t<SSE2> simd_insert(const vector_type_t<SSE2>& a, const T i, const int n) noexcept
 {
@@ -140,115 +194,171 @@ inline vector_type_t<SSE2> simd_insert(const vector_type_t<SSE2>& a, const T i, 
         case 4:  return simd_insert<4>(a, i);
         case 5:  return simd_insert<5>(a, i);
         case 6:  return simd_insert<6>(a, i);
+        case 7:  return simd_insert<7>(a, i);
         default: return simd_insert<7>(a, i);
     }
 }
+#ifdef __AVX2__
+template <int imm, typename T>
+inline vector_type_t<AVX2> simd_insert(const vector_type_t<AVX2>& a, T i) noexcept
+{
+    return _mm256_insert_epi16(a, i, imm);
+}
+template <typename T>
+inline vector_type_t<AVX2> simd_insert(const vector_type_t<AVX2>& a, const T i, const int n) noexcept
+{
+    switch (n) {
+        case 0:  return simd_insert<0>(a, i);
+        case 1:  return simd_insert<1>(a, i);
+        case 2:  return simd_insert<2>(a, i);
+        case 3:  return simd_insert<3>(a, i);
+        case 4:  return simd_insert<4>(a, i);
+        case 5:  return simd_insert<5>(a, i);
+        case 6:  return simd_insert<6>(a, i);
+        case 7:  return simd_insert<7>(a, i);
+        case 8:  return simd_insert<8>(a, i);
+        case 9:  return simd_insert<9>(a, i);
+        case 10:  return simd_insert<10>(a, i);
+        case 11:  return simd_insert<11>(a, i);
+        case 12:  return simd_insert<12>(a, i);
+        case 13:  return simd_insert<13>(a, i);
+        case 14:  return simd_insert<14>(a, i);
+        case 15:  return simd_insert<15>(a, i);
+        default: return simd_insert<15>(a, i);
+    }
+}
+#endif /* __AVX2__ */
 
 inline vector_type_t<SSE2> simd_add(const vector_type_t<SSE2>& lhs, const vector_type_t<SSE2>& rhs) noexcept
 {
     return _mm_add_epi16(lhs, rhs);
 }
+#ifdef __AVX2__
 inline vector_type_t<AVX2> simd_add(const vector_type_t<AVX2>& lhs, const vector_type_t<AVX2>& rhs) noexcept
 {
-    return lhs + rhs;
+    return _mm256_add_epi16(lhs, rhs);
 }
+#endif /* __AVX2__ */
 
 inline vector_type_t<SSE2> simd_and(const vector_type_t<SSE2>& lhs, const vector_type_t<SSE2>& rhs) noexcept
 {
     return _mm_and_si128(lhs, rhs);
 }
+#ifdef __AVX2__
 inline vector_type_t<AVX2> simd_and(const vector_type_t<AVX2>& lhs, const vector_type_t<AVX2>& rhs) noexcept
 {
-    return lhs & rhs;
+    return _mm256_and_si256(lhs, rhs);
 }
+#endif /* __AVX2__ */
 
 inline vector_type_t<SSE2> simd_andnot(const vector_type_t<SSE2>& lhs, const vector_type_t<SSE2>& rhs) noexcept
 {
     return _mm_andnot_si128(lhs, rhs);
 }
+#ifdef __AVX2__
 inline vector_type_t<AVX2> simd_andnot(const vector_type_t<AVX2>& lhs, const vector_type_t<AVX2>& rhs) noexcept
 {
-    return lhs & !rhs;
+    return _mm256_andnot_si256(lhs, rhs);
 }
+#endif /* __AVX2__ */
 
 inline vector_type_t<SSE2> simd_or(const vector_type_t<SSE2>& lhs, const vector_type_t<SSE2>& rhs) noexcept
 {
     return _mm_or_si128(lhs, rhs);
 }
+#ifdef __AVX2__
 inline vector_type_t<AVX2> simd_or(const vector_type_t<AVX2>& lhs, const vector_type_t<AVX2>& rhs) noexcept
 {
-    return lhs | rhs;
+    return _mm256_or_si256(lhs, rhs);
 }
+#endif /* __AVX2__ */
 
 inline vector_type_t<SSE2> simd_cmpeq(const vector_type_t<SSE2>& lhs, const vector_type_t<SSE2>& rhs) noexcept
 {
     return _mm_cmpeq_epi16(lhs, rhs);
 }
+#ifdef __AVX2__
 inline vector_type_t<AVX2> simd_cmpeq(const vector_type_t<AVX2>& lhs, const vector_type_t<AVX2>& rhs) noexcept
 {
-    return lhs == rhs;
+    return _mm256_cmpeq_epi16(lhs, rhs);
 }
+#endif /* __AVX2__ */
 
 template <int imm>
 inline vector_type_t<SSE2> simd_slli_si(const vector_type_t<SSE2>& a) noexcept
 {
     return _mm_slli_si128(a, imm);
 }
+#ifdef __AVX2__
 template <int imm>
 inline vector_type_t<AVX2> simd_slli_si(const vector_type_t<AVX2>& a) noexcept
 {
-    return a;
+    return _mm256_slli_si256(a, imm);
 }
+#endif /* __AVX2__ */
 template <int imm>
 inline vector_type_t<SSE2> simd_slli_epi(const vector_type_t<SSE2>& a) noexcept
 {
     return _mm_slli_epi16(a, imm);
 }
+#ifdef __AVX2__
 template <int imm>
 inline vector_type_t<AVX2> simd_slli_epi(const vector_type_t<AVX2>& a) noexcept
 {
-    return a;
+    return _mm256_slli_epi16(a, imm);
 }
+#endif /* __AVX2__ */
 template <int imm>
 inline vector_type_t<SSE2> simd_srli_si(const vector_type_t<SSE2>& a) noexcept
 {
     return _mm_srli_si128(a, imm);
 }
+#ifdef __AVX2__
 template <int imm>
 inline vector_type_t<AVX2> simd_srli_si(const vector_type_t<AVX2>& a) noexcept
 {
-    return a;
+    return _mm256_srli_si256(a, imm);
 }
+#endif /* __AVX2__ */
 
 inline vector_type_t<SSE2> simd_min(const vector_type_t<SSE2>& lhs, const vector_type_t<SSE2>& rhs) noexcept
 {
     return _mm_min_epi16(lhs, rhs);
 }
+#ifdef __AVX2__
 inline vector_type_t<AVX2> simd_min(const vector_type_t<AVX2>& lhs, const vector_type_t<AVX2>& rhs) noexcept
 {
-    return std::min(lhs, rhs);
+    return _mm256_min_epi16(lhs, rhs);
 }
+#endif /* __AVX2__ */
 
 inline vector_type_t<SSE2> simd_max(const vector_type_t<SSE2>& lhs, const vector_type_t<SSE2>& rhs) noexcept
 {
     return _mm_max_epi16(lhs, rhs);
 }
+#ifdef __AVX2__
 inline vector_type_t<AVX2> simd_max(const vector_type_t<AVX2>& lhs, const vector_type_t<AVX2>& rhs) noexcept
 {
-    return std::max(lhs, rhs);
+    return _mm256_max_epi16(lhs, rhs);
 }
+#endif /* __AVX2__ */
 
 constexpr int bit_shift(SSE2) { return 2; }
+#ifdef __AVX2__
 constexpr int bit_shift(AVX2) { return 2; }
-
+#endif /* __AVX2__ */
 constexpr int band_size(SSE2) { return 8; }
+#ifdef __AVX2__
 constexpr int band_size(AVX2) { return 16; }
-
+#endif /* __AVX2__ */
 constexpr score_type_t<SSE2> n_score(SSE2) { return 2 << bit_shift(SSE2 {}); }
+#ifdef __AVX2__
 constexpr score_type_t<AVX2> n_score(AVX2) { return 2 << bit_shift(AVX2 {}); }
-
+#endif /* __AVX2__ */
 constexpr score_type_t<SSE2> infinity(SSE2) { return 0x7800; }
+#ifdef __AVX2__
 constexpr score_type_t<AVX2> infinity(AVX2) { return 0x7800; }
+#endif /* __AVX2__ */
 
 template <typename SIMD>
 inline void update_gap_penalty(vector_type_t<SIMD>& current, const std::int8_t* source, const std::size_t gap_idx) noexcept
