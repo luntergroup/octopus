@@ -61,15 +61,25 @@ std::ostream& operator<<(std::ostream& os, const Alignment& alignment)
     return os;
 }
 
+template <typename SIMD>
+auto
+align_score_helper(TestCase test)
+{
+    return align<SIMD>(test.target.data(), test.query.data(), test.base_qualities.data(),
+                       static_cast<int>(test.target.size()), static_cast<int>(test.query.size()),
+                       test.gap_open.data(), test.gap_extend, test.nuc_prior);
+}
+
+template <typename SIMD>
 Alignment
 align_helper(TestCase test)
 {
     Alignment result {};
     std::vector<char> align1(2 * test.target.size() + 1, '\0'), align2(2 * test.target.size() + 1, '\0');
-    result.score = align(test.target.data(), test.query.data(), test.base_qualities.data(),
-                         static_cast<int>(test.target.size()), static_cast<int>(test.query.size()),
-                         test.gap_open.data(), test.gap_extend, test.nuc_prior,
-                         result.begin, align1.data(), align2.data());
+    result.score = align<SIMD>(test.target.data(), test.query.data(), test.base_qualities.data(),
+                               static_cast<int>(test.target.size()), static_cast<int>(test.query.size()),
+                               test.gap_open.data(), test.gap_extend, test.nuc_prior,
+                               result.begin, align1.data(), align2.data());
     result.target.assign(align1.cbegin(), std::find(align1.cbegin(), align1.cend(), '\0'));
     result.query.assign(align2.cbegin(), std::find(align2.cbegin(), align2.cend(), '\0'));
     return result;
@@ -101,8 +111,9 @@ BOOST_AUTO_TEST_CASE(check_alignments)
         "AAAA",
         "AAAA"
     };
-    CHECK_ALIGNMENT(align_helper(test), expected_alignment);
-
+    BOOST_CHECK_EQUAL(align_score_helper<SSE2>(test), expected_alignment.score);
+    CHECK_ALIGNMENT(align_helper<SSE2>(test), expected_alignment);
+    
     // test 2
     test = {
         "ACGTACGTACGTACGAATA",
@@ -118,7 +129,8 @@ BOOST_AUTO_TEST_CASE(check_alignments)
         "AATA",
         "AAAA"
     };
-    CHECK_ALIGNMENT(align_helper(test), expected_alignment);
+    BOOST_CHECK_EQUAL(align_score_helper<SSE2>(test), expected_alignment.score);
+    CHECK_ALIGNMENT(align_helper<SSE2>(test), expected_alignment);
     
     // test 3
     test = {
@@ -135,8 +147,9 @@ BOOST_AUTO_TEST_CASE(check_alignments)
         "CGAAGC",
         "CG--GC"
     };
-    CHECK_ALIGNMENT(align_helper(test), expected_alignment);
-
+    BOOST_CHECK_EQUAL(align_score_helper<SSE2>(test), expected_alignment.score);
+    CHECK_ALIGNMENT(align_helper<SSE2>(test), expected_alignment);
+    
     // test 4
     test = {
         "CGAAGCACGTACGTACGTA",
@@ -152,7 +165,8 @@ BOOST_AUTO_TEST_CASE(check_alignments)
         "CGAAGC",
         "CG--GC"
     };
-    CHECK_ALIGNMENT(align_helper(test), expected_alignment);
+    BOOST_CHECK_EQUAL(align_score_helper<SSE2>(test), expected_alignment.score);
+    CHECK_ALIGNMENT(align_helper<SSE2>(test), expected_alignment);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
