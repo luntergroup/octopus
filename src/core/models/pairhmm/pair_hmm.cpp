@@ -16,7 +16,7 @@
 #include <iostream>
 
 #include "utils/maths.hpp"
-#include "simd_pair_hmm.hpp"
+#include "sse2_pair_hmm.hpp"
 
 namespace octopus { namespace hmm {
 

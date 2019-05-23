@@ -5,7 +5,7 @@
     #pragma GCC diagnostic ignored "-Wignored-attributes"
 #endif
 
-#include "simd_pair_hmm.hpp"
+#include "sse2_pair_hmm.hpp"
 
 #include <vector>
 #include <algorithm>
