@@ -99,16 +99,18 @@ BOOST_AUTO_TEST_CASE(sse2_check_alignments)
     
     // test 1
     test = {
-        "ACGTACGTACGTACGAAAA",
+        "ACGTACGTACGTACGTACGTACGTACGTACGAAAA",
         "AAAA",
         {40,40,40,40},
-        {10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10},
+        {10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,
+         10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,
+         10,10,10,10,10},
         1,
         4
     };
     expected_alignment = {
         0,
-        15,
+        31,
         "AAAA",
         "AAAA"
     };
@@ -117,16 +119,18 @@ BOOST_AUTO_TEST_CASE(sse2_check_alignments)
     
     // test 2
     test = {
-        "ACGTACGTACGTACGAATA",
+        "ACGTACGTACGTACGTACGTACGTACGTACGAATA",
         "AAAA",
         {40,40,40,40},
-        {90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90},
+        {90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,
+         90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,
+         90,90,90},
         1,
         4
     };
     expected_alignment = {
         40,
-        15,
+        31,
         "AATA",
         "AAAA"
     };
@@ -135,10 +139,11 @@ BOOST_AUTO_TEST_CASE(sse2_check_alignments)
     
     // test 3
     test = {
-        "ACGTACGTACGTACGAAGC",
+        "ACGTACGTACGTACGAAGCACGTACGTACGTACGT",
         "CGGC",
         {40,40,40,40},
-        {90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,70,90,90,90},
+        {90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,70,90,90,90,
+         90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90},
         1,
         4
     };
@@ -153,10 +158,11 @@ BOOST_AUTO_TEST_CASE(sse2_check_alignments)
     
     // test 4
     test = {
-        "CGAAGCACGTACGTACGTA",
+        "CGAAGCACGTACGTACGTAACGTACGTACGTACGT",
         "CGGC",
         {40,40,40,40},
-        {90,90,70,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90},
+        {90,90,70,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,
+         90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90},
         1,
         4
     };
@@ -165,6 +171,26 @@ BOOST_AUTO_TEST_CASE(sse2_check_alignments)
         0,
         "CGAAGC",
         "CG--GC"
+    };
+    BOOST_CHECK_EQUAL(align_score_helper(test, hmm), expected_alignment.score);
+    CHECK_ALIGNMENT(align_helper(test, hmm), expected_alignment);
+
+    // test 5
+    test = {
+        "CCCCACGTCCCCACGTATATATATATATATGGGGACGTGGGGACGT",
+        "CCCCACGTGGGACGT",
+        {40,40,40,40,40,40,40,40,40,40,40,40,40,40,40},
+        {90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,
+         70,90,90,90,90,90,90,90,90,90,90,90,90,90,90,
+         90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90},
+        1,
+        4
+    };
+    expected_alignment = {
+        84,
+        8,
+        "CCCCACGTATATATATATATATGGGGACGT",
+        "CCCCACGT---------------GGGACGT"
     };
     BOOST_CHECK_EQUAL(align_score_helper(test, hmm), expected_alignment.score);
     CHECK_ALIGNMENT(align_helper(test, hmm), expected_alignment);
