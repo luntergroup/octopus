@@ -16,11 +16,18 @@
 #include <iostream>
 
 #include "utils/maths.hpp"
-#include "sse2_pair_hmm.hpp"
+#include "simd_pair_hmm_fwd.hpp"
 
 namespace octopus { namespace hmm {
 
 using octopus::maths::constants::ln10Div10;
+
+const static simd::SSE2PairHMM hmm;
+
+unsigned min_flank_pad() noexcept
+{
+    return hmm.band_size();
+}
 
 template <typename T, typename = std::enable_if_t<std::is_integral<T>::value>>
 constexpr auto num_values() noexcept
@@ -48,7 +55,7 @@ constexpr auto make_phred_to_ln_prob_lookup() noexcept
 bool target_overlaps_truth_flank(const std::string& truth, const std::string& target, const std::size_t target_offset,
                                  const MutationModel& model) noexcept
 {
-    constexpr auto pad = simd::min_flank_pad();
+    constexpr auto pad = hmm.band_size();
     return target_offset < (model.lhs_flank_size + pad)
            || (target_offset + target.size() + pad) > (truth.size() - model.rhs_flank_size);
 }
@@ -122,7 +129,7 @@ auto simd_align(const std::string& truth, const std::string& target,
                 const std::size_t target_offset,
                 const MutationModel& model) noexcept
 {
-    constexpr auto pad = simd::min_flank_pad();
+    constexpr auto pad = hmm.band_size();
     const auto truth_size  = static_cast<int>(truth.size());
     const auto target_size = static_cast<int>(target.size());
     const auto truth_alignment_size = static_cast<int>(target_size + 2 * pad - 1);
@@ -132,16 +139,16 @@ auto simd_align(const std::string& truth, const std::string& target,
     }
     const auto qualities = reinterpret_cast<const std::int8_t*>(target_qualities.data());
     if (!use_adjusted_alignment_score(truth, target, target_offset, model)) {
-        const auto score = simd::align(truth.data() + alignment_offset,
-                                       target.data(),
-                                       qualities,
-                                       truth_alignment_size,
-                                       target_size,
-                                       model.snv_mask.data() + alignment_offset,
-                                       model.snv_priors.data() + alignment_offset,
-                                       model.gap_open.data() + alignment_offset,
-                                       model.gap_extend.data() + alignment_offset,
-                                       model.nuc_prior);
+        const auto score = hmm.align(truth.data() + alignment_offset,
+                                     target.data(),
+                                     qualities,
+                                     truth_alignment_size,
+                                     target_size,
+                                     model.snv_mask.data() + alignment_offset,
+                                     model.snv_priors.data() + alignment_offset,
+                                     model.gap_open.data() + alignment_offset,
+                                     model.gap_extend.data() + alignment_offset,
+                                     model.nuc_prior);
         return -ln10Div10<> * static_cast<double>(score);
     } else {
         thread_local std::vector<char> align1 {}, align2 {};
@@ -149,17 +156,17 @@ auto simd_align(const std::string& truth, const std::string& target,
         align1.assign(max_alignment_size + 1, 0);
         align2.assign(max_alignment_size + 1, 0);
         int first_pos;
-        const auto score = simd::align(truth.data() + alignment_offset,
-                                       target.data(),
-                                       qualities,
-                                       truth_alignment_size,
-                                       target_size,
-                                       model.snv_mask.data() + alignment_offset,
-                                       model.snv_priors.data() + alignment_offset,
-                                       model.gap_open.data() + alignment_offset,
-                                       model.gap_extend.data() + alignment_offset,
-                                       model.nuc_prior,
-                                       align1.data(), align2.data(), first_pos);
+        const auto score = hmm.align(truth.data() + alignment_offset,
+                                     target.data(),
+                                     qualities,
+                                     truth_alignment_size,
+                                     target_size,
+                                     model.snv_mask.data() + alignment_offset,
+                                     model.snv_priors.data() + alignment_offset,
+                                     model.gap_open.data() + alignment_offset,
+                                     model.gap_extend.data() + alignment_offset,
+                                     model.nuc_prior,
+                                     first_pos, align1.data(), align2.data());
         if (first_pos == -1) {
             return std::numeric_limits<double>::lowest(); // overflow
         }
@@ -181,17 +188,17 @@ auto simd_align(const std::string& truth, const std::string& target,
         assert(lhs_flank_size >= 0 && rhs_flank_size >= 0);
         assert(align1.back() == 0); // required by calculate_flank_score
         int target_mask_size;
-        auto flank_score = simd::calculate_flank_score(truth_alignment_size,
-                                                       lhs_flank_size, rhs_flank_size,
-                                                       target.data(), qualities,
-                                                       model.snv_mask.data() + alignment_offset,
-                                                       model.snv_priors.data() + alignment_offset,
-                                                       model.gap_open.data() + alignment_offset,
-                                                       model.gap_extend.data() + alignment_offset,
-                                                       model.nuc_prior,
-                                                       first_pos,
-                                                       align1.data(), align2.data(),
-                                                       target_mask_size);
+        auto flank_score = hmm.calculate_flank_score(truth_alignment_size,
+                                                     lhs_flank_size, rhs_flank_size,
+                                                     target.data(), qualities,
+                                                     model.snv_mask.data() + alignment_offset,
+                                                     model.snv_priors.data() + alignment_offset,
+                                                     model.gap_open.data() + alignment_offset,
+                                                     model.gap_extend.data() + alignment_offset,
+                                                     model.nuc_prior,
+                                                     first_pos,
+                                                     align1.data(), align2.data(),
+                                                     target_mask_size);
         const auto num_explained_bases = target_size - target_mask_size;
         constexpr int min_explained_bases {2};
         if (num_explained_bases < min_explained_bases) flank_score = 0;
@@ -212,7 +219,7 @@ simd_align(const std::string& truth, const std::string& target,
                       const MutationModel& model,
                       Alignment& result)
 {
-    constexpr auto pad = simd::min_flank_pad();
+    constexpr auto pad = hmm.band_size();
     const auto truth_size  = static_cast<int>(truth.size());
     const auto target_size = static_cast<int>(target.size());
     const auto truth_alignment_size = static_cast<int>(target_size + 2 * pad - 1);
@@ -229,17 +236,17 @@ simd_align(const std::string& truth, const std::string& target,
     align1.assign(max_alignment_size + 1, 0);
     align2.assign(max_alignment_size + 1, 0);
     int first_pos;
-    auto score = simd::align(truth.data() + alignment_offset,
-                             target.data(),
-                             qualities,
-                             truth_alignment_size,
-                             target_size,
-                             model.snv_mask.data() + alignment_offset,
-                             model.snv_priors.data() + alignment_offset,
-                             model.gap_open.data() + alignment_offset,
-                             model.gap_extend.data() + alignment_offset,
-                             model.nuc_prior,
-                             align1.data(), align2.data(), first_pos);
+    auto score = hmm.align(truth.data() + alignment_offset,
+                           target.data(),
+                           qualities,
+                           truth_alignment_size,
+                           target_size,
+                           model.snv_mask.data() + alignment_offset,
+                           model.snv_priors.data() + alignment_offset,
+                           model.gap_open.data() + alignment_offset,
+                           model.gap_extend.data() + alignment_offset,
+                           model.nuc_prior,
+                           first_pos, align1.data(), align2.data());
     if (first_pos == -1) {
         throw HMMOverflow {target, truth};
     }
@@ -262,17 +269,17 @@ simd_align(const std::string& truth, const std::string& target,
         assert(lhs_flank_size >= 0 && rhs_flank_size >= 0);
         assert(align1.back() == 0); // required by calculate_flank_score
         int target_mask_size;
-        auto flank_score = simd::calculate_flank_score(truth_alignment_size,
-                                                       lhs_flank_size, rhs_flank_size,
-                                                       target.data(), qualities,
-                                                       model.snv_mask.data() + alignment_offset,
-                                                       model.snv_priors.data() + alignment_offset,
-                                                       model.gap_open.data() + alignment_offset,
-                                                       model.gap_extend.data() + alignment_offset,
-                                                       model.nuc_prior,
-                                                       first_pos,
-                                                       align1.data(), align2.data(),
-                                                       target_mask_size);
+        auto flank_score = hmm.calculate_flank_score(truth_alignment_size,
+                                                     lhs_flank_size, rhs_flank_size,
+                                                     target.data(), qualities,
+                                                     model.snv_mask.data() + alignment_offset,
+                                                     model.snv_priors.data() + alignment_offset,
+                                                     model.gap_open.data() + alignment_offset,
+                                                     model.gap_extend.data() + alignment_offset,
+                                                     model.nuc_prior,
+                                                     first_pos,
+                                                     align1.data(), align2.data(),
+                                                     target_mask_size);
         const auto num_explained_bases = target_size - target_mask_size;
         constexpr int min_explained_bases {2};
         if (num_explained_bases < min_explained_bases) flank_score = 0;
@@ -288,11 +295,6 @@ simd_align(const std::string& truth, const std::string& target,
     result.likelihood = -ln10Div10<> * static_cast<double>(score);
     make_cigar(align1, align2, result.cigar);
     return result;
-}
-
-unsigned min_flank_pad() noexcept
-{
-    return simd::min_flank_pad();
 }
 
 void validate(const std::string& truth, const std::string& target,
@@ -393,7 +395,7 @@ double evaluate(const std::string& target, const std::string& truth, const Varia
     assert(truth.size() == model.gap_open.size());
     using std::cbegin; using std::cend; using std::next; using std::distance;
     static constexpr auto lnProbability = make_phred_to_ln_prob_lookup<std::uint8_t>();
-    const auto truth_begin = next(cbegin(truth), min_flank_pad());
+    const auto truth_begin = next(cbegin(truth), hmm.band_size());
     const auto m1 = std::mismatch(cbegin(target), cend(target), truth_begin);
     if (m1.first == cend(target)) {
         return 0; // sequences are equal, can't do better than this
@@ -419,16 +421,16 @@ double evaluate(const std::string& target, const std::string& truth, const Varia
             }
         }
     }
-    const auto truth_alignment_size = static_cast<int>(target.size() + 2 * min_flank_pad() - 1);
+    const auto truth_alignment_size = static_cast<int>(target.size() + 2 * hmm.band_size() - 1);
     thread_local std::vector<std::int8_t> dummy_qualities;
     dummy_qualities.assign(target.size(), model.mutation);
-    auto score = simd::align(truth.c_str(), target.c_str(),
-                             dummy_qualities.data(),
-                             truth_alignment_size,
-                             static_cast<int>(target.size()),
-                             model.gap_open.data(),
-                             model.gap_extend.data(),
-                             model.nuc_prior);
+    auto score = hmm.align(truth.c_str(), target.c_str(),
+                           dummy_qualities.data(),
+                           truth_alignment_size,
+                           static_cast<int>(target.size()),
+                           model.gap_open.data(),
+                           model.gap_extend.data(),
+                           model.nuc_prior);
     return -ln10Div10<> * static_cast<double>(score);
 }
 
@@ -439,7 +441,7 @@ align(const std::string& target, const std::string& truth,
 {
     assert(truth.size() == model.gap_open.size());
     using std::cbegin; using std::cend; using std::next; using std::distance;
-    const auto truth_begin = next(cbegin(truth), min_flank_pad());
+    const auto truth_begin = next(cbegin(truth), hmm.band_size());
     const auto m1 = std::mismatch(cbegin(target), cend(target), truth_begin);
     if (m1.first == cend(target)) {
         result.likelihood = 0;
@@ -447,22 +449,22 @@ align(const std::string& target, const std::string& truth,
         result.cigar.assign({CigarOperation {static_cast<CigarOperation::Size>(target.size()), CigarOperation::Flag::sequenceMatch}});
         return result; // sequences are equal, can't do better than this
     }
-    const auto truth_alignment_size = static_cast<int>(target.size() + 2 * min_flank_pad() - 1);
+    const auto truth_alignment_size = static_cast<int>(target.size() + 2 * hmm.band_size() - 1);
     thread_local std::vector<std::int8_t> dummy_qualities;
     dummy_qualities.assign(target.size(), model.mutation);
     thread_local std::vector<char> align1 {}, align2 {};
-    const auto max_alignment_size = 2 * (target.size() + simd::min_flank_pad());
+    const auto max_alignment_size = 2 * (target.size() + hmm.band_size());
     align1.assign(max_alignment_size + 1, 0);
     align2.assign(max_alignment_size + 1, 0);
     int first_pos;
-    auto score = simd::align(truth.c_str(), target.c_str(),
-                             dummy_qualities.data(),
-                             truth_alignment_size,
-                             static_cast<int>(target.size()),
-                             model.gap_open.data(),
-                             model.gap_extend.data(),
-                             model.nuc_prior,
-                             first_pos, align1.data(), align2.data());
+    auto score = hmm.align(truth.c_str(), target.c_str(),
+                           dummy_qualities.data(),
+                           truth_alignment_size,
+                           static_cast<int>(target.size()),
+                           model.gap_open.data(),
+                           model.gap_extend.data(),
+                           model.nuc_prior,
+                           first_pos, align1.data(), align2.data());
     if (first_pos == -1) {
         throw HMMOverflow {target, truth};
     }
@@ -486,7 +488,7 @@ double evaluate(const std::string& target, const std::string& truth, const Varia
     assert(truth.size() == model.gap_open.size());
     using std::cbegin; using std::cend; using std::next; using std::distance;
     static constexpr auto lnProbability = make_phred_to_ln_prob_lookup<std::uint8_t>();
-    const auto truth_begin = next(cbegin(truth), min_flank_pad());
+    const auto truth_begin = next(cbegin(truth), hmm.band_size());
     const auto m1 = std::mismatch(cbegin(target), cend(target), truth_begin);
     if (m1.first == cend(target)) {
         return 0; // sequences are equal, can't do better than this
@@ -512,16 +514,16 @@ double evaluate(const std::string& target, const std::string& truth, const Varia
             }
         }
     }
-    const auto truth_alignment_size = static_cast<int>(target.size() + 2 * min_flank_pad() - 1);
+    const auto truth_alignment_size = static_cast<int>(target.size() + 2 * hmm.band_size() - 1);
     thread_local std::vector<std::int8_t> dummy_qualities;
     dummy_qualities.assign(target.size(), model.mutation);
-    auto score = simd::align(truth.c_str(), target.c_str(),
-                             dummy_qualities.data(),
-                             truth_alignment_size,
-                             static_cast<int>(target.size()),
-                             model.gap_open.data(),
-                             model.gap_extend,
-                             model.nuc_prior);
+    auto score = hmm.align(truth.c_str(), target.c_str(),
+                           dummy_qualities.data(),
+                           truth_alignment_size,
+                           static_cast<int>(target.size()),
+                           model.gap_open.data(),
+                           model.gap_extend,
+                           model.nuc_prior);
     return -ln10Div10<> * static_cast<double>(score);
 }
 
@@ -532,7 +534,7 @@ align(const std::string& target, const std::string& truth,
 {
     assert(truth.size() == model.gap_open.size());
     using std::cbegin; using std::cend; using std::next; using std::distance;
-    const auto truth_begin = next(cbegin(truth), min_flank_pad());
+    const auto truth_begin = next(cbegin(truth), hmm.band_size());
     const auto m1 = std::mismatch(cbegin(target), cend(target), truth_begin);
     if (m1.first == cend(target)) {
         // sequences are equal, can't do better than this
@@ -541,22 +543,22 @@ align(const std::string& target, const std::string& truth,
         result.cigar.assign({CigarOperation {static_cast<CigarOperation::Size>(target.size()), CigarOperation::Flag::sequenceMatch}});
         return result;
     }
-    const auto truth_alignment_size = static_cast<int>(target.size() + 2 * min_flank_pad() - 1);
+    const auto truth_alignment_size = static_cast<int>(target.size() + 2 * hmm.band_size() - 1);
     thread_local std::vector<std::int8_t> dummy_qualities;
     dummy_qualities.assign(target.size(), model.mutation);
     thread_local std::vector<char> align1 {}, align2 {};
-    const auto max_alignment_size = 2 * (target.size() + simd::min_flank_pad());
+    const auto max_alignment_size = 2 * (target.size() + hmm.band_size());
     align1.assign(max_alignment_size + 1, 0);
     align2.assign(max_alignment_size + 1, 0);
     int first_pos;
-    auto score = simd::align(truth.c_str(), target.c_str(),
-                             dummy_qualities.data(),
-                             truth_alignment_size,
-                             static_cast<int>(target.size()),
-                             model.gap_open.data(),
-                             model.gap_extend,
-                             model.nuc_prior,
-                             first_pos, align1.data(), align2.data());
+    auto score = hmm.align(truth.c_str(), target.c_str(),
+                           dummy_qualities.data(),
+                           truth_alignment_size,
+                           static_cast<int>(target.size()),
+                           model.gap_open.data(),
+                           model.gap_extend,
+                           model.nuc_prior,
+                           first_pos, align1.data(), align2.data());
     result.likelihood = -ln10Div10<> * static_cast<double>(score);
     make_cigar(align1, align2, result.cigar);
     result.target_offset = first_pos;
@@ -576,7 +578,7 @@ double evaluate(const std::string& target, const std::string& truth, const FlatG
 {
     using std::cbegin; using std::cend; using std::next; using std::distance;
     static constexpr auto lnProbability = make_phred_to_ln_prob_lookup<std::uint8_t>();
-    const auto truth_begin = next(cbegin(truth), min_flank_pad());
+    const auto truth_begin = next(cbegin(truth), hmm.band_size());
     const auto m1 = std::mismatch(cbegin(target), cend(target), truth_begin);
     if (m1.first == cend(target)) {
         return 0; // sequences are equal, can't do better than this
@@ -601,16 +603,16 @@ double evaluate(const std::string& target, const std::string& truth, const FlatG
             }
         }
     }
-    const auto truth_alignment_size = static_cast<int>(target.size() + 2 * min_flank_pad() - 1);
+    const auto truth_alignment_size = static_cast<int>(target.size() + 2 * hmm.band_size() - 1);
     thread_local std::vector<std::int8_t> dummy_qualities;
     dummy_qualities.assign(target.size(), model.mutation);
-    auto score = simd::align(truth.c_str(), target.c_str(),
-                             dummy_qualities.data(),
-                             truth_alignment_size,
-                             static_cast<int>(target.size()),
-                             model.gap_open,
-                             model.gap_extend,
-                             model.nuc_prior);
+    auto score = hmm.align(truth.c_str(), target.c_str(),
+                           dummy_qualities.data(),
+                           truth_alignment_size,
+                           static_cast<int>(target.size()),
+                           model.gap_open,
+                           model.gap_extend,
+                           model.nuc_prior);
     return -ln10Div10<> * static_cast<double>(score);
 }
 

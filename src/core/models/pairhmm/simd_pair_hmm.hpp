@@ -44,21 +44,21 @@ class PairHMM : private InstructionSetPolicy
     using InstructionSetPolicy::_max;
     
     // Constants
-    constexpr static int score_bytes = sizeof(ScoreType);
-    constexpr static int band_size = sizeof(VectorType) / score_bytes;
-    constexpr static ScoreType infinity = 0x7800;
-    constexpr static int trace_bits = 2;
-    constexpr static ScoreType n_score = 2 << trace_bits;
+    constexpr static int score_bytes_ = sizeof(ScoreType);
+    constexpr static int band_size_ = sizeof(VectorType) / score_bytes_;
+    constexpr static ScoreType infinity_ = 0x7800;
+    constexpr static int trace_bits_ = 2;
+    constexpr static ScoreType n_score_ = 2 << trace_bits_;
     
-    constexpr static int max_n_quality {64}; // what does 64 mean?
-    constexpr static int bitmask {0x8000}; // ?
+    constexpr static int max_n_quality_ {64}; // what does 64 mean?
+    constexpr static int bitmask_ {0x8000}; // ?
     
-    constexpr static int match_label  {0};
-    constexpr static int insert_label {1};
-    constexpr static int delete_label {3};
+    constexpr static int match_label_  {0};
+    constexpr static int insert_label_ {1};
+    constexpr static int delete_label_ {3};
     
-    const VectorType _inf = vectorise(infinity);
-    const VectorType _nscore_m_inf = vectorise(n_score - infinity);
+    const VectorType _inf = vectorise(infinity_);
+    const VectorType _nscore_m_inf = vectorise(n_score_ - infinity_);
     const VectorType _n = vectorise('N');
     const VectorType _three = vectorise(3);
     
@@ -72,13 +72,15 @@ class PairHMM : private InstructionSetPolicy
     template <int shift>
     void update_gap_penalty(VectorType& current, const std::int8_t* source, const std::size_t gap_idx) const noexcept
     {
-        current = _insert(_right_shift<score_bytes>(current), source[gap_idx] << shift, band_size - 1);
+        current = _insert(_right_shift<score_bytes_>(current), source[gap_idx] << shift, band_size_ - 1);
     }
     template <int shift>
     void update_gap_penalty(VectorType& current, const short source, const std::size_t gap_idx) const noexcept {}
 
 public:
     constexpr static char gap_label = '-';
+    
+    constexpr int band_size() const noexcept { return band_size_; }
     
     template <typename OpenPenalty,
               typename ExtendPenalty>
@@ -91,28 +93,28 @@ public:
               const ExtendPenalty gap_extend,
               short nuc_prior) const noexcept
     {
-        assert(truth_len > band_size && (truth_len == target_len + 2 * band_size - 1));
+        assert(truth_len > band_size_ && (truth_len == target_len + 2 * band_size_ - 1));
         auto _m1 = _inf, _i1 = _inf, _d1 = _inf, _m2 = _inf, _i2 = _inf, _d2 = _inf;
-        const auto _nuc_prior  = vectorise(nuc_prior << trace_bits);
+        const auto _nuc_prior  = vectorise(nuc_prior << trace_bits_);
         auto _initmask  = vectorise_zero_set_last(-1);
-        auto _initmask2 = vectorise_zero_set_last(-bitmask);
+        auto _initmask2 = vectorise_zero_set_last(-bitmask_);
         auto _truthwin     = vectorise_reverse(truth);
         auto _targetwin    = _m1;
-        auto _qualitieswin = vectorise(max_n_quality << trace_bits);
-        auto _gap_open     = vectorise_reverse_lshift(gap_open, trace_bits);
-        auto _gap_extend   = vectorise_reverse_lshift(gap_extend, trace_bits);
+        auto _qualitieswin = vectorise(max_n_quality_ << trace_bits_);
+        auto _gap_open     = vectorise_reverse_lshift(gap_open, trace_bits_);
+        auto _gap_extend   = vectorise_reverse_lshift(gap_extend, trace_bits_);
         auto _truthnqual   = _add(_and(_cmpeq(_truthwin, _n), _nscore_m_inf), _inf);
-        ScoreType minscore {infinity};
-        for (int s {0}; s <= 2 * (target_len + band_size); s += 2) {
+        ScoreType minscore {infinity_};
+        for (int s {0}; s <= 2 * (target_len + band_size_); s += 2) {
             // truth is current; target needs updating
-            _targetwin    = _left_shift<score_bytes>(_targetwin);
-            _qualitieswin = _left_shift<score_bytes>(_qualitieswin);
+            _targetwin    = _left_shift<score_bytes_>(_targetwin);
+            _qualitieswin = _left_shift<score_bytes_>(_qualitieswin);
             if (s / 2 < target_len) {
                 _targetwin    = _insert(_targetwin, target[s / 2], 0);
-                _qualitieswin = _insert(_qualitieswin, qualities[s / 2] << trace_bits, 0);
+                _qualitieswin = _insert(_qualitieswin, qualities[s / 2] << trace_bits_, 0);
             } else {
                 _targetwin    = _insert(_targetwin, '0', 0);
-                _qualitieswin = _insert(_qualitieswin, max_n_quality << trace_bits, 0);
+                _qualitieswin = _insert(_qualitieswin, max_n_quality_ << trace_bits_, 0);
             }
             // S even
             _m1 = _or(_initmask2, _andnot(_initmask, _m1));
@@ -122,31 +124,109 @@ public:
                 minscore = std::min(static_cast<decltype(minscore)>(_extract(_m1, std::max(0, s / 2 - target_len))), minscore);
             }
             _m1 = _add(_m1, _min(_andnot(_cmpeq(_targetwin, _truthwin), _qualitieswin), _truthnqual));
-            _d1 = _min(_add(_d2, _gap_extend), _add(_min(_m2, _i2), _right_shift<score_bytes>(_gap_open))); // allow I->D
-            _d1 = _insert(_left_shift<score_bytes>(_d1), infinity, 0);
+            _d1 = _min(_add(_d2, _gap_extend), _add(_min(_m2, _i2), _right_shift<score_bytes_>(_gap_open))); // allow I->D
+            _d1 = _insert(_left_shift<score_bytes_>(_d1), infinity_, 0);
             _i1 = _add(_min(_add(_i2, _gap_extend), _add(_m2, _gap_open)), _nuc_prior);
             // S odd
             // truth needs updating; target is current
-            const auto pos = band_size + s / 2;
+            const auto pos = band_size_ + s / 2;
             const bool pos_in_range {pos < truth_len};
             const char base {pos_in_range ? truth[pos] : 'N'};
-            _truthwin   = _insert(_right_shift<score_bytes>(_truthwin), base, band_size - 1);
-            _truthnqual = _insert(_right_shift<score_bytes>(_truthnqual), base == 'N' ? n_score : infinity, band_size - 1);
+            _truthwin   = _insert(_right_shift<score_bytes_>(_truthwin), base, band_size_ - 1);
+            _truthnqual = _insert(_right_shift<score_bytes_>(_truthnqual), base == 'N' ? n_score_ : infinity_, band_size_ - 1);
             const auto gap_idx = pos_in_range ? pos : truth_len - 1;
-            update_gap_penalty<score_bytes>(_gap_open, gap_open, gap_idx);
-            update_gap_penalty<score_bytes>(_gap_extend, gap_extend, gap_idx);
-            _initmask  = _left_shift<score_bytes>(_initmask);
-            _initmask2 = _left_shift<score_bytes>(_initmask2);
+            update_gap_penalty<score_bytes_>(_gap_open, gap_open, gap_idx);
+            update_gap_penalty<score_bytes_>(_gap_extend, gap_extend, gap_idx);
+            _initmask  = _left_shift<score_bytes_>(_initmask);
+            _initmask2 = _left_shift<score_bytes_>(_initmask2);
             _m2 = _min(_m2, _min(_i2, _d2));
             if (s / 2 >= target_len) {
                 minscore = std::min(static_cast<decltype(minscore)>(_extract(_m2, s / 2 - target_len)), minscore);
             }
             _m2 = _add(_m2, _min(_andnot(_cmpeq(_targetwin, _truthwin), _qualitieswin), _truthnqual));
             _d2 = _min(_add(_d1, _gap_extend), _add(_min(_m1, _i1), _gap_open)); // allow I->D
-            _i2 = _insert(_add(_min(_add(_right_shift<score_bytes>(_i1), _gap_extend),
-                                         _add(_right_shift<score_bytes>(_m1), _gap_open)), _nuc_prior), infinity, band_size - 1);
+            _i2 = _insert(_add(_min(_add(_right_shift<score_bytes_>(_i1), _gap_extend),
+                                         _add(_right_shift<score_bytes_>(_m1), _gap_open)), _nuc_prior), infinity_, band_size_ - 1);
         }
-        return (minscore + bitmask) >> trace_bits;
+        return (minscore + bitmask_) >> trace_bits_;
+    }
+    
+    template <typename OpenPenalty,
+              typename ExtendPenalty>
+    int align(const char* truth,
+              const char* target,
+              const std::int8_t* qualities,
+              const int truth_len,
+              const int target_len,
+              const char* snv_mask,
+              const std::int8_t* snv_prior,
+              const OpenPenalty gap_open,
+              const ExtendPenalty gap_extend,
+              short nuc_prior) const noexcept
+    {
+        assert(truth_len > band_size_ && (truth_len == target_len + 2 * band_size_ - 1));
+        auto _m1 = _inf, _i1 = _inf, _d1 = _inf, _m2 = _inf, _i2 = _inf, _d2 = _inf;
+        const auto _nuc_prior  = vectorise(nuc_prior << trace_bits_);
+        auto _initmask  = vectorise_zero_set_last(-1);
+        auto _initmask2 = vectorise_zero_set_last(-bitmask_);
+        auto _truthwin     = vectorise_reverse(truth);
+        auto _targetwin    = _m1;
+        auto _qualitieswin = vectorise(max_n_quality_ << trace_bits_);
+        auto _gap_open     = vectorise_reverse_lshift(gap_open, trace_bits_);
+        auto _gap_extend   = vectorise_reverse_lshift(gap_extend, trace_bits_);
+        auto _snvmaskwin   = vectorise_reverse(snv_mask);
+        auto _snv_priorwin = vectorise_reverse_lshift(snv_prior, trace_bits_);
+        auto _truthnqual   = _add(_and(_cmpeq(_truthwin, _n), _nscore_m_inf), _inf);
+        VectorType _snvmask;
+        ScoreType minscore {infinity_};
+        for (int s {0}; s <= 2 * (target_len + band_size_); s += 2) {
+            // truth is current; target needs updating
+            _targetwin    = _left_shift<score_bytes_>(_targetwin);
+            _qualitieswin = _left_shift<score_bytes_>(_qualitieswin);
+            if (s / 2 < target_len) {
+                _targetwin    = _insert(_targetwin, target[s / 2], 0);
+                _qualitieswin = _insert(_qualitieswin, qualities[s / 2] << trace_bits_, 0);
+            } else {
+                _targetwin    = _insert(_targetwin, '0', 0);
+                _qualitieswin = _insert(_qualitieswin, max_n_quality_ << trace_bits_, 0);
+            }
+            // S even
+            _m1 = _or(_initmask2, _andnot(_initmask, _m1));
+            _m2 = _or(_initmask2, _andnot(_initmask, _m2));
+            _m1 = _min(_m1, _min(_i1, _d1));
+            if (s / 2 >= target_len) {
+                minscore = std::min(static_cast<decltype(minscore)>(_extract(_m1, std::max(0, s / 2 - target_len))), minscore);
+            }
+            _snvmask = _cmpeq(_targetwin, _snvmaskwin);
+            _m1 = _add(_m1, _min(_andnot(_cmpeq(_targetwin, _truthwin), _min(_qualitieswin, _or(_and(_snvmask, _snv_priorwin), _andnot(_snvmask, _qualitieswin)))), _truthnqual));
+            _d1 = _min(_add(_d2, _gap_extend), _add(_min(_m2, _i2), _right_shift<score_bytes_>(_gap_open))); // allow I->D
+            _d1 = _insert(_left_shift<score_bytes_>(_d1), infinity_, 0);
+            _i1 = _add(_min(_add(_i2, _gap_extend), _add(_m2, _gap_open)), _nuc_prior);
+            // S odd
+            // truth needs updating; target is current
+            const auto pos = band_size_ + s / 2;
+            const bool pos_in_range {pos < truth_len};
+            const char base {pos_in_range ? truth[pos] : 'N'};
+            _truthwin   = _insert(_right_shift<score_bytes_>(_truthwin), base, band_size_ - 1);
+            _truthnqual = _insert(_right_shift<score_bytes_>(_truthnqual), base == 'N' ? n_score_ : infinity_, band_size_ - 1);
+            const auto gap_idx = pos_in_range ? pos : truth_len - 1;
+            update_gap_penalty<score_bytes_>(_gap_open, gap_open, gap_idx);
+            update_gap_penalty<score_bytes_>(_gap_extend, gap_extend, gap_idx);
+            _snvmaskwin   = _insert(_right_shift<score_bytes_>(_snvmaskwin), pos_in_range ? snv_mask[pos] : 'N', band_size_ - 1);
+            _snv_priorwin = _insert(_right_shift<score_bytes_>(_snv_priorwin), (pos_in_range ? snv_prior[pos] : infinity_) << trace_bits_, band_size_ - 1);
+            _initmask  = _left_shift<score_bytes_>(_initmask);
+            _initmask2 = _left_shift<score_bytes_>(_initmask2);
+            _m2 = _min(_m2, _min(_i2, _d2));
+            if (s / 2 >= target_len) {
+                minscore = std::min(static_cast<decltype(minscore)>(_extract(_m2, s / 2 - target_len)), minscore);
+            }
+            _snvmask = _cmpeq(_targetwin, _snvmaskwin);
+            _m2 = _add(_m2, _min(_andnot(_cmpeq(_targetwin, _truthwin), _min(_qualitieswin, _or(_and(_snvmask, _snv_priorwin), _andnot(_snvmask, _qualitieswin)))), _truthnqual));
+            _d2 = _min(_add(_d1, _gap_extend), _add(_min(_m1, _i1), _gap_open)); // allow I->D
+            _i2 = _insert(_add(_min(_add(_right_shift<score_bytes_>(_i1), _gap_extend),
+                                    _add(_right_shift<score_bytes_>(_m1), _gap_open)), _nuc_prior), infinity_, band_size_ - 1);
+        }
+        return (minscore + bitmask_) >> trace_bits_;
     }
     
     template <typename OpenPenalty,
@@ -162,32 +242,32 @@ public:
           short nuc_prior,
           int& first_pos,
           char* align1,
-          char* align2) noexcept
+          char* align2) const noexcept
     {
-        assert(truth_len > band_size && (truth_len == target_len + 2 * band_size - 1));
+        assert(truth_len > band_size_ && (truth_len == target_len + 2 * band_size_ - 1));
         auto _m1 = _inf, _i1 = _inf, _d1 = _inf, _m2 = _inf, _i2 = _inf, _d2 = _inf;
-        const auto _nuc_prior = vectorise(nuc_prior << trace_bits);
+        const auto _nuc_prior = vectorise(nuc_prior << trace_bits_);
         auto _initmask  = vectorise_zero_set_last(-1);
-        auto _initmask2 = vectorise_zero_set_last(-bitmask);
+        auto _initmask2 = vectorise_zero_set_last(-bitmask_);
         auto _truthwin     = vectorise_reverse(truth);
         auto _targetwin    = _m1;
-        auto _qualitieswin = vectorise(max_n_quality << trace_bits);
-        auto _gap_open     = vectorise_reverse_lshift(gap_open, trace_bits);
-        auto _gap_extend   = vectorise_reverse_lshift(gap_extend, trace_bits);
+        auto _qualitieswin = vectorise(max_n_quality_ << trace_bits_);
+        auto _gap_open     = vectorise_reverse_lshift(gap_open, trace_bits_);
+        auto _gap_extend   = vectorise_reverse_lshift(gap_extend, trace_bits_);
         auto _truthnqual   = _add(_and(_cmpeq(_truthwin, _n), _nscore_m_inf), _inf);
-        SmallVector _backpointers(2 * (truth_len + band_size));
-        ScoreType minscore {infinity}, cur_score;
+        SmallVector _backpointers(2 * (truth_len + band_size_));
+        ScoreType minscore {infinity_}, cur_score;
         int s, minscoreidx {-1};
-        for (s = 0; s <= 2 * (target_len + band_size); s += 2) {
+        for (s = 0; s <= 2 * (target_len + band_size_); s += 2) {
             // truth is current; target needs updating
-            _targetwin    = _left_shift<score_bytes>(_targetwin);
-            _qualitieswin = _left_shift<score_bytes>(_qualitieswin);
+            _targetwin    = _left_shift<score_bytes_>(_targetwin);
+            _qualitieswin = _left_shift<score_bytes_>(_qualitieswin);
             if (s / 2 < target_len) {
                 _targetwin    = _insert(_targetwin, target[s / 2], 0);
-                _qualitieswin = _insert(_qualitieswin, qualities[s / 2] << trace_bits, 0);
+                _qualitieswin = _insert(_qualitieswin, qualities[s / 2] << trace_bits_, 0);
             } else {
                 _targetwin    = _insert(_targetwin, '0', 0);
-                _qualitieswin = _insert(_qualitieswin, max_n_quality << trace_bits, 0);
+                _qualitieswin = _insert(_qualitieswin, max_n_quality_ << trace_bits_, 0);
             }
             // S even
             _m1 = _or(_initmask2, _andnot(_initmask, _m1));
@@ -201,27 +281,27 @@ public:
                 }
             }
             _m1 = _add(_m1, _min(_andnot(_cmpeq(_targetwin, _truthwin), _qualitieswin), _truthnqual));
-            _d1 = _min(_add(_d2, _gap_extend), _add(_min(_m2, _i2), _right_shift<score_bytes>(_gap_open))); // allow I->D
-            _d1 = _insert(_left_shift<score_bytes>(_d1), infinity, 0);
+            _d1 = _min(_add(_d2, _gap_extend), _add(_min(_m2, _i2), _right_shift<score_bytes_>(_gap_open))); // allow I->D
+            _d1 = _insert(_left_shift<score_bytes_>(_d1), infinity_, 0);
             _i1 = _add(_min(_add(_i2, _gap_extend), _add(_m2, _gap_open)), _nuc_prior);
-            _backpointers[s] = _or(_or(_and(_three, _m1), _left_shift_words<2 * insert_label>(_and(_three, _i1))),
-                                            _left_shift_words<2 * delete_label>(_and(_three, _d1)));
+            _backpointers[s] = _or(_or(_and(_three, _m1), _left_shift_words<2 * insert_label_>(_and(_three, _i1))),
+                                            _left_shift_words<2 * delete_label_>(_and(_three, _d1)));
             // set state labels
             _m1 = _andnot(_three, _m1);
             _i1 = _or(_andnot(_three, _i1), _right_shift<1>(_three));
             _d1 = _or(_andnot(_three, _d1), _three);
             // S odd
             // truth needs updating; target is current
-            const auto pos = band_size + s / 2;
+            const auto pos = band_size_ + s / 2;
             const bool pos_in_range {pos < truth_len};
             const char base {pos_in_range ? truth[pos] : 'N'};
-            _truthwin   = _insert(_right_shift<score_bytes>(_truthwin), base, band_size - 1);
-            _truthnqual = _insert(_right_shift<score_bytes>(_truthnqual), base == 'N' ? n_score : infinity, band_size - 1);
+            _truthwin   = _insert(_right_shift<score_bytes_>(_truthwin), base, band_size_ - 1);
+            _truthnqual = _insert(_right_shift<score_bytes_>(_truthnqual), base == 'N' ? n_score_ : infinity_, band_size_ - 1);
             const auto gap_idx = pos_in_range ? pos : truth_len - 1;
-            update_gap_penalty<trace_bits>(_gap_open, gap_open, gap_idx);
-            update_gap_penalty<trace_bits>(_gap_extend, gap_extend, gap_idx);
-            _initmask  = _left_shift<score_bytes>(_initmask);
-            _initmask2 = _left_shift<score_bytes>(_initmask2);
+            update_gap_penalty<trace_bits_>(_gap_open, gap_open, gap_idx);
+            update_gap_penalty<trace_bits_>(_gap_extend, gap_extend, gap_idx);
+            _initmask  = _left_shift<score_bytes_>(_initmask);
+            _initmask2 = _left_shift<score_bytes_>(_initmask2);
             _m2 = _min(_m2, _min(_i2, _d2));
             if (s / 2 >= target_len) {
                 cur_score = _extract(_m2, s / 2 - target_len);
@@ -232,10 +312,10 @@ public:
             }
             _m2 = _add(_m2, _min(_andnot(_cmpeq(_targetwin, _truthwin), _qualitieswin), _truthnqual));
             _d2 = _min(_add(_d1, _gap_extend), _add(_min(_m1, _i1), _gap_open)); // allow I->D
-            _i2 = _insert(_add(_min(_add(_right_shift<score_bytes>(_i1), _gap_extend),
-                                         _add(_right_shift<score_bytes>(_m1), _gap_open)), _nuc_prior), infinity, band_size - 1);
-            _backpointers[s + 1] = _or(_or(_and(_three, _m2), _left_shift_words<2 * insert_label>(_and(_three, _i2))),
-                                                _left_shift_words<2 * delete_label>(_and(_three, _d2)));
+            _i2 = _insert(_add(_min(_add(_right_shift<score_bytes_>(_i1), _gap_extend),
+                                         _add(_right_shift<score_bytes_>(_m1), _gap_open)), _nuc_prior), infinity_, band_size_ - 1);
+            _backpointers[s + 1] = _or(_or(_and(_three, _m2), _left_shift_words<2 * insert_label_>(_and(_three, _i2))),
+                                                _left_shift_words<2 * delete_label_>(_and(_three, _d2)));
             // set state labels
             _m2 = _andnot(_three, _m2);
             _i2 = _or(_andnot(_three, _i2), _right_shift<1>(_three));
@@ -257,7 +337,7 @@ public:
             first_pos = -1;
             return -1;
         }
-        auto state = (ptr[i] >> (2 * match_label)) & 3;
+        auto state = (ptr[i] >> (2 * match_label_)) & 3;
         s -= 2;
         // this is 2*y (s even) or 2*y+1 (s odd)
         while (y > 0) {
@@ -267,11 +347,11 @@ public:
                 return -1;
             }
             const auto new_state = (reinterpret_cast<short*>(_backpointers.data() + s)[i] >> (2 * state)) & 3;
-            if (state == match_label) {
+            if (state == match_label_) {
                 s -= 2;
                 align1[alnidx] = truth[--x];
                 align2[alnidx] = target[--y];
-            } else if (state == insert_label) {
+            } else if (state == insert_label_) {
                 i += s & 1;
                 s -= 1;
                 align1[alnidx] = gap_label;
@@ -297,7 +377,407 @@ public:
             align1[j] = x;
             align2[j] = y;
         }
-        return (minscore + bitmask) >> trace_bits;
+        return (minscore + bitmask_) >> trace_bits_;
+    }
+    
+    template <typename OpenPenalty,
+              typename ExtendPenalty>
+    int
+    align(const char* truth,
+          const char* target,
+          const std::int8_t* qualities,
+          const int truth_len,
+          const int target_len,
+          const char* snv_mask,
+          const std::int8_t* snv_prior,
+          const OpenPenalty gap_open,
+          const ExtendPenalty gap_extend,
+          short nuc_prior,
+          int& first_pos,
+          char* align1,
+          char* align2) const noexcept
+    {
+        assert(truth_len > band_size_ && (truth_len == target_len + 2 * band_size_ - 1));
+        auto _m1 = _inf, _i1 = _inf, _d1 = _inf, _m2 = _inf, _i2 = _inf, _d2 = _inf;
+        const auto _nuc_prior = vectorise(nuc_prior << trace_bits_);
+        auto _initmask  = vectorise_zero_set_last(-1);
+        auto _initmask2 = vectorise_zero_set_last(-bitmask_);
+        auto _truthwin     = vectorise_reverse(truth);
+        auto _targetwin    = _m1;
+        auto _qualitieswin = vectorise(max_n_quality_ << trace_bits_);
+        auto _gap_open     = vectorise_reverse_lshift(gap_open, trace_bits_);
+        auto _gap_extend   = vectorise_reverse_lshift(gap_extend, trace_bits_);
+        auto _snvmaskwin   = vectorise_reverse(snv_mask);
+        auto _snv_priorwin = vectorise_reverse_lshift(snv_prior, trace_bits_);
+        auto _truthnqual   = _add(_and(_cmpeq(_truthwin, _n), _nscore_m_inf), _inf);
+        VectorType _snvmask;
+        SmallVector _backpointers(2 * (truth_len + band_size_));
+        ScoreType minscore {infinity_}, cur_score;
+        int s, minscoreidx {-1};
+        for (s = 0; s <= 2 * (target_len + band_size_); s += 2) {
+            // truth is current; target needs updating
+            _targetwin    = _left_shift<score_bytes_>(_targetwin);
+            _qualitieswin = _left_shift<score_bytes_>(_qualitieswin);
+            if (s / 2 < target_len) {
+                _targetwin    = _insert(_targetwin, target[s / 2], 0);
+                _qualitieswin = _insert(_qualitieswin, qualities[s / 2] << trace_bits_, 0);
+            } else {
+                _targetwin    = _insert(_targetwin, '0', 0);
+                _qualitieswin = _insert(_qualitieswin, max_n_quality_ << trace_bits_, 0);
+            }
+            // S even
+            _m1 = _or(_initmask2, _andnot(_initmask, _m1));
+            _m2 = _or(_initmask2, _andnot(_initmask, _m2));
+            _m1 = _min(_m1, _min(_i1, _d1));
+            if (s / 2 >= target_len) {
+                cur_score = _extract(_m1, s / 2 - target_len);
+                if (cur_score < minscore) {
+                    minscore = cur_score;
+                    minscoreidx = s;
+                }
+            }
+            _snvmask = _cmpeq(_targetwin, _snvmaskwin);
+            _m1 = _add(_m1, _min(_andnot(_cmpeq(_targetwin, _truthwin), _min(_qualitieswin, _or(_and(_snvmask, _snv_priorwin), _andnot(_snvmask, _qualitieswin)))), _truthnqual));
+            _d1 = _min(_add(_d2, _gap_extend), _add(_min(_m2, _i2), _right_shift<score_bytes_>(_gap_open))); // allow I->D
+            _d1 = _insert(_left_shift<score_bytes_>(_d1), infinity_, 0);
+            _i1 = _add(_min(_add(_i2, _gap_extend), _add(_m2, _gap_open)), _nuc_prior);
+            _backpointers[s] = _or(_or(_and(_three, _m1), _left_shift_words<2 * insert_label_>(_and(_three, _i1))),
+                                   _left_shift_words<2 * delete_label_>(_and(_three, _d1)));
+            // set state labels
+            _m1 = _andnot(_three, _m1);
+            _i1 = _or(_andnot(_three, _i1), _right_shift<1>(_three));
+            _d1 = _or(_andnot(_three, _d1), _three);
+            // S odd
+            // truth needs updating; target is current
+            const auto pos = band_size_ + s / 2;
+            const bool pos_in_range {pos < truth_len};
+            const char base {pos_in_range ? truth[pos] : 'N'};
+            _truthwin   = _insert(_right_shift<score_bytes_>(_truthwin), base, band_size_ - 1);
+            _truthnqual = _insert(_right_shift<score_bytes_>(_truthnqual), base == 'N' ? n_score_ : infinity_, band_size_ - 1);
+            const auto gap_idx = pos_in_range ? pos : truth_len - 1;
+            update_gap_penalty<trace_bits_>(_gap_open, gap_open, gap_idx);
+            update_gap_penalty<trace_bits_>(_gap_extend, gap_extend, gap_idx);
+            _snvmaskwin   = _insert(_right_shift<score_bytes_>(_snvmaskwin), pos_in_range ? snv_mask[pos] : 'N', band_size_ - 1);
+            _snv_priorwin = _insert(_right_shift<score_bytes_>(_snv_priorwin), (pos_in_range ? snv_prior[pos] : infinity_) << trace_bits_, band_size_ - 1);
+            _initmask  = _left_shift<score_bytes_>(_initmask);
+            _initmask2 = _left_shift<score_bytes_>(_initmask2);
+            _m2 = _min(_m2, _min(_i2, _d2));
+            if (s / 2 >= target_len) {
+                cur_score = _extract(_m2, s / 2 - target_len);
+                if (cur_score < minscore) {
+                    minscore = cur_score;
+                    minscoreidx = s + 1;
+                }
+            }
+            _snvmask = _cmpeq(_targetwin, _snvmaskwin);
+            _m2 = _add(_m2, _min(_andnot(_cmpeq(_targetwin, _truthwin), _min(_qualitieswin, _or(_and(_snvmask, _snv_priorwin), _andnot(_snvmask, _qualitieswin)))), _truthnqual));
+            _d2 = _min(_add(_d1, _gap_extend), _add(_min(_m1, _i1), _gap_open)); // allow I->D
+            _i2 = _insert(_add(_min(_add(_right_shift<score_bytes_>(_i1), _gap_extend),
+                                    _add(_right_shift<score_bytes_>(_m1), _gap_open)), _nuc_prior), infinity_, band_size_ - 1);
+            _backpointers[s + 1] = _or(_or(_and(_three, _m2), _left_shift_words<2 * insert_label_>(_and(_three, _i2))),
+                                       _left_shift_words<2 * delete_label_>(_and(_three, _d2)));
+            // set state labels
+            _m2 = _andnot(_three, _m2);
+            _i2 = _or(_andnot(_three, _i2), _right_shift<1>(_three));
+            _d2 = _or(_andnot(_three, _d2), _three);
+        }
+        if (minscoreidx < 0) {
+            // minscore was never updated so we must have overflowed badly
+            first_pos = -1;
+            return -1;
+        }
+        s = minscoreidx;    // point to the dummy match transition
+        auto i      = s / 2 - target_len;
+        auto y      = target_len;
+        auto x      = s - y;
+        auto alnidx = 0;
+        auto ptr = reinterpret_cast<short*>(_backpointers.data() + s);
+        if ((ptr + i) < reinterpret_cast<short*>(_backpointers.data())
+            || (ptr + i) >= reinterpret_cast<short*>(_backpointers.data() + _backpointers.size())) {
+            first_pos = -1;
+            return -1;
+        }
+        auto state = (ptr[i] >> (2 * match_label_)) & 3;
+        s -= 2;
+        // this is 2*y (s even) or 2*y+1 (s odd)
+        while (y > 0) {
+            if (s < 0 || i < 0) {
+                // This should never happen so must have overflowed
+                first_pos = -1;
+                return -1;
+            }
+            const auto new_state = (reinterpret_cast<short*>(_backpointers.data() + s)[i] >> (2 * state)) & 3;
+            if (state == match_label_) {
+                s -= 2;
+                align1[alnidx] = truth[--x];
+                align2[alnidx] = target[--y];
+            } else if (state == insert_label_) {
+                i += s & 1;
+                s -= 1;
+                align1[alnidx] = gap_label;
+                align2[alnidx] = target[--y];
+            } else {
+                s -= 1;
+                i -= s & 1;
+                align1[alnidx] = truth[--x];
+                align2[alnidx] = gap_label;
+            }
+            state = new_state;
+            alnidx++;
+        }
+        align1[alnidx] = 0;
+        align2[alnidx] = 0;
+        first_pos = x;
+        // reverse them
+        for (int j {alnidx - 1}, i = 0; i < j; ++i, j--) {
+            x = align1[i];
+            y = align2[i];
+            align1[i] = align1[j];
+            align2[i] = align2[j];
+            align1[j] = x;
+            align2[j] = y;
+        }
+        return (minscore + bitmask_) >> trace_bits_;
+    }
+    
+    int
+    calculate_flank_score(int truth_len,
+                          int lhs_flank_len,
+                          int rhs_flank_len,
+                          const char* target,
+                          const std::int8_t* quals,
+                          const char* snv_mask,
+                          const std::int8_t* snv_prior,
+                          const std::int8_t* gap_open,
+                          const std::int8_t* gap_extend,
+                          short nuc_prior,
+                          int first_pos,
+                          const char* aln1,
+                          const char* aln2,
+                          int& target_mask_size) const noexcept
+    {
+        static constexpr char match {'M'}, insertion {'I'}, deletion {'D'};
+        auto prev_state = match;
+        int x {first_pos}; // index into truth
+        int y {0};         // index into target
+        int i {0};         // index into alignment
+        int result {0};    // alignment score (within flank)
+        const auto rhs_flank_begin = truth_len - rhs_flank_len;
+        target_mask_size = 0;
+        while (aln1[i]) {
+            auto new_state = match;
+            if (aln1[i] == gap_label) {
+                new_state = insertion;
+            } else if (aln2[i] == gap_label) { // can't be both '-'
+                new_state = deletion;
+            }
+            switch (new_state) {
+                case match:
+                {
+                    if (x < lhs_flank_len || x >= rhs_flank_begin) {
+                        if (aln1[i] != aln2[i]) {
+                            if (aln1[i] != 'N') {
+                                result += (snv_mask[x] == target[y]) ? std::min(quals[y], snv_prior[x]) : quals[y];
+                            } else {
+                                result += n_score_ >> trace_bits_;
+                            }
+                        }
+                        ++target_mask_size;
+                    }
+                    ++x;
+                    ++y;
+                    break;
+                }
+                case insertion:
+                {
+                    if (x < lhs_flank_len || x >= rhs_flank_begin) {
+                        if (prev_state == insertion) {
+                            result += gap_extend[x - 1] + nuc_prior;
+                        } else {
+                            // gap open score is charged for insertions just after the corresponding base, hence the -1
+                            result += gap_open[x - 1] + nuc_prior;
+                        }
+                        ++target_mask_size;
+                    }
+                    ++y;
+                    break;
+                }
+                case deletion:
+                {
+                    if (x < lhs_flank_len || x >= rhs_flank_begin) {
+                        if (prev_state == deletion) {
+                            result += gap_extend[x];
+                        } else {
+                            result += gap_open[x];
+                        }
+                    }
+                    ++x;
+                    break;
+                }
+            }
+            ++i;
+            prev_state = new_state;
+        }
+        return result;
+    }
+    
+    int
+    calculate_flank_score(const int truth_len,
+                          const int lhs_flank_len,
+                          const int rhs_flank_len,
+                          const std::int8_t* quals,
+                          const std::int8_t* gap_open,
+                          const short gap_extend,
+                          const short nuc_prior,
+                          const int first_pos,
+                          const char* aln1,
+                          const char* aln2,
+                          int& target_mask_size) const noexcept
+    {
+        static constexpr char match {'M'}, insertion {'I'}, deletion {'D'};
+        auto prev_state = match;
+        int x {first_pos}; // index into haplotype
+        int y {0};         // index into read
+        int i {0};         // index into alignment
+        int result {0};    // alignment score (within flank)
+        target_mask_size = 0;
+        while (aln1[i]) {
+            auto new_state = match;
+            if (aln1[i] == gap_label) {
+                new_state = insertion;
+            } else if (aln2[i] == gap_label) { // can't be both '-'
+                new_state = deletion;
+            }
+            switch (new_state) {
+                case match:
+                {
+                    if (x < lhs_flank_len || x >= (truth_len - rhs_flank_len)) {
+                        if (aln1[i] != aln2[i]) {
+                            if (aln1[i] != 'N') {
+                                result += quals[y];
+                            } else {
+                                result += n_score_ >> trace_bits_;
+                            }
+                        }
+                        ++target_mask_size;
+                    }
+                    ++x;
+                    ++y;
+                    break;
+                }
+                case insertion:
+                {
+                    if (x < lhs_flank_len || x >= (truth_len - rhs_flank_len)) {
+                        if (prev_state == insertion) {
+                            result += gap_extend + nuc_prior;
+                        } else {
+                            // gap open score is charged for insertions just after the corresponding base, hence the -1
+                            result += gap_open[x - 1] + nuc_prior;
+                        }
+                        ++target_mask_size;
+                    }
+                    ++y;
+                    break;
+                }
+                case deletion:
+                {
+                    if (x < lhs_flank_len || x >= (truth_len - rhs_flank_len)) {
+                        if (prev_state == deletion) {
+                            result += gap_extend;
+                        } else {
+                            result += gap_open[x];
+                        }
+                    }
+                    ++x;
+                    break;
+                }
+            }
+            
+            ++i;
+            prev_state = new_state;
+        }
+        return result;
+    }
+    
+    int
+    calculate_flank_score(const int truth_len,
+                          const int lhs_flank_len,
+                          const int rhs_flank_len,
+                          const char* target,
+                          const std::int8_t* quals,
+                          const char* snv_mask,
+                          const std::int8_t* snv_prior,
+                          const std::int8_t* gap_open,
+                          const short gap_extend,
+                          const short nuc_prior,
+                          const int first_pos,
+                          const char* aln1,
+                          const char* aln2,
+                          int& target_mask_size) const noexcept
+    {
+        static constexpr char match {'M'}, insertion {'I'}, deletion {'D'};
+        auto prev_state = match;
+        int x {first_pos}; // index into truth
+        int y {0};         // index into target
+        int i {0};         // index into alignment
+        int result {0};    // alignment score (within flank)
+        const auto rhs_flank_begin = truth_len - rhs_flank_len;
+        target_mask_size = 0;
+        while (aln1[i]) {
+            auto new_state = match;
+            if (aln1[i] == gap_label) {
+                new_state = insertion;
+            } else if (aln2[i] == gap_label) { // can't be both '-'
+                new_state = deletion;
+            }
+            switch (new_state) {
+                case match:
+                {
+                    if (x < lhs_flank_len || x >= rhs_flank_begin) {
+                        if (aln1[i] != aln2[i]) {
+                            if (aln1[i] != 'N') {
+                                result += (snv_mask[x] == target[y]) ? std::min(quals[y], snv_prior[x]) : quals[y];
+                            } else {
+                                result += n_score_ >> trace_bits_;
+                            }
+                        }
+                        ++target_mask_size;
+                    }
+                    ++x;
+                    ++y;
+                    break;
+                }
+                case insertion:
+                {
+                    if (x < lhs_flank_len || x >= rhs_flank_begin) {
+                        if (prev_state == insertion) {
+                            result += gap_extend + nuc_prior;
+                        } else {
+                            // gap open score is charged for insertions just after the corresponding base, hence the -1
+                            result += gap_open[x - 1] + nuc_prior;
+                        }
+                        ++target_mask_size;
+                    }
+                    ++y;
+                    break;
+                }
+                case deletion:
+                {
+                    if (x < lhs_flank_len || x >= rhs_flank_begin) {
+                        if (prev_state == deletion) {
+                            result += gap_extend;
+                        } else {
+                            result += gap_open[x];
+                        }
+                    }
+                    ++x;
+                    break;
+                }
+            }
+            ++i;
+            prev_state = new_state;
+        }
+        return result;
     }
 };
 
