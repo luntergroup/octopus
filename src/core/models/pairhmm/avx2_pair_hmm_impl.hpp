@@ -5,7 +5,7 @@
 #define avx2_pair_hmm_impl_hpp
 
 #if __GNUC__ >= 6
-    #pragma GCC diagnostic ignored "-Wignored-attributes"
+#pragma GCC diagnostic ignored "-Wignored-attributes"
 #endif
 
 #include <cstdint>
@@ -15,7 +15,33 @@
 
 namespace octopus { namespace hmm { namespace simd {
 
-#ifdef __AVX2__
+namespace detail {
+
+template <int index>
+auto _left_shift(const __m256i& a) noexcept
+{
+    static_assert(index < 16, "index must be less than 16");
+    return _mm256_alignr_epi8(a, _mm256_permute2x128_si256(a, a, _MM_SHUFFLE(0, 0, 2, 0)), 16 - index);
+};
+template <>
+auto _left_shift<16>(const __m256i& a) noexcept
+{
+    return _mm256_permute2x128_si256(a, a, _MM_SHUFFLE(0, 0, 2, 0));
+}
+
+template <int index>
+auto _right_shift(const __m256i& a) noexcept
+{
+    static_assert(index < 16, "index must be less than 16");
+    return _mm256_alignr_epi8(_mm256_permute2x128_si256(a, a, _MM_SHUFFLE(2, 0, 0, 1)), a, index);
+}
+template <>
+auto _right_shift<16>(const __m256i& a) noexcept
+{
+    return _mm256_permute2x128_si256(a, a, _MM_SHUFFLE(2, 0, 0, 1));
+}
+
+} // namespace detail
 
 class InstructionSetPolicyAVX2
 {
@@ -73,7 +99,7 @@ protected:
             case 13:  return _extract<13>(a);
             case 14:  return _extract<14>(a);
             case 15:  return _extract<15>(a);
-            default: return _extract<7>(a);
+            default: return _extract<15>(a);
         }
     }
     template <int imm, typename T>
@@ -124,15 +150,15 @@ protected:
     {
         return _mm256_cmpeq_epi16(lhs, rhs);
     }
-    template <int imm>
+    template <int index>
     VectorType _left_shift(const VectorType& a) const noexcept
     {
-        return _mm256_slli_si256(a, imm);
+        return detail::_left_shift<index>(a);
     }
-    template <int imm>
+    template <int index>
     VectorType _right_shift(const VectorType& a) const noexcept
     {
-        return _mm256_srli_si256(a, imm);
+        return detail::_right_shift<index>(a);
     }
     template <int imm>
     VectorType _left_shift_words(const VectorType& a) const noexcept
@@ -150,8 +176,6 @@ protected:
 };
 
 using AVX2PairHMM = PairHMM<InstructionSetPolicyAVX2>;
-
-#endif /* __AVX2__ */
 
 } // namespace simd
 } // namespace hmm
