@@ -10,7 +10,7 @@
 #include <utility>
 #include <iostream>
 
-#include "core/models/pairhmm/simd_pair_hmm.hpp"
+#include "core/models/pairhmm/simd_pair_hmm_fwd.hpp"
 
 namespace octopus { namespace test {
 
@@ -61,25 +61,25 @@ std::ostream& operator<<(std::ostream& os, const Alignment& alignment)
     return os;
 }
 
-template <typename SIMD>
+template <typename HMM>
 auto
-align_score_helper(TestCase test)
+align_score_helper(TestCase test, HMM hmm)
 {
-    return align<SIMD>(test.target.data(), test.query.data(), test.base_qualities.data(),
-                       static_cast<int>(test.target.size()), static_cast<int>(test.query.size()),
-                       test.gap_open.data(), test.gap_extend, test.nuc_prior);
+    return hmm.align(test.target.data(), test.query.data(), test.base_qualities.data(),
+                     static_cast<int>(test.target.size()), static_cast<int>(test.query.size()),
+                     test.gap_open.data(), test.gap_extend, test.nuc_prior);
 }
 
-template <typename SIMD>
+template <typename HMM>
 Alignment
-align_helper(TestCase test)
+align_helper(TestCase test, HMM hmm)
 {
     Alignment result {};
     std::vector<char> align1(2 * test.target.size() + 1, '\0'), align2(2 * test.target.size() + 1, '\0');
-    result.score = align<SIMD>(test.target.data(), test.query.data(), test.base_qualities.data(),
-                               static_cast<int>(test.target.size()), static_cast<int>(test.query.size()),
-                               test.gap_open.data(), test.gap_extend, test.nuc_prior,
-                               result.begin, align1.data(), align2.data());
+    result.score = hmm.align(test.target.data(), test.query.data(), test.base_qualities.data(),
+                             static_cast<int>(test.target.size()), static_cast<int>(test.query.size()),
+                             test.gap_open.data(), test.gap_extend, test.nuc_prior,
+                             result.begin, align1.data(), align2.data());
     result.target.assign(align1.cbegin(), std::find(align1.cbegin(), align1.cend(), '\0'));
     result.query.assign(align2.cbegin(), std::find(align2.cbegin(), align2.cend(), '\0'));
     return result;
@@ -93,6 +93,7 @@ align_helper(TestCase test)
 
 BOOST_AUTO_TEST_CASE(sse2_check_alignments)
 {
+    SSE2PairHMM hmm;
     TestCase test;
     Alignment expected_alignment;
     
@@ -111,8 +112,8 @@ BOOST_AUTO_TEST_CASE(sse2_check_alignments)
         "AAAA",
         "AAAA"
     };
-    BOOST_CHECK_EQUAL(align_score_helper<SSE2>(test), expected_alignment.score);
-    CHECK_ALIGNMENT(align_helper<SSE2>(test), expected_alignment);
+    BOOST_CHECK_EQUAL(align_score_helper(test, hmm), expected_alignment.score);
+    CHECK_ALIGNMENT(align_helper(test, hmm), expected_alignment);
     
     // test 2
     test = {
@@ -129,8 +130,8 @@ BOOST_AUTO_TEST_CASE(sse2_check_alignments)
         "AATA",
         "AAAA"
     };
-    BOOST_CHECK_EQUAL(align_score_helper<SSE2>(test), expected_alignment.score);
-    CHECK_ALIGNMENT(align_helper<SSE2>(test), expected_alignment);
+    BOOST_CHECK_EQUAL(align_score_helper(test, hmm), expected_alignment.score);
+    CHECK_ALIGNMENT(align_helper(test, hmm), expected_alignment);
     
     // test 3
     test = {
@@ -147,8 +148,8 @@ BOOST_AUTO_TEST_CASE(sse2_check_alignments)
         "CGAAGC",
         "CG--GC"
     };
-    BOOST_CHECK_EQUAL(align_score_helper<SSE2>(test), expected_alignment.score);
-    CHECK_ALIGNMENT(align_helper<SSE2>(test), expected_alignment);
+    BOOST_CHECK_EQUAL(align_score_helper(test, hmm), expected_alignment.score);
+    CHECK_ALIGNMENT(align_helper(test, hmm), expected_alignment);
     
     // test 4
     test = {
@@ -165,13 +166,14 @@ BOOST_AUTO_TEST_CASE(sse2_check_alignments)
         "CGAAGC",
         "CG--GC"
     };
-    BOOST_CHECK_EQUAL(align_score_helper<SSE2>(test), expected_alignment.score);
-    CHECK_ALIGNMENT(align_helper<SSE2>(test), expected_alignment);
+    BOOST_CHECK_EQUAL(align_score_helper(test, hmm), expected_alignment.score);
+    CHECK_ALIGNMENT(align_helper(test, hmm), expected_alignment);
 }
 
 #ifdef __AVX2__
 BOOST_AUTO_TEST_CASE(avx2_check_alignments)
 {
+    AVX2PairHMM hmm;
     TestCase test;
     Alignment expected_alignment;
     
@@ -190,8 +192,8 @@ BOOST_AUTO_TEST_CASE(avx2_check_alignments)
         "AAAA",
         "AAAA"
     };
-    BOOST_CHECK_EQUAL(align_score_helper<AVX2>(test), expected_alignment.score);
-    CHECK_ALIGNMENT(align_helper<AVX2>(test), expected_alignment);
+    BOOST_CHECK_EQUAL(align_score_helper(test, hmm), expected_alignment.score);
+    CHECK_ALIGNMENT(align_helper(test, hmm), expected_alignment);
     
     // test 2
     test = {
@@ -208,8 +210,8 @@ BOOST_AUTO_TEST_CASE(avx2_check_alignments)
         "AATA",
         "AAAA"
     };
-    BOOST_CHECK_EQUAL(align_score_helper<AVX2>(test), expected_alignment.score);
-    CHECK_ALIGNMENT(align_helper<AVX2>(test), expected_alignment);
+    BOOST_CHECK_EQUAL(align_score_helper(test, hmm), expected_alignment.score);
+    CHECK_ALIGNMENT(align_helper(test, hmm), expected_alignment);
     
     // test 3
     test = {
@@ -226,8 +228,8 @@ BOOST_AUTO_TEST_CASE(avx2_check_alignments)
         "CGAAGC",
         "CG--GC"
     };
-    BOOST_CHECK_EQUAL(align_score_helper<AVX2>(test), expected_alignment.score);
-    CHECK_ALIGNMENT(align_helper<AVX2>(test), expected_alignment);
+    BOOST_CHECK_EQUAL(align_score_helper(test, hmm), expected_alignment.score);
+    CHECK_ALIGNMENT(align_helper(test, hmm), expected_alignment);
     
     // test 4
     test = {
@@ -244,8 +246,8 @@ BOOST_AUTO_TEST_CASE(avx2_check_alignments)
         "CGAAGC",
         "CG--GC"
     };
-    BOOST_CHECK_EQUAL(align_score_helper<AVX2>(test), expected_alignment.score);
-    CHECK_ALIGNMENT(align_helper<AVX2>(test), expected_alignment);
+    BOOST_CHECK_EQUAL(align_score_helper(test, hmm), expected_alignment.score);
+    CHECK_ALIGNMENT(align_helper(test, hmm), expected_alignment);
 }
 #endif /* __AVX2__ */
 
