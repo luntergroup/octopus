@@ -11,8 +11,6 @@
 #include <cstdint>
 #include <emmintrin.h>
 
-#include <boost/container/small_vector.hpp>
-
 #include "simd_pair_hmm.hpp"
 
 namespace octopus { namespace hmm { namespace simd {
@@ -22,12 +20,6 @@ class InstructionSetPolicySSE2
 protected:
     using VectorType  = __m128i;
     using ScoreType   = short;
-    using SmallVector = boost::container::small_vector<VectorType, 10000>;
-    
-    constexpr static int band_size = 8;
-    constexpr static int trace_bits = 2;
-    constexpr static ScoreType infinity = 0x7800;
-    constexpr static ScoreType n_score = 2 << trace_bits;
     
     VectorType vectorise(ScoreType x) const noexcept
     {
@@ -111,17 +103,17 @@ protected:
         return _mm_cmpeq_epi16(lhs, rhs);
     }
     template <int imm>
-    VectorType _slli_si(const VectorType& a) const noexcept
+    VectorType _left_shift(const VectorType& a) const noexcept
     {
         return _mm_slli_si128(a, imm);
     }
     template <int imm>
-    VectorType _srli_si(const VectorType& a) const noexcept
+    VectorType _right_shift(const VectorType& a) const noexcept
     {
         return _mm_srli_si128(a, imm);
     }
     template <int imm>
-    VectorType _slli_epi(const VectorType& a) const noexcept
+    VectorType _left_shift_words(const VectorType& a) const noexcept
     {
         return _mm_slli_epi16(a, imm);
     }

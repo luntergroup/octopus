@@ -11,8 +11,6 @@
 #include <cstdint>
 #include <immintrin.h>
 
-#include <boost/container/small_vector.hpp>
-
 #include "simd_pair_hmm.hpp"
 
 namespace octopus { namespace hmm { namespace simd {
@@ -22,14 +20,8 @@ namespace octopus { namespace hmm { namespace simd {
 class InstructionSetPolicyAVX2
 {
 protected:
-    using VectorType  = __m256i;
-    using ScoreType   = short;
-    using SmallVector = boost::container::small_vector<VectorType, 10000>;
-    
-    constexpr static int band_size = 16;
-    constexpr static int trace_bits = 2;
-    constexpr static ScoreType infinity = 0x7800;
-    constexpr static ScoreType n_score = 2 << trace_bits;
+    using VectorType = __m256i;
+    using ScoreType  = short;
     
     VectorType vectorise(ScoreType x) const noexcept
     {
@@ -73,6 +65,14 @@ protected:
             case 5:  return _extract<5>(a);
             case 6:  return _extract<6>(a);
             case 7:  return _extract<7>(a);
+            case 8:  return _extract<8>(a);
+            case 9:  return _extract<9>(a);
+            case 10:  return _extract<10>(a);
+            case 11:  return _extract<11>(a);
+            case 12:  return _extract<12>(a);
+            case 13:  return _extract<13>(a);
+            case 14:  return _extract<14>(a);
+            case 15:  return _extract<15>(a);
             default: return _extract<7>(a);
         }
     }
@@ -93,7 +93,15 @@ protected:
             case 5:  return _insert<5>(a, i);
             case 6:  return _insert<6>(a, i);
             case 7:  return _insert<7>(a, i);
-            default: return _insert<7>(a, i);
+            case 8:  return _insert<8>(a, i);
+            case 9:  return _insert<9>(a, i);
+            case 10:  return _insert<10>(a, i);
+            case 11:  return _insert<11>(a, i);
+            case 12:  return _insert<12>(a, i);
+            case 13:  return _insert<13>(a, i);
+            case 14:  return _insert<14>(a, i);
+            case 15:  return _insert<15>(a, i);
+            default: return _insert<15>(a, i);
         }
     }
     VectorType _add(const VectorType& lhs, const VectorType& rhs) const noexcept
@@ -117,17 +125,17 @@ protected:
         return _mm256_cmpeq_epi16(lhs, rhs);
     }
     template <int imm>
-    VectorType _slli_si(const VectorType& a) const noexcept
+    VectorType _left_shift(const VectorType& a) const noexcept
     {
         return _mm256_slli_si256(a, imm);
     }
     template <int imm>
-    VectorType _srli_si(const VectorType& a) const noexcept
+    VectorType _right_shift(const VectorType& a) const noexcept
     {
         return _mm256_srli_si256(a, imm);
     }
     template <int imm>
-    VectorType _slli_epi(const VectorType& a) const noexcept
+    VectorType _left_shift_words(const VectorType& a) const noexcept
     {
         return _mm256_slli_epi16(a, imm);
     }
