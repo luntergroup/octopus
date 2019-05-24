@@ -25,11 +25,11 @@ protected:
     
     VectorType vectorise(ScoreType x) const noexcept
     {
-        return _mm256_set1_epi16(penalty);
+        return _mm256_set1_epi16(x);
     }
     VectorType vectorise_zero_set_last(ScoreType x) const noexcept
     {
-        return _mm256_set_epi16(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,penalty);
+        return _mm256_set_epi16(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,x);
     }
     VectorType vectorise_reverse(const char* sequence) const noexcept
     {
