@@ -25,7 +25,6 @@ struct TestCase
     std::vector<std::int8_t> base_qualities;
     std::vector<std::int8_t> gap_open;
     int gap_extend, nuc_prior;
-    unsigned band_size = 8;
 };
 
 struct Alignment
@@ -85,8 +84,8 @@ align_helper(TestCase test, HMM hmm)
     return result;
 }
 
-#define CHECK_TEST(test) \
-        BOOST_CHECK_EQUAL(test.target.size(), test.query.size() + 2* test.band_size - 1); \
+#define CHECK_TEST(test, hmm) \
+        BOOST_CHECK_EQUAL(test.target.size(), test.query.size() + 2 * hmm.band_size() - 1); \
         BOOST_CHECK_EQUAL(test.query.size(), test.base_qualities.size()); \
         BOOST_CHECK_EQUAL(test.target.size(), test.gap_open.size());
 
@@ -119,7 +118,7 @@ BOOST_AUTO_TEST_CASE(sse2_check_alignments)
         "AAAA",
         "AAAA"
     };
-    CHECK_TEST(test)
+    CHECK_TEST(test, hmm)
     CHECK_ALIGNER(test, hmm, expected_alignment)
     
     // test 2
@@ -138,7 +137,7 @@ BOOST_AUTO_TEST_CASE(sse2_check_alignments)
         "AATA",
         "AAAA"
     };
-    CHECK_TEST(test)
+    CHECK_TEST(test, hmm)
     CHECK_ALIGNER(test, hmm, expected_alignment)
     
     // test 3
@@ -157,7 +156,7 @@ BOOST_AUTO_TEST_CASE(sse2_check_alignments)
         "CGAAGC",
         "CG--GC"
     };
-    CHECK_TEST(test)
+    CHECK_TEST(test, hmm)
     CHECK_ALIGNER(test, hmm, expected_alignment)
     
     // test 4
@@ -176,7 +175,7 @@ BOOST_AUTO_TEST_CASE(sse2_check_alignments)
         "CGAAGC",
         "CG--GC"
     };
-    CHECK_TEST(test)
+    CHECK_TEST(test, hmm)
     CHECK_ALIGNER(test, hmm, expected_alignment)
 
     // test 5
@@ -195,7 +194,7 @@ BOOST_AUTO_TEST_CASE(sse2_check_alignments)
         "CCCCACGTATATATATATATATGGGGACGT",
         "CCCCACGT---------------GGGACGT"
     };
-    CHECK_TEST(test)
+    CHECK_TEST(test, hmm)
     CHECK_ALIGNER(test, hmm, expected_alignment)
 }
 
@@ -211,45 +210,48 @@ BOOST_AUTO_TEST_CASE(avx2_check_alignments)
         "ACGTACGTACGTACGTACGTACGTACGTACGAAAA",
         "AAAA",
         {40,40,40,40},
-        {10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10},
+        {10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,
+         10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,
+         10,10,10,10,10},
         1,
         4
     };
     expected_alignment = {
         0,
-        15,
+        31,
         "AAAA",
         "AAAA"
     };
-    CHECK_TEST(test)
-    BOOST_CHECK_EQUAL(align_score_helper(test, hmm), expected_alignment.score);
-    CHECK_ALIGNMENT(align_helper(test, hmm), expected_alignment);
+    CHECK_TEST(test, hmm)
+    CHECK_ALIGNER(test, hmm, expected_alignment);
     
     // test 2
     test = {
         "ACGTACGTACGTACGTACGTACGTACGTACGAATA",
         "AAAA",
         {40,40,40,40},
-        {90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90},
+        {90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,
+         90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,
+         90,90,90},
         1,
         4
     };
     expected_alignment = {
         40,
-        15,
+        31,
         "AATA",
         "AAAA"
     };
-    CHECK_TEST(test)
-    BOOST_CHECK_EQUAL(align_score_helper(test, hmm), expected_alignment.score);
-    CHECK_ALIGNMENT(align_helper(test, hmm), expected_alignment);
+    CHECK_TEST(test, hmm)
+    CHECK_ALIGNER(test, hmm, expected_alignment);
     
     // test 3
     test = {
         "ACGTACGTACGTACGAAGCACGTACGTACGTACGT",
         "CGGC",
         {40,40,40,40},
-        {90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,70,90,90,90},
+        {90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,70,90,90,90,
+         90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90},
         1,
         4
     };
@@ -259,16 +261,16 @@ BOOST_AUTO_TEST_CASE(avx2_check_alignments)
         "CGAAGC",
         "CG--GC"
     };
-    CHECK_TEST(test)
-    BOOST_CHECK_EQUAL(align_score_helper(test, hmm), expected_alignment.score);
-    CHECK_ALIGNMENT(align_helper(test, hmm), expected_alignment);
+    CHECK_TEST(test, hmm)
+    CHECK_ALIGNER(test, hmm, expected_alignment);
     
     // test 4
     test = {
         "CGAAGCACGTACGTACGTAACGTACGTACGTACGT",
         "CGGC",
         {40,40,40,40},
-        {90,90,70,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90},
+        {90,90,70,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,
+         90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90},
         1,
         4
     };
@@ -278,9 +280,28 @@ BOOST_AUTO_TEST_CASE(avx2_check_alignments)
         "CGAAGC",
         "CG--GC"
     };
-    CHECK_TEST(test)
-    BOOST_CHECK_EQUAL(align_score_helper(test, hmm), expected_alignment.score);
-    CHECK_ALIGNMENT(align_helper(test, hmm), expected_alignment);
+    CHECK_TEST(test, hmm)
+    CHECK_ALIGNER(test, hmm, expected_alignment);
+
+    // test 5
+    test = {
+        "CCCCACGTCCCCACGTATATATATATATATGGGGACGTGGGGACGT",
+        "CCCCACGTGGGACGT",
+        {40,40,40,40,40,40,40,40,40,40,40,40,40,40,40},
+        {90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,
+         70,90,90,90,90,90,90,90,90,90,90,90,90,90,90,
+         90,90,90,90,90,90,90,90,90,90,90,90,90,90,90},
+        1,
+        4
+    };
+    expected_alignment = {
+        84,
+        8,
+        "CCCCACGTATATATATATATATGGGGACGT",
+        "CCCCACGT---------------GGGACGT"
+    };
+    CHECK_TEST(test, hmm)
+    CHECK_ALIGNER(test, hmm, expected_alignment);
 }
 #endif /* __AVX2__ */
 
