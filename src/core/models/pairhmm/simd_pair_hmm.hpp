@@ -50,8 +50,8 @@ class PairHMM : private InstructionSetPolicy
     constexpr static int trace_bits_ = 2;
     constexpr static ScoreType n_score_ = 2 << trace_bits_;
     
-    constexpr static int max_n_quality_ {64}; // what does 64 mean?
-    constexpr static int bitmask_ {0x8000}; // ?
+    constexpr static int max_quality_score_ {64}; // maximum reasonable phred base quality
+    constexpr static int null_score_ {-0x8000};   // baseline for score zero (== MIN_SHORT)
     
     constexpr static int match_label_  {0};
     constexpr static int insert_label_ {1};
@@ -97,10 +97,10 @@ public:
         auto _m1 = _inf, _i1 = _inf, _d1 = _inf, _m2 = _inf, _i2 = _inf, _d2 = _inf;
         const auto _nuc_prior  = vectorise(nuc_prior << trace_bits_);
         auto _initmask  = vectorise_zero_set_last(-1);
-        auto _initmask2 = vectorise_zero_set_last(-bitmask_);
+        auto _initmask2 = vectorise_zero_set_last(null_score_);
         auto _truthwin     = vectorise_reverse(truth);
         auto _targetwin    = _m1;
-        auto _qualitieswin = vectorise(max_n_quality_ << trace_bits_);
+        auto _qualitieswin = vectorise(max_quality_score_ << trace_bits_);
         auto _gap_open     = vectorise_reverse_lshift(gap_open, trace_bits_);
         auto _gap_extend   = vectorise_reverse_lshift(gap_extend, trace_bits_);
         auto _truthnqual   = _add(_and(_cmpeq(_truthwin, _n), _nscore_m_inf), _inf);
@@ -114,7 +114,7 @@ public:
                 _qualitieswin = _insert(_qualitieswin, qualities[s / 2] << trace_bits_, 0);
             } else {
                 _targetwin    = _insert(_targetwin, '0', 0);
-                _qualitieswin = _insert(_qualitieswin, max_n_quality_ << trace_bits_, 0);
+                _qualitieswin = _insert(_qualitieswin, max_quality_score_ << trace_bits_, 0);
             }
             // S even
             _m1 = _or(_initmask2, _andnot(_initmask, _m1));
@@ -146,9 +146,9 @@ public:
             _m2 = _add(_m2, _min(_andnot(_cmpeq(_targetwin, _truthwin), _qualitieswin), _truthnqual));
             _d2 = _min(_add(_d1, _gap_extend), _add(_min(_m1, _i1), _gap_open)); // allow I->D
             _i2 = _insert(_add(_min(_add(_right_shift<score_bytes_>(_i1), _gap_extend),
-                                         _add(_right_shift<score_bytes_>(_m1), _gap_open)), _nuc_prior), infinity_, band_size_ - 1);
+                                    _add(_right_shift<score_bytes_>(_m1), _gap_open)), _nuc_prior), infinity_, band_size_ - 1);
         }
-        return (minscore + bitmask_) >> trace_bits_;
+        return (minscore - null_score_) >> trace_bits_;
     }
     
     template <typename OpenPenalty,
@@ -166,12 +166,12 @@ public:
     {
         assert(truth_len > band_size_ && (truth_len == target_len + 2 * band_size_ - 1));
         auto _m1 = _inf, _i1 = _inf, _d1 = _inf, _m2 = _inf, _i2 = _inf, _d2 = _inf;
-        const auto _nuc_prior  = vectorise(nuc_prior << trace_bits_);
+        const auto _nuc_prior = vectorise(nuc_prior << trace_bits_);
         auto _initmask  = vectorise_zero_set_last(-1);
-        auto _initmask2 = vectorise_zero_set_last(-bitmask_);
+        auto _initmask2 = vectorise_zero_set_last(null_score_);
         auto _truthwin     = vectorise_reverse(truth);
         auto _targetwin    = _m1;
-        auto _qualitieswin = vectorise(max_n_quality_ << trace_bits_);
+        auto _qualitieswin = vectorise(max_quality_score_ << trace_bits_);
         auto _gap_open     = vectorise_reverse_lshift(gap_open, trace_bits_);
         auto _gap_extend   = vectorise_reverse_lshift(gap_extend, trace_bits_);
         auto _snvmaskwin   = vectorise_reverse(snv_mask);
@@ -188,7 +188,7 @@ public:
                 _qualitieswin = _insert(_qualitieswin, qualities[s / 2] << trace_bits_, 0);
             } else {
                 _targetwin    = _insert(_targetwin, '0', 0);
-                _qualitieswin = _insert(_qualitieswin, max_n_quality_ << trace_bits_, 0);
+                _qualitieswin = _insert(_qualitieswin, max_quality_score_ << trace_bits_, 0);
             }
             // S even
             _m1 = _or(_initmask2, _andnot(_initmask, _m1));
@@ -226,7 +226,7 @@ public:
             _i2 = _insert(_add(_min(_add(_right_shift<score_bytes_>(_i1), _gap_extend),
                                     _add(_right_shift<score_bytes_>(_m1), _gap_open)), _nuc_prior), infinity_, band_size_ - 1);
         }
-        return (minscore + bitmask_) >> trace_bits_;
+        return (minscore - null_score_) >> trace_bits_;
     }
     
     template <typename OpenPenalty,
@@ -248,10 +248,10 @@ public:
         auto _m1 = _inf, _i1 = _inf, _d1 = _inf, _m2 = _inf, _i2 = _inf, _d2 = _inf;
         const auto _nuc_prior = vectorise(nuc_prior << trace_bits_);
         auto _initmask  = vectorise_zero_set_last(-1);
-        auto _initmask2 = vectorise_zero_set_last(-bitmask_);
+        auto _initmask2 = vectorise_zero_set_last(null_score_);
         auto _truthwin     = vectorise_reverse(truth);
         auto _targetwin    = _m1;
-        auto _qualitieswin = vectorise(max_n_quality_ << trace_bits_);
+        auto _qualitieswin = vectorise(max_quality_score_ << trace_bits_);
         auto _gap_open     = vectorise_reverse_lshift(gap_open, trace_bits_);
         auto _gap_extend   = vectorise_reverse_lshift(gap_extend, trace_bits_);
         auto _truthnqual   = _add(_and(_cmpeq(_truthwin, _n), _nscore_m_inf), _inf);
@@ -267,7 +267,7 @@ public:
                 _qualitieswin = _insert(_qualitieswin, qualities[s / 2] << trace_bits_, 0);
             } else {
                 _targetwin    = _insert(_targetwin, '0', 0);
-                _qualitieswin = _insert(_qualitieswin, max_n_quality_ << trace_bits_, 0);
+                _qualitieswin = _insert(_qualitieswin, max_quality_score_ << trace_bits_, 0);
             }
             // S even
             _m1 = _or(_initmask2, _andnot(_initmask, _m1));
@@ -377,7 +377,7 @@ public:
             align1[j] = x;
             align2[j] = y;
         }
-        return (minscore + bitmask_) >> trace_bits_;
+        return (minscore - null_score_) >> trace_bits_;
     }
     
     template <typename OpenPenalty,
@@ -401,10 +401,10 @@ public:
         auto _m1 = _inf, _i1 = _inf, _d1 = _inf, _m2 = _inf, _i2 = _inf, _d2 = _inf;
         const auto _nuc_prior = vectorise(nuc_prior << trace_bits_);
         auto _initmask  = vectorise_zero_set_last(-1);
-        auto _initmask2 = vectorise_zero_set_last(-bitmask_);
+        auto _initmask2 = vectorise_zero_set_last(null_score_);
         auto _truthwin     = vectorise_reverse(truth);
         auto _targetwin    = _m1;
-        auto _qualitieswin = vectorise(max_n_quality_ << trace_bits_);
+        auto _qualitieswin = vectorise(max_quality_score_ << trace_bits_);
         auto _gap_open     = vectorise_reverse_lshift(gap_open, trace_bits_);
         auto _gap_extend   = vectorise_reverse_lshift(gap_extend, trace_bits_);
         auto _snvmaskwin   = vectorise_reverse(snv_mask);
@@ -423,7 +423,7 @@ public:
                 _qualitieswin = _insert(_qualitieswin, qualities[s / 2] << trace_bits_, 0);
             } else {
                 _targetwin    = _insert(_targetwin, '0', 0);
-                _qualitieswin = _insert(_qualitieswin, max_n_quality_ << trace_bits_, 0);
+                _qualitieswin = _insert(_qualitieswin, max_quality_score_ << trace_bits_, 0);
             }
             // S even
             _m1 = _or(_initmask2, _andnot(_initmask, _m1));
@@ -537,7 +537,7 @@ public:
             align1[j] = x;
             align2[j] = y;
         }
-        return (minscore + bitmask_) >> trace_bits_;
+        return (minscore - null_score_) >> trace_bits_;
     }
     
     int
