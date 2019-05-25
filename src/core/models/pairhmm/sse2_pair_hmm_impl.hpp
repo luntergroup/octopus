@@ -37,8 +37,8 @@ protected:
     }
     VectorType vectorise_reverse_lshift(const std::int8_t* values, const int shift) const noexcept
     {
-        return _mm_set_epi16(values[7] << shift, values[6] << shift, values[5] << shift, values[4] << shift,
-                             values[3] << shift, values[2] << shift, values[1] << shift, values[0] << shift);
+        return _mm_slli_epi16( _mm_set_epi16(values[7], values[6], values[5], values[4],
+                                             values[3], values[2], values[1], values[0]), shift );
     }
     VectorType vectorise_reverse_lshift(const std::int8_t value, const int shift) const noexcept
     {
