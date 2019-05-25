@@ -8,6 +8,9 @@
 #include "sse2_pair_hmm_impl.hpp"
 #ifdef __AVX2__
     #include "avx2_pair_hmm_impl.hpp"
-#endif /* __AVX2__ */
+#endif
+#ifdef __AVX512__
+    #include "avx512_pair_hmm_impl.hpp"
+#endif
 
 #endif
