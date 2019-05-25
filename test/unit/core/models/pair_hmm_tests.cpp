@@ -198,6 +198,111 @@ BOOST_AUTO_TEST_CASE(sse2_check_alignments)
     CHECK_ALIGNER(test, hmm, expected_alignment)
 }
 
+BOOST_AUTO_TEST_CASE(sse2x2_check_alignments)
+{
+    SSE2x2PairHMM hmm;
+    TestCase test;
+    Alignment expected_alignment;
+    
+    // test 1
+    test = {
+        "ACGTACGTACGTACGTACGTACGTACGTACGAAAA",
+        "AAAA",
+        {40,40,40,40},
+        {10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,
+         10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,
+         10,10,10,10,10},
+        1,
+        4
+    };
+    expected_alignment = {
+        0,
+        31,
+        "AAAA",
+        "AAAA"
+    };
+    CHECK_TEST(test, hmm)
+    CHECK_ALIGNER(test, hmm, expected_alignment);
+    
+    // test 2
+    test = {
+        "ACGTACGTACGTACGTACGTACGTACGTACGAATA",
+        "AAAA",
+        {40,40,40,40},
+        {90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,
+         90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,
+         90,90,90},
+        1,
+        4
+    };
+    expected_alignment = {
+        40,
+        31,
+        "AATA",
+        "AAAA"
+    };
+    CHECK_TEST(test, hmm)
+    CHECK_ALIGNER(test, hmm, expected_alignment);
+    
+    // test 3
+    test = {
+        "ACGTACGTACGTACGAAGCACGTACGTACGTACGT",
+        "CGGC",
+        {40,40,40,40},
+        {90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,70,90,90,90,
+         90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90},
+        1,
+        4
+    };
+    expected_alignment = {
+        71,
+        13,
+        "CGAAGC",
+        "CG--GC"
+    };
+    CHECK_TEST(test, hmm)
+    CHECK_ALIGNER(test, hmm, expected_alignment);
+    
+    // test 4
+    test = {
+        "CGAAGCACGTACGTACGTAACGTACGTACGTACGT",
+        "CGGC",
+        {40,40,40,40},
+        {90,90,70,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,
+         90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90},
+        1,
+        4
+    };
+    expected_alignment = {
+        71,
+        0,
+        "CGAAGC",
+        "CG--GC"
+    };
+    CHECK_TEST(test, hmm)
+    CHECK_ALIGNER(test, hmm, expected_alignment);
+    
+    // test 5
+    test = {
+        "CCCCACGTCCCCACGTATATATATATATATGGGGACGTGGGGACGT",
+        "CCCCACGTGGGACGT",
+        {40,40,40,40,40,40,40,40,40,40,40,40,40,40,40},
+        {90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,
+         70,90,90,90,90,90,90,90,90,90,90,90,90,90,90,
+         90,90,90,90,90,90,90,90,90,90,90,90,90,90,90},
+        1,
+        4
+    };
+    expected_alignment = {
+        84,
+        8,
+        "CCCCACGTATATATATATATATGGGGACGT",
+        "CCCCACGT---------------GGGACGT"
+    };
+    CHECK_TEST(test, hmm)
+    CHECK_ALIGNER(test, hmm, expected_alignment);
+}
+
 #ifdef __AVX2__
 BOOST_AUTO_TEST_CASE(avx2_check_alignments)
 {
