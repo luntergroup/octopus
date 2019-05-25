@@ -61,7 +61,7 @@ protected:
             case 5:  return _extract<5>(a);
             case 6:  return _extract<6>(a);
             case 7:  return _extract<7>(a);
-            default: assert(false);
+            default: assert(false); return 0;
         }
     }
     VectorType _insert_bottom(const VectorType& a, const ScoreType i) const noexcept
