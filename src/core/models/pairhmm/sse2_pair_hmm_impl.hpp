@@ -22,6 +22,8 @@ class InstructionSetPolicySSE2
 protected:
     using VectorType  = __m128i;
     using ScoreType   = short;
+
+    constexpr static int band_size_ = sizeof(VectorType) / sizeof(ScoreType);
     
     VectorType vectorise(ScoreType x) const noexcept
     {
@@ -53,28 +55,16 @@ protected:
             case 5:  return _extract<5>(a);
             case 6:  return _extract<6>(a);
             case 7:  return _extract<7>(a);
-            default: return _extract<7>(a);
+            default: assert(false); return 0;
         }
     }
-    template <int imm, typename T>
-    VectorType _insert(const VectorType& a, T i) const noexcept
+    VectorType _insert_bottom(const VectorType& a, const ScoreType i) const noexcept
     {
-        return _mm_insert_epi16(a, i, imm);
+        return _mm_insert_epi16(a, i, 0);
     }
-    template <typename T>
-    VectorType _insert(const VectorType& a, const T i, const int n) const noexcept
+    VectorType _insert_top(const VectorType& a, const ScoreType i) const noexcept
     {
-        switch (n) {
-            case 0:  return _insert<0>(a, i);
-            case 1:  return _insert<1>(a, i);
-            case 2:  return _insert<2>(a, i);
-            case 3:  return _insert<3>(a, i);
-            case 4:  return _insert<4>(a, i);
-            case 5:  return _insert<5>(a, i);
-            case 6:  return _insert<6>(a, i);
-            case 7:  return _insert<7>(a, i);
-            default: return _insert<7>(a, i);
-        }
+        return _mm_insert_epi16(a, i, band_size_ - 1);
     }
     VectorType _add(const VectorType& lhs, const VectorType& rhs) const noexcept
     {
@@ -96,18 +86,21 @@ protected:
     {
         return _mm_cmpeq_epi16(lhs, rhs);
     }
-    template <int n>
-    VectorType _left_shift(const VectorType& a) const noexcept
+    VectorType _left_shift_word(const VectorType& a) const noexcept
     {
-        return _mm_slli_si128(a, n);
+        return _mm_slli_si128(a, 2);
     }
-    template <int n>
-    VectorType _right_shift(const VectorType& a) const noexcept
+    VectorType _right_shift_word(const VectorType& a) const noexcept
     {
-        return _mm_srli_si128(a, n);
+        return _mm_srli_si128(a, 2);
     }
-    template <int n>
-    VectorType _left_shift_words(const VectorType& a) const noexcept
+    template <int imm>
+    VectorType _right_shift_bits(const VectorType& a) const noexcept
+    {
+        return _mm_srli_epi16(a, imm);
+    }
+    template <int imm>
+    VectorType _left_shift_bits(const VectorType& a) const noexcept
     {
         return _mm_slli_epi16(a, n);
     }
