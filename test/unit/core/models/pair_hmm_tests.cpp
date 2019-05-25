@@ -85,11 +85,17 @@ align_helper(TestCase test, HMM hmm)
     return result;
 }
 
-#define CHECK_ALIGNMENT(received, expected) \
-    BOOST_CHECK_EQUAL(received.score, expected.score); \
-    BOOST_CHECK_EQUAL(received.begin, expected.begin); \
-    BOOST_CHECK_EQUAL(received.target, expected.target); \
-    BOOST_CHECK_EQUAL(received.query, expected.query);
+#define CHECK_TEST(test) \
+        BOOST_CHECK_EQUAL(test.target.size(), test.query.size() + 2* test.band_size - 1); \
+        BOOST_CHECK_EQUAL(test.query.size(), test.base_qualities.size()); \
+        BOOST_CHECK_EQUAL(test.target.size(), test.gap_open.size());
+
+#define CHECK_ALIGNER(test, hmm, expected_alignment) \
+        BOOST_CHECK_EQUAL(align_score_helper(test, hmm), expected_alignment.score); \
+        BOOST_CHECK_EQUAL(align_helper(test, hmm).score, expected_alignment.score); \
+        BOOST_CHECK_EQUAL(align_helper(test, hmm).begin, expected_alignment.begin); \
+        BOOST_CHECK_EQUAL(align_helper(test, hmm).target, expected_alignment.target); \
+        BOOST_CHECK_EQUAL(align_helper(test, hmm).query, expected_alignment.query);
 
 BOOST_AUTO_TEST_CASE(sse2_check_alignments)
 {
@@ -99,70 +105,68 @@ BOOST_AUTO_TEST_CASE(sse2_check_alignments)
     
     // test 1
     test = {
-        "ACGTACGTACGTACGTACGTACGTACGTACGAAAA",
+        "ACGTACGTACGTACGAAAA",
         "AAAA",
         {40,40,40,40},
-        {10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,
-         10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,
-         10,10,10,10,10},
+        {10,10,10,10, 10,10,10,10, 10,10,10,10, 10,10,10,10,
+         10,10,10},
         1,
         4
     };
     expected_alignment = {
         0,
-        31,
+        15,
         "AAAA",
         "AAAA"
     };
-    BOOST_CHECK_EQUAL(align_score_helper(test, hmm), expected_alignment.score);
-    CHECK_ALIGNMENT(align_helper(test, hmm), expected_alignment);
+    CHECK_TEST(test)
+    CHECK_ALIGNER(test, hmm, expected_alignment)
     
     // test 2
     test = {
-        "ACGTACGTACGTACGTACGTACGTACGTACGAATA",
+        "ACGTACGTACGTACGAATA",
         "AAAA",
         {40,40,40,40},
-        {90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,
-         90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,
+        {90,90,90,90, 90,90,90,90, 90,90,90,90, 90,90,90,90,
          90,90,90},
         1,
         4
     };
     expected_alignment = {
         40,
-        31,
+        15,
         "AATA",
         "AAAA"
     };
-    BOOST_CHECK_EQUAL(align_score_helper(test, hmm), expected_alignment.score);
-    CHECK_ALIGNMENT(align_helper(test, hmm), expected_alignment);
+    CHECK_TEST(test)
+    CHECK_ALIGNER(test, hmm, expected_alignment)
     
     // test 3
     test = {
-        "ACGTACGTACGTACGAAGCACGTACGTACGTACGT",
+        "ACGTACGAAGCTACGTACG",
         "CGGC",
         {40,40,40,40},
-        {90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,70,90,90,90,
-         90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90},
+        {90,90,90,90, 90,90,90,70, 90,90,90,90, 90,90,90,90,
+         90,90,90},
         1,
         4
     };
     expected_alignment = {
         71,
-        13,
+        5,
         "CGAAGC",
         "CG--GC"
     };
-    BOOST_CHECK_EQUAL(align_score_helper(test, hmm), expected_alignment.score);
-    CHECK_ALIGNMENT(align_helper(test, hmm), expected_alignment);
+    CHECK_TEST(test)
+    CHECK_ALIGNER(test, hmm, expected_alignment)
     
     // test 4
     test = {
-        "CGAAGCACGTACGTACGTAACGTACGTACGTACGT",
+        "CGAAGCACGTACGTACGTA",
         "CGGC",
         {40,40,40,40},
-        {90,90,70,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,
-         90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90},
+        {90,90,70,90, 90,90,90,90, 90,90,90,90, 90,90,90,90, 
+         90,90,90},
         1,
         4
     };
@@ -172,28 +176,27 @@ BOOST_AUTO_TEST_CASE(sse2_check_alignments)
         "CGAAGC",
         "CG--GC"
     };
-    BOOST_CHECK_EQUAL(align_score_helper(test, hmm), expected_alignment.score);
-    CHECK_ALIGNMENT(align_helper(test, hmm), expected_alignment);
+    CHECK_TEST(test)
+    CHECK_ALIGNER(test, hmm, expected_alignment)
 
     // test 5
     test = {
-        "CCCCACGTCCCCACGTATATATATATATATGGGGACGTGGGGACGT",
+        "CCCCACGTATATATATATATATGGGGACGT",
         "CCCCACGTGGGACGT",
         {40,40,40,40,40,40,40,40,40,40,40,40,40,40,40},
-        {90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,
-         70,90,90,90,90,90,90,90,90,90,90,90,90,90,90,
-         90,90,90,90,90,90,90,90,90,90,90,90,90,90,90,90},
+        {90,90,90,90, 90,90,90,90, 70,90,90,90, 90,90,90,90,
+         90,90,90,90, 90,90,90,90, 90,90,90,90, 90,90},
         1,
         4
     };
     expected_alignment = {
         84,
-        8,
+        0,
         "CCCCACGTATATATATATATATGGGGACGT",
         "CCCCACGT---------------GGGACGT"
     };
-    BOOST_CHECK_EQUAL(align_score_helper(test, hmm), expected_alignment.score);
-    CHECK_ALIGNMENT(align_helper(test, hmm), expected_alignment);
+    CHECK_TEST(test)
+    CHECK_ALIGNER(test, hmm, expected_alignment)
 }
 
 #ifdef __AVX2__
@@ -218,6 +221,7 @@ BOOST_AUTO_TEST_CASE(avx2_check_alignments)
         "AAAA",
         "AAAA"
     };
+    CHECK_TEST(test)
     BOOST_CHECK_EQUAL(align_score_helper(test, hmm), expected_alignment.score);
     CHECK_ALIGNMENT(align_helper(test, hmm), expected_alignment);
     
@@ -236,6 +240,7 @@ BOOST_AUTO_TEST_CASE(avx2_check_alignments)
         "AATA",
         "AAAA"
     };
+    CHECK_TEST(test)
     BOOST_CHECK_EQUAL(align_score_helper(test, hmm), expected_alignment.score);
     CHECK_ALIGNMENT(align_helper(test, hmm), expected_alignment);
     
@@ -254,6 +259,7 @@ BOOST_AUTO_TEST_CASE(avx2_check_alignments)
         "CGAAGC",
         "CG--GC"
     };
+    CHECK_TEST(test)
     BOOST_CHECK_EQUAL(align_score_helper(test, hmm), expected_alignment.score);
     CHECK_ALIGNMENT(align_helper(test, hmm), expected_alignment);
     
@@ -272,6 +278,7 @@ BOOST_AUTO_TEST_CASE(avx2_check_alignments)
         "CGAAGC",
         "CG--GC"
     };
+    CHECK_TEST(test)
     BOOST_CHECK_EQUAL(align_score_helper(test, hmm), expected_alignment.score);
     CHECK_ALIGNMENT(align_helper(test, hmm), expected_alignment);
 }
