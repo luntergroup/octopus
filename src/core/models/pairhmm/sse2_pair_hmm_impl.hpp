@@ -21,7 +21,7 @@ protected:
     using VectorType  = __m128i;
     using ScoreType   = short;
 
-    constexpr static int band_size = sizeof(VectorType) / sizeof(ScoreType);
+    constexpr static int band_size_ = sizeof(VectorType) / sizeof(ScoreType);
     
     VectorType vectorise(ScoreType x) const noexcept
     {
@@ -70,7 +70,7 @@ protected:
     }
     VectorType _insert_top(const VectorType& a, const ScoreType i) const noexcept
     {
-        return _mm_insert_epi16(a, i, band_size - 1);
+        return _mm_insert_epi16(a, i, band_size_ - 1);
     }
     VectorType _add(const VectorType& lhs, const VectorType& rhs) const noexcept
     {

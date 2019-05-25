@@ -47,8 +47,7 @@ class PairHMM : private InstructionSetPolicy
     using InstructionSetPolicy::_right_shift_word;
     
     // Constants
-    constexpr static int score_bytes_ = sizeof(ScoreType);
-    constexpr static int band_size_ = sizeof(VectorType) / score_bytes_;
+    constexpr static int band_size_ = InstructionSetPolicy::band_size_;
     constexpr static ScoreType infinity_ = 0x7800;
     constexpr static int trace_bits_ = 2;
     constexpr static ScoreType n_score_ = 2 << trace_bits_;
