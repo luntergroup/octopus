@@ -54,7 +54,6 @@ protected:
                                 sequence[23], sequence[22], sequence[21], sequence[20],
                                 sequence[19], sequence[18], sequence[17], sequence[16],
                                 sequence[15], sequence[14], sequence[13], sequence[12],
-                                sequence[15], sequence[14], sequence[13], sequence[12],
                                 sequence[11], sequence[10], sequence[9], sequence[8],
                                 sequence[7], sequence[6], sequence[5], sequence[4],
                                 sequence[3], sequence[2], sequence[1], sequence[0]);
@@ -78,7 +77,9 @@ protected:
     auto _extract(const VectorType a) const noexcept
     {
         static_assert(index < 32, "index must be less than 32");
-        return _mm512_extract_epi16(a, index);
+        // TODO
+        //return _mm512_extract_epi16(a, index);
+        return a;
     }
     auto _extract(const VectorType a, const int index) const noexcept
     {
@@ -125,7 +126,7 @@ protected:
         return _mm512_insert_epi16(a, i, index);
     }
     template <typename T>
-    VectorType _insert(const VectorType& a, const T value, const int index) const noexcept
+    VectorType _insert(const VectorType& a, const T i, const int index) const noexcept
     {
         switch (index) {
             case 0:  return _insert<0>(a, i);
@@ -181,7 +182,9 @@ protected:
     }
     VectorType _cmpeq(const VectorType& lhs, const VectorType& rhs) const noexcept
     {
-        return _mm512_cmpeq_epi16(lhs, rhs);
+        // TODO: use _mm512_cmpeq_epi16_mask?
+        //return _mm512_cmpeq_epi16(lhs, rhs);
+        return lhs;
     }
     template <int index>
     VectorType _left_shift(const VectorType& a) const noexcept
