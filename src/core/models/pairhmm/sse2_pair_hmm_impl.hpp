@@ -10,6 +10,7 @@
 
 #include <cstdint>
 #include <emmintrin.h>
+#include <array>
 #include <tuple>
 
 #include "simd_pair_hmm.hpp"
@@ -26,23 +27,15 @@ protected:
     {
         return _mm_set1_epi16(x);
     }
+    template <typename T>
+    VectorType vectorise(const T* values) const noexcept
+    {
+        return _mm_set_epi16(values[7], values[6], values[5], values[4],
+                             values[3], values[2], values[1], values[0]);
+    }
     VectorType vectorise_zero_set_last(ScoreType x) const noexcept
     {
         return _mm_set_epi16(0,0,0,0,0,0,0,x);
-    }
-    VectorType vectorise_reverse(const char* sequence) const noexcept
-    {
-        return _mm_set_epi16(sequence[7], sequence[6], sequence[5], sequence[4],
-                             sequence[3], sequence[2], sequence[1], sequence[0]);
-    }
-    VectorType vectorise_reverse_lshift(const std::int8_t* values, const int shift) const noexcept
-    {
-        return _mm_slli_epi16( _mm_set_epi16(values[7], values[6], values[5], values[4],
-                                             values[3], values[2], values[1], values[0]), shift );
-    }
-    VectorType vectorise_reverse_lshift(const std::int8_t value, const int shift) const noexcept
-    {
-        return vectorise(value << shift);
     }
     template <int imm>
     auto _extract(const VectorType a) const noexcept
@@ -103,20 +96,20 @@ protected:
     {
         return _mm_cmpeq_epi16(lhs, rhs);
     }
-    template <int imm>
+    template <int n>
     VectorType _left_shift(const VectorType& a) const noexcept
     {
-        return _mm_slli_si128(a, imm);
+        return _mm_slli_si128(a, n);
     }
-    template <int imm>
+    template <int n>
     VectorType _right_shift(const VectorType& a) const noexcept
     {
-        return _mm_srli_si128(a, imm);
+        return _mm_srli_si128(a, n);
     }
-    template <int imm>
+    template <int n>
     VectorType _left_shift_words(const VectorType& a) const noexcept
     {
-        return _mm_slli_epi16(a, imm);
+        return _mm_slli_epi16(a, n);
     }
     VectorType _min(const VectorType& lhs, const VectorType& rhs) const noexcept
     {
@@ -134,7 +127,7 @@ class InstructionSetPolicySSE2x2
 {
     using BlockType = __m128i;
 protected:
-    using VectorType = std::tuple<BlockType, BlockType>;
+    using VectorType = std::array<BlockType, 2>;
     using ScoreType  = short;
 
 private:
@@ -149,28 +142,18 @@ protected:
         return {_mm_set1_epi16(x),
                 _mm_set1_epi16(x)};
     }
+    template <typename T>
+    VectorType vectorise(const T* values) const noexcept
+    {
+        return {_mm_set_epi16(values[7], values[6], values[5], values[4],
+                              values[3], values[2], values[1], values[0]),
+                _mm_set_epi16(values[15], values[14], values[13], values[12],
+                              values[11], values[10], values[9], values[8])};
+    }
     VectorType vectorise_zero_set_last(ScoreType x) const noexcept
     {
         return {_mm_set_epi16(0,0,0,0,0,0,0,x),
                 _mm_set_epi16(0,0,0,0,0,0,0,0)};
-    }
-    VectorType vectorise_reverse(const char* sequence) const noexcept
-    {
-        return {_mm_set_epi16(sequence[7], sequence[6], sequence[5], sequence[4],
-                              sequence[3], sequence[2], sequence[1], sequence[0]),
-                _mm_set_epi16(sequence[15], sequence[14], sequence[13], sequence[12],
-                              sequence[11], sequence[10], sequence[9], sequence[8])};
-    }
-    VectorType vectorise_reverse_lshift(const std::int8_t* values, const int shift) const noexcept
-    {
-        return {_mm_set_epi16(values[7] << shift, values[6] << shift, values[5] << shift, values[4] << shift,
-                              values[3] << shift, values[2] << shift, values[1] << shift, values[0] << shift),
-                _mm_set_epi16(values[15] << shift, values[14] << shift, values[13] << shift, values[12] << shift,
-                              values[11] << shift, values[10] << shift, values[9] << shift, values[8] << shift)};
-    }
-    VectorType vectorise_reverse_lshift(const std::int8_t value, const int shift) const noexcept
-    {
-        return vectorise(value << shift);
     }
     template <int index>
     auto _extract(const VectorType a) const noexcept
@@ -265,25 +248,25 @@ protected:
         return {_mm_cmpeq_epi16(std::get<0>(lhs), std::get<0>(rhs)),
                 _mm_cmpeq_epi16(std::get<1>(lhs), std::get<1>(rhs))};
     }
-    template <int index>
+    template <int n>
     VectorType _left_shift(VectorType a) const noexcept
     {
-        std::get<1>(a) = _mm_or_si128(_mm_slli_si128(std::get<1>(a), index), _mm_srli_si128(std::get<0>(a), block_bytes - index));
-        std::get<0>(a) = _mm_slli_si128(std::get<0>(a), index);
+        std::get<1>(a) = _mm_or_si128(_mm_slli_si128(std::get<1>(a), n), _mm_srli_si128(std::get<0>(a), block_bytes - n));
+        std::get<0>(a) = _mm_slli_si128(std::get<0>(a), n);
         return a;
     }
-    template <int index>
+    template <int n>
     VectorType _right_shift(VectorType a) const noexcept
     {
-        std::get<0>(a) = _mm_or_si128(_mm_srli_si128(std::get<0>(a), index), _mm_slli_si128(std::get<1>(a), block_bytes - index));
-        std::get<1>(a) = _mm_srli_si128(std::get<1>(a), index);
+        std::get<0>(a) = _mm_or_si128(_mm_srli_si128(std::get<0>(a), n), _mm_slli_si128(std::get<1>(a), block_bytes - n));
+        std::get<1>(a) = _mm_srli_si128(std::get<1>(a), n);
         return a;
     }
-    template <int index>
+    template <int n>
     VectorType _left_shift_words(const VectorType& a) const noexcept
     {
-        return {_mm_slli_epi16(std::get<0>(a), index),
-                _mm_slli_epi16(std::get<1>(a), index)};
+        return {_mm_slli_epi16(std::get<0>(a), n),
+                _mm_slli_epi16(std::get<1>(a), n)};
     }
     VectorType _min(const VectorType& lhs, const VectorType& rhs) const noexcept
     {

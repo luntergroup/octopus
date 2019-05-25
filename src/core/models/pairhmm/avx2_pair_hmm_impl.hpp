@@ -17,11 +17,11 @@ namespace octopus { namespace hmm { namespace simd {
 
 namespace detail {
 
-template <int index>
+template <int n>
 auto _left_shift(const __m256i& a) noexcept
 {
-    static_assert(index < 16, "index must be less than 16");
-    return _mm256_alignr_epi8(a, _mm256_permute2x128_si256(a, a, _MM_SHUFFLE(0, 0, 2, 0)), 16 - index);
+    static_assert(n < 16, "n must be less than 16");
+    return _mm256_alignr_epi8(a, _mm256_permute2x128_si256(a, a, _MM_SHUFFLE(0, 0, 2, 0)), 16 - n);
 };
 template <>
 auto _left_shift<16>(const __m256i& a) noexcept
@@ -29,11 +29,11 @@ auto _left_shift<16>(const __m256i& a) noexcept
     return _mm256_permute2x128_si256(a, a, _MM_SHUFFLE(0, 0, 2, 0));
 }
 
-template <int index>
+template <int n>
 auto _right_shift(const __m256i& a) noexcept
 {
-    static_assert(index < 16, "index must be less than 16");
-    return _mm256_alignr_epi8(_mm256_permute2x128_si256(a, a, _MM_SHUFFLE(2, 0, 0, 1)), a, index);
+    static_assert(n < 16, "n must be less than 16");
+    return _mm256_alignr_epi8(_mm256_permute2x128_si256(a, a, _MM_SHUFFLE(2, 0, 0, 1)), a, n);
 }
 template <>
 auto _right_shift<16>(const __m256i& a) noexcept
@@ -53,36 +53,26 @@ protected:
     {
         return _mm256_set1_epi16(x);
     }
+    template <typename T>
+    VectorType vectorise(const T* values) const noexcept
+    {
+        return _mm256_set_epi16(values[15], values[14], values[13], values[12],
+                                values[11], values[10], values[9], values[8],
+                                values[7], values[6], values[5], values[4],
+                                values[3], values[2], values[1], values[0]);
+    }
     VectorType vectorise_zero_set_last(ScoreType x) const noexcept
     {
         return _mm256_set_epi16(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,x);
     }
-    VectorType vectorise_reverse(const char* sequence) const noexcept
-    {
-        return _mm256_set_epi16(sequence[15], sequence[14], sequence[13], sequence[12],
-                                sequence[11], sequence[10], sequence[9], sequence[8],
-                                sequence[7], sequence[6], sequence[5], sequence[4],
-                                sequence[3], sequence[2], sequence[1], sequence[0]);
-    }
-    VectorType vectorise_reverse_lshift(const std::int8_t* values, const int shift) const noexcept
-    {
-        return _mm256_set_epi16(values[15] << shift, values[14] << shift, values[13] << shift, values[12] << shift,
-                                values[11] << shift, values[10] << shift, values[9] << shift, values[8] << shift,
-                                values[7] << shift, values[6] << shift, values[5] << shift, values[4] << shift,
-                                values[3] << shift, values[2] << shift, values[1] << shift, values[0] << shift);
-    }
-    VectorType vectorise_reverse_lshift(const std::int8_t value, const int shift) const noexcept
-    {
-        return vectorise(value << shift);
-    }
-    template <int imm>
+    template <int index>
     auto _extract(const VectorType a) const noexcept
     {
-        return _mm256_extract_epi16(a, imm);
+        return _mm256_extract_epi16(a, index);
     }
-    auto _extract(const VectorType a, const int n) const noexcept
+    auto _extract(const VectorType a, const int index) const noexcept
     {
-        switch (n) {
+        switch (index) {
             case 0:  return _extract<0>(a);
             case 1:  return _extract<1>(a);
             case 2:  return _extract<2>(a);
@@ -102,15 +92,15 @@ protected:
             default: return _extract<15>(a);
         }
     }
-    template <int imm, typename T>
+    template <int index, typename T>
     VectorType _insert(const VectorType& a, T i) const noexcept
     {
-        return _mm256_insert_epi16(a, i, imm);
+        return _mm256_insert_epi16(a, i, index);
     }
     template <typename T>
-    VectorType _insert(const VectorType& a, const T i, const int n) const noexcept
+    VectorType _insert(const VectorType& a, const T i, const int index) const noexcept
     {
-        switch (n) {
+        switch (index) {
             case 0:  return _insert<0>(a, i);
             case 1:  return _insert<1>(a, i);
             case 2:  return _insert<2>(a, i);
@@ -150,20 +140,20 @@ protected:
     {
         return _mm256_cmpeq_epi16(lhs, rhs);
     }
-    template <int index>
+    template <int n>
     VectorType _left_shift(const VectorType& a) const noexcept
     {
-        return detail::_left_shift<index>(a);
+        return detail::_left_shift<n>(a);
     }
-    template <int index>
+    template <int n>
     VectorType _right_shift(const VectorType& a) const noexcept
     {
-        return detail::_right_shift<index>(a);
+        return detail::_right_shift<n>(a);
     }
-    template <int imm>
+    template <int n>
     VectorType _left_shift_words(const VectorType& a) const noexcept
     {
-        return _mm256_slli_epi16(a, imm);
+        return _mm256_slli_epi16(a, n);
     }
     VectorType _min(const VectorType& lhs, const VectorType& rhs) const noexcept
     {

@@ -30,8 +30,6 @@ class PairHMM : private InstructionSetPolicy
     
     // Methods
     using InstructionSetPolicy::vectorise;
-    using InstructionSetPolicy::vectorise_reverse;
-    using InstructionSetPolicy::vectorise_reverse_lshift;
     using InstructionSetPolicy::vectorise_zero_set_last;
     using InstructionSetPolicy::_extract;
     using InstructionSetPolicy::_insert;
@@ -62,12 +60,23 @@ class PairHMM : private InstructionSetPolicy
     const VectorType _n = vectorise('N');
     const VectorType _three = vectorise(3);
     
-    template <int idx>
-    auto _left_shift(const VectorType& vec) const noexcept { return InstructionSetPolicy::template _left_shift<idx>(vec); }
-    template <int idx>
-    auto _right_shift(const VectorType& vec) const noexcept { return InstructionSetPolicy::template _right_shift<idx>(vec); }
-    template <int idx>
-    auto _left_shift_words(const VectorType& vec) const noexcept { return InstructionSetPolicy::template _left_shift_words<idx>(vec); }
+    template <int n>
+    auto _left_shift(const VectorType& vec) const noexcept { return InstructionSetPolicy::template _left_shift<n>(vec); }
+    template <int n>
+    auto _right_shift(const VectorType& vec) const noexcept { return InstructionSetPolicy::template _right_shift<n>(vec); }
+    template <int n>
+    auto _left_shift_words(const VectorType& vec) const noexcept { return InstructionSetPolicy::template _left_shift_words<n>(vec); }
+    
+    template <int shift, typename T>
+    auto vectorise_lshift(const T* values) const noexcept
+    {
+        return _left_shift_words<shift>(vectorise(values));
+    }
+    template <int shift>
+    auto vectorise_lshift(const std::int8_t value) const noexcept
+    {
+        return vectorise(value << shift);
+    }
     
     template <int shift>
     void update_gap_penalty(VectorType& current, const std::int8_t* source, const std::size_t gap_idx) const noexcept
@@ -98,11 +107,11 @@ public:
         const auto _nuc_prior  = vectorise(nuc_prior << trace_bits_);
         auto _initmask  = vectorise_zero_set_last(-1);
         auto _initmask2 = vectorise_zero_set_last(null_score_);
-        auto _truthwin     = vectorise_reverse(truth);
+        auto _truthwin     = vectorise(truth);
         auto _targetwin    = _m1;
         auto _qualitieswin = vectorise(max_quality_score_ << trace_bits_);
-        auto _gap_open     = vectorise_reverse_lshift(gap_open, trace_bits_);
-        auto _gap_extend   = vectorise_reverse_lshift(gap_extend, trace_bits_);
+        auto _gap_open     = vectorise_lshift<trace_bits_>(gap_open);
+        auto _gap_extend   = vectorise_lshift<trace_bits_>(gap_extend);
         auto _truthnqual   = _add(_and(_cmpeq(_truthwin, _n), _nscore_m_inf), _inf);
         ScoreType minscore {infinity_};
         for (int s {0}; s <= 2 * (target_len + band_size_); s += 2) {
@@ -169,13 +178,13 @@ public:
         const auto _nuc_prior = vectorise(nuc_prior << trace_bits_);
         auto _initmask  = vectorise_zero_set_last(-1);
         auto _initmask2 = vectorise_zero_set_last(null_score_);
-        auto _truthwin     = vectorise_reverse(truth);
+        auto _truthwin     = vectorise(truth);
         auto _targetwin    = _m1;
         auto _qualitieswin = vectorise(max_quality_score_ << trace_bits_);
-        auto _gap_open     = vectorise_reverse_lshift(gap_open, trace_bits_);
-        auto _gap_extend   = vectorise_reverse_lshift(gap_extend, trace_bits_);
-        auto _snvmaskwin   = vectorise_reverse(snv_mask);
-        auto _snv_priorwin = vectorise_reverse_lshift(snv_prior, trace_bits_);
+        auto _gap_open     = vectorise_lshift<trace_bits_>(gap_open);
+        auto _gap_extend   = vectorise_lshift<trace_bits_>(gap_extend);
+        auto _snvmaskwin   = vectorise(snv_mask);
+        auto _snv_priorwin = vectorise_lshift<trace_bits_>(snv_prior);
         auto _truthnqual   = _add(_and(_cmpeq(_truthwin, _n), _nscore_m_inf), _inf);
         VectorType _snvmask;
         ScoreType minscore {infinity_};
@@ -249,11 +258,11 @@ public:
         const auto _nuc_prior = vectorise(nuc_prior << trace_bits_);
         auto _initmask  = vectorise_zero_set_last(-1);
         auto _initmask2 = vectorise_zero_set_last(null_score_);
-        auto _truthwin     = vectorise_reverse(truth);
+        auto _truthwin     = vectorise(truth);
         auto _targetwin    = _m1;
         auto _qualitieswin = vectorise(max_quality_score_ << trace_bits_);
-        auto _gap_open     = vectorise_reverse_lshift(gap_open, trace_bits_);
-        auto _gap_extend   = vectorise_reverse_lshift(gap_extend, trace_bits_);
+        auto _gap_open     = vectorise_lshift<trace_bits_>(gap_open);
+        auto _gap_extend   = vectorise_lshift<trace_bits_>(gap_extend);
         auto _truthnqual   = _add(_and(_cmpeq(_truthwin, _n), _nscore_m_inf), _inf);
         SmallVector _backpointers(2 * (truth_len + band_size_));
         ScoreType minscore {infinity_}, cur_score;
@@ -402,13 +411,13 @@ public:
         const auto _nuc_prior = vectorise(nuc_prior << trace_bits_);
         auto _initmask  = vectorise_zero_set_last(-1);
         auto _initmask2 = vectorise_zero_set_last(null_score_);
-        auto _truthwin     = vectorise_reverse(truth);
+        auto _truthwin     = vectorise(truth);
         auto _targetwin    = _m1;
         auto _qualitieswin = vectorise(max_quality_score_ << trace_bits_);
-        auto _gap_open     = vectorise_reverse_lshift(gap_open, trace_bits_);
-        auto _gap_extend   = vectorise_reverse_lshift(gap_extend, trace_bits_);
-        auto _snvmaskwin   = vectorise_reverse(snv_mask);
-        auto _snv_priorwin = vectorise_reverse_lshift(snv_prior, trace_bits_);
+        auto _gap_open     = vectorise_lshift<trace_bits_>(gap_open);
+        auto _gap_extend   = vectorise_lshift<trace_bits_>(gap_extend);
+        auto _snvmaskwin   = vectorise(snv_mask);
+        auto _snv_priorwin = vectorise_lshift<trace_bits_>(snv_prior);
         auto _truthnqual   = _add(_and(_cmpeq(_truthwin, _n), _nscore_m_inf), _inf);
         VectorType _snvmask;
         SmallVector _backpointers(2 * (truth_len + band_size_));

@@ -43,11 +43,7 @@ protected:
     {
         return _mm512_set1_epi16(x);
     }
-    VectorType vectorise_zero_set_last(ScoreType x) const noexcept
-    {
-        return _mm512_set_epi16(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,x);
-    }
-    VectorType vectorise_reverse(const char* sequence) const noexcept
+    VectorType vectorise(const char* sequence) const noexcept
     {
         return _mm512_set_epi16(sequence[31], sequence[30], sequence[29], sequence[28],
                                 sequence[27], sequence[26], sequence[25], sequence[24],
@@ -58,28 +54,15 @@ protected:
                                 sequence[7], sequence[6], sequence[5], sequence[4],
                                 sequence[3], sequence[2], sequence[1], sequence[0]);
     }
-    VectorType vectorise_reverse_lshift(const std::int8_t* values, const int shift) const noexcept
+    VectorType vectorise_zero_set_last(ScoreType x) const noexcept
     {
-        return _mm512_set_epi16(values[31] << shift, values[30] << shift, values[29] << shift, values[28] << shift,
-                                values[27] << shift, values[26] << shift, values[25] << shift, values[24] << shift,
-                                values[23] << shift, values[22] << shift, values[21] << shift, values[20] << shift,
-                                values[19] << shift, values[18] << shift, values[17] << shift, values[16] << shift,
-                                values[15] << shift, values[14] << shift, values[13] << shift, values[12] << shift,
-                                values[11] << shift, values[10] << shift, values[9] << shift, values[8] << shift,
-                                values[7] << shift, values[6] << shift, values[5] << shift, values[4] << shift,
-                                values[3] << shift, values[2] << shift, values[1] << shift, values[0] << shift);
-    }
-    VectorType vectorise_reverse_lshift(const std::int8_t value, const int shift) const noexcept
-    {
-        return vectorise(value << shift);
+        return _mm512_set_epi16(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,x);
     }
     template <int index>
     auto _extract(const VectorType a) const noexcept
     {
         static_assert(index < 32, "index must be less than 32");
-        // TODO
-        //return _mm512_extract_epi16(a, index);
-        return a;
+        return _mm512_cvtsi512_si32(_mm512_srli_epi16(a, index)) & 0xFFFF;
     }
     auto _extract(const VectorType a, const int index) const noexcept
     {
@@ -182,24 +165,22 @@ protected:
     }
     VectorType _cmpeq(const VectorType& lhs, const VectorType& rhs) const noexcept
     {
-        // TODO: use _mm512_cmpeq_epi16_mask?
-        //return _mm512_cmpeq_epi16(lhs, rhs);
-        return lhs;
+        return _mm512_maskz_set1_epi16(_mm512_cmpeq_epi16_mask(lhs, rhs), 0xFFFF);
     }
-    template <int index>
+    template <int n>
     VectorType _left_shift(const VectorType& a) const noexcept
     {
-        return detail::_left_shift<index>(a);
+        return detail::_left_shift<n>(a);
     }
-    template <int index>
+    template <int n>
     VectorType _right_shift(const VectorType& a) const noexcept
     {
-        return detail::_right_shift<index>(a);
+        return detail::_right_shift<n>(a);
     }
-    template <int index>
+    template <int n>
     VectorType _left_shift_words(const VectorType& a) const noexcept
     {
-        return _mm512_slli_epi16(a, index);
+        return _mm512_slli_epi16(a, n);
     }
     VectorType _min(const VectorType& lhs, const VectorType& rhs) const noexcept
     {
