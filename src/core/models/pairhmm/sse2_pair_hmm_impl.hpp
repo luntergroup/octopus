@@ -15,6 +15,7 @@
 
 #include "utils/array_tricks.hpp"
 #include "simd_pair_hmm.hpp"
+#include "initialization.hpp"
 
 namespace octopus { namespace hmm { namespace simd {
 
@@ -26,6 +27,26 @@ protected:
     
     constexpr static int word_size = sizeof(ScoreType);
 
+    //using RollingInit = class InsertRollingInit<SSE2PairHMMInstructionSet<MinBandSize> >;
+    using RollingInit = class ShiftingRollingInit<SSE2PairHMMInstructionSet<MinBandSize> >;
+
+    /*
+    static auto _insert(const VectorType a, const ScoreType b, const int index) noexcept
+    {
+        switch (index) {
+        case 0:  return _mm_insert_epi16(a, b, 0);
+        case 1:  return _mm_insert_epi16(a, b, 1);
+        case 2:  return _mm_insert_epi16(a, b, 2);
+        case 3:  return _mm_insert_epi16(a, b, 3);
+        case 4:  return _mm_insert_epi16(a, b, 4);
+        case 5:  return _mm_insert_epi16(a, b, 5);
+        case 6:  return _mm_insert_epi16(a, b, 6);
+        case 7:  return _mm_insert_epi16(a, b, 7);
+        default: return a;
+        }
+    }
+    */
+
 private:
     using BlockType = __m128i;
     
@@ -36,6 +57,7 @@ private:
 protected:
     using VectorType = std::array<BlockType, num_blocks>;
     
+    constexpr static int word_size  = sizeof(ScoreType);
     constexpr static int band_size_ = sizeof(VectorType) / word_size;
 
 private:
@@ -57,21 +79,21 @@ private:
     }
     
 protected:
-    VectorType vectorise(ScoreType x) const noexcept
+    static VectorType vectorise(ScoreType x) noexcept
     {
         return make_array<num_blocks>(_mm_set1_epi16(x));
     }
     template <typename T>
-    VectorType vectorise(const T* values) const noexcept
+    static VectorType vectorise(const T* values) noexcept
     {
         return vectorise_helper(values, std::make_index_sequence<num_blocks>());
     }
-    VectorType vectorise_zero_set_last(ScoreType x) const noexcept
+    static VectorType vectorise_zero_set_last(ScoreType x) noexcept
     {
         return make_array<num_blocks>(_mm_set_epi16(0,0,0,0,0,0,0,x), _mm_set_epi16(0,0,0,0,0,0,0,0));
     }
     template <int index>
-    auto _extract(const VectorType a) const noexcept
+    static auto _extract(const VectorType a) noexcept
     {
         constexpr static auto block_index = index / block_words_;
         static_assert(block_index < num_blocks_, "block index out range");
@@ -100,32 +122,32 @@ protected:
         std::get<0>(a) = _mm_insert_epi16(std::get<0>(a), i, 0);
         return a;
     }
-    VectorType _insert_top(VectorType a, const ScoreType i) const noexcept
+    static VectorType _insert_top(VectorType a, const ScoreType i) noexcept
     {
         std::get<num_blocks_ - 1>(a) = _mm_insert_epi16(std::get<num_blocks_ - 1>(a), i, block_words_ - 1);
         return a;
     }
-    VectorType _add(const VectorType& lhs, const VectorType& rhs) const noexcept
+    static VectorType _add(const VectorType& lhs, const VectorType& rhs) noexcept
     {
         return transform([] (const auto& lhs, const auto& rhs) noexcept { return _mm_add_epi16(lhs, rhs); }, lhs, rhs);
     }
-    VectorType _and(const VectorType& lhs, const VectorType& rhs) const noexcept
+    static VectorType _and(const VectorType& lhs, const VectorType& rhs) noexcept
     {
         return transform([] (const auto& lhs, const auto& rhs) noexcept { return _mm_and_si128(lhs, rhs); }, lhs, rhs);
     }
-    VectorType _andnot(const VectorType& lhs, const VectorType& rhs) const noexcept
+    static VectorType _andnot(const VectorType& lhs, const VectorType& rhs) noexcept
     {
         return transform([] (const auto& lhs, const auto& rhs) noexcept { return _mm_andnot_si128(lhs, rhs); }, lhs, rhs);
     }
-    VectorType _or(const VectorType& lhs, const VectorType& rhs) const noexcept
+    static VectorType _or(const VectorType& lhs, const VectorType& rhs) noexcept
     {
         return transform([] (const auto& lhs, const auto& rhs) noexcept { return _mm_or_si128(lhs, rhs); }, lhs, rhs);
     }
-    VectorType _cmpeq(const VectorType& lhs, const VectorType& rhs) const noexcept
+    static VectorType _cmpeq(const VectorType& lhs, const VectorType& rhs) noexcept
     {
         return transform([] (const auto& lhs, const auto& rhs) noexcept { return _mm_cmpeq_epi16(lhs, rhs); }, lhs, rhs);
     }
-    VectorType _left_shift_word(VectorType a) const noexcept
+    static VectorType _left_shift_word(VectorType a) noexcept
     {
         adjacent_apply_reverse([] (const auto& lhs, const auto& rhs) noexcept {
             return _mm_or_si128(_mm_slli_si128(rhs, word_size), _mm_srli_si128(lhs, block_bytes_ - word_size));
@@ -133,7 +155,7 @@ protected:
         std::get<0>(a) = _mm_slli_si128(std::get<0>(a), word_size);
         return a;
     }
-    VectorType _right_shift_word(VectorType a) const noexcept
+    static VectorType _right_shift_word(VectorType a) noexcept
     {
         adjacent_apply([] (const auto& lhs, const auto& rhs) noexcept {
             return _mm_or_si128(_mm_srli_si128(lhs, word_size), _mm_slli_si128(rhs, block_bytes_ - word_size));
@@ -142,20 +164,20 @@ protected:
         return a;
     }
     template <int n>
-    VectorType _left_shift_bits(const VectorType& a) const noexcept
+    static VectorType _left_shift_bits(const VectorType& a) noexcept
     {
         return transform([] (const auto& x) noexcept { return _mm_slli_epi16(x, n); }, a);
     }
     template <int n>
-    VectorType _right_shift_bits(const VectorType& a) const noexcept
+    static VectorType _right_shift_bits(const VectorType& a) noexcept
     {
         return transform([] (const auto& x) noexcept { return _mm_srli_epi16(x, n); }, a);
     }
-    VectorType _min(const VectorType& lhs, const VectorType& rhs) const noexcept
+    static VectorType _min(const VectorType& lhs, const VectorType& rhs) noexcept
     {
         return transform([] (const auto& lhs, const auto& rhs) noexcept { return _mm_min_epi16(lhs, rhs); }, lhs, rhs);
     }
-    VectorType _max(const VectorType& lhs, const VectorType& rhs) const noexcept
+    static VectorType _max(const VectorType& lhs, const VectorType& rhs) noexcept
     {
         return transform([] (const auto& lhs, const auto& rhs) noexcept { return _mm_max_epi16(lhs, rhs); }, lhs, rhs);
     }
