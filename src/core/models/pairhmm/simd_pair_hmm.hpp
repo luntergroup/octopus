@@ -62,35 +62,30 @@ class PairHMM : private InstructionSet
     constexpr static int insert_label_ {1};
     constexpr static int delete_label_ {3};
     
-    const VectorType _inf = vectorise(infinity_);
-    const VectorType _nscore_m_inf = vectorise(n_score_ - infinity_);
-    const VectorType _n = vectorise('N');
-    const VectorType _three = vectorise(3);
-    const VectorType _one = _right_shift_bits<1>(_three);   // could save one register
-    
     constexpr auto vectorise(NullType) const noexcept { return NullType {}; }
     
     template <int n, typename T>
-    auto vectorise_left_shift_bits(const T* values) const noexcept
+    static auto vectorise_left_shift_bits(const T* values) noexcept
     {
         return _left_shift_bits<n>(vectorise(values));
     }
     template <int n>
-    auto vectorise_left_shift_bits(const std::int8_t value) const noexcept
+    static auto vectorise_left_shift_bits(const std::int8_t value) noexcept
     {
         return vectorise(value << n);
     }
     template <int n>
     constexpr auto vectorise_left_shift_bits(NullType) const noexcept { return NullType {}; }
     template <int idx>
-    auto _right_shift_bits(const VectorType& vec) const noexcept {
+    static auto _right_shift_bits(const VectorType& vec) noexcept
+    {
         return InstructionSet::template _right_shift_bits<idx>(vec);
     }
     template <int idx>
-    auto _left_shift_bits(const VectorType& vec) const noexcept {
+    static auto _left_shift_bits(const VectorType& vec) noexcept
+    {
         return InstructionSet::template _left_shift_bits<idx>(vec);
     }
-    
     void update_gap_penalty(VectorType& current, const std::int8_t* source, const std::size_t gap_idx) const noexcept
     {
         current = _insert_top(_right_shift_word(current), source[gap_idx] << trace_bits_);
@@ -144,6 +139,8 @@ class PairHMM : private InstructionSet
                      VectorType& insert_state,
                      VectorType& delete_state) const noexcept
     {
+        const static VectorType _three = vectorise(3);
+        const static VectorType _one = _right_shift_bits<1>(_three);   // could save one register
         _backpointers[index] = _or(_or(_and(_three, match_state), _left_shift_bits<2 * insert_label_>(_and(_three, insert_state))),
                                _left_shift_bits<2 * delete_label_>(_and(_three, delete_state)));
         // set state labels
@@ -244,6 +241,7 @@ class PairHMM : private InstructionSet
                  CharArrayOrNull align2) const noexcept
     {
         assert(truth_len > band_size_ && (truth_len == target_len + 2 * band_size_ - 1));
+        const static VectorType _inf = vectorise(infinity_);
         const auto _nuc_prior = vectorise_left_shift_bits<trace_bits_>(nuc_prior);
         auto _truthwin     = vectorise(truth);
         auto _targetwin    = _inf;
@@ -252,7 +250,7 @@ class PairHMM : private InstructionSet
         auto _gap_extend   = vectorise_left_shift_bits<trace_bits_>(gap_extend);
         auto _snvmaskwin   = vectorise(snv_mask);
         auto _snv_priorwin = vectorise_left_shift_bits<trace_bits_>(snv_prior);
-        auto _truthnqual   = _add(_and(_cmpeq(_truthwin, _n), _nscore_m_inf), _inf);
+        auto _truthnqual   = _add(_and(_cmpeq(_truthwin, vectorise('N')), vectorise(n_score_ - infinity_)), _inf);
         auto _backpointers = make_traceback_array(truth_len, first_pos);
         auto _m1 = _inf, _i1 = _inf, _d1 = _inf, _m2 = _inf, _i2 = _inf, _d2 = _inf;
         ScoreType minscore {infinity_}, cur_score;
