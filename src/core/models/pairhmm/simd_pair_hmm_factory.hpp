@@ -21,10 +21,11 @@
 namespace octopus { namespace hmm { namespace simd {
 
 template <unsigned MinBandSize,
-          typename RollingInitializer = ShiftingRollingInitializer<SSE2PairHMMInstructionSet<MinBandSize>>>
-using SSE2PairHMM = PairHMM<SSE2PairHMMInstructionSet<MinBandSize>, RollingInitializer>;
+          typename ScoreType = short,
+          typename RollingInitializer = ShiftingRollingInitializer<SSE2PairHMMInstructionSet<MinBandSize, ScoreType>>>
+using SSE2PairHMM = PairHMM<SSE2PairHMMInstructionSet<MinBandSize, ScoreType>, RollingInitializer>;
 
-using FastestSSE2PairHMM = SSE2PairHMM<8>;
+using FastestSSE2PairHMM = SSE2PairHMM<8, short>;
 
 #ifdef __AVX2__
 
@@ -40,7 +41,7 @@ template <unsigned MinBandSize, typename ScoreType>
 struct PairHMMSelector:
     public std::conditional<
         MinBandSize < AVX2PairHMM::band_size(),
-        SSE2PairHMM<MinBandSize>,
+        SSE2PairHMM<MinBandSize, ScoreType>,
         AVX2PairHMM
     > {};
 
@@ -49,7 +50,7 @@ struct PairHMMSelector:
 template <unsigned MinBandSize, typename ScoreType>
 struct PairHMMSelector
 {
-    using type = SSE2PairHMM<MinBandSize>;
+    using type = SSE2PairHMM<MinBandSize, ScoreType>;
 };
 
 #endif /* __AVX2__ */

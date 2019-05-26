@@ -103,7 +103,8 @@ align_helper(TestCase test, HMM hmm)
 
 BOOST_AUTO_TEST_CASE(sse2_band_size_8_check_alignments)
 {
-    FastestSSE2PairHMM hmm;
+    SSE2PairHMM<8, short> sse_short_hmm;
+    SSE2PairHMM<8, int> sse_int_hmm;
     TestCase test;
     Alignment expected_alignment;
     
@@ -123,8 +124,10 @@ BOOST_AUTO_TEST_CASE(sse2_band_size_8_check_alignments)
         "AAAA",
         "AAAA"
     };
-    CHECK_TEST(test, hmm)
-    CHECK_ALIGNER(test, hmm, expected_alignment)
+    CHECK_TEST(test, sse_short_hmm)
+    CHECK_ALIGNER(test, sse_short_hmm, expected_alignment)
+    CHECK_TEST(test, sse_int_hmm)
+    CHECK_ALIGNER(test, sse_int_hmm, expected_alignment)
     
     // test 2
     test = {
@@ -142,8 +145,10 @@ BOOST_AUTO_TEST_CASE(sse2_band_size_8_check_alignments)
         "AATA",
         "AAAA"
     };
-    CHECK_TEST(test, hmm)
-    CHECK_ALIGNER(test, hmm, expected_alignment)
+    CHECK_TEST(test, sse_short_hmm)
+    CHECK_ALIGNER(test, sse_short_hmm, expected_alignment)
+    CHECK_TEST(test, sse_int_hmm)
+    CHECK_ALIGNER(test, sse_int_hmm, expected_alignment)
     
     // test 3
     test = {
@@ -161,8 +166,10 @@ BOOST_AUTO_TEST_CASE(sse2_band_size_8_check_alignments)
         "CGAAGC",
         "CG--GC"
     };
-    CHECK_TEST(test, hmm)
-    CHECK_ALIGNER(test, hmm, expected_alignment)
+    CHECK_TEST(test, sse_short_hmm)
+    CHECK_ALIGNER(test, sse_short_hmm, expected_alignment)
+    CHECK_TEST(test, sse_int_hmm)
+    CHECK_ALIGNER(test, sse_int_hmm, expected_alignment)
     
     // test 4
     test = {
@@ -180,8 +187,10 @@ BOOST_AUTO_TEST_CASE(sse2_band_size_8_check_alignments)
         "CGAAGC",
         "CG--GC"
     };
-    CHECK_TEST(test, hmm)
-    CHECK_ALIGNER(test, hmm, expected_alignment)
+    CHECK_TEST(test, sse_short_hmm)
+    CHECK_ALIGNER(test, sse_short_hmm, expected_alignment)
+    CHECK_TEST(test, sse_int_hmm)
+    CHECK_ALIGNER(test, sse_int_hmm, expected_alignment)
 
     // test 5
     test = {
@@ -199,8 +208,10 @@ BOOST_AUTO_TEST_CASE(sse2_band_size_8_check_alignments)
         "CCCCACGTATATATATATATATGGGGACGT",
         "CCCCACGT---------------GGGACGT"
     };
-    CHECK_TEST(test, hmm)
-    CHECK_ALIGNER(test, hmm, expected_alignment)
+    CHECK_TEST(test, sse_short_hmm)
+    CHECK_ALIGNER(test, sse_short_hmm, expected_alignment)
+    CHECK_TEST(test, sse_int_hmm)
+    CHECK_ALIGNER(test, sse_int_hmm, expected_alignment)
 
     // test 6
     test = {
@@ -250,9 +261,12 @@ BOOST_AUTO_TEST_CASE(sse2_band_size_8_check_alignments)
         "AACCGGTTTTGGCCAAAACCGGTTTTGGCCAAAACCGGTTTTGGCCAAAACCGGTTTTGGCCAAAACCGGTTTTGGCCAAAACCGGTTTTGGCCAAAACCGGTTTTGGCCAAAACCGGTTTTGGCCAACCCCACGTATATATATATATATGGGGACGTAACCGGTTTTGGCCAAAACCGGTTTTGGCCAAAACCGGTTTTGGCCAAAACCGGTTTTGGCCAAAACCGGTTTTGGCCAAAACCGGTTTTGGCCAAAACCGGTTTTGGCCAAAACCGGTTTTGGCCAA",
         "AACCGGTTTTGGCCAAAACCGGTTTTGGCCAAAACCGGTTTTGGCCAAAACCGGTTTTGGCCAAAACCGGTTTTGGCCAAAACCGGTTTTGGCCAAAACCGGTTTTGGCCAAAACCGGTTTTGGCCAACCCCACGT---------------GGGACGTAACCGGTTTTGGCCAAAACCGGTTTTGGCCAAAACCGGTTTTGGCCAAAACCGGTTTTGGCCAAAACCGGTTTTGGCCAAAACCGGTTTTGGCCAAAACCGGTTTTGGCCAAAACCGGTTTTGGCCAA"
     };
-    CHECK_TEST(test, hmm)
-    CHECK_ALIGNER(test, hmm, expected_alignment)
-    CHECK_SPEED(test, hmm, expected_alignment, 1000000)
+    CHECK_TEST(test, sse_short_hmm)
+    CHECK_ALIGNER(test, sse_short_hmm, expected_alignment)
+    CHECK_TEST(test, sse_int_hmm)
+    CHECK_ALIGNER(test, sse_int_hmm, expected_alignment)
+    CHECK_SPEED(test, sse_short_hmm, expected_alignment, 1000000)
+    CHECK_SPEED(test, sse_int_hmm, expected_alignment, 1000000)
 }
 
 BOOST_AUTO_TEST_CASE(sse2_band_size_16_check_alignments)

@@ -12,6 +12,7 @@
 #include <algorithm>
 #include <iterator>
 #include <cassert>
+#include <limits>
 #include <emmintrin.h>
 #include <immintrin.h>
 
@@ -51,13 +52,14 @@ class PairHMM : private InstructionSet
     
     // Constants
     constexpr static const char* name_ = InstructionSet::name;
-    constexpr static int band_size_ = InstructionSet::band_size;
-    constexpr static ScoreType infinity_ = 0x7800;
-    constexpr static int trace_bits_ = 2;
-    constexpr static ScoreType n_score_ = 2 << trace_bits_;
+    constexpr static int band_size_ {InstructionSet::band_size};
+    constexpr static ScoreType infinity_tolerance_ {0x7FF};
+    constexpr static ScoreType infinity_ {std::numeric_limits<ScoreType>::max() - infinity_tolerance_};
+    constexpr static int trace_bits_ {2};
+    constexpr static ScoreType n_score_ {2 << trace_bits_};
     
-    constexpr static int max_quality_score_ {64}; // maximum reasonable phred base quality
-    constexpr static int null_score_ {-0x8000};   // baseline for score zero (== MIN_SHORT)
+    constexpr static ScoreType max_quality_score_ {64}; // maximum reasonable phred base quality
+    constexpr static ScoreType null_score_ {std::numeric_limits<ScoreType>::min()}; // baseline for score zero
     
     constexpr static int match_label_  {0};
     constexpr static int insert_label_ {1};
