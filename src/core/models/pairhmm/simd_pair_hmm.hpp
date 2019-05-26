@@ -93,7 +93,7 @@ class PairHMM : private InstructionSet
     {
         current = _insert_top(_right_shift_word(current), source[gap_idx] << trace_bits_);
     }
-    void update_gap_penalty(VectorType& current, const short source, const std::size_t gap_idx) const noexcept {}
+    void update_gap_penalty(VectorType& current, const ScoreType source, const std::size_t gap_idx) const noexcept {}
     
     void
     update_snv_mask(VectorType& curr_mask,
@@ -173,9 +173,9 @@ class PairHMM : private InstructionSet
         auto y      = target_len;
         auto x      = s - y;
         auto alnidx = 0;
-        auto ptr = reinterpret_cast<short*>(_backpointers.data() + s);
-        if ((ptr + i) < reinterpret_cast<short*>(_backpointers.data())
-            || (ptr + i) >= reinterpret_cast<short*>(_backpointers.data() + _backpointers.size())) {
+        auto ptr = reinterpret_cast<ScoreType*>(_backpointers.data() + s);
+        if ((ptr + i) < reinterpret_cast<ScoreType*>(_backpointers.data())
+            || (ptr + i) >= reinterpret_cast<ScoreType*>(_backpointers.data() + _backpointers.size())) {
             first_pos = -1;
             return;
         }
@@ -188,7 +188,7 @@ class PairHMM : private InstructionSet
                 first_pos = -1;
                 return;
             }
-            const auto new_state = (reinterpret_cast<short*>(_backpointers.data() + s)[i] >> (2 * state)) & 3;
+            const auto new_state = (reinterpret_cast<ScoreType*>(_backpointers.data() + s)[i] >> (2 * state)) & 3;
             if (state == match_label_) {
                 s -= 2;
                 align1[alnidx] = truth[--x];
@@ -238,7 +238,7 @@ class PairHMM : private InstructionSet
                  const ExtendPenaltyArrayOrConstant gap_extend,
                  const SnvMaskArrayOrNull snv_mask,
                  const SnvBaseQualityCapArrayOrNull snv_prior,
-                 short nuc_prior,
+                 const ScoreType nuc_prior,
                  PositionOrNull& first_pos,
                  CharArrayOrNull align1,
                  CharArrayOrNull align2) const noexcept
@@ -351,7 +351,7 @@ class PairHMM : private InstructionSet
                                  const ExtendPenaltyArrayOrConstant gap_extend,
                                  const SnvMaskArrayOrNull snv_mask,
                                  const SnvBaseQualityCapArrayOrNull snv_prior,
-                                 const short nuc_prior,
+                                 const ScoreType nuc_prior,
                                  const int first_pos,
                                  const char* aln1,
                                  const char* aln2,
