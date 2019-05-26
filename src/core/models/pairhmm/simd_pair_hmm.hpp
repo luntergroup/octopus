@@ -423,7 +423,7 @@ class PairHMM : private InstructionSetPolicy
 public:
     constexpr static char gap_label = '-';
     
-    constexpr int band_size() const noexcept { return band_size_; }
+    constexpr static int band_size() noexcept { return band_size_; }
     
     template <typename OpenPenaltyArrayOrConstant,
               typename ExtendPenaltyArrayOrConstant>

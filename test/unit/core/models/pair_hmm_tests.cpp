@@ -10,7 +10,7 @@
 #include <utility>
 #include <iostream>
 
-#include "core/models/pairhmm/simd_pair_hmm_fwd.hpp"
+#include "core/models/pairhmm/simd_pair_hmm_factory.hpp"
 
 namespace octopus { namespace test {
 

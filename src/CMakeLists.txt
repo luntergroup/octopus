@@ -441,7 +441,7 @@ set(CORE_SOURCES
     core/models/pairhmm/sse2_pair_hmm_impl.hpp
     core/models/pairhmm/avx2_pair_hmm_impl.hpp
     core/models/pairhmm/avx512_pair_hmm_impl.hpp
-    core/models/pairhmm/simd_pair_hmm_fwd.hpp
+    core/models/pairhmm/simd_pair_hmm_factory.hpp
 
     core/models/error/indel_error_model.hpp
     core/models/error/indel_error_model.cpp

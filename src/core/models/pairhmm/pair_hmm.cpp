@@ -16,13 +16,13 @@
 #include <iostream>
 
 #include "utils/maths.hpp"
-#include "simd_pair_hmm_fwd.hpp"
+#include "simd_pair_hmm_factory.hpp"
 
 namespace octopus { namespace hmm {
 
 using octopus::maths::constants::ln10Div10;
 
-const static simd::FastestSSE2PairHMM hmm;
+const static auto hmm = simd::make_simd_pair_hmm<8>();
 
 unsigned min_flank_pad() noexcept
 {
