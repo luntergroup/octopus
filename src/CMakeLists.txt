@@ -192,6 +192,7 @@ set(UTILS_SOURCES
     utils/random_select.hpp
     utils/read_duplicates.hpp
     utils/read_duplicates.cpp
+    utils/array_tricks.hpp
 )
 
 set(CORE_SOURCES
