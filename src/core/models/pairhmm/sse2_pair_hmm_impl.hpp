@@ -185,7 +185,42 @@ protected:
     template <typename T>
     static VectorType _insert(const VectorType& a, const T& value, const int index) noexcept
     {
-        return _insert_helper(a, value, index, std::make_index_sequence<band_size> {});
+        //return _insert_helper(a, value, index, std::make_index_sequence<band_size> {});
+        if (band_size == 8) {
+            switch( index ) {
+            case 0: std::get<0>(a) = _mm_insert_epi16(std::get<0>(a), value, 0); return a;
+            case 1: std::get<0>(a) = _mm_insert_epi16(std::get<0>(a), value, 1); return a;
+            case 2: std::get<0>(a) = _mm_insert_epi16(std::get<0>(a), value, 2); return a;
+            case 3: std::get<0>(a) = _mm_insert_epi16(std::get<0>(a), value, 3); return a;
+            case 4: std::get<0>(a) = _mm_insert_epi16(std::get<0>(a), value, 4); return a;
+            case 5: std::get<0>(a) = _mm_insert_epi16(std::get<0>(a), value, 5); return a;
+            case 6: std::get<0>(a) = _mm_insert_epi16(std::get<0>(a), value, 6); return a;
+            case 7: std::get<0>(a) = _mm_insert_epi16(std::get<0>(a), value, 7); return a;
+            default: return a;
+            }
+        } else if (band_size == 16) {
+            switch( index ) {
+            case 0: std::get<0>(a) = _mm_insert_epi16(std::get<0>(a), value, 0); return a;
+            case 1: std::get<0>(a) = _mm_insert_epi16(std::get<0>(a), value, 1); return a;
+            case 2: std::get<0>(a) = _mm_insert_epi16(std::get<0>(a), value, 2); return a;
+            case 3: std::get<0>(a) = _mm_insert_epi16(std::get<0>(a), value, 3); return a;
+            case 4: std::get<0>(a) = _mm_insert_epi16(std::get<0>(a), value, 4); return a;
+            case 5: std::get<0>(a) = _mm_insert_epi16(std::get<0>(a), value, 5); return a;
+            case 6: std::get<0>(a) = _mm_insert_epi16(std::get<0>(a), value, 6); return a;
+            case 7: std::get<0>(a) = _mm_insert_epi16(std::get<0>(a), value, 7); return a;
+            case 8: std::get<1>(a) = _mm_insert_epi16(std::get<1>(a), value, 0); return a;
+            case 9: std::get<1>(a) = _mm_insert_epi16(std::get<1>(a), value, 1); return a;
+            case 10: std::get<1>(a) = _mm_insert_epi16(std::get<1>(a), value, 2); return a;
+            case 11: std::get<1>(a) = _mm_insert_epi16(std::get<1>(a), value, 3); return a;
+            case 12: std::get<1>(a) = _mm_insert_epi16(std::get<1>(a), value, 4); return a;
+            case 13: std::get<1>(a) = _mm_insert_epi16(std::get<1>(a), value, 5); return a;
+            case 14: std::get<1>(a) = _mm_insert_epi16(std::get<1>(a), value, 6); return a;
+            case 15: std::get<1>(a) = _mm_insert_epi16(std::get<1>(a), value, 7); return a;
+            default: return a;
+            }
+        } else {
+            assert(false);
+        }
     }
     static VectorType _insert_bottom(VectorType a, const ScoreType value) noexcept
     {

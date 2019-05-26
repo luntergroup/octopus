@@ -23,7 +23,7 @@
 namespace octopus { namespace hmm { namespace simd {
 
 template <typename InstructionSet,
-          typename RollingInitializer = ShiftingRollingInitializer<InstructionSet>>
+          typename RollingInitializer = InsertRollingInitializer<InstructionSet>>
 class PairHMM : private InstructionSet
 {
     // Types
