@@ -26,7 +26,7 @@ using SSE2PairHMM = PairHMM<SSE2PairHMMInstructionSet<MinBandSize>, RollingIniti
 
 using FastestSSE2PairHMM = SSE2PairHMM<8>;
 
-#ifdef __AVX512__
+#ifdef __AVX2__
 
 using AVX2PairHMM = PairHMM<AVX2PairHMMInstructionSet>;
 
@@ -66,7 +66,8 @@ namespace detail {
 
 using PairHMMs = std::tuple<
     SimdPairHMM<8>,
-    SSE2PairHMM<16>,
+    SimdPairHMM<16>,
+    SimdPairHMM<24>,
     SimdPairHMM<32>
     >;
 
