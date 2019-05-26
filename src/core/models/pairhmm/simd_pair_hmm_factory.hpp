@@ -22,7 +22,7 @@ namespace octopus { namespace hmm { namespace simd {
 
 template <unsigned MinBandSize,
           typename ScoreType = short,
-          typename RollingInitializer = ShiftingRollingInitializer<SSE2PairHMMInstructionSet<MinBandSize, ScoreType>>>
+          typename RollingInitializer = InsertRollingInitializer<SSE2PairHMMInstructionSet<MinBandSize, ScoreType>>>
 using SSE2PairHMM = PairHMM<SSE2PairHMMInstructionSet<MinBandSize, ScoreType>, RollingInitializer>;
 
 using FastestSSE2PairHMM = SSE2PairHMM<8, short>;
