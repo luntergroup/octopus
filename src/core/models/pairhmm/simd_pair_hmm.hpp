@@ -63,6 +63,16 @@ class PairHMM : private InstructionSetPolicy
     const VectorType _three = vectorise(3);
     const VectorType _one = _right_shift_bits<1>(_three);   // could save one register
     
+    template <int n, typename T>
+    auto vectorise_left_shift_bits(const T* values) const noexcept
+    {
+        return _left_shift_bits<n>(vectorise(values));
+    }
+    template <int n>
+    auto vectorise_left_shift_bits(const std::int8_t value) const noexcept
+    {
+        return vectorise(value << n);
+    }
     template <int idx>
     auto _right_shift_bits(const VectorType& vec) const noexcept {
         return InstructionSetPolicy::template _right_shift_bits<idx>(vec);
@@ -96,14 +106,14 @@ public:
     {
         assert(truth_len > band_size_ && (truth_len == target_len + 2 * band_size_ - 1));
         auto _m1 = _inf, _i1 = _inf, _d1 = _inf, _m2 = _inf, _i2 = _inf, _d2 = _inf;
-        const auto _nuc_prior  = vectorise(nuc_prior << trace_bits_);
-        auto _initmask  = vectorise_zero_set_last(-1);
-        auto _initmask2 = vectorise_zero_set_last(null_score_);
+        const auto _nuc_prior  = vectorise_left_shift_bits<trace_bits_>(nuc_prior);
+        auto _initmask     = vectorise_zero_set_last(-1);
+        auto _initmask2    = vectorise_zero_set_last(null_score_);
         auto _truthwin     = vectorise(truth);
-        auto _targetwin    = _m1;
-        auto _qualitieswin = vectorise(max_quality_score_ << trace_bits_);
-        auto _gap_open     = vectorise_lshift<trace_bits_>(gap_open);
-        auto _gap_extend   = vectorise_lshift<trace_bits_>(gap_extend);
+        auto _targetwin    = _inf;
+        auto _qualitieswin = vectorise_left_shift_bits<trace_bits_>(max_quality_score_);
+        auto _gap_open     = vectorise_left_shift_bits<trace_bits_>(gap_open);
+        auto _gap_extend   = vectorise_left_shift_bits<trace_bits_>(gap_extend);
         auto _truthnqual   = _add(_and(_cmpeq(_truthwin, _n), _nscore_m_inf), _inf);
         ScoreType minscore {infinity_};
         for (int s {0}; s <= 2 * (target_len + band_size_); s += 2) {
@@ -167,16 +177,16 @@ public:
     {
         assert(truth_len > band_size_ && (truth_len == target_len + 2 * band_size_ - 1));
         auto _m1 = _inf, _i1 = _inf, _d1 = _inf, _m2 = _inf, _i2 = _inf, _d2 = _inf;
-        const auto _nuc_prior = vectorise(nuc_prior << trace_bits_);
-        auto _initmask  = vectorise_zero_set_last(-1);
-        auto _initmask2 = vectorise_zero_set_last(null_score_);
+        const auto _nuc_prior = vectorise_left_shift_bits<trace_bits_>(nuc_prior);
+        auto _initmask     = vectorise_zero_set_last(-1);
+        auto _initmask2    = vectorise_zero_set_last(null_score_);
         auto _truthwin     = vectorise(truth);
-        auto _targetwin    = _m1;
-        auto _qualitieswin = vectorise(max_quality_score_ << trace_bits_);
-        auto _gap_open     = vectorise_lshift<trace_bits_>(gap_open);
-        auto _gap_extend   = vectorise_lshift<trace_bits_>(gap_extend);
+        auto _targetwin    = _inf;
+        auto _qualitieswin = vectorise_left_shift_bits<trace_bits_>(max_quality_score_);
+        auto _gap_open     = vectorise_left_shift_bits<trace_bits_>(gap_open);
+        auto _gap_extend   = vectorise_left_shift_bits<trace_bits_>(gap_extend);
         auto _snvmaskwin   = vectorise(snv_mask);
-        auto _snv_priorwin = vectorise_lshift<trace_bits_>(snv_prior);
+        auto _snv_priorwin = vectorise_left_shift_bits<trace_bits_>(snv_prior);
         auto _truthnqual   = _add(_and(_cmpeq(_truthwin, _n), _nscore_m_inf), _inf);
         VectorType _snvmask;
         ScoreType minscore {infinity_};
@@ -247,14 +257,14 @@ public:
     {
         assert(truth_len > band_size_ && (truth_len == target_len + 2 * band_size_ - 1));
         auto _m1 = _inf, _i1 = _inf, _d1 = _inf, _m2 = _inf, _i2 = _inf, _d2 = _inf;
-        const auto _nuc_prior = vectorise(nuc_prior << trace_bits_);
-        auto _initmask  = vectorise_zero_set_last(-1);
-        auto _initmask2 = vectorise_zero_set_last(null_score_);
+        const auto _nuc_prior = vectorise_left_shift_bits<trace_bits_>(nuc_prior);
+        auto _initmask     = vectorise_zero_set_last(-1);
+        auto _initmask2    = vectorise_zero_set_last(null_score_);
         auto _truthwin     = vectorise(truth);
-        auto _targetwin    = _m1;
-        auto _qualitieswin = vectorise(max_quality_score_ << trace_bits_);
-        auto _gap_open     = vectorise_lshift<trace_bits_>(gap_open);
-        auto _gap_extend   = vectorise_lshift<trace_bits_>(gap_extend);
+        auto _targetwin    = _inf;
+        auto _qualitieswin = vectorise_left_shift_bits<trace_bits_>(max_quality_score_);
+        auto _gap_open     = vectorise_left_shift_bits<trace_bits_>(gap_open);
+        auto _gap_extend   = vectorise_left_shift_bits<trace_bits_>(gap_extend);
         auto _truthnqual   = _add(_and(_cmpeq(_truthwin, _n), _nscore_m_inf), _inf);
         SmallVector _backpointers(2 * (truth_len + band_size_));
         ScoreType minscore {infinity_}, cur_score;
@@ -400,16 +410,16 @@ public:
     {
         assert(truth_len > band_size_ && (truth_len == target_len + 2 * band_size_ - 1));
         auto _m1 = _inf, _i1 = _inf, _d1 = _inf, _m2 = _inf, _i2 = _inf, _d2 = _inf;
-        const auto _nuc_prior = vectorise(nuc_prior << trace_bits_);
-        auto _initmask  = vectorise_zero_set_last(-1);
-        auto _initmask2 = vectorise_zero_set_last(null_score_);
+        const auto _nuc_prior = vectorise_left_shift_bits<trace_bits_>(nuc_prior);
+        auto _initmask     = vectorise_zero_set_last(-1);
+        auto _initmask2    = vectorise_zero_set_last(null_score_);
         auto _truthwin     = vectorise(truth);
-        auto _targetwin    = _m1;
-        auto _qualitieswin = vectorise(max_quality_score_ << trace_bits_);
-        auto _gap_open     = vectorise_lshift<trace_bits_>(gap_open);
-        auto _gap_extend   = vectorise_lshift<trace_bits_>(gap_extend);
+        auto _targetwin    = _inf;
+        auto _qualitieswin = vectorise_left_shift_bits<trace_bits_>(max_quality_score_);
+        auto _gap_open     = vectorise_left_shift_bits<trace_bits_>(gap_open);
+        auto _gap_extend   = vectorise_left_shift_bits<trace_bits_>(gap_extend);
         auto _snvmaskwin   = vectorise(snv_mask);
-        auto _snv_priorwin = vectorise_lshift<trace_bits_>(snv_prior);
+        auto _snv_priorwin = vectorise_left_shift_bits<trace_bits_>(snv_prior);
         auto _truthnqual   = _add(_and(_cmpeq(_truthwin, _n), _nscore_m_inf), _inf);
         VectorType _snvmask;
         SmallVector _backpointers(2 * (truth_len + band_size_));

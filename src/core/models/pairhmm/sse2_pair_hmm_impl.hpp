@@ -23,7 +23,8 @@ protected:
     using VectorType  = __m128i;
     using ScoreType   = short;
 
-    constexpr static int band_size_ = sizeof(VectorType) / sizeof(ScoreType);
+    constexpr static int word_size  = sizeof(ScoreType);
+    constexpr static int band_size_ = sizeof(VectorType) / word_size;
     
     VectorType vectorise(ScoreType x) const noexcept
     {
@@ -39,14 +40,14 @@ protected:
     {
         return _mm_set_epi16(0,0,0,0,0,0,0,x);
     }
-    template <int imm>
+    template <int index>
     auto _extract(const VectorType a) const noexcept
     {
-        return _mm_extract_epi16(a, imm);
+        return _mm_extract_epi16(a, index);
     }
-    auto _extract(const VectorType a, const int n) const noexcept
+    auto _extract(const VectorType a, const int index) const noexcept
     {
-        switch (n) {
+        switch (index) {
             case 0:  return _extract<0>(a);
             case 1:  return _extract<1>(a);
             case 2:  return _extract<2>(a);
@@ -88,18 +89,18 @@ protected:
     }
     VectorType _left_shift_word(const VectorType& a) const noexcept
     {
-        return _mm_slli_si128(a, 2);
+        return _mm_slli_si128(a, word_size);
     }
     VectorType _right_shift_word(const VectorType& a) const noexcept
     {
-        return _mm_srli_si128(a, 2);
+        return _mm_srli_si128(a, word_size);
     }
-    template <int imm>
+    template <int n>
     VectorType _right_shift_bits(const VectorType& a) const noexcept
     {
-        return _mm_srli_epi16(a, imm);
+        return _mm_srli_epi16(a, n);
     }
-    template <int imm>
+    template <int n>
     VectorType _left_shift_bits(const VectorType& a) const noexcept
     {
         return _mm_slli_epi16(a, n);
@@ -122,12 +123,14 @@ class InstructionSetPolicySSE2x2
 protected:
     using VectorType = std::array<BlockType, 2>;
     using ScoreType  = short;
+    
+    constexpr static int word_size  = sizeof(ScoreType);
+    constexpr static int band_size_ = sizeof(VectorType) / word_size;
 
 private:
-    constexpr static auto block_bytes = sizeof(BlockType);
-    constexpr static auto block_band_size = block_bytes / sizeof(ScoreType);
-    constexpr static auto band_size = sizeof(VectorType) / sizeof(ScoreType);
-    constexpr static auto num_blocks = std::tuple_size<VectorType>::value;
+    constexpr static auto block_bytes_ = sizeof(BlockType);
+    constexpr static auto block_words_ = block_bytes_ / word_size;
+    constexpr static auto num_blocks_  = std::tuple_size<VectorType>::value;
 
 protected:
     VectorType vectorise(ScoreType x) const noexcept
@@ -151,12 +154,10 @@ protected:
     template <int index>
     auto _extract(const VectorType a) const noexcept
     {
-        // constexpr static auto block_index = num_blocks - (index / block_band_size) - 1;
-        constexpr static auto block_index = index / block_band_size;
-        static_assert(block_index < num_blocks, "block index out range");
-        //constexpr static auto block_byte_index = block_band_size - (index % block_band_size) - 1;
-        constexpr static auto block_byte_index = index % block_band_size;
-        static_assert(block_byte_index < block_band_size, "block byte index out range");
+        constexpr static auto block_index = index / block_words_;
+        static_assert(block_index < num_blocks_, "block index out range");
+        constexpr static auto block_byte_index = index % block_words_;
+        static_assert(block_byte_index < block_words_, "block byte index out range");
         return _mm_extract_epi16(std::get<block_index>(a), block_byte_index);
     }
     auto _extract(const VectorType a, const int index) const noexcept
@@ -181,40 +182,15 @@ protected:
             default: return _extract<15>(a);
         }
     }
-    template <int index, typename T>
-    VectorType _insert(VectorType a, T i) const noexcept
+    VectorType _insert_bottom(VectorType a, const ScoreType i) const noexcept
     {
-        // constexpr static auto block_index = num_blocks - (index / block_band_size) - 1;
-        constexpr static auto block_index = index / block_band_size;
-        static_assert(block_index < num_blocks, "block index out range");
-        //constexpr static auto block_byte_index = block_band_size - (index % block_band_size) - 1;
-        constexpr static auto block_byte_index = index % block_band_size;
-        static_assert(block_byte_index < block_band_size, "block byte index out range");
-        std::get<block_index>(a) = _mm_insert_epi16(std::get<block_index>(a), i, block_byte_index);
+        std::get<0>(a) = _mm_insert_epi16(std::get<0>(a), i, 0);
         return a;
     }
-    template <typename T>
-    VectorType _insert(const VectorType& a, const T i, const int index) const noexcept
+    VectorType _insert_top(VectorType a, const ScoreType i) const noexcept
     {
-        switch (index) {
-            case 0:  return _insert<0>(a, i);
-            case 1:  return _insert<1>(a, i);
-            case 2:  return _insert<2>(a, i);
-            case 3:  return _insert<3>(a, i);
-            case 4:  return _insert<4>(a, i);
-            case 5:  return _insert<5>(a, i);
-            case 6:  return _insert<6>(a, i);
-            case 7:  return _insert<7>(a, i);
-            case 8:  return _insert<8>(a, i);
-            case 9:  return _insert<9>(a, i);
-            case 10:  return _insert<10>(a, i);
-            case 11:  return _insert<11>(a, i);
-            case 12:  return _insert<12>(a, i);
-            case 13:  return _insert<13>(a, i);
-            case 14:  return _insert<14>(a, i);
-            case 15:  return _insert<15>(a, i);
-            default: return _insert<15>(a, i);
-        }
+        std::get<num_blocks_ - 1>(a) = _mm_insert_epi16(std::get<num_blocks_ - 1>(a), i, block_words_ - 1);
+        return a;
     }
     VectorType _add(const VectorType& lhs, const VectorType& rhs) const noexcept
     {
@@ -241,25 +217,31 @@ protected:
         return {_mm_cmpeq_epi16(std::get<0>(lhs), std::get<0>(rhs)),
                 _mm_cmpeq_epi16(std::get<1>(lhs), std::get<1>(rhs))};
     }
-    template <int n>
-    VectorType _left_shift(VectorType a) const noexcept
+    VectorType _left_shift_word(VectorType a) const noexcept
     {
-        std::get<1>(a) = _mm_or_si128(_mm_slli_si128(std::get<1>(a), n), _mm_srli_si128(std::get<0>(a), block_bytes - n));
-        std::get<0>(a) = _mm_slli_si128(std::get<0>(a), n);
+        std::get<1>(a) = _mm_or_si128(_mm_slli_si128(std::get<1>(a), word_size),
+                                      _mm_srli_si128(std::get<0>(a), block_bytes_ - word_size));
+        std::get<0>(a) = _mm_slli_si128(std::get<0>(a), word_size);
+        return a;
+    }
+    VectorType _right_shift_word(VectorType a) const noexcept
+    {
+        std::get<0>(a) = _mm_or_si128(_mm_srli_si128(std::get<0>(a), word_size),
+                                      _mm_slli_si128(std::get<1>(a), block_bytes_ - word_size));
+        std::get<1>(a) = _mm_srli_si128(std::get<1>(a), word_size);
         return a;
     }
     template <int n>
-    VectorType _right_shift(VectorType a) const noexcept
-    {
-        std::get<0>(a) = _mm_or_si128(_mm_srli_si128(std::get<0>(a), n), _mm_slli_si128(std::get<1>(a), block_bytes - n));
-        std::get<1>(a) = _mm_srli_si128(std::get<1>(a), n);
-        return a;
-    }
-    template <int n>
-    VectorType _left_shift_words(const VectorType& a) const noexcept
+    VectorType _left_shift_bits(const VectorType& a) const noexcept
     {
         return {_mm_slli_epi16(std::get<0>(a), n),
                 _mm_slli_epi16(std::get<1>(a), n)};
+    }
+    template <int n>
+    VectorType _right_shift_bits(const VectorType& a) const noexcept
+    {
+        return {_mm_srli_epi16(std::get<0>(a), n),
+                _mm_srli_epi16(std::get<1>(a), n)};
     }
     VectorType _min(const VectorType& lhs, const VectorType& rhs) const noexcept
     {

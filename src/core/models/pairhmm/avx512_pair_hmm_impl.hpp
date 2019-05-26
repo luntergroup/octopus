@@ -17,15 +17,15 @@ namespace octopus { namespace hmm { namespace simd {
 
 namespace detail {
 
-template <int index>
-auto _left_shift(const __m512i& a) noexcept
+template <int n>
+auto _left_shift_words(const __m512i& a) noexcept
 {
     // TODO
     return a;
 };
 
-template <int index>
-auto _right_shift(const __m512i& a) noexcept
+template <int n>
+auto _right_shift_words(const __m512i& a) noexcept
 {
     // TODO
     return a;
@@ -38,6 +38,9 @@ class InstructionSetPolicyAVX512
 protected:
     using VectorType = __m512i;
     using ScoreType  = short;
+    
+    constexpr static int word_size  = sizeof(ScoreType);
+    constexpr static int band_size_ = sizeof(VectorType) / word_size;
     
     VectorType vectorise(ScoreType x) const noexcept
     {
@@ -102,50 +105,13 @@ protected:
             default: return _extract<31>(a);
         }
     }
-    template <int index, typename T>
-    VectorType _insert(const VectorType& a, T i) const noexcept
+    VectorType _insert_bottom(const VectorType& a, const ScoreType i) const noexcept
     {
-        static_assert(index < 32, "index must be less than 32");
-        return _mm512_insert_epi16(a, i, index);
+        return _mm512_insert_epi16(a, i, 0);
     }
-    template <typename T>
-    VectorType _insert(const VectorType& a, const T i, const int index) const noexcept
+    VectorType _insert_top(const VectorType& a, const ScoreType i) const noexcept
     {
-        switch (index) {
-            case 0:  return _insert<0>(a, i);
-            case 1:  return _insert<1>(a, i);
-            case 2:  return _insert<2>(a, i);
-            case 3:  return _insert<3>(a, i);
-            case 4:  return _insert<4>(a, i);
-            case 5:  return _insert<5>(a, i);
-            case 6:  return _insert<6>(a, i);
-            case 7:  return _insert<7>(a, i);
-            case 8:  return _insert<8>(a, i);
-            case 9:  return _insert<9>(a, i);
-            case 10:  return _insert<10>(a, i);
-            case 11:  return _insert<11>(a, i);
-            case 12:  return _insert<12>(a, i);
-            case 13:  return _insert<13>(a, i);
-            case 14:  return _insert<14>(a, i);
-            case 15:  return _insert<15>(a, i);
-            case 16:  return _insert<16>(a, i);
-            case 17:  return _insert<17>(a, i);
-            case 18:  return _insert<18>(a, i);
-            case 19:  return _insert<19>(a, i);
-            case 20:  return _insert<20>(a, i);
-            case 21:  return _insert<21>(a, i);
-            case 22:  return _insert<22>(a, i);
-            case 23:  return _insert<23>(a, i);
-            case 24:  return _insert<24>(a, i);
-            case 25:  return _insert<25>(a, i);
-            case 26:  return _insert<26>(a, i);
-            case 27:  return _insert<27>(a, i);
-            case 28:  return _insert<28>(a, i);
-            case 29:  return _insert<29>(a, i);
-            case 30:  return _insert<30>(a, i);
-            case 31:  return _insert<31>(a, i);
-            default: return _insert<31>(a, i);
-        }
+        return _mm512_insert_epi16(a, i, band_size_ - 1);
     }
     VectorType _add(const VectorType& lhs, const VectorType& rhs) const noexcept
     {
@@ -167,18 +133,21 @@ protected:
     {
         return _mm512_maskz_set1_epi16(_mm512_cmpeq_epi16_mask(lhs, rhs), 0xFFFF);
     }
-    template <int n>
-    VectorType _left_shift(const VectorType& a) const noexcept
+    VectorType _left_shift_word(const VectorType& a) const noexcept
     {
-        return detail::_left_shift<n>(a);
+        return detail::_left_shift_words<word_size>(a);
+    }
+    VectorType _right_shift_word(const VectorType& a) const noexcept
+    {
+        return detail::_right_shift_words<word_size>(a);
     }
     template <int n>
-    VectorType _right_shift(const VectorType& a) const noexcept
+    VectorType _left_shift_bits(const VectorType& a) const noexcept
     {
-        return detail::_right_shift<n>(a);
+        return _mm512_slli_epi16(a, n);
     }
     template <int n>
-    VectorType _left_shift_words(const VectorType& a) const noexcept
+    VectorType _right_shift_bits(const VectorType& a) const noexcept
     {
         return _mm512_slli_epi16(a, n);
     }

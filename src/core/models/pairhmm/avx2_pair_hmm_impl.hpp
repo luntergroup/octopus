@@ -18,25 +18,25 @@ namespace octopus { namespace hmm { namespace simd {
 namespace detail {
 
 template <int n>
-auto _left_shift(const __m256i& a) noexcept
+auto _left_shift_words(const __m256i& a) noexcept
 {
     static_assert(n < 16, "n must be less than 16");
     return _mm256_alignr_epi8(a, _mm256_permute2x128_si256(a, a, _MM_SHUFFLE(0, 0, 2, 0)), 16 - n);
 };
 template <>
-auto _left_shift<16>(const __m256i& a) noexcept
+auto _left_shift_words<16>(const __m256i& a) noexcept
 {
     return _mm256_permute2x128_si256(a, a, _MM_SHUFFLE(0, 0, 2, 0));
 }
 
 template <int n>
-auto _right_shift(const __m256i& a) noexcept
+auto _right_shift_words(const __m256i& a) noexcept
 {
     static_assert(n < 16, "n must be less than 16");
     return _mm256_alignr_epi8(_mm256_permute2x128_si256(a, a, _MM_SHUFFLE(2, 0, 0, 1)), a, n);
 }
 template <>
-auto _right_shift<16>(const __m256i& a) noexcept
+auto _right_shift_words<16>(const __m256i& a) noexcept
 {
     return _mm256_permute2x128_si256(a, a, _MM_SHUFFLE(2, 0, 0, 1));
 }
@@ -48,6 +48,9 @@ class InstructionSetPolicyAVX2
 protected:
     using VectorType = __m256i;
     using ScoreType  = short;
+    
+    constexpr static int word_size  = sizeof(ScoreType);
+    constexpr static int band_size_ = sizeof(VectorType) / word_size;
     
     VectorType vectorise(ScoreType x) const noexcept
     {
@@ -92,33 +95,13 @@ protected:
             default: return _extract<15>(a);
         }
     }
-    template <int index, typename T>
-    VectorType _insert(const VectorType& a, T i) const noexcept
+    VectorType _insert_bottom(const VectorType& a, const ScoreType i) const noexcept
     {
-        return _mm256_insert_epi16(a, i, index);
+        return _mm256_insert_epi16(a, i, 0);
     }
-    template <typename T>
-    VectorType _insert(const VectorType& a, const T i, const int index) const noexcept
+    VectorType _insert_top(const VectorType& a, const ScoreType i) const noexcept
     {
-        switch (index) {
-            case 0:  return _insert<0>(a, i);
-            case 1:  return _insert<1>(a, i);
-            case 2:  return _insert<2>(a, i);
-            case 3:  return _insert<3>(a, i);
-            case 4:  return _insert<4>(a, i);
-            case 5:  return _insert<5>(a, i);
-            case 6:  return _insert<6>(a, i);
-            case 7:  return _insert<7>(a, i);
-            case 8:  return _insert<8>(a, i);
-            case 9:  return _insert<9>(a, i);
-            case 10:  return _insert<10>(a, i);
-            case 11:  return _insert<11>(a, i);
-            case 12:  return _insert<12>(a, i);
-            case 13:  return _insert<13>(a, i);
-            case 14:  return _insert<14>(a, i);
-            case 15:  return _insert<15>(a, i);
-            default: return _insert<15>(a, i);
-        }
+        return _mm256_insert_epi16(a, i, band_size_ - 1);
     }
     VectorType _add(const VectorType& lhs, const VectorType& rhs) const noexcept
     {
@@ -140,18 +123,21 @@ protected:
     {
         return _mm256_cmpeq_epi16(lhs, rhs);
     }
-    template <int n>
-    VectorType _left_shift(const VectorType& a) const noexcept
+    VectorType _left_shift_word(const VectorType& a) const noexcept
     {
-        return detail::_left_shift<n>(a);
+        return detail::_left_shift_words<word_size>(a);
+    }
+    VectorType _right_shift_word(const VectorType& a) const noexcept
+    {
+        return detail::_right_shift_words<word_size>(a);
     }
     template <int n>
-    VectorType _right_shift(const VectorType& a) const noexcept
+    VectorType _right_shift_bits(const VectorType& a) const noexcept
     {
-        return detail::_right_shift<n>(a);
+        return _mm256_srli_epi16(a, n);
     }
     template <int n>
-    VectorType _left_shift_words(const VectorType& a) const noexcept
+    VectorType _left_shift_bits(const VectorType& a) const noexcept
     {
         return _mm256_slli_epi16(a, n);
     }
