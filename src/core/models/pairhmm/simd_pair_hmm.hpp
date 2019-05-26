@@ -50,7 +50,8 @@ class PairHMM : private InstructionSet
     using InstructionSet::_right_shift_word;
     
     // Constants
-    constexpr static int band_size_ = InstructionSet::band_size_;
+    constexpr static const char* name_ = InstructionSet::name;
+    constexpr static int band_size_ = InstructionSet::band_size;
     constexpr static ScoreType infinity_ = 0x7800;
     constexpr static int trace_bits_ = 2;
     constexpr static ScoreType n_score_ = 2 << trace_bits_;
@@ -422,6 +423,7 @@ class PairHMM : private InstructionSet
 public:
     constexpr static char gap_label = '-';
     
+    constexpr static const char* name() noexcept { return name_; }
     constexpr static int band_size() noexcept { return band_size_; }
     
     template <typename OpenPenaltyArrayOrConstant,

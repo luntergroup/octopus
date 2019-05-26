@@ -48,7 +48,9 @@ protected:
     using ScoreType   = short;
     
     constexpr static int word_size  = sizeof(ScoreType);
-    constexpr static int band_size_ = sizeof(VectorType) / word_size;
+    constexpr static int band_size = sizeof(VectorType) / word_size;
+    
+    constexpr static const char* name = "AVX2";
     
     static VectorType vectorise(ScoreType x) noexcept
     {
@@ -127,7 +129,7 @@ protected:
     }
     static VectorType _insert_top(const VectorType& a, const ScoreType i) noexcept
     {
-        return _mm256_insert_epi16(a, i, band_size_ - 1);
+        return _mm256_insert_epi16(a, i, band_size - 1);
     }
     static VectorType _add(const VectorType& lhs, const VectorType& rhs) noexcept
     {

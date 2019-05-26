@@ -24,6 +24,8 @@ protected:
     using ScoreType   = short;
     
     constexpr static int word_size = sizeof(ScoreType);
+    
+    constexpr static const char* name = "SSE2";
 
 private:
     using BlockType = __m128i;
@@ -35,7 +37,7 @@ private:
 protected:
     using VectorType = std::array<BlockType, num_blocks>;
     
-    constexpr static int band_size_ = sizeof(VectorType) / word_size;
+    constexpr static int band_size = sizeof(VectorType) / word_size;
 
 private:
     constexpr static auto num_blocks_ = std::tuple_size<VectorType>::value;
@@ -82,19 +84,19 @@ private:
     template <std::size_t... Is>
     static auto _extract_helper(const VectorType& a, const int index, std::index_sequence<Is...>) noexcept
     {
-        if (index < band_size_ && index >= 0) {
+        if (index < band_size && index >= 0) {
             decltype(_extract<0>(a)) r;
             int unused[] = {(index == Is ? (r = _extract<Is>(a), 0) : 0)...};
             (void) unused;
             return r;
         } else {
-            return _extract<band_size_ - 1>(a);
+            return _extract<band_size - 1>(a);
         }
     }
 protected:
     static auto _extract(const VectorType& a, const int index) noexcept
     {
-        return _extract_helper(a, index, std::make_index_sequence<band_size_> {});
+        return _extract_helper(a, index, std::make_index_sequence<band_size> {});
     }
     template <int index, typename T>
     static VectorType _insert(VectorType a, T value) noexcept
@@ -110,20 +112,20 @@ private:
     template <typename T, std::size_t... Is>
     static auto _insert_helper(const VectorType& a, const T& value, const int index, std::index_sequence<Is...>) noexcept
     {
-        if (index < band_size_ && index >= 0) {
+        if (index < band_size && index >= 0) {
             decltype(_insert<0>(a, value)) r;
             int unused[] = {(index == Is ? (r = _insert<Is>(a, value), 0) : 0)...};
             (void) unused;
             return r;
         } else {
-            return _insert<band_size_ - 1>(a, value);
+            return _insert<band_size - 1>(a, value);
         }
     }
 protected:
     template <typename T>
     VectorType _insert(const VectorType& a, const T& value, const int index) const noexcept
     {
-        return _insert_helper(a, value, index, std::make_index_sequence<band_size_> {});
+        return _insert_helper(a, value, index, std::make_index_sequence<band_size> {});
     }
     VectorType _insert_bottom(VectorType a, const ScoreType value) const noexcept
     {
