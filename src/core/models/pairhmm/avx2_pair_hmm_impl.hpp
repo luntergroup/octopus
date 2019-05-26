@@ -50,28 +50,28 @@ protected:
     constexpr static int word_size  = sizeof(ScoreType);
     constexpr static int band_size_ = sizeof(VectorType) / word_size;
     
-    VectorType vectorise(ScoreType x) const noexcept
+    static VectorType vectorise(ScoreType x) noexcept
     {
         return _mm256_set1_epi16(x);
     }
     template <typename T>
-    VectorType vectorise(const T* values) const noexcept
+    static VectorType vectorise(const T* values) noexcept
     {
         return _mm256_set_epi16(values[15], values[14], values[13], values[12],
                                 values[11], values[10], values[9], values[8],
                                 values[7], values[6], values[5], values[4],
                                 values[3], values[2], values[1], values[0]);
     }
-    VectorType vectorise_zero_set_last(ScoreType x) const noexcept
+    static VectorType vectorise_zero_set_last(ScoreType x) noexcept
     {
         return _mm256_set_epi16(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,x);
     }
     template <int index>
-    auto _extract(const VectorType a) const noexcept
+    static auto _extract(const VectorType a) noexcept
     {
         return _mm256_extract_epi16(a, index);
     }
-    auto _extract(const VectorType a, const int index) const noexcept
+    static auto _extract(const VectorType a, const int index) noexcept
     {
         switch (index) {
             case 0:  return _extract<0>(a);
@@ -121,57 +121,57 @@ protected:
             default: return _insert<15>(a, i);
         }
     }
-    VectorType _insert_bottom(const VectorType& a, const ScoreType i) const noexcept
+    static VectorType _insert_bottom(const VectorType& a, const ScoreType i) noexcept
     {
         return _mm256_insert_epi16(a, i, 0);
     }
-    VectorType _insert_top(const VectorType& a, const ScoreType i) const noexcept
+    static VectorType _insert_top(const VectorType& a, const ScoreType i) noexcept
     {
         return _mm256_insert_epi16(a, i, band_size_ - 1);
     }
-    VectorType _add(const VectorType& lhs, const VectorType& rhs) const noexcept
+    static VectorType _add(const VectorType& lhs, const VectorType& rhs) noexcept
     {
         return _mm256_add_epi16(lhs, rhs);
     }
-    VectorType _and(const VectorType& lhs, const VectorType& rhs) const noexcept
+    static VectorType _and(const VectorType& lhs, const VectorType& rhs) noexcept
     {
         return _mm256_and_si256(lhs, rhs);
     }
-    VectorType _andnot(const VectorType& lhs, const VectorType& rhs) const noexcept
+    static VectorType _andnot(const VectorType& lhs, const VectorType& rhs) noexcept
     {
         return _mm256_andnot_si256(lhs, rhs);
     }
-    VectorType _or(const VectorType& lhs, const VectorType& rhs) const noexcept
+    static VectorType _or(const VectorType& lhs, const VectorType& rhs) noexcept
     {
         return _mm256_or_si256(lhs, rhs);
     }
-    VectorType _cmpeq(const VectorType& lhs, const VectorType& rhs) const noexcept
+    static VectorType _cmpeq(const VectorType& lhs, const VectorType& rhs) noexcept
     {
         return _mm256_cmpeq_epi16(lhs, rhs);
     }
-    VectorType _left_shift_word(const VectorType& a) const noexcept
+    static VectorType _left_shift_word(const VectorType& a) noexcept
     {
         return detail::_left_shift_words<word_size>(a);
     }
-    VectorType _right_shift_word(const VectorType& a) const noexcept
+    static VectorType _right_shift_word(const VectorType& a) noexcept
     {
         return detail::_right_shift_words<word_size>(a);
     }
     template <int n>
-    VectorType _right_shift_bits(const VectorType& a) const noexcept
+    static VectorType _right_shift_bits(const VectorType& a) noexcept
     {
         return _mm256_srli_epi16(a, n);
     }
     template <int n>
-    VectorType _left_shift_bits(const VectorType& a) const noexcept
+    static VectorType _left_shift_bits(const VectorType& a) noexcept
     {
         return _mm256_slli_epi16(a, n);
     }
-    VectorType _min(const VectorType& lhs, const VectorType& rhs) const noexcept
+    static VectorType _min(const VectorType& lhs, const VectorType& rhs) noexcept
     {
         return _mm256_min_epi16(lhs, rhs);
     }
-    VectorType _max(const VectorType& lhs, const VectorType& rhs) const noexcept
+    static VectorType _max(const VectorType& lhs, const VectorType& rhs) noexcept
     {
         return _mm256_max_epi16(lhs, rhs);
     }
