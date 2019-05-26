@@ -124,19 +124,19 @@ protected:
     {
         constexpr static auto block_index = index / block_words_;
         static_assert(block_index < num_blocks_, "block index out range");
-        constexpr static auto block_byte_index = index % block_words_;
-        static_assert(block_byte_index < block_words_, "block byte index out range");
-        return do_extract<block_byte_index>(std::get<block_index>(a), ScoreType {});
+        constexpr static auto word_index = index % block_words_;
+        static_assert(word_index < block_words_, "word index out range");
+        return do_extract<word_index>(std::get<block_index>(a), ScoreType {});
     }
 private:
     template <std::size_t... Is>
     static auto _extract_helper(const VectorType& a, const int index, std::index_sequence<Is...>) noexcept
     {
-        if (index < band_size && index >= 0) {
-            decltype(_extract<0>(a)) r;
-            int unused[] = {(index == Is ? (r = _extract<Is>(a), 0) : 0)...};
+        if (index >= 0 && index < band_size) {
+            decltype(_extract<0>(a)) result;
+            int unused[] = {(index == Is ? (result = _extract<Is>(a), 0) : 0)...};
             (void) unused;
-            return r;
+            return result;
         } else {
             return _extract<band_size - 1>(a);
         }
@@ -163,31 +163,31 @@ protected:
     {
         constexpr static auto block_index = index / block_words_;
         static_assert(block_index < num_blocks_, "block index out range");
-        constexpr static auto block_byte_index = index % block_words_;
-        static_assert(block_byte_index < block_words_, "block byte index out range");
-        std::get<block_index>(a) = do_insert<block_byte_index>(std::get<block_index>(a), value, ScoreType {});
+        constexpr static auto word_index = index % block_words_;
+        static_assert(word_index < block_words_, "word index out range");
+        std::get<block_index>(a) = do_insert<word_index>(std::get<block_index>(a), value, ScoreType {});
         return a;
     }
 private:
     template <typename T, std::size_t... Is>
-    static auto _insert_helper(const VectorType& a, const T& value, const int index, std::index_sequence<Is...>) noexcept
+    static VectorType _insert_helper(const VectorType& a, const T& value, const int index, std::index_sequence<Is...>) noexcept
     {
-        if (index < band_size && index >= 0) {
-            decltype(_insert<0>(a, value)) r;
-            int unused[] = {(index == Is ? (r = _insert<Is>(a, value), 0) : 0)...};
+        if (index >= 0 && index < band_size) {
+            VectorType result;
+            int unused[] = {(index == Is ? (result = _insert<Is>(a, value), 0) : 0)...};
             (void) unused;
-            return r;
+            return result;
         } else {
-            return _insert<band_size - 1>(a, value);
+            return a;
         }
     }
 protected:
     template <typename T>
-    VectorType _insert(const VectorType& a, const T& value, const int index) const noexcept
+    static VectorType _insert(const VectorType& a, const T& value, const int index) noexcept
     {
         return _insert_helper(a, value, index, std::make_index_sequence<band_size> {});
     }
-    VectorType _insert_bottom(VectorType a, const ScoreType value) const noexcept
+    static VectorType _insert_bottom(VectorType a, const ScoreType value) noexcept
     {
         return _insert<0>(a, value);
     }
