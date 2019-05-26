@@ -313,29 +313,136 @@ class PairHMM : private InstructionSetPolicy
         return (minscore - null_score_) >> trace_bits_;
     }
     
+    auto get(const std::int8_t* values, int index) const noexcept { return values[index]; }
+    auto get(std::int8_t value, int index) const noexcept { return value; }
+    auto
+    get_mismatch_quality(const char* target,
+                         const std::int8_t* quals,
+                         int x, int y,
+                         const char* snv_mask,
+                         const std::int8_t* caps) const noexcept
+    {
+        return (snv_mask[x] == target[y]) ? std::min(quals[y], caps[x]) : quals[y];
+    }
+    auto
+    get_mismatch_quality(const char* target,
+                         const std::int8_t* quals,
+                         int x, int y,
+                         NullType,
+                         NullType) const noexcept
+    {
+        return quals[y];
+    }
+    
+    template <typename CharArrayOrNull,
+              typename OpenPenaltyArrayOrConstant,
+              typename ExtendPenaltyArrayOrConstant,
+              typename SnvMaskArrayOrNull,
+              typename SnvBaseQualityCapArrayOrNull>
+    int
+    calculate_flank_score_helper(const int truth_len,
+                                 const int lhs_flank_len,
+                                 const int rhs_flank_len,
+                                 const CharArrayOrNull target,
+                                 const std::int8_t* quals,
+                                 const OpenPenaltyArrayOrConstant gap_open,
+                                 const ExtendPenaltyArrayOrConstant gap_extend,
+                                 const SnvMaskArrayOrNull snv_mask,
+                                 const SnvBaseQualityCapArrayOrNull snv_prior,
+                                 const short nuc_prior,
+                                 const int first_pos,
+                                 const char* aln1,
+                                 const char* aln2,
+                                 int& target_mask_size) const noexcept
+    {
+        static constexpr char match {'M'}, insertion {'I'}, deletion {'D'};
+        auto prev_state = match;
+        int x {first_pos}; // index into truth
+        int y {0};         // index into target
+        int i {0};         // index into alignment
+        int result {0};    // alignment score (within flank)
+        const auto rhs_flank_begin = truth_len - rhs_flank_len;
+        target_mask_size = 0;
+        while (aln1[i]) {
+            auto new_state = match;
+            if (aln1[i] == gap_label) {
+                new_state = insertion;
+            } else if (aln2[i] == gap_label) { // can't be both '-'
+                new_state = deletion;
+            }
+            switch (new_state) {
+                case match:
+                {
+                    if (x < lhs_flank_len || x >= rhs_flank_begin) {
+                        if (aln1[i] != aln2[i]) {
+                            if (aln1[i] != 'N') {
+                                result += get_mismatch_quality(target, quals, x, y, snv_mask, snv_prior);
+                            } else {
+                                result += n_score_ >> trace_bits_;
+                            }
+                        }
+                        ++target_mask_size;
+                    }
+                    ++x;
+                    ++y;
+                    break;
+                }
+                case insertion:
+                {
+                    if (x < lhs_flank_len || x >= rhs_flank_begin) {
+                        if (prev_state == insertion) {
+                            result += get(gap_extend, x - 1) + nuc_prior;
+                        } else {
+                            // gap open score is charged for insertions just after the corresponding base, hence the -1
+                            result += get(gap_open, x - 1) + nuc_prior;
+                        }
+                        ++target_mask_size;
+                    }
+                    ++y;
+                    break;
+                }
+                case deletion:
+                {
+                    if (x < lhs_flank_len || x >= rhs_flank_begin) {
+                        if (prev_state == deletion) {
+                            result += get(gap_extend, x);
+                        } else {
+                            result += get(gap_open, x);
+                        }
+                    }
+                    ++x;
+                    break;
+                }
+            }
+            ++i;
+            prev_state = new_state;
+        }
+        return result;
+    }
+    
 public:
     constexpr static char gap_label = '-';
     
     constexpr int band_size() const noexcept { return band_size_; }
     
-    template <typename OpenPenalty,
-              typename ExtendPenalty>
+    template <typename OpenPenaltyArrayOrConstant,
+              typename ExtendPenaltyArrayOrConstant>
     int
     align(const char* truth,
           const char* target,
           const std::int8_t* qualities,
           const int truth_len,
           const int target_len,
-          const OpenPenalty gap_open,
-          const ExtendPenalty gap_extend,
+          const OpenPenaltyArrayOrConstant gap_open,
+          const ExtendPenaltyArrayOrConstant gap_extend,
           short nuc_prior) const noexcept
     {
         constexpr static NullType null {};
         return align_helper(truth, target, qualities, truth_len, target_len, gap_open, gap_extend, null, null, nuc_prior, null, null, null);
     }
     
-    template <typename OpenPenalty,
-              typename ExtendPenalty>
+    template <typename OpenPenaltyArrayOrConstant,
+              typename ExtendPenaltyArrayOrConstant>
     int
     align(const char* truth,
           const char* target,
@@ -344,24 +451,24 @@ public:
           const int target_len,
           const char* snv_mask,
           const std::int8_t* snv_prior,
-          const OpenPenalty gap_open,
-          const ExtendPenalty gap_extend,
+          const OpenPenaltyArrayOrConstant gap_open,
+          const ExtendPenaltyArrayOrConstant gap_extend,
           short nuc_prior) const noexcept
     {
         constexpr static NullType null {};
         return align_helper(truth, target, qualities, truth_len, target_len, gap_open, gap_extend, snv_mask, snv_prior, nuc_prior, null, null, null);
     }
     
-    template <typename OpenPenalty,
-              typename ExtendPenalty>
+    template <typename OpenPenaltyArrayOrConstant,
+              typename ExtendPenaltyArrayOrConstant>
     int
     align(const char* truth,
           const char* target,
           const std::int8_t* qualities,
           const int truth_len,
           const int target_len,
-          const OpenPenalty gap_open,
-          const ExtendPenalty gap_extend,
+          const OpenPenaltyArrayOrConstant gap_open,
+          const ExtendPenaltyArrayOrConstant gap_extend,
           short nuc_prior,
           int& first_pos,
           char* align1,
@@ -371,8 +478,8 @@ public:
         return align_helper(truth, target, qualities, truth_len, target_len, gap_open, gap_extend, null, null, nuc_prior, first_pos, align1, align2);
     }
     
-    template <typename OpenPenalty,
-              typename ExtendPenalty>
+    template <typename OpenPenaltyArrayOrConstant,
+              typename ExtendPenaltyArrayOrConstant>
     int
     align(const char* truth,
           const char* target,
@@ -381,8 +488,8 @@ public:
           const int target_len,
           const char* snv_mask,
           const std::int8_t* snv_prior,
-          const OpenPenalty gap_open,
-          const ExtendPenalty gap_extend,
+          const OpenPenaltyArrayOrConstant gap_open,
+          const ExtendPenaltyArrayOrConstant gap_extend,
           short nuc_prior,
           int& first_pos,
           char* align1,
@@ -391,6 +498,27 @@ public:
         return align_helper(truth, target, qualities, truth_len, target_len, gap_open, gap_extend, snv_mask, snv_prior, nuc_prior, first_pos, align1, align2);
     }
     
+    template <typename OpenPenaltyArrayOrConstant,
+              typename ExtendPenaltyArrayOrConstant>
+    int
+    calculate_flank_score(const int truth_len,
+                          const int lhs_flank_len,
+                          const int rhs_flank_len,
+                          const std::int8_t* quals,
+                          const OpenPenaltyArrayOrConstant gap_open,
+                          const ExtendPenaltyArrayOrConstant gap_extend,
+                          const short nuc_prior,
+                          const int first_pos,
+                          const char* aln1,
+                          const char* aln2,
+                          int& target_mask_size) const noexcept
+    {
+        constexpr static NullType null {};
+        return calculate_flank_score_helper(truth_len, lhs_flank_len, rhs_flank_len, null, quals, gap_open, gap_extend, null, null, nuc_prior, first_pos, aln1, aln2, target_mask_size);
+    }
+    
+    template <typename OpenPenaltyArrayOrConstant,
+              typename ExtendPenaltyArrayOrConstant>
     int
     calculate_flank_score(int truth_len,
                           int lhs_flank_len,
@@ -399,236 +527,15 @@ public:
                           const std::int8_t* quals,
                           const char* snv_mask,
                           const std::int8_t* snv_prior,
-                          const std::int8_t* gap_open,
-                          const std::int8_t* gap_extend,
+                          const OpenPenaltyArrayOrConstant gap_open,
+                          const ExtendPenaltyArrayOrConstant gap_extend,
                           short nuc_prior,
                           int first_pos,
                           const char* aln1,
                           const char* aln2,
                           int& target_mask_size) const noexcept
     {
-        static constexpr char match {'M'}, insertion {'I'}, deletion {'D'};
-        auto prev_state = match;
-        int x {first_pos}; // index into truth
-        int y {0};         // index into target
-        int i {0};         // index into alignment
-        int result {0};    // alignment score (within flank)
-        const auto rhs_flank_begin = truth_len - rhs_flank_len;
-        target_mask_size = 0;
-        while (aln1[i]) {
-            auto new_state = match;
-            if (aln1[i] == gap_label) {
-                new_state = insertion;
-            } else if (aln2[i] == gap_label) { // can't be both '-'
-                new_state = deletion;
-            }
-            switch (new_state) {
-                case match:
-                {
-                    if (x < lhs_flank_len || x >= rhs_flank_begin) {
-                        if (aln1[i] != aln2[i]) {
-                            if (aln1[i] != 'N') {
-                                result += (snv_mask[x] == target[y]) ? std::min(quals[y], snv_prior[x]) : quals[y];
-                            } else {
-                                result += n_score_ >> trace_bits_;
-                            }
-                        }
-                        ++target_mask_size;
-                    }
-                    ++x;
-                    ++y;
-                    break;
-                }
-                case insertion:
-                {
-                    if (x < lhs_flank_len || x >= rhs_flank_begin) {
-                        if (prev_state == insertion) {
-                            result += gap_extend[x - 1] + nuc_prior;
-                        } else {
-                            // gap open score is charged for insertions just after the corresponding base, hence the -1
-                            result += gap_open[x - 1] + nuc_prior;
-                        }
-                        ++target_mask_size;
-                    }
-                    ++y;
-                    break;
-                }
-                case deletion:
-                {
-                    if (x < lhs_flank_len || x >= rhs_flank_begin) {
-                        if (prev_state == deletion) {
-                            result += gap_extend[x];
-                        } else {
-                            result += gap_open[x];
-                        }
-                    }
-                    ++x;
-                    break;
-                }
-            }
-            ++i;
-            prev_state = new_state;
-        }
-        return result;
-    }
-    
-    int
-    calculate_flank_score(const int truth_len,
-                          const int lhs_flank_len,
-                          const int rhs_flank_len,
-                          const std::int8_t* quals,
-                          const std::int8_t* gap_open,
-                          const short gap_extend,
-                          const short nuc_prior,
-                          const int first_pos,
-                          const char* aln1,
-                          const char* aln2,
-                          int& target_mask_size) const noexcept
-    {
-        static constexpr char match {'M'}, insertion {'I'}, deletion {'D'};
-        auto prev_state = match;
-        int x {first_pos}; // index into haplotype
-        int y {0};         // index into read
-        int i {0};         // index into alignment
-        int result {0};    // alignment score (within flank)
-        target_mask_size = 0;
-        while (aln1[i]) {
-            auto new_state = match;
-            if (aln1[i] == gap_label) {
-                new_state = insertion;
-            } else if (aln2[i] == gap_label) { // can't be both '-'
-                new_state = deletion;
-            }
-            switch (new_state) {
-                case match:
-                {
-                    if (x < lhs_flank_len || x >= (truth_len - rhs_flank_len)) {
-                        if (aln1[i] != aln2[i]) {
-                            if (aln1[i] != 'N') {
-                                result += quals[y];
-                            } else {
-                                result += n_score_ >> trace_bits_;
-                            }
-                        }
-                        ++target_mask_size;
-                    }
-                    ++x;
-                    ++y;
-                    break;
-                }
-                case insertion:
-                {
-                    if (x < lhs_flank_len || x >= (truth_len - rhs_flank_len)) {
-                        if (prev_state == insertion) {
-                            result += gap_extend + nuc_prior;
-                        } else {
-                            // gap open score is charged for insertions just after the corresponding base, hence the -1
-                            result += gap_open[x - 1] + nuc_prior;
-                        }
-                        ++target_mask_size;
-                    }
-                    ++y;
-                    break;
-                }
-                case deletion:
-                {
-                    if (x < lhs_flank_len || x >= (truth_len - rhs_flank_len)) {
-                        if (prev_state == deletion) {
-                            result += gap_extend;
-                        } else {
-                            result += gap_open[x];
-                        }
-                    }
-                    ++x;
-                    break;
-                }
-            }
-            
-            ++i;
-            prev_state = new_state;
-        }
-        return result;
-    }
-    
-    int
-    calculate_flank_score(const int truth_len,
-                          const int lhs_flank_len,
-                          const int rhs_flank_len,
-                          const char* target,
-                          const std::int8_t* quals,
-                          const char* snv_mask,
-                          const std::int8_t* snv_prior,
-                          const std::int8_t* gap_open,
-                          const short gap_extend,
-                          const short nuc_prior,
-                          const int first_pos,
-                          const char* aln1,
-                          const char* aln2,
-                          int& target_mask_size) const noexcept
-    {
-        static constexpr char match {'M'}, insertion {'I'}, deletion {'D'};
-        auto prev_state = match;
-        int x {first_pos}; // index into truth
-        int y {0};         // index into target
-        int i {0};         // index into alignment
-        int result {0};    // alignment score (within flank)
-        const auto rhs_flank_begin = truth_len - rhs_flank_len;
-        target_mask_size = 0;
-        while (aln1[i]) {
-            auto new_state = match;
-            if (aln1[i] == gap_label) {
-                new_state = insertion;
-            } else if (aln2[i] == gap_label) { // can't be both '-'
-                new_state = deletion;
-            }
-            switch (new_state) {
-                case match:
-                {
-                    if (x < lhs_flank_len || x >= rhs_flank_begin) {
-                        if (aln1[i] != aln2[i]) {
-                            if (aln1[i] != 'N') {
-                                result += (snv_mask[x] == target[y]) ? std::min(quals[y], snv_prior[x]) : quals[y];
-                            } else {
-                                result += n_score_ >> trace_bits_;
-                            }
-                        }
-                        ++target_mask_size;
-                    }
-                    ++x;
-                    ++y;
-                    break;
-                }
-                case insertion:
-                {
-                    if (x < lhs_flank_len || x >= rhs_flank_begin) {
-                        if (prev_state == insertion) {
-                            result += gap_extend + nuc_prior;
-                        } else {
-                            // gap open score is charged for insertions just after the corresponding base, hence the -1
-                            result += gap_open[x - 1] + nuc_prior;
-                        }
-                        ++target_mask_size;
-                    }
-                    ++y;
-                    break;
-                }
-                case deletion:
-                {
-                    if (x < lhs_flank_len || x >= rhs_flank_begin) {
-                        if (prev_state == deletion) {
-                            result += gap_extend;
-                        } else {
-                            result += gap_open[x];
-                        }
-                    }
-                    ++x;
-                    break;
-                }
-            }
-            ++i;
-            prev_state = new_state;
-        }
-        return result;
+        return calculate_flank_score_helper(truth_len, lhs_flank_len, rhs_flank_len, target, quals, gap_open, gap_extend, snv_mask, snv_prior, nuc_prior, first_pos, aln1, aln2, target_mask_size);
     }
 };
 
