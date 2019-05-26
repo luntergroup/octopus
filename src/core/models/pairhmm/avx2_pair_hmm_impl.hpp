@@ -43,7 +43,7 @@ auto _right_shift_words<16>(const __m256i& a) noexcept
 
 } // namespace detail
 
-class InstructionSetPolicyAVX2
+class AVX2PairHMMInstructionSet
 {
 protected:
     using VectorType = __m256i;
@@ -151,7 +151,7 @@ protected:
     }
 };
 
-using AVX2PairHMM = PairHMM<InstructionSetPolicyAVX2>;
+using AVX2PairHMM = PairHMM<AVX2PairHMMInstructionSet>;
 
 } // namespace simd
 } // namespace hmm

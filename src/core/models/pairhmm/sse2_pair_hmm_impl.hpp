@@ -9,147 +9,66 @@
 #endif
 
 #include <cstdint>
-#include <emmintrin.h>
 #include <array>
 #include <tuple>
+#include <emmintrin.h>
 
+#include "utils/array_tricks.hpp"
 #include "simd_pair_hmm.hpp"
 
 namespace octopus { namespace hmm { namespace simd {
 
-class InstructionSetPolicySSE2
+template <unsigned MinBandSize>
+class SSE2PairHMMInstructionSet
 {
 protected:
-    using VectorType  = __m128i;
-    using ScoreType   = short;
-
-    constexpr static int word_size  = sizeof(ScoreType);
-    constexpr static int band_size_ = sizeof(VectorType) / word_size;
+    using ScoreType = short;
     
-    VectorType vectorise(ScoreType x) const noexcept
-    {
-        return _mm_set1_epi16(x);
-    }
-    template <typename T>
-    VectorType vectorise(const T* values) const noexcept
-    {
-        return _mm_set_epi16(values[7], values[6], values[5], values[4],
-                             values[3], values[2], values[1], values[0]);
-    }
-    VectorType vectorise_zero_set_last(ScoreType x) const noexcept
-    {
-        return _mm_set_epi16(0,0,0,0,0,0,0,x);
-    }
-    template <int index>
-    auto _extract(const VectorType a) const noexcept
-    {
-        return _mm_extract_epi16(a, index);
-    }
-    auto _extract(const VectorType a, const int index) const noexcept
-    {
-        switch (index) {
-            case 0:  return _extract<0>(a);
-            case 1:  return _extract<1>(a);
-            case 2:  return _extract<2>(a);
-            case 3:  return _extract<3>(a);
-            case 4:  return _extract<4>(a);
-            case 5:  return _extract<5>(a);
-            case 6:  return _extract<6>(a);
-            case 7:  return _extract<7>(a);
-            default: assert(false); return 0;
-        }
-    }
-    VectorType _insert_bottom(const VectorType& a, const ScoreType i) const noexcept
-    {
-        return _mm_insert_epi16(a, i, 0);
-    }
-    VectorType _insert_top(const VectorType& a, const ScoreType i) const noexcept
-    {
-        return _mm_insert_epi16(a, i, band_size_ - 1);
-    }
-    VectorType _add(const VectorType& lhs, const VectorType& rhs) const noexcept
-    {
-        return _mm_add_epi16(lhs, rhs);
-    }
-    VectorType _and(const VectorType& lhs, const VectorType& rhs) const noexcept
-    {
-        return _mm_and_si128(lhs, rhs);
-    }
-    VectorType _andnot(const VectorType& lhs, const VectorType& rhs) const noexcept
-    {
-        return _mm_andnot_si128(lhs, rhs);
-    }
-    VectorType _or(const VectorType& lhs, const VectorType& rhs) const noexcept
-    {
-        return _mm_or_si128(lhs, rhs);
-    }
-    VectorType _cmpeq(const VectorType& lhs, const VectorType& rhs) const noexcept
-    {
-        return _mm_cmpeq_epi16(lhs, rhs);
-    }
-    VectorType _left_shift_word(const VectorType& a) const noexcept
-    {
-        return _mm_slli_si128(a, word_size);
-    }
-    VectorType _right_shift_word(const VectorType& a) const noexcept
-    {
-        return _mm_srli_si128(a, word_size);
-    }
-    template <int n>
-    VectorType _right_shift_bits(const VectorType& a) const noexcept
-    {
-        return _mm_srli_epi16(a, n);
-    }
-    template <int n>
-    VectorType _left_shift_bits(const VectorType& a) const noexcept
-    {
-        return _mm_slli_epi16(a, n);
-    }
-    VectorType _min(const VectorType& lhs, const VectorType& rhs) const noexcept
-    {
-        return _mm_min_epi16(lhs, rhs);
-    }
-    VectorType _max(const VectorType& lhs, const VectorType& rhs) const noexcept
-    {
-        return _mm_max_epi16(lhs, rhs);
-    }
-};
+    constexpr static int word_size = sizeof(ScoreType);
 
-using SSE2PairHMM = PairHMM<InstructionSetPolicySSE2>;
-
-class InstructionSetPolicySSE2x2
-{
+private:
     using BlockType = __m128i;
-protected:
-    using VectorType = std::array<BlockType, 2>;
-    using ScoreType  = short;
     
-    constexpr static int word_size  = sizeof(ScoreType);
+    constexpr static auto block_bytes_      = sizeof(BlockType);
+    constexpr static auto block_words_      = block_bytes_ / word_size;
+    constexpr static std::size_t num_blocks = MinBandSize / block_words_;
+    
+protected:
+    using VectorType = std::array<BlockType, num_blocks>;
+    
     constexpr static int band_size_ = sizeof(VectorType) / word_size;
 
 private:
-    constexpr static auto block_bytes_ = sizeof(BlockType);
-    constexpr static auto block_words_ = block_bytes_ / word_size;
-    constexpr static auto num_blocks_  = std::tuple_size<VectorType>::value;
-
+    constexpr static auto num_blocks_ = std::tuple_size<VectorType>::value;
+    
+    template <typename T, std::size_t...Is>
+    VectorType vectorise_helper(const T* values, std::index_sequence<Is...>) const noexcept
+    {
+        return {{(static_cast<void>(Is),
+            _mm_set_epi16(values[block_words_ * Is + 7],
+                          values[block_words_ * Is + 6],
+                          values[block_words_ * Is + 5],
+                          values[block_words_ * Is + 4],
+                          values[block_words_ * Is + 3],
+                          values[block_words_ * Is + 2],
+                          values[block_words_ * Is + 1],
+                          values[block_words_ * Is + 0]
+                          ))...}};
+    }
+    
 protected:
     VectorType vectorise(ScoreType x) const noexcept
     {
-        return {_mm_set1_epi16(x),
-                _mm_set1_epi16(x)};
+        return make_array<num_blocks>(_mm_set1_epi16(x));
     }
     template <typename T>
     VectorType vectorise(const T* values) const noexcept
     {
-        return {_mm_set_epi16(values[7], values[6], values[5], values[4],
-                              values[3], values[2], values[1], values[0]),
-                _mm_set_epi16(values[15], values[14], values[13], values[12],
-                              values[11], values[10], values[9], values[8])};
+        return vectorise_helper(values, std::make_index_sequence<num_blocks>());
     }
     VectorType vectorise_zero_set_last(ScoreType x) const noexcept
     {
-        return {_mm_set_epi16(0,0,0,0,0,0,0,x),
-                _mm_set_epi16(0,0,0,0,0,0,0,0)};
+        return make_array<num_blocks>(_mm_set_epi16(0,0,0,0,0,0,0,x), _mm_set_epi16(0,0,0,0,0,0,0,0));
     }
     template <int index>
     auto _extract(const VectorType a) const noexcept
@@ -160,27 +79,21 @@ protected:
         static_assert(block_byte_index < block_words_, "block byte index out range");
         return _mm_extract_epi16(std::get<block_index>(a), block_byte_index);
     }
-    auto _extract(const VectorType a, const int index) const noexcept
+    template <std::size_t... Is>
+    auto _extract_helper(const VectorType& a, const int index, std::index_sequence<Is...>) const noexcept
     {
-        switch (index) {
-            case 0:  return _extract<0>(a);
-            case 1:  return _extract<1>(a);
-            case 2:  return _extract<2>(a);
-            case 3:  return _extract<3>(a);
-            case 4:  return _extract<4>(a);
-            case 5:  return _extract<5>(a);
-            case 6:  return _extract<6>(a);
-            case 7:  return _extract<7>(a);
-            case 8:  return _extract<8>(a);
-            case 9:  return _extract<9>(a);
-            case 10:  return _extract<10>(a);
-            case 11:  return _extract<11>(a);
-            case 12:  return _extract<12>(a);
-            case 13:  return _extract<13>(a);
-            case 14:  return _extract<14>(a);
-            case 15:  return _extract<15>(a);
-            default: return _extract<15>(a);
+        if (index < band_size_ && index >= 0) {
+            decltype(_extract<0>(a)) r;
+            int unused[] = {(index == Is ? (r = _extract<Is>(a), 0) : 0)...};
+            (void) unused;
+            return r;
+        } else {
+            return _extract<band_size_ - 1>(a);
         }
+    }
+    auto _extract(const VectorType& a, const int index) const noexcept
+    {
+        return _extract_helper(a, index, std::make_index_sequence<band_size_> {});
     }
     VectorType _insert_bottom(VectorType a, const ScoreType i) const noexcept
     {
@@ -194,68 +107,64 @@ protected:
     }
     VectorType _add(const VectorType& lhs, const VectorType& rhs) const noexcept
     {
-        return {_mm_add_epi16(std::get<0>(lhs), std::get<0>(rhs)),
-                _mm_add_epi16(std::get<1>(lhs), std::get<1>(rhs))};
+        return transform([] (const auto& lhs, const auto& rhs) noexcept { return _mm_add_epi16(lhs, rhs); }, lhs, rhs);
     }
     VectorType _and(const VectorType& lhs, const VectorType& rhs) const noexcept
     {
-        return {_mm_and_si128(std::get<0>(lhs), std::get<0>(rhs)),
-                _mm_and_si128(std::get<1>(lhs), std::get<1>(rhs))};
+        return transform([] (const auto& lhs, const auto& rhs) noexcept { return _mm_and_si128(lhs, rhs); }, lhs, rhs);
     }
     VectorType _andnot(const VectorType& lhs, const VectorType& rhs) const noexcept
     {
-        return {_mm_andnot_si128(std::get<0>(lhs), std::get<0>(rhs)),
-                _mm_andnot_si128(std::get<1>(lhs), std::get<1>(rhs))};
+        return transform([] (const auto& lhs, const auto& rhs) noexcept { return _mm_andnot_si128(lhs, rhs); }, lhs, rhs);
     }
     VectorType _or(const VectorType& lhs, const VectorType& rhs) const noexcept
     {
-        return {_mm_or_si128(std::get<0>(lhs), std::get<0>(rhs)),
-                _mm_or_si128(std::get<1>(lhs), std::get<1>(rhs))};
+        return transform([] (const auto& lhs, const auto& rhs) noexcept { return _mm_or_si128(lhs, rhs); }, lhs, rhs);
     }
     VectorType _cmpeq(const VectorType& lhs, const VectorType& rhs) const noexcept
     {
-        return {_mm_cmpeq_epi16(std::get<0>(lhs), std::get<0>(rhs)),
-                _mm_cmpeq_epi16(std::get<1>(lhs), std::get<1>(rhs))};
+        return transform([] (const auto& lhs, const auto& rhs) noexcept { return _mm_cmpeq_epi16(lhs, rhs); }, lhs, rhs);
     }
     VectorType _left_shift_word(VectorType a) const noexcept
     {
-        std::get<1>(a) = _mm_or_si128(_mm_slli_si128(std::get<1>(a), word_size),
-                                      _mm_srli_si128(std::get<0>(a), block_bytes_ - word_size));
+        adjacent_apply_reverse([] (const auto& lhs, const auto& rhs) noexcept {
+            return _mm_or_si128(_mm_slli_si128(rhs, word_size), _mm_srli_si128(lhs, block_bytes_ - word_size));
+        }, a, a);
         std::get<0>(a) = _mm_slli_si128(std::get<0>(a), word_size);
         return a;
     }
     VectorType _right_shift_word(VectorType a) const noexcept
     {
-        std::get<0>(a) = _mm_or_si128(_mm_srli_si128(std::get<0>(a), word_size),
-                                      _mm_slli_si128(std::get<1>(a), block_bytes_ - word_size));
-        std::get<1>(a) = _mm_srli_si128(std::get<1>(a), word_size);
+        adjacent_apply([] (const auto& lhs, const auto& rhs) noexcept {
+            return _mm_or_si128(_mm_srli_si128(lhs, word_size), _mm_slli_si128(rhs, block_bytes_ - word_size));
+        }, a, a);
+        std::get<num_blocks - 1>(a) = _mm_srli_si128(std::get<num_blocks - 1>(a), word_size);
         return a;
     }
     template <int n>
     VectorType _left_shift_bits(const VectorType& a) const noexcept
     {
-        return {_mm_slli_epi16(std::get<0>(a), n),
-                _mm_slli_epi16(std::get<1>(a), n)};
+        return transform([] (const auto& x) noexcept { return _mm_slli_epi16(x, n); }, a);
     }
     template <int n>
     VectorType _right_shift_bits(const VectorType& a) const noexcept
     {
-        return {_mm_srli_epi16(std::get<0>(a), n),
-                _mm_srli_epi16(std::get<1>(a), n)};
+        return transform([] (const auto& x) noexcept { return _mm_srli_epi16(x, n); }, a);
     }
     VectorType _min(const VectorType& lhs, const VectorType& rhs) const noexcept
     {
-        return {_mm_min_epi16(std::get<0>(lhs), std::get<0>(rhs)),
-                _mm_min_epi16(std::get<1>(lhs), std::get<1>(rhs))};
+        return transform([] (const auto& lhs, const auto& rhs) noexcept { return _mm_min_epi16(lhs, rhs); }, lhs, rhs);
     }
     VectorType _max(const VectorType& lhs, const VectorType& rhs) const noexcept
     {
-        return {_mm_max_epi16(std::get<0>(lhs), std::get<0>(rhs)),
-                _mm_max_epi16(std::get<1>(lhs), std::get<1>(rhs))};
+        return transform([] (const auto& lhs, const auto& rhs) noexcept { return _mm_max_epi16(lhs, rhs); }, lhs, rhs);
     }
 };
 
-using SSE2x2PairHMM = PairHMM<InstructionSetPolicySSE2x2>;
+template <unsigned MinBandSize>
+using SSE2PairHMM = PairHMM<SSE2PairHMMInstructionSet<MinBandSize>>;
+
+using FastestSSE2PairHMM = SSE2PairHMM<8>;
 
 } // namespace simd
 } // namespace hmm

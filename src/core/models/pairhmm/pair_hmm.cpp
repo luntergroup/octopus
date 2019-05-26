@@ -22,7 +22,7 @@ namespace octopus { namespace hmm {
 
 using octopus::maths::constants::ln10Div10;
 
-const static simd::SSE2PairHMM hmm;
+const static simd::FastestSSE2PairHMM hmm;
 
 unsigned min_flank_pad() noexcept
 {

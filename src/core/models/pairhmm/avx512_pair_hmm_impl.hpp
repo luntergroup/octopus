@@ -33,7 +33,7 @@ auto _right_shift_words(const __m512i& a) noexcept
 
 } // namespace detail
 
-class InstructionSetPolicyAVX512
+class AVX512PairHMMInstructionSet
 {
 protected:
     using VectorType = __m512i;
@@ -161,7 +161,7 @@ protected:
     }
 };
 
-using AVX512PairHMM = PairHMM<InstructionSetPolicyAVX512>;
+using AVX512PairHMM = PairHMM<AVX512PairHMMInstructionSet>;
 
 } // namespace simd
 } // namespace hmm
