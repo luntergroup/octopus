@@ -14,8 +14,6 @@
 #include <emmintrin.h>
 
 #include "utils/array_tricks.hpp"
-#include "simd_pair_hmm.hpp"
-#include "initialization.hpp"
 
 namespace octopus { namespace hmm { namespace simd {
 
@@ -23,29 +21,9 @@ template <unsigned MinBandSize>
 class SSE2PairHMMInstructionSet
 {
 protected:
-    using ScoreType = short;
+    using ScoreType   = short;
     
     constexpr static int word_size = sizeof(ScoreType);
-
-    //using RollingInit = class InsertRollingInit<SSE2PairHMMInstructionSet<MinBandSize> >;
-    using RollingInit = class ShiftingRollingInit<SSE2PairHMMInstructionSet<MinBandSize> >;
-
-    /*
-    static auto _insert(const VectorType a, const ScoreType b, const int index) noexcept
-    {
-        switch (index) {
-        case 0:  return _mm_insert_epi16(a, b, 0);
-        case 1:  return _mm_insert_epi16(a, b, 1);
-        case 2:  return _mm_insert_epi16(a, b, 2);
-        case 3:  return _mm_insert_epi16(a, b, 3);
-        case 4:  return _mm_insert_epi16(a, b, 4);
-        case 5:  return _mm_insert_epi16(a, b, 5);
-        case 6:  return _mm_insert_epi16(a, b, 6);
-        case 7:  return _mm_insert_epi16(a, b, 7);
-        default: return a;
-        }
-    }
-    */
 
 private:
     using BlockType = __m128i;
@@ -57,14 +35,13 @@ private:
 protected:
     using VectorType = std::array<BlockType, num_blocks>;
     
-    constexpr static int word_size  = sizeof(ScoreType);
     constexpr static int band_size_ = sizeof(VectorType) / word_size;
 
 private:
     constexpr static auto num_blocks_ = std::tuple_size<VectorType>::value;
     
     template <typename T, std::size_t...Is>
-    VectorType vectorise_helper(const T* values, std::index_sequence<Is...>) const noexcept
+    static VectorType vectorise_helper(const T* values, std::index_sequence<Is...>) noexcept
     {
         return {{(static_cast<void>(Is),
             _mm_set_epi16(values[block_words_ * Is + 7],
@@ -101,8 +78,9 @@ protected:
         static_assert(block_byte_index < block_words_, "block byte index out range");
         return _mm_extract_epi16(std::get<block_index>(a), block_byte_index);
     }
+private:
     template <std::size_t... Is>
-    auto _extract_helper(const VectorType& a, const int index, std::index_sequence<Is...>) const noexcept
+    static auto _extract_helper(const VectorType& a, const int index, std::index_sequence<Is...>) noexcept
     {
         if (index < band_size_ && index >= 0) {
             decltype(_extract<0>(a)) r;
@@ -113,19 +91,47 @@ protected:
             return _extract<band_size_ - 1>(a);
         }
     }
-    auto _extract(const VectorType& a, const int index) const noexcept
+protected:
+    static auto _extract(const VectorType& a, const int index) noexcept
     {
         return _extract_helper(a, index, std::make_index_sequence<band_size_> {});
     }
-    VectorType _insert_bottom(VectorType a, const ScoreType i) const noexcept
+    template <int index, typename T>
+    static VectorType _insert(VectorType a, T value) noexcept
     {
-        std::get<0>(a) = _mm_insert_epi16(std::get<0>(a), i, 0);
+        constexpr static auto block_index = index / block_words_;
+        static_assert(block_index < num_blocks_, "block index out range");
+        constexpr static auto block_byte_index = index % block_words_;
+        static_assert(block_byte_index < block_words_, "block byte index out range");
+        std::get<block_index>(a) = _mm_insert_epi16(std::get<block_index>(a), value, block_byte_index);
         return a;
     }
-    static VectorType _insert_top(VectorType a, const ScoreType i) noexcept
+private:
+    template <typename T, std::size_t... Is>
+    static auto _insert_helper(const VectorType& a, const T& value, const int index, std::index_sequence<Is...>) noexcept
     {
-        std::get<num_blocks_ - 1>(a) = _mm_insert_epi16(std::get<num_blocks_ - 1>(a), i, block_words_ - 1);
-        return a;
+        if (index < band_size_ && index >= 0) {
+            decltype(_insert<0>(a, value)) r;
+            int unused[] = {(index == Is ? (r = _insert<Is>(a, value), 0) : 0)...};
+            (void) unused;
+            return r;
+        } else {
+            return _insert<band_size_ - 1>(a, value);
+        }
+    }
+protected:
+    template <typename T>
+    VectorType _insert(const VectorType& a, const T& value, const int index) const noexcept
+    {
+        return _insert_helper(a, value, index, std::make_index_sequence<band_size_> {});
+    }
+    VectorType _insert_bottom(VectorType a, const ScoreType value) const noexcept
+    {
+        return _insert<0>(a, value);
+    }
+    static VectorType _insert_top(VectorType a, const ScoreType value) noexcept
+    {
+        return _insert<num_blocks_ * block_words_ - 1>(a, value);
     }
     static VectorType _add(const VectorType& lhs, const VectorType& rhs) noexcept
     {
@@ -182,11 +188,6 @@ protected:
         return transform([] (const auto& lhs, const auto& rhs) noexcept { return _mm_max_epi16(lhs, rhs); }, lhs, rhs);
     }
 };
-
-template <unsigned MinBandSize>
-using SSE2PairHMM = PairHMM<SSE2PairHMMInstructionSet<MinBandSize>>;
-
-using FastestSSE2PairHMM = SSE2PairHMM<8>;
 
 } // namespace simd
 } // namespace hmm

@@ -16,9 +16,21 @@
 #endif
 #ifdef __AVX512__
     #include "avx512_pair_hmm_impl.hpp"
-#endif
+#endif /* __AVX2__ */
 
 namespace octopus { namespace hmm { namespace simd {
+
+template <unsigned MinBandSize,
+          typename RollingInitializer = ShiftingRollingInitializer<SSE2PairHMMInstructionSet<MinBandSize>>>
+using SSE2PairHMM = PairHMM<SSE2PairHMMInstructionSet<MinBandSize>, RollingInitializer>;
+
+using FastestSSE2PairHMM = SSE2PairHMM<8>;
+
+#ifdef __AVX512__
+
+using AVX2PairHMM = PairHMM<AVX2PairHMMInstructionSet>;
+
+#endif /* __AVX2__ */
 
 namespace detail {
 

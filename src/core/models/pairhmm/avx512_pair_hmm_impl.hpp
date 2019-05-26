@@ -11,8 +11,6 @@
 #include <cstdint>
 #include <immintrin.h>
 
-#include "simd_pair_hmm.hpp"
-
 namespace octopus { namespace hmm { namespace simd {
 
 namespace detail {
@@ -36,8 +34,8 @@ auto _right_shift_words(const __m512i& a) noexcept
 class AVX512PairHMMInstructionSet
 {
 protected:
-    using VectorType = __m512i;
-    using ScoreType  = short;
+    using VectorType  = __m512i;
+    using ScoreType   = short;
     
     constexpr static int word_size  = sizeof(ScoreType);
     constexpr static int band_size_ = sizeof(VectorType) / word_size;
@@ -160,8 +158,6 @@ protected:
         return _mm512_max_epi16(lhs, rhs);
     }
 };
-
-using AVX512PairHMM = PairHMM<AVX512PairHMMInstructionSet>;
 
 } // namespace simd
 } // namespace hmm

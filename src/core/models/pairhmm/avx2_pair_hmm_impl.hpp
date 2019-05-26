@@ -11,8 +11,6 @@
 #include <cstdint>
 #include <immintrin.h>
 
-#include "simd_pair_hmm.hpp"
-
 namespace octopus { namespace hmm { namespace simd {
 
 namespace detail {
@@ -46,8 +44,8 @@ auto _right_shift_words<16>(const __m256i& a) noexcept
 class AVX2PairHMMInstructionSet
 {
 protected:
-    using VectorType = __m256i;
-    using ScoreType  = short;
+    using VectorType  = __m256i;
+    using ScoreType   = short;
     
     constexpr static int word_size  = sizeof(ScoreType);
     constexpr static int band_size_ = sizeof(VectorType) / word_size;
@@ -93,6 +91,34 @@ protected:
             case 14:  return _extract<14>(a);
             case 15:  return _extract<15>(a);
             default: return _extract<15>(a);
+        }
+    }
+    template <int index, typename T>
+    static VectorType _insert(const VectorType& a, T i) noexcept
+    {
+        return _mm256_insert_epi16(a, i, index);
+    }
+    template <typename T>
+    static VectorType _insert(const VectorType& a, const T i, const int n) noexcept
+    {
+        switch (n) {
+            case 0:  return _insert<0>(a, i);
+            case 1:  return _insert<1>(a, i);
+            case 2:  return _insert<2>(a, i);
+            case 3:  return _insert<3>(a, i);
+            case 4:  return _insert<4>(a, i);
+            case 5:  return _insert<5>(a, i);
+            case 6:  return _insert<6>(a, i);
+            case 7:  return _insert<7>(a, i);
+            case 8:  return _insert<8>(a, i);
+            case 9:  return _insert<9>(a, i);
+            case 10:  return _insert<10>(a, i);
+            case 11:  return _insert<11>(a, i);
+            case 12:  return _insert<12>(a, i);
+            case 13:  return _insert<13>(a, i);
+            case 14:  return _insert<14>(a, i);
+            case 15:  return _insert<15>(a, i);
+            default: return _insert<15>(a, i);
         }
     }
     VectorType _insert_bottom(const VectorType& a, const ScoreType i) const noexcept
@@ -150,8 +176,6 @@ protected:
         return _mm256_max_epi16(lhs, rhs);
     }
 };
-
-using AVX2PairHMM = PairHMM<AVX2PairHMMInstructionSet>;
 
 } // namespace simd
 } // namespace hmm

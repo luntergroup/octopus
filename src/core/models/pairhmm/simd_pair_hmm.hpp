@@ -17,38 +17,40 @@
 
 #include <boost/container/small_vector.hpp>
 
+#include "rolling_initializer.hpp"
+
 namespace octopus { namespace hmm { namespace simd {
 
-template <typename InstructionSetPolicy>
-class PairHMM : private InstructionSetPolicy
+template <typename InstructionSet,
+          typename RollingInitializer = ShiftingRollingInitializer<InstructionSet>>
+class PairHMM : private InstructionSet
 {
     // Types
-    using VectorType  = typename InstructionSetPolicy::VectorType;
-    using ScoreType   = typename InstructionSetPolicy::ScoreType;
-    using RollingInit = typename InstructionSetPolicy::RollingInit;
+    using VectorType  = typename InstructionSet::VectorType;
+    using ScoreType   = typename InstructionSet::ScoreType;
     
     using SmallVector = boost::container::small_vector<VectorType, 10000>;
     
     struct NullType {};
     
     // Methods
-    using InstructionSetPolicy::vectorise;
-    using InstructionSetPolicy::vectorise_zero_set_last;
-    using InstructionSetPolicy::_extract;
-    using InstructionSetPolicy::_insert_bottom;
-    using InstructionSetPolicy::_insert_top;
-    using InstructionSetPolicy::_add;
-    using InstructionSetPolicy::_and;
-    using InstructionSetPolicy::_andnot;
-    using InstructionSetPolicy::_or;
-    using InstructionSetPolicy::_cmpeq;
-    using InstructionSetPolicy::_min;
-    using InstructionSetPolicy::_max;
-    using InstructionSetPolicy::_left_shift_word;
-    using InstructionSetPolicy::_right_shift_word;
+    using InstructionSet::vectorise;
+    using InstructionSet::vectorise_zero_set_last;
+    using InstructionSet::_extract;
+    using InstructionSet::_insert_bottom;
+    using InstructionSet::_insert_top;
+    using InstructionSet::_add;
+    using InstructionSet::_and;
+    using InstructionSet::_andnot;
+    using InstructionSet::_or;
+    using InstructionSet::_cmpeq;
+    using InstructionSet::_min;
+    using InstructionSet::_max;
+    using InstructionSet::_left_shift_word;
+    using InstructionSet::_right_shift_word;
     
     // Constants
-    constexpr static int band_size_ = InstructionSetPolicy::band_size_;
+    constexpr static int band_size_ = InstructionSet::band_size_;
     constexpr static ScoreType infinity_ = 0x7800;
     constexpr static int trace_bits_ = 2;
     constexpr static ScoreType n_score_ = 2 << trace_bits_;
@@ -82,11 +84,11 @@ class PairHMM : private InstructionSetPolicy
     constexpr auto vectorise_left_shift_bits(NullType) const noexcept { return NullType {}; }
     template <int idx>
     auto _right_shift_bits(const VectorType& vec) const noexcept {
-        return InstructionSetPolicy::template _right_shift_bits<idx>(vec);
+        return InstructionSet::template _right_shift_bits<idx>(vec);
     }
     template <int idx>
     auto _left_shift_bits(const VectorType& vec) const noexcept {
-        return InstructionSetPolicy::template _left_shift_bits<idx>(vec);
+        return InstructionSet::template _left_shift_bits<idx>(vec);
     }
     
     void update_gap_penalty(VectorType& current, const std::int8_t* source, const std::size_t gap_idx) const noexcept
@@ -242,10 +244,7 @@ class PairHMM : private InstructionSetPolicy
                  CharArrayOrNull align2) const noexcept
     {
         assert(truth_len > band_size_ && (truth_len == target_len + 2 * band_size_ - 1));
-        auto _m1 = _inf, _i1 = _inf, _d1 = _inf, _m2 = _inf, _i2 = _inf, _d2 = _inf;
         const auto _nuc_prior = vectorise_left_shift_bits<trace_bits_>(nuc_prior);
-        //auto _initmask     = vectorise_zero_set_last(-1);
-        //auto _initmask2    = vectorise_zero_set_last(null_score_);
         auto _truthwin     = vectorise(truth);
         auto _targetwin    = _inf;
         auto _qualitieswin = vectorise_left_shift_bits<trace_bits_>(max_quality_score_);
@@ -255,9 +254,10 @@ class PairHMM : private InstructionSetPolicy
         auto _snv_priorwin = vectorise_left_shift_bits<trace_bits_>(snv_prior);
         auto _truthnqual   = _add(_and(_cmpeq(_truthwin, _n), _nscore_m_inf), _inf);
         auto _backpointers = make_traceback_array(truth_len, first_pos);
+        auto _m1 = _inf, _i1 = _inf, _d1 = _inf, _m2 = _inf, _i2 = _inf, _d2 = _inf;
         ScoreType minscore {infinity_}, cur_score;
         int s, minscoreidx {-1};
-        RollingInit rollinginit {null_score_};
+        RollingInitializer rollinginit {null_score_};
         for (s = 0; s <= 2 * (target_len + band_size_); s += 2) {
             // truth is current; target needs updating
             _targetwin    = _left_shift_word(_targetwin);
@@ -270,8 +270,6 @@ class PairHMM : private InstructionSetPolicy
                 _qualitieswin = _insert_bottom(_qualitieswin, max_quality_score_ << trace_bits_);
             }
             // S even
-            //_m1 = _or(_initmask2, _andnot(_initmask, _m1));
-            //_m2 = _or(_initmask2, _andnot(_initmask, _m2));
             _m1 = rollinginit.init( _m1 );
             _m2 = rollinginit.init( _m2 );
             _m1 = _min(_m1, _min(_i1, _d1));
@@ -297,8 +295,6 @@ class PairHMM : private InstructionSetPolicy
             update_gap_penalty(_gap_open, gap_open, gap_idx);
             update_gap_penalty(_gap_extend, gap_extend, gap_idx);
             update_snv_mask(_snvmaskwin, _snv_priorwin, snv_mask, snv_prior, pos, truth_len);
-            //_initmask  = _left_shift_word(_initmask);
-            //_initmask2 = _left_shift_word(_initmask2);
             rollinginit.update();
             _m2 = _min(_m2, _min(_i2, _d2));
             if (s / 2 >= target_len) {

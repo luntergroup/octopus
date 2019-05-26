@@ -438,6 +438,7 @@ set(CORE_SOURCES
     core/models/pairhmm/pair_hmm.hpp
     core/models/pairhmm/pair_hmm.cpp
     core/models/pairhmm/simd_pair_hmm.hpp
+    core/models/pairhmm/rolling_initializer.hpp
     core/models/pairhmm/sse2_pair_hmm_impl.hpp
     core/models/pairhmm/avx2_pair_hmm_impl.hpp
     core/models/pairhmm/avx512_pair_hmm_impl.hpp
