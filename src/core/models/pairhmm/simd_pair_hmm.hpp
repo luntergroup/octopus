@@ -23,8 +23,9 @@ template <typename InstructionSetPolicy>
 class PairHMM : private InstructionSetPolicy
 {
     // Types
-    using VectorType = typename InstructionSetPolicy::VectorType;
-    using ScoreType  = typename InstructionSetPolicy::ScoreType;
+    using VectorType  = typename InstructionSetPolicy::VectorType;
+    using ScoreType   = typename InstructionSetPolicy::ScoreType;
+    using RollingInit = typename InstructionSetPolicy::RollingInit;
     
     using SmallVector = boost::container::small_vector<VectorType, 10000>;
     
@@ -243,8 +244,8 @@ class PairHMM : private InstructionSetPolicy
         assert(truth_len > band_size_ && (truth_len == target_len + 2 * band_size_ - 1));
         auto _m1 = _inf, _i1 = _inf, _d1 = _inf, _m2 = _inf, _i2 = _inf, _d2 = _inf;
         const auto _nuc_prior = vectorise_left_shift_bits<trace_bits_>(nuc_prior);
-        auto _initmask     = vectorise_zero_set_last(-1);
-        auto _initmask2    = vectorise_zero_set_last(null_score_);
+        //auto _initmask     = vectorise_zero_set_last(-1);
+        //auto _initmask2    = vectorise_zero_set_last(null_score_);
         auto _truthwin     = vectorise(truth);
         auto _targetwin    = _inf;
         auto _qualitieswin = vectorise_left_shift_bits<trace_bits_>(max_quality_score_);
@@ -256,6 +257,7 @@ class PairHMM : private InstructionSetPolicy
         auto _backpointers = make_traceback_array(truth_len, first_pos);
         ScoreType minscore {infinity_}, cur_score;
         int s, minscoreidx {-1};
+        RollingInit rollinginit {null_score_};
         for (s = 0; s <= 2 * (target_len + band_size_); s += 2) {
             // truth is current; target needs updating
             _targetwin    = _left_shift_word(_targetwin);
@@ -268,8 +270,10 @@ class PairHMM : private InstructionSetPolicy
                 _qualitieswin = _insert_bottom(_qualitieswin, max_quality_score_ << trace_bits_);
             }
             // S even
-            _m1 = _or(_initmask2, _andnot(_initmask, _m1));
-            _m2 = _or(_initmask2, _andnot(_initmask, _m2));
+            //_m1 = _or(_initmask2, _andnot(_initmask, _m1));
+            //_m2 = _or(_initmask2, _andnot(_initmask, _m2));
+            _m1 = rollinginit.init( _m1 );
+            _m2 = rollinginit.init( _m2 );
             _m1 = _min(_m1, _min(_i1, _d1));
             if (s / 2 >= target_len) {
                 cur_score = _extract(_m1, s / 2 - target_len);
@@ -293,8 +297,9 @@ class PairHMM : private InstructionSetPolicy
             update_gap_penalty(_gap_open, gap_open, gap_idx);
             update_gap_penalty(_gap_extend, gap_extend, gap_idx);
             update_snv_mask(_snvmaskwin, _snv_priorwin, snv_mask, snv_prior, pos, truth_len);
-            _initmask  = _left_shift_word(_initmask);
-            _initmask2 = _left_shift_word(_initmask2);
+            //_initmask  = _left_shift_word(_initmask);
+            //_initmask2 = _left_shift_word(_initmask2);
+            rollinginit.update();
             _m2 = _min(_m2, _min(_i2, _d2));
             if (s / 2 >= target_len) {
                 cur_score = _extract(_m2, s / 2 - target_len);
