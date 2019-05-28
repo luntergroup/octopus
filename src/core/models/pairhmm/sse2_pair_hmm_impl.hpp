@@ -45,51 +45,29 @@ private:
     static_assert(BandSize % block_words_ == 0, "BandSize must be multiple of block words");
     
 protected:
-    using VectorType = std::conditional_t<num_blocks_ == 1, BlockType, std::array<BlockType, num_blocks_>>;
+    using VectorType = std::array<BlockType, num_blocks>;
     
     constexpr static int band_size = num_blocks_ * block_words_;
     
     static_assert(sizeof(VectorType) / word_size == band_size, "size error");
     
 private:
-    static BlockType do_vectorise(ScoreType x, std::true_type, short) noexcept
+    constexpr static auto num_blocks_ = std::tuple_size<VectorType>::value;
+    
+    static VectorType do_vectorise(ScoreType x, short) noexcept
     {
-        return _mm_set1_epi16(x);
+        return make_array<num_blocks>(_mm_set1_epi16(x));
     }
-    static BlockType do_vectorise(ScoreType x, std::true_type, int) noexcept
+    static VectorType do_vectorise(ScoreType x, int) noexcept
     {
-        return _mm_set1_epi32(x);
-    }
-    static VectorType do_vectorise(ScoreType x, std::false_type, short) noexcept
-    {
-        return make_array<num_blocks_>(do_vectorise(x, std::true_type {}, short {}));
-    }
-    static VectorType do_vectorise(ScoreType x, std::false_type, int) noexcept
-    {
-        return make_array<num_blocks_>(do_vectorise(x, std::true_type {}, int {}));
+        return make_array<num_blocks>(_mm_set1_epi32(x));
     }
 protected:
     static VectorType vectorise(ScoreType x) noexcept
     {
-        return do_vectorise(x, std::is_same<VectorType, BlockType> {}, ScoreType {});
+        return do_vectorise(x, ScoreType {});
     }
 private:
-    template <typename T>
-    static BlockType do_vectorise(const T* values, short) noexcept
-    {
-        return _mm_set_epi16(values[7], values[6], values[5], values[4],
-                             values[3], values[2], values[1], values[0]);
-    }
-    template <typename T, std::size_t...Is>
-    static BlockType do_vectorise(const T* values, int) noexcept
-    {
-        return _mm_set_epi32(values[3], values[2], values[1], values[0]);
-    }
-    template <typename T>
-    static VectorType do_vectorise(const T* values, std::true_type) noexcept
-    {
-        return do_vectorise(values, ScoreType {});
-    }
     template <typename T, std::size_t...Is>
     static VectorType do_vectorise(const T* values, std::index_sequence<Is...>, short) noexcept
     {
@@ -114,38 +92,25 @@ private:
                       values[block_words_ * Is + 0]
         ))...}};
     }
-    template <typename T>
-    static VectorType do_vectorise(const T* values, std::false_type) noexcept
-    {
-        return do_vectorise(values, std::make_index_sequence<num_blocks_>(), ScoreType {});
-    }
 protected:
     template <typename T>
     static VectorType vectorise(const T* values) noexcept
     {
-        return do_vectorise(values, std::is_same<VectorType, BlockType> {});
+        return do_vectorise(values, std::make_index_sequence<num_blocks>(), ScoreType {});
     }
 private:
-    static BlockType do_vectorise_zero_set_last(ScoreType x, std::true_type, short) noexcept
+    static VectorType do_vectorise_zero_set_last(ScoreType x, short) noexcept
     {
-        return _mm_set_epi16(0,0,0,0,0,0,0,x);
+        return make_array<num_blocks>(_mm_set_epi16(0,0,0,0,0,0,0,x), _mm_set_epi16(0,0,0,0,0,0,0,0));
     }
-    static BlockType do_vectorise_zero_set_last(ScoreType x, std::true_type, int) noexcept
+    static VectorType do_vectorise_zero_set_last(ScoreType x, int) noexcept
     {
-        return _mm_set_epi32(0,0,0,x);
-    }
-    static VectorType do_vectorise_zero_set_last(ScoreType x, std::false_type, short) noexcept
-    {
-        return make_array<num_blocks_>(_mm_set_epi16(0,0,0,0,0,0,0,x), _mm_set_epi16(0,0,0,0,0,0,0,0));
-    }
-    static VectorType do_vectorise_zero_set_last(ScoreType x, std::false_type, int) noexcept
-    {
-        return make_array<num_blocks_>(_mm_set_epi32(0,0,0,x), _mm_set_epi32(0,0,0,0));
+        return make_array<num_blocks>(_mm_set_epi32(0,0,0,x), _mm_set_epi32(0,0,0,0));
     }
 protected:
     static VectorType vectorise_zero_set_last(ScoreType x) noexcept
     {
-        return do_vectorise_zero_set_last(x, std::is_same<VectorType, BlockType> {},  ScoreType {});
+        return do_vectorise_zero_set_last(x, ScoreType {});
     }
 private:
     template <int index>
@@ -158,25 +123,15 @@ private:
     {
         return _mm_extract_epi32(a, index);
     }
+protected:
     template <int index>
-    static auto do_extract(const VectorType a, std::true_type) noexcept
-    {
-        return do_extract<index>(a, ScoreType {});
-    }
-    template <int index>
-    static auto do_extract(const VectorType a, std::false_type) noexcept
+    static auto _extract(const VectorType a) noexcept
     {
         constexpr static auto block_index = index / block_words_;
         static_assert(block_index < num_blocks_, "block index out range");
         constexpr static auto word_index = index % block_words_;
         static_assert(word_index < block_words_, "word index out range");
         return do_extract<word_index>(std::get<block_index>(a), ScoreType {});
-    }
-protected:
-    template <int index>
-    static auto _extract(const VectorType a) noexcept
-    {
-        return do_extract<index>(a, std::is_same<VectorType, BlockType> {});
     }
 private:
     template <std::size_t... Is>
@@ -207,13 +162,9 @@ private:
     {
         return _mm_insert_epi32(a, value, index);
     }
+protected:
     template <int index, typename T>
-    static VectorType do_insert(const VectorType& a, T value, std::true_type) noexcept
-    {
-        return do_insert<index>(a, value, ScoreType {});
-    }
-    template <int index, typename T>
-    static VectorType do_insert(VectorType a, T value, std::false_type) noexcept
+    static VectorType _insert(VectorType a, T value) noexcept
     {
         constexpr static auto block_index = index / block_words_;
         static_assert(block_index < num_blocks_, "block index out range");
@@ -221,12 +172,6 @@ private:
         static_assert(word_index < block_words_, "word index out range");
         std::get<block_index>(a) = do_insert<word_index>(std::get<block_index>(a), value, ScoreType {});
         return a;
-    }
-protected:
-    template <int index, typename T>
-    static VectorType _insert(const VectorType& a, const T& value) noexcept
-    {
-        return do_insert<index>(a, value, std::is_same<VectorType, BlockType> {});
     }
 private:
     template <typename T, std::size_t... Is>
@@ -264,56 +209,22 @@ private:
     {
         return _mm_add_epi32(lhs, rhs);
     }
-    static VectorType do_add(const VectorType& lhs, const VectorType& rhs, std::true_type) noexcept
-    {
-        return do_add(lhs, rhs, ScoreType {});
-    }
-    static VectorType do_add(const VectorType& lhs, const VectorType& rhs, std::false_type) noexcept
-    {
-        return transform([] (const auto& lhs, const auto& rhs) noexcept { return do_add(lhs, rhs, ScoreType {}); }, lhs, rhs);
-    }
 protected:
     static VectorType _add(const VectorType& lhs, const VectorType& rhs) noexcept
     {
-        return do_add(lhs, rhs, std::is_same<VectorType, BlockType> {});
+        return transform([] (const auto& lhs, const auto& rhs) noexcept { return do_add(lhs, rhs, ScoreType {}); }, lhs, rhs);
     }
-private:
-    static BlockType do_and(const BlockType& lhs, const BlockType& rhs, std::true_type) noexcept
-    {
-        return  _mm_and_si128(lhs, rhs);
-    }
-    static VectorType do_and(const VectorType& lhs, const VectorType& rhs, std::false_type) noexcept
-    {
-        return transform([] (const auto& lhs, const auto& rhs) noexcept { return do_and(lhs, rhs, std::true_type {}); }, lhs, rhs);
-    }
-    static BlockType do_andnot(const BlockType& lhs, const BlockType& rhs, std::true_type) noexcept
-    {
-        return  _mm_andnot_si128(lhs, rhs);
-    }
-    static VectorType do_andnot(const VectorType& lhs, const VectorType& rhs, std::false_type) noexcept
-    {
-        return transform([] (const auto& lhs, const auto& rhs) noexcept { return do_andnot(lhs, rhs, std::true_type {}); }, lhs, rhs);
-    }
-    static BlockType do_or(const BlockType& lhs, const BlockType& rhs, std::true_type) noexcept
-    {
-        return  _mm_or_si128(lhs, rhs);
-    }
-    static VectorType do_or(const VectorType& lhs, const VectorType& rhs, std::false_type) noexcept
-    {
-        return transform([] (const auto& lhs, const auto& rhs) noexcept { return do_or(lhs, rhs, std::true_type {}); }, lhs, rhs);
-    }
-protected:
     static VectorType _and(const VectorType& lhs, const VectorType& rhs) noexcept
     {
-        return do_and(lhs, rhs, std::is_same<VectorType, BlockType> {});
+        return transform([] (const auto& lhs, const auto& rhs) noexcept { return _mm_and_si128(lhs, rhs); }, lhs, rhs);
     }
     static VectorType _andnot(const VectorType& lhs, const VectorType& rhs) noexcept
     {
-        return do_andnot(lhs, rhs, std::is_same<VectorType, BlockType> {});
+        return transform([] (const auto& lhs, const auto& rhs) noexcept { return _mm_andnot_si128(lhs, rhs); }, lhs, rhs);
     }
     static VectorType _or(const VectorType& lhs, const VectorType& rhs) noexcept
     {
-        return do_or(lhs, rhs, std::is_same<VectorType, BlockType> {});
+        return transform([] (const auto& lhs, const auto& rhs) noexcept { return _mm_or_si128(lhs, rhs); }, lhs, rhs);
     }
 private:
     static BlockType do_cmpeq(const BlockType& lhs, const BlockType& rhs, short) noexcept
@@ -324,25 +235,12 @@ private:
     {
         return _mm_cmpeq_epi32(lhs, rhs);
     }
-    static VectorType do_cmpeq(const VectorType& lhs, const VectorType& rhs, std::true_type) noexcept
-    {
-        return do_cmpeq(lhs, rhs, ScoreType {});
-    }
-    static VectorType do_cmpeq(const VectorType& lhs, const VectorType& rhs, std::false_type) noexcept
-    {
-        return transform([] (const auto& lhs, const auto& rhs) noexcept { return do_cmpeq(lhs, rhs, ScoreType {}); }, lhs, rhs);
-    }
 protected:
     static VectorType _cmpeq(const VectorType& lhs, const VectorType& rhs) noexcept
     {
-        return do_cmpeq(lhs, rhs, std::is_same<VectorType, BlockType> {});
+        return transform([] (const auto& lhs, const auto& rhs) noexcept { return do_cmpeq(lhs, rhs, ScoreType {}); }, lhs, rhs);
     }
-private:
-    static VectorType do_left_shift_word(VectorType a, std::true_type) noexcept
-    {
-        return _mm_slli_si128(a, word_size);
-    }
-    static VectorType do_left_shift_word(VectorType a, std::false_type) noexcept
+    static VectorType _left_shift_word(VectorType a) noexcept
     {
         adjacent_apply_reverse([] (const auto& lhs, const auto& rhs) noexcept {
             return _mm_or_si128(_mm_slli_si128(rhs, word_size), _mm_srli_si128(lhs, block_bytes_ - word_size));
@@ -350,26 +248,13 @@ private:
         std::get<0>(a) = _mm_slli_si128(std::get<0>(a), word_size);
         return a;
     }
-    static VectorType do_right_shift_word(VectorType a, std::true_type) noexcept
-    {
-        return _mm_srli_si128(a, word_size);
-    }
-    static VectorType do_right_shift_word(VectorType a, std::false_type) noexcept
+    static VectorType _right_shift_word(VectorType a) noexcept
     {
         adjacent_apply([] (const auto& lhs, const auto& rhs) noexcept {
             return _mm_or_si128(_mm_srli_si128(lhs, word_size), _mm_slli_si128(rhs, block_bytes_ - word_size));
         }, a, a);
-        std::get<num_blocks_ - 1>(a) = _mm_srli_si128(std::get<num_blocks_ - 1>(a), word_size);
+        std::get<num_blocks - 1>(a) = _mm_srli_si128(std::get<num_blocks - 1>(a), word_size);
         return a;
-    }
-protected:
-    static VectorType _left_shift_word(VectorType a) noexcept
-    {
-        return do_left_shift_word(a, std::is_same<VectorType, BlockType> {});
-    }
-    static VectorType _right_shift_word(VectorType a) noexcept
-    {
-        return do_right_shift_word(a, std::is_same<VectorType, BlockType> {});
     }
 private:
     template <int n>
@@ -382,21 +267,11 @@ private:
     {
         return _mm_slli_epi32(a, n);
     }
-    template <int n>
-    static VectorType do_left_shift_bits(const VectorType& a, std::true_type) noexcept
-    {
-        return do_left_shift_bits<n>(a, ScoreType {});
-    }
-    template <int n>
-    static VectorType do_left_shift_bits(const VectorType& a, std::false_type) noexcept
-    {
-        return transform([] (const auto& x) noexcept { return do_left_shift_bits<n>(x, ScoreType {}); }, a);
-    }
 protected:
     template <int n>
     static VectorType _left_shift_bits(const VectorType& a) noexcept
     {
-        return do_left_shift_bits<n>(a, std::is_same<VectorType, BlockType> {});
+        return transform([] (const auto& x) noexcept { return do_left_shift_bits<n>(x, ScoreType {}); }, a);
     }
 private:
     template <int n>
@@ -409,21 +284,11 @@ private:
     {
         return _mm_srli_epi32(a, n);
     }
-    template <int n>
-    static VectorType do_right_shift_bits(const VectorType& a, std::true_type) noexcept
-    {
-        return do_right_shift_bits<n>(a, ScoreType {});
-    }
-    template <int n>
-    static VectorType do_right_shift_bits(const VectorType& a, std::false_type) noexcept
-    {
-        return transform([] (const auto& x) noexcept { return do_right_shift_bits<n>(x, ScoreType {}); }, a);
-    }
 protected:
     template <int n>
     static VectorType _right_shift_bits(const VectorType& a) noexcept
     {
-        return do_right_shift_bits<n>(a, std::is_same<VectorType, BlockType> {});
+        return transform([] (const auto& x) noexcept { return do_right_shift_bits<n>(x, ScoreType {}); }, a);
     }
 private:
     static BlockType do_min(const BlockType& lhs, const BlockType& rhs, short) noexcept
@@ -434,18 +299,10 @@ private:
     {
         return _mm_min_epi32(lhs, rhs);
     }
-    static VectorType do_min(const VectorType& lhs, const VectorType& rhs, std::true_type) noexcept
-    {
-        return do_min(lhs, rhs, ScoreType {});
-    }
-    static VectorType do_min(const VectorType& lhs, const VectorType& rhs, std::false_type) noexcept
-    {
-        return transform([] (const auto& lhs, const auto& rhs) noexcept { return do_min(lhs, rhs, ScoreType {}); }, lhs, rhs);
-    }
 protected:
     static VectorType _min(const VectorType& lhs, const VectorType& rhs) noexcept
     {
-        return do_min(lhs, rhs, std::is_same<VectorType, BlockType> {});
+        return transform([] (const auto& lhs, const auto& rhs) noexcept { return do_min(lhs, rhs, ScoreType {}); }, lhs, rhs);
     }
 private:
     static BlockType do_max(const BlockType& lhs, const BlockType& rhs, short) noexcept
@@ -456,18 +313,10 @@ private:
     {
         return _mm_max_epi32(lhs, rhs);
     }
-    static VectorType do_max(const VectorType& lhs, const VectorType& rhs, std::true_type) noexcept
-    {
-        return do_max(lhs, rhs, ScoreType {});
-    }
-    static VectorType do_max(const VectorType& lhs, const VectorType& rhs, std::false_type) noexcept
-    {
-        return transform([] (const auto& lhs, const auto& rhs) noexcept { return do_max(lhs, rhs, ScoreType {}); }, lhs, rhs);
-    }
 protected:
     static VectorType _max(const VectorType& lhs, const VectorType& rhs) noexcept
     {
-        return do_max(lhs, rhs, std::is_same<VectorType, BlockType> {});
+        return transform([] (const auto& lhs, const auto& rhs) noexcept { return do_max(lhs, rhs, ScoreType {}); }, lhs, rhs);
     }
 };
 
