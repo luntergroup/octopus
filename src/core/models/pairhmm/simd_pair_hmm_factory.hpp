@@ -62,12 +62,9 @@ using SimdPairHMM = typename detail::PairHMMSelector<BandSize, ScoreType, Initia
 template <unsigned BandSize,
           typename ScoreType = short,
           template <class> class InitializerType = InsertRollingInitializer>
-auto make_simd_pair_hmm() noexcept { return SimdPairHMM<BandSize, ScoreType, InitializerType> {}; }
+constexpr auto make_simd_pair_hmm() { return SimdPairHMM<BandSize, ScoreType, InitializerType> {}; }
 
-inline auto make_fastest_simd_pair_hmm() noexcept
-{
-    return make_simd_pair_hmm<8, short, InsertRollingInitializer>();
-}
+constexpr auto make_fastest_simd_pair_hmm() { return make_simd_pair_hmm<8, short, InsertRollingInitializer>(); }
 
 } // namespace simd
 } // namespace hmm
