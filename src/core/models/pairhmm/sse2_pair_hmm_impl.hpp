@@ -45,22 +45,20 @@ private:
     static_assert(BandSize % block_words_ == 0, "BandSize must be multiple of block words");
     
 protected:
-    using VectorType = std::array<BlockType, num_blocks>;
+    using VectorType = std::array<BlockType, num_blocks_>;
     
     constexpr static int band_size = num_blocks_ * block_words_;
     
     static_assert(sizeof(VectorType) / word_size == band_size, "size error");
     
 private:
-    constexpr static auto num_blocks_ = std::tuple_size<VectorType>::value;
-    
     static VectorType do_vectorise(ScoreType x, short) noexcept
     {
-        return make_array<num_blocks>(_mm_set1_epi16(x));
+        return make_array<num_blocks_>(_mm_set1_epi16(x));
     }
     static VectorType do_vectorise(ScoreType x, int) noexcept
     {
-        return make_array<num_blocks>(_mm_set1_epi32(x));
+        return make_array<num_blocks_>(_mm_set1_epi32(x));
     }
 protected:
     static VectorType vectorise(ScoreType x) noexcept
@@ -96,16 +94,16 @@ protected:
     template <typename T>
     static VectorType vectorise(const T* values) noexcept
     {
-        return do_vectorise(values, std::make_index_sequence<num_blocks>(), ScoreType {});
+        return do_vectorise(values, std::make_index_sequence<num_blocks_>(), ScoreType {});
     }
 private:
     static VectorType do_vectorise_zero_set_last(ScoreType x, short) noexcept
     {
-        return make_array<num_blocks>(_mm_set_epi16(0,0,0,0,0,0,0,x), _mm_set_epi16(0,0,0,0,0,0,0,0));
+        return make_array<num_blocks_>(_mm_set_epi16(0,0,0,0,0,0,0,x), _mm_set_epi16(0,0,0,0,0,0,0,0));
     }
     static VectorType do_vectorise_zero_set_last(ScoreType x, int) noexcept
     {
-        return make_array<num_blocks>(_mm_set_epi32(0,0,0,x), _mm_set_epi32(0,0,0,0));
+        return make_array<num_blocks_>(_mm_set_epi32(0,0,0,x), _mm_set_epi32(0,0,0,0));
     }
 protected:
     static VectorType vectorise_zero_set_last(ScoreType x) noexcept
@@ -253,7 +251,7 @@ protected:
         adjacent_apply([] (const auto& lhs, const auto& rhs) noexcept {
             return _mm_or_si128(_mm_srli_si128(lhs, word_size), _mm_slli_si128(rhs, block_bytes_ - word_size));
         }, a, a);
-        std::get<num_blocks - 1>(a) = _mm_srli_si128(std::get<num_blocks - 1>(a), word_size);
+        std::get<num_blocks_ - 1>(a) = _mm_srli_si128(std::get<num_blocks_ - 1>(a), word_size);
         return a;
     }
 private:
