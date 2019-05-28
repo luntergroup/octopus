@@ -641,6 +641,10 @@ if (BUILD_TESTING)
     else()
         message(WARNING "IPO is not supported: ${output}")
     endif()
+    configure_file (
+        "${PROJECT_SOURCE_DIR}/src/config/system.h.in"
+        "${PROJECT_BINARY_DIR}/generated/system.hpp"
+    )
 elseif (CMAKE_BUILD_TYPE MATCHES Debug)
     add_executable(octopus-debug main.cpp ${OCTOPUS_SOURCES} ${INCLUDE_SOURCES})
     target_compile_features(octopus-debug PRIVATE cxx_thread_local)
