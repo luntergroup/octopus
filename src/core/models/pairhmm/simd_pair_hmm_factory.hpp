@@ -20,12 +20,12 @@
 
 namespace octopus { namespace hmm { namespace simd {
 
-template <unsigned MinBandSize,
+template <unsigned BandSize,
           typename ScoreType = short,
-          typename RollingInitializer = InsertRollingInitializer<SSE2PairHMMInstructionSet<MinBandSize, ScoreType>>>
-using SSE2PairHMM = PairHMM<SSE2PairHMMInstructionSet<MinBandSize, ScoreType>, RollingInitializer>;
+          template <class> class InitializerType = InsertRollingInitializer>
+using SSE2PairHMM = PairHMM<SSE2PairHMMInstructionSet<BandSize, ScoreType>, InitializerType>;
 
-using FastestSSE2PairHMM = SSE2PairHMM<8, short>;
+using FastestSSE2PairHMM = SSE2PairHMM<8, short, InsertRollingInitializer>;
 
 #ifdef __AVX2__
 
@@ -46,22 +46,32 @@ struct PairHMMSelector:
     > {};
 
 #else
-
-template <unsigned MinBandSize, typename ScoreType>
+template <unsigned MinBandSize,
+          typename ScoreType,
+          template <class> class InitializerType>
 struct PairHMMSelector
 {
-    using type = SSE2PairHMM<MinBandSize, ScoreType>;
+    using type = SSE2PairHMM<MinBandSize, ScoreType, InitializerType>;
 };
 
 #endif /* __AVX2__ */
 
 } // namespace detail
 
-template <unsigned MinBandSize, typename ScoreType = short>
-using SimdPairHMM = typename detail::PairHMMSelector<MinBandSize, ScoreType>::type;
+template <unsigned BandSize,
+          typename ScoreType = short,
+          template <class> class InitializerType = InsertRollingInitializer>
+using SimdPairHMM = typename detail::PairHMMSelector<BandSize, ScoreType, InitializerType>::type;
 
-template <unsigned MinBandSize, typename ScoreType = short>
-auto make_simd_pair_hmm() noexcept { return SimdPairHMM<MinBandSize, ScoreType> {}; }
+template <unsigned BandSize,
+          typename ScoreType = short,
+          template <class> class InitializerType = InsertRollingInitializer>
+auto make_simd_pair_hmm() noexcept { return SimdPairHMM<BandSize, ScoreType, InitializerType> {}; }
+
+inline auto make_fastest_simd_pair_hmm() noexcept
+{
+    return make_simd_pair_hmm<8, short, InsertRollingInitializer>();
+}
 
 namespace detail {
 

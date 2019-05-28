@@ -12,7 +12,7 @@ namespace octopus { namespace hmm { namespace simd {
 
 // Original rolling initialization using shift instructions
 template <typename PairHMMInstructionSet>
-class ShiftingRollingInitializer : PairHMMInstructionSet
+class ShiftingRollingInitializer : private PairHMMInstructionSet
 {
     using ScoreType  = typename PairHMMInstructionSet::ScoreType;
     using VectorType = typename PairHMMInstructionSet::VectorType;
@@ -20,34 +20,34 @@ class ShiftingRollingInitializer : PairHMMInstructionSet
     using PairHMMInstructionSet::_left_shift_word;
     using PairHMMInstructionSet::_or;
     using PairHMMInstructionSet::_andnot;
-    VectorType _initmask;
-    VectorType _initmask2;
+    VectorType _initmask_;
+    VectorType _initmask2_;
 public:
-    ShiftingRollingInitializer(ScoreType null_score_) noexcept
-    : _initmask {vectorise_zero_set_last(-1)}
-    , _initmask2 {vectorise_zero_set_last(null_score_)}
+    ShiftingRollingInitializer(const ScoreType null_score) noexcept
+    : _initmask_ {vectorise_zero_set_last(-1)}
+    , _initmask2_ {vectorise_zero_set_last(null_score)}
     {}
-    VectorType init(const VectorType& a) const noexcept { return _or(_initmask2, _andnot(_initmask, a)); }
+    VectorType init(const VectorType& a) const noexcept { return _or(_initmask2_, _andnot(_initmask_, a)); }
     void update() noexcept
     {
-        _initmask  = _left_shift_word(_initmask);
-        _initmask2 = _left_shift_word(_initmask2);
+        _initmask_  = _left_shift_word(_initmask_);
+        _initmask2_ = _left_shift_word(_initmask2_);
     }
 };
 
 // Faster rolling initialization using insert instructions
 template <typename PairHMMInstructionSet>
-class InsertRollingInitializer : PairHMMInstructionSet
+class InsertRollingInitializer : private PairHMMInstructionSet
 {
     using ScoreType  = typename PairHMMInstructionSet::ScoreType;
     using VectorType = typename PairHMMInstructionSet::VectorType;
     using PairHMMInstructionSet::_insert;
-    int i;
-    ScoreType value;
+    int i_;
+    ScoreType value_;
 public:
-    InsertRollingInitializer(ScoreType null_score_) noexcept : i {0}, value {null_score_} {}
-    VectorType init(const VectorType& a) const noexcept { return _insert(a, value, i); }
-    void update() noexcept { ++i; }
+    InsertRollingInitializer(ScoreType null_score) noexcept : i_ {0}, value_ {null_score} {}
+    VectorType init(const VectorType& a) const noexcept { return _insert(a, value_, i_); }
+    void update() noexcept { ++i_; }
 };
 
 } // simd

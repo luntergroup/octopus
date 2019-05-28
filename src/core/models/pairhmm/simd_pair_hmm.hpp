@@ -18,17 +18,17 @@
 
 #include <boost/container/small_vector.hpp>
 
-#include "rolling_initializer.hpp"
-
 namespace octopus { namespace hmm { namespace simd {
 
 template <typename InstructionSet,
-          typename RollingInitializer = InsertRollingInitializer<InstructionSet>>
+          template <class> class InitializerType>
 class PairHMM : private InstructionSet
 {
     // Types
     using VectorType  = typename InstructionSet::VectorType;
     using ScoreType   = typename InstructionSet::ScoreType;
+    
+    using Initializer = InitializerType<InstructionSet>;
     
     using SmallVector = boost::container::small_vector<VectorType, 10000>;
     
@@ -89,6 +89,7 @@ class PairHMM : private InstructionSet
     {
         return InstructionSet::template _left_shift_bits<idx>(vec);
     }
+    
     void update_gap_penalty(VectorType& current, const std::int8_t* source, const std::size_t gap_idx) const noexcept
     {
         current = _insert_top(_right_shift_word(current), source[gap_idx] << trace_bits_);
@@ -258,7 +259,7 @@ class PairHMM : private InstructionSet
         auto _m1 = _inf, _i1 = _inf, _d1 = _inf, _m2 = _inf, _i2 = _inf, _d2 = _inf;
         ScoreType minscore {infinity_}, cur_score;
         int s, minscoreidx {-1};
-        RollingInitializer rollinginit {null_score_};
+        Initializer rollinginit {null_score_};
         for (s = 0; s <= 2 * (target_len + band_size_); s += 2) {
             // truth is current; target needs updating
             _targetwin    = _left_shift_word(_targetwin);
