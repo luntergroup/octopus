@@ -595,7 +595,7 @@ BOOST_AUTO_TEST_CASE(sse2_band_size_32_check_alignments)
 #ifdef __AVX2__
 BOOST_AUTO_TEST_CASE(avx2_check_alignments)
 {
-    AVX2PairHMM hmm;
+    AVX2PairHMM<16, short> hmm;
     TestCase test;
     Alignment expected_alignment;
     

@@ -22,21 +22,28 @@ using SSE2PairHMM = PairHMM<SSE2PairHMMInstructionSet<BandSize, ScoreType>, Init
 using FastestSSE2PairHMM = SSE2PairHMM<8, short, InsertRollingInitializer>;
 
 #if defined(AVX2_PHMM)
-template <template <class> class InitializerType = InsertRollingInitializer>
-using AVX2PairHMM = PairHMM<AVX2PairHMMInstructionSet, InitializerType>;
+
+template <unsigned BandSize,
+          typename ScoreType = short,
+          template <class> class InitializerType = InsertRollingInitializer>
+using AVX2PairHMM = PairHMM<AVX2PairHMMInstructionSet<BandSize, ScoreType>, InitializerType>;
+
 #endif
 
 namespace detail {
 
 #if defined(AVX2_PHMM)
 
+template <unsigned BandSize, typename ScoreType>
+constexpr bool is_viable_avx2 = BandSize % (32 / sizeof(ScoreType)) == 0;
+
 template <unsigned BandSize,
           typename ScoreType,
           template <class> class InitializerType>
 struct PairHMMSelector :
     public std::conditional<
-        BandSize == AVX2PairHMM<InitializerType>::band_size() && std::is_same<ScoreType, short>::value,
-        AVX2PairHMM<InitializerType>,
+        is_viable_avx2<BandSize, ScoreType>,
+        AVX2PairHMM<BandSize, ScoreType, InitializerType>,
         SSE2PairHMM<BandSize, ScoreType, InitializerType>
     > {};
 
