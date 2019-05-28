@@ -21,7 +21,7 @@ namespace octopus { namespace hmm { namespace simd {
 template <typename T>
 constexpr bool is_short_or_int = std::is_same<T, short>::value || std::is_same<T, int>::value;
 
-template <unsigned BandSize,
+template <unsigned BandSize = 8,
           typename ScoreTp = short>
 class SSE2PairHMMInstructionSet
 {
