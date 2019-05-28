@@ -28,35 +28,35 @@ namespace detail {
 // source: https://stackoverflow.com/a/25264853/2970186
 
 template <int n>
-std::enable_if_t<(n < 16), __m256i> _mm256_slli_si256(const __m256i& a) noexcept
+std::enable_if_t<(n < 16), __m256i> _shift_left(const __m256i& a) noexcept
 {
     return _mm256_alignr_epi8(a, _mm256_permute2x128_si256(a, a, _MM_SHUFFLE(0, 0, 2, 0)), 16 - n);
 };
 template <int n>
-std::enable_if_t<(n == 16), __m256i> _mm256_slli_si256(const __m256i& a) noexcept
+std::enable_if_t<(n == 16), __m256i> _shift_left(const __m256i& a) noexcept
 {
     return _mm256_permute2x128_si256(a, a, _MM_SHUFFLE(0, 0, 2, 0));
 }
 template <int n>
-std::enable_if_t<(n > 16), __m256i> _mm256_slli_si256(const __m256i& a) noexcept
+std::enable_if_t<(n > 16), __m256i> _shift_left(const __m256i& a) noexcept
 {
-    return _mm256_slli_si256<n - 16>(_mm256_permute2x128_si256(a, a, _MM_SHUFFLE(0, 0, 2, 0)));
+    return _shift_left<n - 16>(_mm256_permute2x128_si256(a, a, _MM_SHUFFLE(0, 0, 2, 0)));
 };
 
 template <int n>
-std::enable_if_t<(n < 16), __m256i> _mm256_srli_si256(const __m256i& a) noexcept
+std::enable_if_t<(n < 16), __m256i> _shift_right(const __m256i& a) noexcept
 {
     return _mm256_alignr_epi8(_mm256_permute2x128_si256(a, a, _MM_SHUFFLE(2, 0, 0, 1)), a, n);
 }
 template <int n>
-std::enable_if_t<(n == 16), __m256i> _mm256_srli_si256(const __m256i& a) noexcept
+std::enable_if_t<(n == 16), __m256i> _shift_right(const __m256i& a) noexcept
 {
     return _mm256_permute2x128_si256(a, a, _MM_SHUFFLE(2, 0, 0, 1));
 }
 template <int n>
-std::enable_if_t<(n > 16), __m256i> _mm256_srli_si256(const __m256i& a) noexcept
+std::enable_if_t<(n > 16), __m256i> _shift_right(const __m256i& a) noexcept
 {
-    return _mm256_srli_si256<n - 16>(_mm256_permute2x128_si256(a, a, _MM_SHUFFLE(2, 0, 0, 1)));
+    return _shift_right<n - 16>(_mm256_permute2x128_si256(a, a, _MM_SHUFFLE(2, 0, 0, 1)));
 }
 
 } // namespace detail
@@ -292,22 +292,22 @@ protected:
     }
     static VectorType _left_shift_word(VectorType a) noexcept
     {
-        using detail::_mm256_slli_si256;
-        using detail::_mm256_srli_si256;
+        using detail::_shift_left;
+        using detail::_shift_right;
         adjacent_apply_reverse([] (const auto& lhs, const auto& rhs) noexcept {
-            return _mm256_or_si256(_mm256_slli_si256<word_size>(rhs), _mm256_srli_si256<block_bytes_ - word_size>(lhs));
+            return _mm256_or_si256(_shift_left<word_size>(rhs), _shift_right<block_bytes_ - word_size>(lhs));
         }, a, a);
-        std::get<0>(a) = _mm256_slli_si256<word_size>(std::get<0>(a));
+        std::get<0>(a) = _shift_left<word_size>(std::get<0>(a));
         return a;
     }
     static VectorType _right_shift_word(VectorType a) noexcept
     {
-        using detail::_mm256_slli_si256;
-        using detail::_mm256_srli_si256;
+        using detail::_shift_left;
+        using detail::_shift_right;
         adjacent_apply([] (const auto& lhs, const auto& rhs) noexcept {
-            return _mm256_or_si256(_mm256_srli_si256<word_size>(lhs), _mm256_slli_si256<block_bytes_ - word_size>(rhs));
+            return _mm256_or_si256(_shift_right<word_size>(lhs), _shift_left<block_bytes_ - word_size>(rhs));
         }, a, a);
-        std::get<num_blocks_ - 1>(a) = _mm256_srli_si256<word_size>(std::get<num_blocks_ - 1>(a));
+        std::get<num_blocks_ - 1>(a) = _shift_right<word_size>(std::get<num_blocks_ - 1>(a));
         return a;
     }
 private:
