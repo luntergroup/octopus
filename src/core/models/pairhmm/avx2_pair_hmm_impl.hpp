@@ -5,13 +5,19 @@
 #define avx2_pair_hmm_impl_hpp
 
 #if __GNUC__ >= 6
-#pragma GCC diagnostic ignored "-Wignored-attributes"
+    #pragma GCC diagnostic ignored "-Wignored-attributes"
 #endif
 
 #include <cstdint>
 #include <immintrin.h>
 
+#include "system.hpp"
+
 namespace octopus { namespace hmm { namespace simd {
+
+#if defined(__AVX2__) && AVX2_AVAILABLE
+
+#define AVX2_PHMM
 
 namespace detail {
 
@@ -178,6 +184,8 @@ protected:
         return _mm256_max_epi16(lhs, rhs);
     }
 };
+
+#endif
 
 } // namespace simd
 } // namespace hmm

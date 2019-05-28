@@ -11,12 +11,9 @@
 
 #include "simd_pair_hmm.hpp"
 #include "sse2_pair_hmm_impl.hpp"
-#ifdef __AVX2__
-    #include "avx2_pair_hmm_impl.hpp"
-#endif
-#ifdef __AVX512__
-    #include "avx512_pair_hmm_impl.hpp"
-#endif /* __AVX2__ */
+#include "avx2_pair_hmm_impl.hpp"
+//#include "avx512_pair_hmm_impl.hpp"
+#include "rolling_initializer.hpp"
 
 namespace octopus { namespace hmm { namespace simd {
 
@@ -27,24 +24,23 @@ using SSE2PairHMM = PairHMM<SSE2PairHMMInstructionSet<BandSize, ScoreType>, Init
 
 using FastestSSE2PairHMM = SSE2PairHMM<8, short, InsertRollingInitializer>;
 
-#ifdef __AVX2__
-
-using AVX2PairHMM = PairHMM<AVX2PairHMMInstructionSet>;
-
-#endif /* __AVX2__ */
+#if defined(AVX2_PHMM)
+template <template <class> class InitializerType = InsertRollingInitializer>
+using AVX2PairHMM = PairHMM<AVX2PairHMMInstructionSet, InitializerType>;
+#endif
 
 namespace detail {
 
-#ifdef __AVX2__
-
-template <unsigned MinBandSize, typename ScoreType>
+#if defined(AVX2_PHMM)
+template <unsigned BandSize,
+          typename ScoreType,
+          template <class> class InitializerType>
 struct PairHMMSelector:
     public std::conditional<
-        MinBandSize < AVX2PairHMM::band_size(),
-        SSE2PairHMM<MinBandSize, ScoreType>,
-        AVX2PairHMM
+        (BandSize == AVX2PairHMM<InitializerType>::band_size()),
+        AVX2PairHMM<InitializerType>,
+        SSE2PairHMM<BandSize, ScoreType, InitializerType>,
     > {};
-
 #else
 template <unsigned MinBandSize,
           typename ScoreType,
@@ -53,8 +49,7 @@ struct PairHMMSelector
 {
     using type = SSE2PairHMM<MinBandSize, ScoreType, InitializerType>;
 };
-
-#endif /* __AVX2__ */
+#endif
 
 } // namespace detail
 
