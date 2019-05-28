@@ -24,13 +24,19 @@ std::unique_ptr<Measure> STRLength::do_clone() const
 
 namespace {
 
+template <typename Region>
+Region safe_expand_lhs(const Region& region, typename Region::Distance n) noexcept
+{
+    return expand_lhs(region, std::min(n, static_cast<decltype(n)>(region.begin())));
+}
+
 struct RepeatContextLess
 {
     bool operator()(const TandemRepeat& lhs, const TandemRepeat& rhs) const noexcept
     {
         // Expand to discount possible reference pad
-        const auto expanded_lhs_region = expand_lhs(mapped_region(lhs), 1);
-        const auto expanded_rhs_region = expand_lhs(mapped_region(rhs), 1);
+        const auto expanded_lhs_region = safe_expand_lhs(mapped_region(lhs), 1);
+        const auto expanded_rhs_region = safe_expand_lhs(mapped_region(rhs), 1);
         if (overlap_size(expanded_lhs_region, call_) != overlap_size(expanded_rhs_region, call_)) {
             return overlap_size(expanded_lhs_region, call_) < overlap_size(expanded_rhs_region, call_);
         }
