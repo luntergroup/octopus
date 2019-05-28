@@ -45,7 +45,7 @@ class InsertRollingInitializer : private PairHMMInstructionSet
     int i_;
     ScoreType value_;
 public:
-    InsertRollingInitializer(ScoreType null_score) noexcept : i_ {0}, value_ {null_score} {}
+    constexpr InsertRollingInitializer(ScoreType null_score) noexcept : i_ {0}, value_ {null_score} {}
     VectorType init(const VectorType& a) const noexcept { return _insert(a, value_, i_); }
     void update() noexcept { ++i_; }
 };
