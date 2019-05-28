@@ -5,9 +5,6 @@
 #define simd_pair_hmm_factory_hpp
 
 #include <type_traits>
-#include <tuple>
-
-#include <boost/variant.hpp>
 
 #include "simd_pair_hmm.hpp"
 #include "sse2_pair_hmm_impl.hpp"
@@ -66,36 +63,6 @@ auto make_simd_pair_hmm() noexcept { return SimdPairHMM<BandSize, ScoreType, Ini
 inline auto make_fastest_simd_pair_hmm() noexcept
 {
     return make_simd_pair_hmm<8, short, InsertRollingInitializer>();
-}
-
-namespace detail {
-
-using PairHMMs = std::tuple<
-    SimdPairHMM<8>,
-    SimdPairHMM<16>,
-    SimdPairHMM<24>,
-    SimdPairHMM<32>
-    >;
-
-using PairHmmVariants = boost::variant<
-    std::tuple_element_t<0, PairHMMs>,
-    std::tuple_element_t<1, PairHMMs>,
-    std::tuple_element_t<2, PairHMMs>
-    >;
-
-const static PairHMMs pair_hmms = {};
-
-} // namespace detail
-
-detail::PairHmmVariants make_simd_pair_hmm(const unsigned band_size) noexcept
-{
-    if (band_size <= std::tuple_element_t<0, detail::PairHMMs>::band_size()) {
-        return std::get<0>(detail::pair_hmms);
-    } else if (band_size <= std::tuple_element_t<1, detail::PairHMMs>::band_size()) {
-        return std::get<1>(detail::pair_hmms);
-    } else {
-        return std::get<2>(detail::pair_hmms);
-    }
 }
 
 } // namespace simd
