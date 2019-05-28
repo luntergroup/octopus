@@ -29,24 +29,28 @@ using AVX2PairHMM = PairHMM<AVX2PairHMMInstructionSet, InitializerType>;
 namespace detail {
 
 #if defined(AVX2_PHMM)
+
 template <unsigned BandSize,
           typename ScoreType,
           template <class> class InitializerType>
-struct PairHMMSelector:
+struct PairHMMSelector :
     public std::conditional<
-        (BandSize == AVX2PairHMM<InitializerType>::band_size()),
+        BandSize == AVX2PairHMM<InitializerType>::band_size() && std::is_same<ScoreType, short>::value,
         AVX2PairHMM<InitializerType>,
-        SSE2PairHMM<BandSize, ScoreType, InitializerType>,
+        SSE2PairHMM<BandSize, ScoreType, InitializerType>
     > {};
-#else
+
+#else // defined(AVX2_PHMM)
+
 template <unsigned MinBandSize,
-          typename ScoreType,
-          template <class> class InitializerType>
+typename ScoreType,
+template <class> class InitializerType>
 struct PairHMMSelector
 {
     using type = SSE2PairHMM<MinBandSize, ScoreType, InitializerType>;
 };
-#endif
+
+#endif // defined(AVX2_PHMM)
 
 } // namespace detail
 
