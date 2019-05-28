@@ -21,10 +21,12 @@ namespace octopus { namespace hmm { namespace simd {
 template <typename T>
 constexpr bool is_short_or_int = std::is_same<T, short>::value || std::is_same<T, int>::value;
 
-template <unsigned MinBandSize,
+template <unsigned BandSize,
           typename ScoreTp = short>
 class SSE2PairHMMInstructionSet
 {
+    using BlockType = __m128i;
+    
 protected:
     using ScoreType = ScoreTp;
     
@@ -35,17 +37,20 @@ protected:
     constexpr static const char* name = "SSE2";
 
 private:
-    using BlockType = __m128i;
-    
     constexpr static auto block_bytes_       = sizeof(BlockType);
     constexpr static auto block_words_       = block_bytes_ / word_size;
-    constexpr static std::size_t num_blocks_ = MinBandSize / block_words_;
+    constexpr static std::size_t num_blocks_ = BandSize / block_words_;
+    
+    static_assert(BandSize > 0, "BandSize must be positive");
+    static_assert(BandSize % block_words_ == 0, "BandSize must be multiple of block words");
     
 protected:
     using VectorType = std::conditional_t<num_blocks_ == 1, BlockType, std::array<BlockType, num_blocks_>>;
     
-    constexpr static int band_size = sizeof(VectorType) / word_size;
-
+    constexpr static int band_size = num_blocks_ * block_words_;
+    
+    static_assert(sizeof(VectorType) / word_size == band_size, "size error");
+    
 private:
     static BlockType do_vectorise(ScoreType x, std::true_type, short) noexcept
     {
@@ -248,7 +253,7 @@ protected:
     }
     static VectorType _insert_top(VectorType a, const ScoreType value) noexcept
     {
-        return _insert<num_blocks_ * block_words_ - 1>(a, value);
+        return _insert<band_size - 1>(a, value);
     }
 private:
     static BlockType do_add(const BlockType& lhs, const BlockType& rhs, short) noexcept
