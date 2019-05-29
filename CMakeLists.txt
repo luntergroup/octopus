@@ -15,7 +15,7 @@ set(octopus_VERSION_RELEASE beta)
 execute_process(
     COMMAND git rev-parse --abbrev-ref HEAD
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-    OUTPUT_VARIABLE GIT_BRANCH
+    OUTPUT_VARIABLE GIT_BRANCH_
     OUTPUT_STRIP_TRAILING_WHITESPACE
 )
 
@@ -23,12 +23,12 @@ execute_process(
 execute_process(
     COMMAND git log -1 --format=%h
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-    OUTPUT_VARIABLE GIT_COMMIT_HASH
+    OUTPUT_VARIABLE GIT_COMMIT_HASH_
     OUTPUT_STRIP_TRAILING_WHITESPACE
 )
 
-add_definitions(-DGIT_COMMIT_HASH="${GIT_COMMIT_HASH}")
-add_definitions(-DGIT_BRANCH="${GIT_BRANCH}")
+set(GIT_BRANCH "${GIT_BRANCH_}")
+set(GIT_COMMIT_HASH "${GIT_COMMIT_HASH_}")
 
 configure_file (
     "${PROJECT_SOURCE_DIR}/src/config/version.h.in"
