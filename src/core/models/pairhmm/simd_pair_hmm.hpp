@@ -244,7 +244,7 @@ class PairHMM : private InstructionSet
                  CharArrayOrNull align1,
                  CharArrayOrNull align2) const noexcept
     {
-        assert(truth_len > band_size_ && (truth_len == target_len + 2 * band_size_ - 1));
+        assert(target_len > 0 && truth_len > band_size_ && (truth_len == target_len + 2 * band_size_ - 1));
         const static VectorType _inf = vectorise(infinity_);
         const auto _nuc_prior = vectorise_left_shift_bits<trace_bits_>(nuc_prior);
         auto _truthwin     = vectorise(truth);
@@ -257,11 +257,11 @@ class PairHMM : private InstructionSet
         auto _truthnqual   = _add(_and(_cmpeq(_truthwin, vectorise('N')), vectorise(n_score_ - infinity_)), _inf);
         auto _backpointers = make_traceback_array(truth_len, first_pos);
         auto _m1 = _inf, _i1 = _inf, _d1 = _inf, _m2 = _inf, _i2 = _inf, _d2 = _inf;
-        ScoreType minscore {infinity_}, cur_score;
-        int s, minscoreidx {-1};
         Initializer rollinginit {null_score_};
-        for (s = 0; s <= 2 * (target_len + band_size_); s += 2) {
-            // truth is current; target needs updating
+        ScoreType minscore {infinity_}, cur_score;
+        int minscoreidx {-1};
+        for (int s = 0; s < 2 * (target_len + band_size_); s += 2) {
+            // s even. truth is current; target needs updating
             _targetwin    = _left_shift_word(_targetwin);
             _qualitieswin = _left_shift_word(_qualitieswin);
             if (s / 2 < target_len) {
@@ -271,9 +271,8 @@ class PairHMM : private InstructionSet
                 _targetwin    = _insert_bottom(_targetwin, '0');
                 _qualitieswin = _insert_bottom(_qualitieswin, max_quality_score_ << trace_bits_);
             }
-            // S even
-            _m1 = rollinginit.init( _m1 );
-            _m2 = rollinginit.init( _m2 );
+            _m1 = rollinginit.init(_m1);
+            _m2 = rollinginit.init(_m2);
             _m1 = _min(_m1, _min(_i1, _d1));
             if (s / 2 >= target_len) {
                 cur_score = _extract(_m1, s / 2 - target_len);
