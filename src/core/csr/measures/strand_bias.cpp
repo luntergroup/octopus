@@ -117,21 +117,31 @@ auto get_direction_counts(const AlleleSupportMap& support, const GenomicRegion& 
     return result;
 }
 
-auto sample_beta(const DirectionCounts& counts, const std::size_t n)
+template <typename URNG>
+auto sample_beta(const DirectionCounts& counts, const std::size_t n, URNG& generator)
 {
-    static thread_local std::mt19937 generator {42};
     std::beta_distribution<> beta {static_cast<double>(counts.forward), static_cast<double>(counts.reverse)};
     std::vector<double> result(n);
     std::generate_n(std::begin(result), n, [&] () { return beta(generator); });
     return result;
 }
 
+template <typename URNG>
+typename URNG::result_type
+generate_urng_seed(const DirectionCountVector& direction_counts, const std::size_t num_samples) noexcept
+{
+    const static auto add_counts = [] (auto curr, const auto& counts) noexcept { return counts.forward + counts.reverse; };
+    const auto tot_count = std::accumulate(std::cbegin(direction_counts), std::cend(direction_counts), 0u, add_counts);
+    return tot_count + num_samples % tot_count;
+}
+
 auto generate_beta_samples(const DirectionCountVector& direction_counts, const std::size_t num_samples)
 {
+    std::mt19937 generator {generate_urng_seed<std::mt19937>(direction_counts, num_samples)};
     std::vector<std::vector<double>> result {};
     result.reserve(direction_counts.size());
     for (const auto& counts : direction_counts) {
-        result.push_back(sample_beta(counts, num_samples));
+        result.push_back(sample_beta(counts, num_samples, generator));
     }
     return result;
 }
