@@ -133,8 +133,8 @@ class PairHMM : private InstructionSet
         current = _add(current, _min(_andnot(_cmpeq(_targetwin, _truthwin), _qualitieswin), _truthnqual));
     }
     
-    auto make_traceback_array(int truth_len, int) const noexcept { return SmallVector(2 * (truth_len + band_size_)); }
-    auto make_traceback_array(int truth_len, NullType) const noexcept { return NullType {}; }
+    auto make_traceback_array(int target_len, int) const noexcept { return SmallVector(2 * (target_len + band_size_)); }
+    auto make_traceback_array(int target_len, NullType) const noexcept { return NullType {}; }
     
     void
     update_traceback(SmallVector& _backpointers,
@@ -255,7 +255,7 @@ class PairHMM : private InstructionSet
         auto _snvmaskwin   = vectorise(snv_mask);
         auto _snv_priorwin = vectorise_left_shift_bits<trace_bits_>(snv_prior);
         auto _truthnqual   = _add(_and(_cmpeq(_truthwin, vectorise('N')), vectorise(n_score_ - infinity_)), _inf);
-        auto _backpointers = make_traceback_array(truth_len, first_pos);
+        auto _backpointers = make_traceback_array(target_len, first_pos);
         auto _m1 = _inf, _i1 = _inf, _d1 = _inf, _m2 = _inf, _i2 = _inf, _d2 = _inf;
         Initializer rollinginit {null_score_};
         ScoreType minscore {infinity_}, cur_score;
