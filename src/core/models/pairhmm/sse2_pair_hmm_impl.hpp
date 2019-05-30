@@ -12,6 +12,7 @@
 #include <array>
 #include <tuple>
 #include <type_traits>
+#include <cassert>
 #include <emmintrin.h>
 
 #include "utils/array_tricks.hpp"
@@ -135,14 +136,11 @@ private:
     template <std::size_t... Is>
     static auto _extract_helper(const VectorType& a, const int index, std::index_sequence<Is...>) noexcept
     {
-        if (index >= 0 && index < band_size) {
-            decltype(_extract<0>(a)) result;
-            int unused[] = {(index == Is ? (result = _extract<Is>(a), 0) : 0)...};
-            (void) unused;
-            return result;
-        } else {
-            return _extract<band_size - 1>(a);
-        }
+        assert(index >= 0 && index < band_size);
+        decltype(_extract<0>(a)) result;
+        int unused[] = {(index == Is ? (result = _extract<Is>(a), 0) : 0)...};
+        (void) unused;
+        return result;
     }
 protected:
     static auto _extract(const VectorType& a, const int index) noexcept
@@ -175,7 +173,8 @@ private:
     template <typename T, std::size_t... Is>
     static VectorType _insert_helper(const VectorType& a, const T& value, const int index, std::index_sequence<Is...>) noexcept
     {
-        if (index >= 0 && index < band_size) {
+        assert(index >= 0);
+        if (index < band_size) {
             VectorType result;
             int unused[] = {(index == Is ? (result = _insert<Is>(a, value), 0) : 0)...};
             (void) unused;
