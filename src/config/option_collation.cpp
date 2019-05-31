@@ -1128,6 +1128,9 @@ auto make_variant_generator_builder(const OptionMap& options)
         active_region_options.assemble_all = true;
     } else {
         AssemblerActiveRegionGenerator::Options assembler_region_options {};
+        using TT = AssemblerActiveRegionGenerator::Options::TriggerType;
+        assembler_region_options.trigger_types = {TT::indel, TT::structual};
+        assembler_region_options.read_profile = read_profile;
         assembler_region_options.min_expected_mutation_frequency = get_assembler_region_generator_frequency_trigger(options);
         active_region_options.assembler_active_region_generator_options = assembler_region_options;
     }
