@@ -1017,7 +1017,7 @@ auto get_max_expected_heterozygosity(const OptionMap& options)
     return std::min(static_cast<double>(heterozygosity + 2 * heterozygosity_stdev), 0.9999);
 }
 
-auto make_variant_generator_builder(const OptionMap& options)
+auto make_variant_generator_builder(const OptionMap& options, const boost::optional<ReadSetProfile>& read_profile)
 {
     using namespace coretools;
     
@@ -1768,7 +1768,7 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
                                   const boost::optional<ReadSetProfile> read_profile)
 {
     CallerBuilder vc_builder {reference, read_pipe,
-                              make_variant_generator_builder(options),
+                              make_variant_generator_builder(options, read_profile),
                               make_haplotype_generator_builder(options, read_profile)};
 	const auto pedigree = read_ped_file(options);
     const auto caller = get_caller_type(options, read_pipe.samples(), pedigree);
