@@ -25,8 +25,7 @@ def aggregate_errors(df, aggregators=['period', 'periods']):
     if 'motif' in aggregators:
         aggregation_functions['motif'] = 'first'
     errors_df.reset_index(drop=True, inplace=True)
-    tmp = errors_df.groupby(aggregators)
-    errors_df = tmp.aggregate(aggregation_functions, axis='columns')
+    errors_df = errors_df.groupby(aggregators).aggregate(aggregation_functions, axis='columns')
     errors_df['error_rate'] = errors_df.apply(lambda row: row.errors / max(row.reads, 1), axis=1)
     errors_attributes.append('error_rate')
     if 'motif' not in aggregators:
