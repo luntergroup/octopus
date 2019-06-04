@@ -50,6 +50,8 @@ def make_error_summaries(indel_profile_df):
         'period == 3 and periods > 0 and motif not in ["AAA", "CCC", "GGG", "TTT"]')
     result['tetranucleotide'] = indel_profile_df.query(
         'period == 4 and periods > 0 and motif not in ["AAAA", "ACAC", "AGAG", "ATAT", "CACA", "CCCC", "CGCG", "CTCT", "GAGA", "GCGC", "GGGG", "GTGT", "TATA", "TCTC", "TGTG", "TTTT"]')
+    result['pentanucleotide'] = indel_profile_df.query(
+        'period == 5 and periods > 0 and motif not in ["AAAAA", "CCCCC", "GGGGG", "TTTTT"]')
     result['period'] = aggregate_errors(indel_profile_df)
     result['length'] = aggregate_errors(indel_profile_df, ['periods', 'period', 'indel_length'])
     motif_aggregators = ['periods', 'period', 'motif']
@@ -57,6 +59,7 @@ def make_error_summaries(indel_profile_df):
     result['dinucleotide-motif'] = aggregate_errors(result['dinucleotide'], motif_aggregators)
     result['trinucleotide-motif'] = aggregate_errors(result['trinucleotide'], motif_aggregators)
     result['tetranucleotide-motif'] = aggregate_errors(result['tetranucleotide'], motif_aggregators)
+    result['pentanucleotide-motif'] = aggregate_errors(result['pentanucleotide'], motif_aggregators)
     return result
 
 def read_indel_error_profile_summaries(indel_profile_df):
@@ -127,7 +130,7 @@ def smooth_empirical_model(open_model, extend_model=10):
 
 def make_octopus_indel_error_model(profile_df):
     result = {}
-    for pattern in [('A', 'T'), ('C', 'G'), 2, 3, 4]:
+    for pattern in [('A', 'T'), ('C', 'G'), 2, 3, 4, 5]:
         model = smooth_empirical_model(make_empirical_indel_error_model_helper(profile_df, pattern))
         if type(pattern) == int:
             result[pattern * 'N'] = model
