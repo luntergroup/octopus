@@ -49,7 +49,7 @@ def make_error_summaries(indel_profile_df):
     result['trinucleotide'] = indel_profile_df.query(
         'period == 3 and periods > 0 and motif not in ["AAA", "CCC", "GGG", "TTT"]')
     result['tetranucleotide'] = indel_profile_df.query(
-        'period == 4 and periods > 0 and motif not in ["AAAA", "CCCC", "GGGG", "TTTT"]')
+        'period == 4 and periods > 0 and motif not in ["AAAA", "ACAC", "AGAG", "ATAT", "CACA", "CCCC", "CGCG", "CTCT", "GAGA", "GCGC", "GGGG", "GTGT", "TATA", "TCTC", "TGTG", "TTTT"]')
     result['period'] = aggregate_errors(indel_profile_df)
     result['length'] = aggregate_errors(indel_profile_df, ['periods', 'period', 'indel_length'])
     motif_aggregators = ['periods', 'period', 'motif']
