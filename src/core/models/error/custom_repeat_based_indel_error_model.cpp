@@ -63,6 +63,9 @@ CustomRepeatBasedIndelErrorModel::get_open_penalty(const Sequence& motif, const 
     auto itr = gap_open_penalties_.find(motif);
     if (itr == std::cend(gap_open_penalties_)) {
         itr = gap_open_penalties_.find(ns_[std::min(period, ns_.size() - 1)]);
+        if (itr == std::cend(gap_open_penalties_)) {
+            return get_default_open_penalty();
+        }
     }
     return get_min_penalty(itr->second, length / period);
 }
@@ -81,6 +84,9 @@ CustomRepeatBasedIndelErrorModel::get_extension_penalty(const Sequence& motif, c
     auto itr = gap_extend_penalties_->find(motif);
     if (itr == std::cend(*gap_extend_penalties_)) {
         itr = gap_extend_penalties_->find(ns_[std::min(period, ns_.size() - 1)]);
+        if (itr == std::cend(*gap_extend_penalties_)) {
+            return get_default_extension_penalty();
+        }
     }
     return get_min_penalty(itr->second, length / period);
 }
