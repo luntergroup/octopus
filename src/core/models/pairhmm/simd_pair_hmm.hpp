@@ -24,9 +24,11 @@ template <typename InstructionSet,
           template <class> class InitializerType>
 class PairHMM : private InstructionSet
 {
-    // Types
+public:
+    using ScoreType = typename InstructionSet::ScoreType;
+
+private:
     using VectorType  = typename InstructionSet::VectorType;
-    using ScoreType   = typename InstructionSet::ScoreType;
     
     using Initializer = InitializerType<InstructionSet>;
     
