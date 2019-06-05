@@ -95,7 +95,7 @@ private:
     
     LocalIndelModel generate_local_indel_model(const Haplotype& given) const;
     void set_local_indel_model(unsigned given) const;
-    void update_hmm_from_cache() const;
+    HMM::ParameterType make_hmm_parameters() const noexcept;
     bool can_try_align_with_hmm(const Haplotype& target, const Haplotype& given) const noexcept;
     void align_with_hmm(const Haplotype& target, const Haplotype& given) const;
     LogProbability evaluate_uncached(const Haplotype& target, const Haplotype& given, bool gap_penalties_cached = false) const;

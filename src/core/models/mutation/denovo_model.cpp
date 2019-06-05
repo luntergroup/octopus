@@ -238,9 +238,9 @@ void DeNovoModel::set_local_indel_model(const unsigned given) const
     local_indel_model_ = std::addressof(*cached_result);
 }
 
-void DeNovoModel::update_hmm_from_cache() const
+DeNovoModel::HMM::ParameterType DeNovoModel::make_hmm_parameters() const noexcept
 {
-    hmm_.set({local_indel_model_->open, local_indel_model_->extend, {}, {}, snv_penalty_});
+    return {local_indel_model_->open, local_indel_model_->extend, {}, {}, snv_penalty_};
 }
 
 bool DeNovoModel::can_try_align_with_hmm(const Haplotype& target, const Haplotype& given) const noexcept
@@ -253,7 +253,8 @@ void DeNovoModel::align_with_hmm(const Haplotype& target, const Haplotype& given
     pad_given(target, given, 2 * hmm_.band_size(), padded_given_);
     local_indel_model_->open.resize(padded_given_.size(), snv_penalty_);
     local_indel_model_->extend.resize(padded_given_.size(), snv_penalty_);
-    update_hmm_from_cache();
+    const auto hmm_params = make_hmm_parameters();
+    hmm_.set(hmm_params);
     hmm_.align(target.sequence(), padded_given_, alignment_);
 }
 
