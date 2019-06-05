@@ -276,8 +276,8 @@ template <typename Sequence1,
           typename Sequence2,
           typename PairHMMParameters>
 std::pair<double, bool>
-try_naive_evaluate(const Sequence1& target,
-                   const Sequence2& truth,
+try_naive_evaluate(const Sequence1& truth,
+                   const Sequence2& target,
                    const std::vector<std::uint8_t>& target_base_qualities,
                    const std::size_t target_offset,
                    const PairHMMParameters& model) noexcept
@@ -322,8 +322,8 @@ template <typename Sequence1,
           typename Sequence2,
           typename PairHMMParameters>
 bool
-try_naive_align(const Sequence1& target,
-                const Sequence2& truth,
+try_naive_align(const Sequence1& truth,
+                const Sequence2& target,
                 const std::vector<std::uint8_t>& target_base_qualities,
                 const std::size_t target_offset,
                 const PairHMMParameters& model,
@@ -829,14 +829,14 @@ template <typename Sequence1,
           typename PairHMM,
           typename PairHMMParameters>
 double
-evaluate(const Sequence1& target,
-         const Sequence2& truth,
+evaluate(const Sequence1& truth,
+         const Sequence2& target,
          const std::vector<std::uint8_t>& target_base_qualities,
          const std::size_t target_offset,
          const PairHMM& hmm,
          const PairHMMParameters& model_params) noexcept
 {
-    auto p = detail::try_naive_evaluate(target, truth, target_base_qualities, target_offset, model_params);
+    auto p = detail::try_naive_evaluate(truth, target, target_base_qualities, target_offset, model_params);
     return p.second ? p.first : detail::simd_evaluate(truth, target, target_base_qualities, target_offset, hmm, model_params);
 }
 
@@ -845,14 +845,14 @@ template <typename Sequence1,
           typename PairHMM,
           typename PairHMMParameters>
 double
-evaluate(const Sequence1& target,
-         const Sequence2& truth,
+evaluate(const Sequence1& truth,
+         const Sequence2& target,
          const PairHMM& hmm,
          const PairHMMParameters& model_params) noexcept
 {
     thread_local std::vector<std::uint8_t> target_base_qualities;
     target_base_qualities.assign(target.size(), model_params.mismatch);
-    return evaluate(target, truth, target_base_qualities, 0, hmm, model_params);
+    return evaluate(truth, target, target_base_qualities, hmm.band_size(), hmm, model_params);
 }
 
 template <typename Sequence1,
@@ -868,7 +868,7 @@ align(const Sequence1& target,
       const PairHMMParameters& model_params,
       Alignment& result) noexcept
 {
-    if (!detail::try_naive_align(target, truth, target_base_qualities, target_offset, model_params, result)) {
+    if (!detail::try_naive_align(truth, target, target_base_qualities, target_offset, model_params, result)) {
         detail::simd_align(truth, target, target_base_qualities, target_offset, hmm, model_params, result);
     }
 }
@@ -886,7 +886,7 @@ align(const Sequence1& target,
 {
     thread_local std::vector<std::uint8_t> target_base_qualities;
     target_base_qualities.assign(target.size(), model_params.mismatch);
-    align(truth, target, target_base_qualities, 0, hmm, model_params, result);
+    align(truth, target, target_base_qualities, hmm.band_size(), hmm, model_params, result);
 }
 
 template <typename Parameters,
@@ -923,7 +923,7 @@ public:
              const std::size_t target_offset) const noexcept
     {
         assert(params_);
-        auto p = detail::try_naive_evaluate(target, truth, target_base_qualities, target_offset, *params_);
+        auto p = detail::try_naive_evaluate(truth, target, target_base_qualities, target_offset, *params_);
         return p.second ? p.first : detail::simd_evaluate(truth, target, target_base_qualities, target_offset, hmm_, *params_);
     }
     
@@ -936,7 +936,7 @@ public:
         assert(params_);
         thread_local std::vector<std::uint8_t> target_base_qualities;
         target_base_qualities.assign(target.size(), params_->mismatch);
-        return evaluate(target, truth, target_base_qualities, 0);
+        return this->evaluate(target, truth, target_base_qualities, band_size());
     }
     
     template <typename Sequence1,
@@ -949,7 +949,7 @@ public:
           Alignment& result) const noexcept
     {
         assert(params_);
-        if (!detail::try_naive_align(target, truth, target_base_qualities, target_offset, *params_, result)) {
+        if (!detail::try_naive_align(truth, target, target_base_qualities, target_offset, *params_, result)) {
             detail::simd_align(truth, target, target_base_qualities, target_offset, hmm_, *params_, result);
         }
     }
@@ -962,7 +962,7 @@ public:
           const std::size_t target_offset) const noexcept
     {
         Alignment result {};
-        align(truth, target, target_base_qualities, target_offset, result);
+        this->align(target, truth, target_base_qualities, target_offset, result);
         return result;
     }
     
@@ -976,7 +976,7 @@ public:
         assert(params_);
         thread_local std::vector<std::uint8_t> target_base_qualities;
         target_base_qualities.assign(target.size(), params_->mismatch);
-        align(truth, target, target_base_qualities, 0, result);
+        this->align(target, truth, target_base_qualities, band_size(), result);
     }
     template <typename Sequence1,
               typename Sequence2>
@@ -985,7 +985,7 @@ public:
           const Sequence2& truth) const noexcept
     {
         Alignment result {};
-        align(truth, target, result);
+        this->align(target, truth, result);
         return result;
     }
     
