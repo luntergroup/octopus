@@ -895,6 +895,8 @@ template <typename Parameters,
 class PairHMM
 {
 public:
+    using ParameterType = Parameters;
+    
     PairHMM() = default;
     PairHMM(unsigned min_band_size) noexcept { reset(min_band_size); }
     PairHMM(const Parameters& params, unsigned min_band_size = 8) noexcept
