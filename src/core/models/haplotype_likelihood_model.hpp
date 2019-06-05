@@ -24,15 +24,13 @@
 #include "core/models/error/indel_error_model.hpp"
 #include "pairhmm/pair_hmm.hpp"
 
-#include "timers.hpp"
-
 namespace octopus {
 
 class HaplotypeLikelihoodModel
 {
 public:
     using LogProbability = double;
-    using Penalty = hmm::MutationModel::Penalty;
+    using Penalty = hmm::Penalty;
     
     struct Config
     {
@@ -40,6 +38,7 @@ public:
         boost::optional<AlignedRead::MappingQuality> mapping_quality_cap_trigger = boost::none;
         AlignedRead::MappingQuality mapping_quality_cap = 120;
         bool use_flank_state = true;
+        unsigned max_indel_error = 8;
     };
     
     struct FlankState
@@ -77,7 +76,7 @@ public:
     
     ~HaplotypeLikelihoodModel() = default;
     
-    static unsigned pad_requirement() noexcept;
+    unsigned pad_requirement() const noexcept;
     
     bool can_use_flank_state() const noexcept;
     
@@ -95,6 +94,8 @@ public:
     Alignment align(const AlignedRead& read, MappingPositionItr first_mapping_position, MappingPositionItr last_mapping_position) const;
     
 private:
+    using HMM = hmm::PairHMM<hmm::MutationModel>;
+    
     std::unique_ptr<SnvErrorModel> snv_error_model_;
     std::unique_ptr<IndelErrorModel> indel_error_model_;
     
@@ -107,6 +108,7 @@ private:
     
     std::vector<Penalty> haplotype_gap_open_penalities_, haplotype_gap_extend_penalities_;
     Config config_;
+    mutable HMM hmm_;
 };
 
 class HaplotypeLikelihoodModel::ShortHaplotypeError : public std::runtime_error

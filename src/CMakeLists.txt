@@ -436,7 +436,6 @@ set(CORE_SOURCES
     core/models/genotype/single_cell_model.cpp
 
     core/models/pairhmm/pair_hmm.hpp
-    core/models/pairhmm/pair_hmm.cpp
     core/models/pairhmm/simd_pair_hmm.hpp
     core/models/pairhmm/rolling_initializer.hpp
     core/models/pairhmm/sse2_pair_hmm_impl.hpp

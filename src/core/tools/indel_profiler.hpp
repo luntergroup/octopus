@@ -17,6 +17,7 @@
 #include "core/types/haplotype.hpp"
 #include "core/types/genotype.hpp"
 #include "core/types/allele.hpp"
+#include "core/models/haplotype_likelihood_model.hpp"
 #include "containers/mappable_flat_set.hpp"
 #include "containers/mappable_flat_multi_set.hpp"
 #include "io/reference/reference_genome.hpp"
@@ -81,6 +82,7 @@ private:
         HaplotypeRepeatMap repeats;
     };
     
+    HaplotypeLikelihoodModel model_;
     ProfileConfig config_;
     PerformanceConfig performance_config_;
     mutable ThreadPool workers_;

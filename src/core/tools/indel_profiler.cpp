@@ -44,13 +44,15 @@ unsigned get_pool_size(const IndelProfiler::PerformanceConfig& config)
 } // namespace
 
 IndelProfiler::IndelProfiler(ProfileConfig config)
-: config_ {std::move(config)}
+: model_ {}
+, config_ {std::move(config)}
 , performance_config_ {}
 , workers_ {get_pool_size(performance_config_)}
 {}
 
 IndelProfiler::IndelProfiler(ProfileConfig config, PerformanceConfig performance_config)
-: config_ {std::move(config)}
+: model_ {}
+, config_ {std::move(config)}
 , performance_config_ {}
 , workers_ {get_pool_size(performance_config_)}
 {}
@@ -420,15 +422,15 @@ unsigned count_errors(const AlignedRead& read)
     return count_errors(read.cigar());
 }
 
-bool over_hmm_band_limit(const CigarString& cigar) noexcept
+bool over_hmm_band_limit(const CigarString& cigar, const HaplotypeLikelihoodModel& model) noexcept
 {
     auto gap_len = static_cast<unsigned>(std::max(std::abs(max_indel_size(cigar)), std::abs(sum_indel_sizes(cigar))));
-    return gap_len > HaplotypeLikelihoodModel::pad_requirement();
+    return gap_len > model.pad_requirement();
 }
 
-bool is_likely_misaligned(const AlignedRead& read)
+bool is_likely_misaligned(const AlignedRead& read, const HaplotypeLikelihoodModel& model)
 {
-    if (over_hmm_band_limit(read.cigar())) return true;
+    if (over_hmm_band_limit(read.cigar(), model)) return true;
     const auto expected_errors = static_cast<unsigned>(std::ceil(error_expectation(read)));
     const auto max_expected_errors = 5 * expected_errors;
     const auto observed_errors = count_errors(read);
@@ -453,10 +455,10 @@ void IndelProfiler::evaluate_support(const Genotype<Haplotype>& genotype, ReadCo
     buffer.clear();
     buffer.shrink_to_fit();
     for (auto& p : haplotype_support) {
-        safe_realign(p.second, p.first);
+        safe_realign(p.second, p.first, model_);
         if (config_.check_read_misalignments) {
             p.second.erase(std::remove_if(std::begin(p.second), std::end(p.second),
-                                          [] (const auto& read) { return is_likely_misaligned(read); }),
+                                          [this] (const auto& read) { return is_likely_misaligned(read, model_); }),
                            std::end(p.second));
             p.second.shrink_to_fit();
         }
