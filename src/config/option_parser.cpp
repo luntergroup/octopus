@@ -529,6 +529,10 @@ OptionMap parse_options(const int argc, const char** argv)
     ("max-vb-seeds",
      po::value<int>()->default_value(12),
      "Maximum number of seeds to use for Variational Bayes algorithms")
+     
+     ("max-indel-errors",
+      po::value<int>()->default_value(8),
+      "Maximum number of indel errors allowed during haplotype likelihood calculation")
     ;
     
     po::options_description cancer("Calling (cancer)");
