@@ -10,10 +10,34 @@
 
 namespace octopus { namespace hmm { namespace simd {
 
+namespace detail {
+
+template <typename T, std::size_t... I>
+constexpr auto make_phmm_tuple(std::index_sequence<I...>) { return std::make_tuple(SimdPairHMM<128 * (I + 1) / sizeof(T), T>{}...); }
+
+template <typename Tuple>
+struct to_variant;
+
+template <typename... Ts>
+struct to_variant<std::tuple<Ts...>>
+{
+    using type = boost::variant<Ts...>;
+};
+
+template <typename Tuple>
+using to_variant_t = typename to_variant<Tuple>::type;
+
+} // namespace detail
+
 class PairHMMWrapper
 {
 public:
-    PairHMMWrapper(unsigned band_size = 8) noexcept { reset(band_size); }
+    enum class ScorePrecision { int16, int32 };
+    
+    PairHMMWrapper(unsigned band_size = 8, ScorePrecision score_precision = ScorePrecision::int16) noexcept
+    {
+        reset(band_size, score_precision);
+    }
     
     PairHMMWrapper(const PairHMMWrapper&)            = default;
     PairHMMWrapper& operator=(const PairHMMWrapper&) = default;
@@ -32,9 +56,9 @@ public:
         return boost::apply_visitor([] (const auto& hmm) noexcept { return hmm.name(); }, hmm_);
     }
     
-    void reset(unsigned band_size) noexcept
+    void reset(unsigned band_size, ScorePrecision score_precision = ScorePrecision::int16) noexcept
     {
-        hmm_ = make_simd_pair_hmm(band_size);
+        hmm_ = make_simd_pair_hmm(band_size, score_precision);
     }
     
     template <typename OpenPenaltyArrayOrConstant,
@@ -154,40 +178,38 @@ public:
     }
 
 private:
-    using PairHMMs = std::tuple<
-        SimdPairHMM<8,  short>,
-        SimdPairHMM<16, short>,
-        SimdPairHMM<24, short>,
-        SimdPairHMM<32, short>,
-        SimdPairHMM<40, short>,
-        SimdPairHMM<48, short>,
-        SimdPairHMM<4,  int>,
-        SimdPairHMM<8,  int>,
-        SimdPairHMM<12, int>,
-        SimdPairHMM<16, int>,
-        SimdPairHMM<20, int>,
-        SimdPairHMM<24, int>,
-        SimdPairHMM<28, int>,
-        SimdPairHMM<32, int>
-    >;
+    using ShortPairHMMs = decltype(detail::make_phmm_tuple<short>(std::make_index_sequence<10>()));
+    using IntPairHMMs   = decltype(detail::make_phmm_tuple<int>(std::make_index_sequence<20>()));
+    using PairHMMs      = decltype(std::tuple_cat(ShortPairHMMs {}, IntPairHMMs {}));
     
-    using PairHmmVariants = boost::variant<
-        std::tuple_element_t<0, PairHMMs>,
-        std::tuple_element_t<1, PairHMMs>,
-        std::tuple_element_t<2, PairHMMs>
-    >;
+    using PairHmmVariant = detail::to_variant_t<PairHMMs>;
     
-    PairHmmVariants hmm_;
+    PairHmmVariant hmm_;
     
-    PairHmmVariants make_simd_pair_hmm(const unsigned band_size) noexcept
+    template <typename Hmms, std::size_t... Is>
+    static PairHmmVariant make_simd_pair_hmm_helper(const unsigned band_size, std::index_sequence<Is...>) noexcept
     {
-        const static PairHMMs pair_hmms {};
-        if (band_size <= std::tuple_element_t<0, PairHMMs>::band_size()) {
-            return std::get<0>(pair_hmms);
-        } else if (band_size <= std::tuple_element_t<1, PairHMMs>::band_size()) {
-            return std::get<1>(pair_hmms);
+        constexpr static auto num_hmms = std::tuple_size<Hmms>::value;
+        constexpr static auto max_band_size = std::tuple_element_t<num_hmms - 1, Hmms>::band_size();
+        if (band_size < max_band_size) {
+            PairHmmVariant result {};
+            int unused[] = {(band_size < std::tuple_element_t<Is, Hmms>::band_size() ? (result = std::tuple_element_t<Is, Hmms> {}, 0) : 0)...};
+            (void) unused;
+            return result;
         } else {
-            return std::get<2>(pair_hmms);
+            return std::tuple_element_t<num_hmms - 1, Hmms> {};
+        }
+    }
+    
+    PairHmmVariant
+    make_simd_pair_hmm(const unsigned band_size, const ScorePrecision score_precision) noexcept
+    {
+        if (score_precision == ScorePrecision::int16) {
+            using Hmms = ShortPairHMMs;
+            return make_simd_pair_hmm_helper<Hmms>(band_size, std::make_index_sequence<std::tuple_size<Hmms>::value>());
+        } else {
+            using Hmms = IntPairHMMs;
+            return make_simd_pair_hmm_helper<Hmms>(band_size, std::make_index_sequence<std::tuple_size<Hmms>::value>());
         }
     }
 };
