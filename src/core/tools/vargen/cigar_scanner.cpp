@@ -496,7 +496,8 @@ bool is_tandem_repeat(const Allele& allele, const unsigned max_period = 4)
 }
 
 bool is_good_germline(const Variant& variant, const unsigned depth, const unsigned forward_strand_depth,
-                      const unsigned forward_strand_support, std::vector<unsigned> observed_qualities)
+                      const unsigned forward_strand_support, std::vector<unsigned> observed_qualities,
+                      const unsigned copy_number = 2)
 {
     const auto support = observed_qualities.size();
     if (depth < 4) {
@@ -643,7 +644,7 @@ bool is_good_somatic(const Variant& v, const CigarScanner::VariantObservation::S
 
 bool KnownCopyNumberInclusionPredicate::operator()(const CigarScanner::VariantObservation& candidate)
 {
-    return any_good_germline_samples(candidate, ploidy_) || (candidate.sample_observations.size() > 1 && is_good_germline_pooled(candidate));
+    return any_good_germline_samples(candidate, copy_number_) || (candidate.sample_observations.size() > 1 && is_good_germline_pooled(candidate));
 }
 
 UnknownCopyNumberInclusionPredicate::UnknownCopyNumberInclusionPredicate(double min_vaf, double min_probability)
