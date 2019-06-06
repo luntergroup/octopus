@@ -898,8 +898,8 @@ public:
     using ParameterType = Parameters;
     
     PairHMM() = default;
-    PairHMM(unsigned min_band_size) noexcept { reset(min_band_size); }
-    PairHMM(const Parameters& params, unsigned min_band_size = 8) noexcept
+    PairHMM(unsigned min_band_size) { reset(min_band_size); }
+    PairHMM(const Parameters& params, unsigned min_band_size = 8)
     {
         reset(min_band_size);
         set(params);
@@ -999,9 +999,9 @@ private:
     SIMDHMM hmm_;
     const Parameters* params_ = nullptr;
     
-    void reset(unsigned min_band_size) noexcept { reset(min_band_size, std::conditional_t<is_static, std::true_type, std::false_type> {}); }
+    void reset(unsigned min_band_size) { reset(min_band_size, std::conditional_t<is_static, std::true_type, std::false_type> {}); }
     void reset(unsigned min_band_size, std::true_type) const noexcept { }
-    void reset(unsigned min_band_size, std::false_type) noexcept { hmm_.reset(min_band_size); }
+    void reset(unsigned min_band_size, std::false_type) { hmm_.reset(min_band_size); }
 };
 
 } // namespace hmm
