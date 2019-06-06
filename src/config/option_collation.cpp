@@ -852,9 +852,9 @@ ReadPipe make_read_pipe(ReadManager& read_manager, const ReferenceGenome& refere
     }
 }
 
-auto get_default_germline_inclusion_predicate()
+auto get_default_germline_inclusion_predicate(const OptionMap& options)
 {
-    return coretools::DefaultInclusionPredicate {};
+    return coretools::KnownCopyNumberInclusionPredicate {static_cast<unsigned>(options.at("organism-ploidy").as<int>())};
 }
 
 bool is_cancer_calling(const OptionMap& options)
@@ -872,24 +872,13 @@ bool is_single_cell_calling(const OptionMap& options)
     return options.at("caller").as<std::string>() == "cell";
 }
 
-double get_min_somatic_vaf(const OptionMap& options)
-{
-    const auto min_credible_frequency = options.at("min-credible-somatic-frequency").as<float>();
-    const auto min_expected_frequency = options.at("min-expected-somatic-frequency").as<float>();
-    if (std::min(min_credible_frequency, min_expected_frequency) <= 1.0) {
-        return std::max(min_credible_frequency, min_expected_frequency);
-    } else {
-        return std::min(min_credible_frequency, min_expected_frequency);
-    }
-}
-
 auto get_default_somatic_inclusion_predicate(const OptionMap& options, boost::optional<SampleName> normal = boost::none)
 {
-    const auto min_vaf = get_min_somatic_vaf(options);
+    const auto min_credible_vaf = options.at("min-credible-somatic-frequency").as<float>();
     if (normal) {
-        return coretools::DefaultSomaticInclusionPredicate {*normal, min_vaf};
+        return coretools::UnknownCopyNumberInclusionPredicate {*normal, min_credible_vaf};
     } else {
-        return coretools::DefaultSomaticInclusionPredicate {min_vaf};
+        return coretools::UnknownCopyNumberInclusionPredicate {min_credible_vaf};
     }
 }
 
@@ -900,8 +889,7 @@ double get_min_clone_vaf(const OptionMap& options)
 
 auto get_default_polyclone_inclusion_predicate(const OptionMap& options)
 {
-    const auto min_vaf = get_min_clone_vaf(options);
-    return coretools::DefaultSomaticInclusionPredicate {min_vaf};
+    return coretools::UnknownCopyNumberInclusionPredicate {get_min_clone_vaf(options)};
 }
 
 auto get_default_single_cell_inclusion_predicate(const OptionMap& options)
@@ -924,7 +912,7 @@ auto get_default_inclusion_predicate(const OptionMap& options) noexcept
     } else if (is_single_cell_calling(options)) {
         return InclusionPredicate {get_default_single_cell_inclusion_predicate(options)};
     } else {
-        return InclusionPredicate {get_default_germline_inclusion_predicate()};
+        return InclusionPredicate {get_default_germline_inclusion_predicate(options)};
     }
 }
 
@@ -933,10 +921,21 @@ auto get_default_match_predicate() noexcept
     return coretools::DefaultMatchPredicate {};
 }
 
+double get_min_expected_somatic_vaf(const OptionMap& options)
+{
+    const auto min_credible_frequency = options.at("min-credible-somatic-frequency").as<float>();
+    const auto min_expected_frequency = options.at("min-expected-somatic-frequency").as<float>();
+    if (std::min(min_credible_frequency, min_expected_frequency) <= 1.0) {
+        return std::max(min_credible_frequency, min_expected_frequency);
+    } else {
+        return std::min(min_credible_frequency, min_expected_frequency);
+    }
+}
+
 auto get_assembler_region_generator_frequency_trigger(const OptionMap& options)
 {
     if (is_cancer_calling(options)) {
-        return get_min_somatic_vaf(options);
+        return get_min_expected_somatic_vaf(options);
     } else if (is_polyclone_calling(options)) {
         return get_min_clone_vaf(options);
     } else {

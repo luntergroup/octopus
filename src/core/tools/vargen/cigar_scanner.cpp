@@ -545,61 +545,59 @@ bool is_good_germline(const Variant& variant, const unsigned depth, const unsign
     }
 }
 
+struct UnknownExpectedVAFStats
+{
+    double min_vaf, min_probability;
+};
+
 bool is_good_somatic(const Variant& variant, const unsigned depth, const unsigned forward_strand_depth,
                      const unsigned forward_strand_support, const unsigned num_edge_observations,
-                     std::vector<unsigned> observed_qualities, const double min_expected_vaf)
+                     std::vector<unsigned> observed_qualities, const UnknownExpectedVAFStats vaf_def)
 {
     assert(depth > 0);
     const auto support = observed_qualities.size();
     const auto reverse_strand_support = support - forward_strand_support;
-    if (support > 15 && is_completely_strand_biased(forward_strand_support, reverse_strand_support)) {
-        return false;
-    }
-    if (support > 25 && is_almost_completely_strand_biased(forward_strand_support, reverse_strand_support)) {
-        return false;
-    }
-    if (support > 50 && is_strongly_strand_biased(forward_strand_support, reverse_strand_support)) {
+    if ((support > 15 && is_completely_strand_biased(forward_strand_support, reverse_strand_support))
+        || (support > 25 && is_almost_completely_strand_biased(forward_strand_support, reverse_strand_support))
+        || (support > 50 && is_strongly_strand_biased(forward_strand_support, reverse_strand_support))){
         return false;
     }
     const auto adjusted_depth = depth - std::min(static_cast<unsigned>(std::sqrt(depth)), depth - 1);
-    auto approx_vaf = static_cast<double>(observed_qualities.size()) / adjusted_depth;
     if (is_snv(variant)) {
         if (is_likely_runthrough_artifact(forward_strand_support, reverse_strand_support, observed_qualities)) return false;
         erase_below(observed_qualities, 15);
-        approx_vaf = static_cast<double>(observed_qualities.size() - num_edge_observations) / adjusted_depth;
-        if (observed_qualities.size() >= 2 && approx_vaf >= min_expected_vaf && num_edge_observations < support) {
-            return approx_vaf >= 0.01 || !is_completely_strand_biased(forward_strand_support, reverse_strand_support);
-        } else {
-            return false;
-        }
+        const auto good_support = observed_qualities.size() - num_edge_observations;
+        const auto probability_vaf_greater_than_min_vaf = maths::beta_sf(good_support + 0.5, adjusted_depth - good_support + 0.5, vaf_def.min_vaf);
+        return good_support > 1
+            && probability_vaf_greater_than_min_vaf >= vaf_def.min_probability
+            && num_edge_observations < support
+            && !is_completely_strand_biased(forward_strand_support, reverse_strand_support);
     } else if (is_insertion(variant)) {
         if (support == 1 && alt_sequence_size(variant) > 8) return false;
         erase_below(observed_qualities, 15);
-        if (alt_sequence_size(variant) < 10) {
-            return observed_qualities.size() >= 2 && approx_vaf >= min_expected_vaf;
-        } else {
-            return observed_qualities.size() >= 2 && approx_vaf >= min_expected_vaf / 3;
-        }
+        const auto good_support = observed_qualities.size();
+        const auto probability_vaf_greater_than_min_vaf = maths::beta_sf(good_support + 0.5, adjusted_depth - good_support + 0.5, vaf_def.min_vaf);
+        return good_support > 1 && probability_vaf_greater_than_min_vaf >= vaf_def.min_probability;
     } else {
         // deletion or mnv
-        if (region_size(variant) < 10) {
-            return support > 1 && approx_vaf >= min_expected_vaf;
-        } else {
-            return static_cast<double>(support) / approx_vaf >= min_expected_vaf / 3;
-        }
+        const auto probability_vaf_greater_than_min_vaf = maths::beta_sf(support + 0.5, adjusted_depth - support + 0.5, vaf_def.min_vaf);
+        return probability_vaf_greater_than_min_vaf >= vaf_def.min_probability;
+        return support > 1 && probability_vaf_greater_than_min_vaf >= vaf_def.min_probability;
     }
 }
 
-bool is_good_germline(const Variant& v, const CigarScanner::VariantObservation::SampleObservationStats& observation)
+bool is_good_germline(const Variant& v, const CigarScanner::VariantObservation::SampleObservationStats& observation,
+                      unsigned ploidy = 2)
 {
     return is_good_germline(v, observation.depth, observation.forward_strand_depth,
-                            observation.forward_strand_support, observation.observed_base_qualities);
+                            observation.forward_strand_support, observation.observed_base_qualities,
+                            ploidy);
 }
 
-bool any_good_germline_samples(const CigarScanner::VariantObservation& candidate)
+bool any_good_germline_samples(const CigarScanner::VariantObservation& candidate, unsigned ploidy = 2)
 {
     return std::any_of(std::cbegin(candidate.sample_observations), std::cend(candidate.sample_observations),
-                       [&] (const auto& observation) { return is_good_germline(candidate.variant, observation); });
+                       [&] (const auto& observation) { return is_good_germline(candidate.variant, observation, ploidy); });
 }
 
 auto count_forward_strand_depth(const CigarScanner::VariantObservation& candidate)
@@ -634,34 +632,49 @@ bool is_good_germline_pooled(const CigarScanner::VariantObservation& candidate)
                             count_forward_strand_support(candidate), concat_observed_base_qualities(candidate));
 }
 
-bool is_good_somatic(const Variant& v, const CigarScanner::VariantObservation::SampleObservationStats& observation, double min_expected_vaf)
+bool is_good_somatic(const Variant& v, const CigarScanner::VariantObservation::SampleObservationStats& observation,
+                     UnknownExpectedVAFStats vaf_def)
 {
     return is_good_somatic(v, observation.depth, observation.forward_strand_depth, observation.forward_strand_support,
-                           observation.edge_support, observation.observed_base_qualities, min_expected_vaf);
+                           observation.edge_support, observation.observed_base_qualities, vaf_def);
 }
 
 } // namespace
 
-bool DefaultInclusionPredicate::operator()(const CigarScanner::VariantObservation& candidate)
+bool KnownCopyNumberInclusionPredicate::operator()(const CigarScanner::VariantObservation& candidate)
 {
-    return any_good_germline_samples(candidate) || (candidate.sample_observations.size() > 1 && is_good_germline_pooled(candidate));
+    return any_good_germline_samples(candidate, ploidy_) || (candidate.sample_observations.size() > 1 && is_good_germline_pooled(candidate));
 }
 
-bool DefaultSomaticInclusionPredicate::operator()(const CigarScanner::VariantObservation& candidate)
+UnknownCopyNumberInclusionPredicate::UnknownCopyNumberInclusionPredicate(double min_vaf, double min_probability)
+: normal_ {}
+, min_vaf_ {min_vaf}
+, min_probability_ {min_probability}
+{}
+
+UnknownCopyNumberInclusionPredicate::UnknownCopyNumberInclusionPredicate(SampleName normal, double min_vaf, double min_probability)
+: normal_ {std::move(normal)}
+, min_vaf_ {min_vaf}
+, min_probability_ {min_probability}
+{}
+
+bool UnknownCopyNumberInclusionPredicate::operator()(const CigarScanner::VariantObservation& candidate)
 {
+    const UnknownExpectedVAFStats vaf_def {min_vaf_, min_probability_};
     return std::any_of(std::cbegin(candidate.sample_observations), std::cend(candidate.sample_observations),
                        [&] (const auto& observation) {
                            if (normal_ && observation.sample.get() == *normal_) {
                                return is_good_germline(candidate.variant, observation);
                            } else {
-                               return is_good_somatic(candidate.variant, observation, min_expected_vaf_);
+                               return is_good_somatic(candidate.variant, observation, vaf_def);
                            }
                        });
 }
 
 bool is_good_cell(const Variant& v, const CigarScanner::VariantObservation::SampleObservationStats& observation)
 {
-    return is_good_somatic(v, observation, 0.25);
+    const UnknownExpectedVAFStats vaf_def {0.2, 0.5};
+    return is_good_somatic(v, observation, vaf_def);
 }
 
 bool any_good_cell_samples(const CigarScanner::VariantObservation& candidate)
