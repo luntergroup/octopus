@@ -110,6 +110,11 @@ boost::optional<unsigned> GenomeCallingComponents::num_threads() const noexcept
     return components_.num_threads;
 }
 
+const HaplotypeLikelihoodModel& GenomeCallingComponents::haplotype_likelihood_model() const noexcept
+{
+    return components_.haplotype_likelihood_model;
+}
+
 const CallerFactory& GenomeCallingComponents::caller_factory() const noexcept
 {
     return components_.caller_factory;
@@ -499,6 +504,7 @@ GenomeCallingComponents::Components::Components(ReferenceGenome&& reference, Rea
 , contigs {get_contigs(this->regions, this->reference, options::get_contig_output_order(options))}
 , reads_profile {profile_reads(this->samples, this->regions, this->read_manager)}
 , read_pipe {options::make_read_pipe(this->read_manager, this->reference, this->samples, options)}
+, haplotype_likelihood_model {options::make_haplotype_likelihood_model(options, this->reads_profile)}
 , caller_factory {options::make_caller_factory(this->reference, this->read_pipe, this->regions, options, this->reads_profile)}
 , filter_read_pipe {}
 , output {std::move(output)}

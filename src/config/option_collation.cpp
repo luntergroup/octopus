@@ -1388,7 +1388,7 @@ AlignedRead::MappingQuality calculate_mapping_quality_cap_trigger(const OptionMa
     }
 }
 
-HaplotypeLikelihoodModel make_likelihood_model(const OptionMap& options, const boost::optional<ReadSetProfile>& read_profile)
+HaplotypeLikelihoodModel make_haplotype_likelihood_model(const OptionMap& options, const boost::optional<ReadSetProfile>& read_profile)
 {
     auto error_model = make_error_model(options);
     HaplotypeLikelihoodModel::Config config {};
@@ -1404,7 +1404,7 @@ HaplotypeLikelihoodModel make_likelihood_model(const OptionMap& options, const b
 
 auto get_min_haplotype_flank_pad(const OptionMap& options, const boost::optional<ReadSetProfile>& input_reads_profile)
 {
-    auto model = make_likelihood_model(options, input_reads_profile);
+    auto model = make_haplotype_likelihood_model(options, input_reads_profile);
     return 2 * model.pad_requirement();
 }
 
@@ -1787,7 +1787,7 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
     if (call_sites_only(options) && !is_call_filtering_requested(options)) {
         vc_builder.set_sites_only();
     }
-    vc_builder.set_likelihood_model(make_likelihood_model(options, read_profile));
+    vc_builder.set_likelihood_model(make_haplotype_likelihood_model(options, read_profile));
     const auto target_working_memory = get_target_working_memory(options);
     if (target_working_memory) vc_builder.set_target_memory_footprint(*target_working_memory);
     vc_builder.set_execution_policy(get_thread_execution_policy(options));

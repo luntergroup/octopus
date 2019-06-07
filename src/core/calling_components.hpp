@@ -21,6 +21,7 @@
 #include "io/read/read_manager.hpp"
 #include "io/variant/vcf_writer.hpp"
 #include "readpipe/read_pipe_fwd.hpp"
+#include "core/models/haplotype_likelihood_model.hpp"
 #include "core/callers/caller_factory.hpp"
 #include "core/csr/filters/variant_call_filter_factory.hpp"
 #include "core/tools/bam_realigner.hpp"
@@ -61,6 +62,7 @@ public:
     std::size_t read_buffer_size() const noexcept;
     const boost::optional<Path>& temp_directory() const noexcept;
     boost::optional<unsigned> num_threads() const noexcept;
+    const HaplotypeLikelihoodModel& haplotype_likelihood_model() const noexcept;
     const CallerFactory& caller_factory() const noexcept;
     boost::optional<VcfWriter&> filtered_output() noexcept;
     boost::optional<const VcfWriter&> filtered_output() const noexcept;
@@ -100,6 +102,7 @@ private:
         std::vector<GenomicRegion::ContigName> contigs;
         boost::optional<ReadSetProfile> reads_profile;
         ReadPipe read_pipe;
+        HaplotypeLikelihoodModel haplotype_likelihood_model;
         CallerFactory caller_factory;
         boost::optional<ReadPipe> filter_read_pipe;
         VcfWriter output;
