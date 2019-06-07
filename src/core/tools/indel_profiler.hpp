@@ -36,6 +36,7 @@ public:
     
     struct ProfileConfig
     {
+        HaplotypeLikelihoodModel alignment_model = {};
         unsigned min_period = 1, max_period = 30;
         unsigned min_periods = 1, max_periods = 50;
         unsigned max_length = 200;
@@ -82,7 +83,6 @@ private:
         HaplotypeRepeatMap repeats;
     };
     
-    HaplotypeLikelihoodModel model_;
     ProfileConfig config_;
     PerformanceConfig performance_config_;
     mutable ThreadPool workers_;
@@ -115,9 +115,18 @@ struct IndelProfiler::IndelProfile
 IndelProfiler::IndelProfile
 profile_indels(const ReadPipe& reads, VcfReader::Path variants, const ReferenceGenome& reference);
 IndelProfiler::IndelProfile
+profile_indels(const ReadPipe& reads, VcfReader::Path variants, const ReferenceGenome& reference,
+               IndelProfiler::ProfileConfig config);
+IndelProfiler::IndelProfile
 profile_indels(const ReadPipe& reads, VcfReader::Path variants, const ReferenceGenome& reference, const InputRegionMap& regions);
 IndelProfiler::IndelProfile
+profile_indels(const ReadPipe& reads, VcfReader::Path variants, const ReferenceGenome& reference, const InputRegionMap& regions,
+               IndelProfiler::ProfileConfig config);
+IndelProfiler::IndelProfile
 profile_indels(const ReadPipe& reads, VcfReader::Path variants, const ReferenceGenome& reference, const GenomicRegion& region);
+IndelProfiler::IndelProfile
+profile_indels(const ReadPipe& reads, VcfReader::Path variants, const ReferenceGenome& reference, const GenomicRegion& region,
+               IndelProfiler::ProfileConfig config);
 
 std::ostream& operator<<(std::ostream& os, const IndelProfiler::IndelProfile& indel_profile);
 

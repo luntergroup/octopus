@@ -1625,7 +1625,9 @@ void run_data_profiler(GenomeCallingComponents& components)
             info_log << "Starting indel profiler";
             final_output.close();
             if (is_indexable(*final_output_path)) index_vcf(*final_output_path);
-            const auto profile = profile_indels(components.read_pipe(), *final_output_path, components.reference(), components.search_regions());
+            IndelProfiler::ProfileConfig config {};
+            config.alignment_model = make_filtering_haplotype_likelihood_model(components);
+            const auto profile = profile_indels(components.read_pipe(), *final_output_path, components.reference(), components.search_regions(), std::move(config));
             std::ofstream profile_file {data_profile_csv_path->string()};
             profile_file << profile;
             stream(info_log) << "Indel profile written to " << *data_profile_csv_path;

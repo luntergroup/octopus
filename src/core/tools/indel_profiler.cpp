@@ -44,15 +44,13 @@ unsigned get_pool_size(const IndelProfiler::PerformanceConfig& config)
 } // namespace
 
 IndelProfiler::IndelProfiler(ProfileConfig config)
-: model_ {}
-, config_ {std::move(config)}
+: config_ {std::move(config)}
 , performance_config_ {}
 , workers_ {get_pool_size(performance_config_)}
 {}
 
 IndelProfiler::IndelProfiler(ProfileConfig config, PerformanceConfig performance_config)
-: model_ {}
-, config_ {std::move(config)}
+: config_ {std::move(config)}
 , performance_config_ {}
 , workers_ {get_pool_size(performance_config_)}
 {}
@@ -448,17 +446,17 @@ void IndelProfiler::evaluate_support(const Genotype<Haplotype>& genotype, ReadCo
     HaplotypeSupportMap haplotype_support;
     if (genotype.ploidy() > 1) {
         const AssignmentConfig assigner_config {AssignmentConfig::AmbiguousAction::random};
-        haplotype_support = compute_haplotype_support(genotype, buffer, assigner_config);
+        haplotype_support = compute_haplotype_support(genotype, buffer, config_.alignment_model, assigner_config);
     } else {
         haplotype_support.emplace(genotype[0], std::move(buffer));
     }
     buffer.clear();
     buffer.shrink_to_fit();
     for (auto& p : haplotype_support) {
-        safe_realign(p.second, p.first, model_);
+        safe_realign(p.second, p.first, config_.alignment_model);
         if (config_.check_read_misalignments) {
             p.second.erase(std::remove_if(std::begin(p.second), std::end(p.second),
-                                          [this] (const auto& read) { return is_likely_misaligned(read, model_); }),
+                                          [this] (const auto& read) { return is_likely_misaligned(read, config_.alignment_model); }),
                            std::end(p.second));
             p.second.shrink_to_fit();
         }
@@ -545,6 +543,15 @@ profile_indels(const ReadPipe& reads, VcfReader::Path variants, const ReferenceG
 }
 
 IndelProfiler::IndelProfile
+profile_indels(const ReadPipe& reads, VcfReader::Path variants, const ReferenceGenome& reference,
+               IndelProfiler::ProfileConfig config)
+{
+    VcfReader vcf {std::move(variants)};
+    IndelProfiler profiler {std::move(config)};
+    return profiler.profile(reads, vcf, reference);
+}
+
+IndelProfiler::IndelProfile
 profile_indels(const ReadPipe& reads, VcfReader::Path variants, const ReferenceGenome& reference, const InputRegionMap& regions)
 {
     VcfReader vcf {std::move(variants)};
@@ -553,10 +560,28 @@ profile_indels(const ReadPipe& reads, VcfReader::Path variants, const ReferenceG
 }
 
 IndelProfiler::IndelProfile
+profile_indels(const ReadPipe& reads, VcfReader::Path variants, const ReferenceGenome& reference, const InputRegionMap& regions,
+               IndelProfiler::ProfileConfig config)
+{
+    VcfReader vcf {std::move(variants)};
+    IndelProfiler profiler {std::move(config)};
+    return profiler.profile(reads, vcf, reference, regions);
+}
+
+IndelProfiler::IndelProfile
 profile_indels(const ReadPipe& reads, VcfReader::Path variants, const ReferenceGenome& reference, const GenomicRegion& region)
 {
     VcfReader vcf {std::move(variants)};
     IndelProfiler profiler {};
+    return profiler.profile(reads, vcf, reference, region);
+}
+
+IndelProfiler::IndelProfile
+profile_indels(const ReadPipe& reads, VcfReader::Path variants, const ReferenceGenome& reference, const GenomicRegion& region,
+               IndelProfiler::ProfileConfig config)
+{
+    VcfReader vcf {std::move(variants)};
+    IndelProfiler profiler {std::move(config)};
     return profiler.profile(reads, vcf, reference, region);
 }
 
