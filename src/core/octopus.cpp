@@ -1322,6 +1322,16 @@ bool use_unfiltered_call_region_hints_for_filtering(const GenomeCallingComponent
     return true;
 }
 
+HaplotypeLikelihoodModel make_filtering_haplotype_likelihood_model(const GenomeCallingComponents& components)
+{
+    auto result = components.haplotype_likelihood_model();
+    auto new_config = result.config();
+    new_config.use_mapping_quality = false;
+    new_config.use_flank_state = false;
+    result.set(std::move(new_config));
+    return result;
+}
+
 void run_csr(GenomeCallingComponents& components)
 {
     if (apply_csr(components)) {
@@ -1347,7 +1357,9 @@ void run_csr(GenomeCallingComponents& components)
         }
         const VcfReader in {std::move(*input_path)};
         const auto filter = filter_factory.make(components.reference(), std::move(buffered_rp), in.fetch_header(),
-                                                components.ploidies(), components.pedigree(),
+                                                components.ploidies(),
+                                                make_filtering_haplotype_likelihood_model(components),
+                                                components.pedigree(),
                                                 progress, components.num_threads());
         assert(filter);
         VcfWriter& out {*components.filtered_output()};

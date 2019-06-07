@@ -14,6 +14,7 @@
 #include "config/common.hpp"
 #include "core/types/haplotype.hpp"
 #include "core/types/genotype.hpp"
+#include "core/models/haplotype_likelihood_model.hpp"
 #include "core/tools/read_assigner.hpp"
 #include "io/reference/reference_genome.hpp"
 
@@ -26,12 +27,19 @@ public:
     
     ReadAssignments() = default;
     
-    ReadAssignments(const ReferenceGenome& reference, const GenotypeMap& genotypes, const ReadMap& reads);
+    ReadAssignments(const ReferenceGenome& reference,
+                    const GenotypeMap& genotypes,
+                    const ReadMap& reads);
+    ReadAssignments(const ReferenceGenome& reference,
+                    const GenotypeMap& genotypes,
+                    const ReadMap& reads,
+                    HaplotypeLikelihoodModel model);
     
 private:
     static const std::string name_;
     
     SupportMaps result_;
+    HaplotypeLikelihoodModel likelihood_model_;
     
     const std::string& do_name() const noexcept override { return name_; }
     Facet::ResultType do_get() const override;

@@ -20,8 +20,17 @@ auto copy_overlapped_to_vector(const ReadContainer& reads, const Mappable& mappa
 
 } // namespace
 
-ReadAssignments::ReadAssignments(const ReferenceGenome& reference, const GenotypeMap& genotypes, const ReadMap& reads)
+ReadAssignments::ReadAssignments(const ReferenceGenome& reference,
+                                 const GenotypeMap& genotypes,
+                                 const ReadMap& reads)
+: ReadAssignments {reference, genotypes, reads, {}} {}
+
+ReadAssignments::ReadAssignments(const ReferenceGenome& reference,
+                                 const GenotypeMap& genotypes,
+                                 const ReadMap& reads,
+                                 HaplotypeLikelihoodModel model)
 : result_ {}
+, likelihood_model_ {std::move(model)}
 {
     const auto num_samples = genotypes.size();
     result_.support.reserve(num_samples);
@@ -39,7 +48,7 @@ ReadAssignments::ReadAssignments(const ReferenceGenome& reference, const Genotyp
             if (!local_reads.empty()) {
                 HaplotypeSupportMap genotype_support {};
                 if (!genotype.is_homozygous()) {
-                    genotype_support = compute_haplotype_support(genotype, local_reads, result_.ambiguous[sample]);
+                    genotype_support = compute_haplotype_support(genotype, local_reads, result_.ambiguous[sample], likelihood_model_);
                 } else {
                     if (is_reference(genotype[0])) {
                         genotype_support[genotype[0]] = std::move(local_reads);
@@ -48,11 +57,11 @@ ReadAssignments::ReadAssignments(const ReferenceGenome& reference, const Genotyp
                         Haplotype ref {mapped_region(genotype), reference};
                         result_.support[sample][ref] = {};
                         augmented_genotype.emplace(std::move(ref));
-                        genotype_support = compute_haplotype_support(augmented_genotype, local_reads, result_.ambiguous[sample]);
+                        genotype_support = compute_haplotype_support(augmented_genotype, local_reads, result_.ambiguous[sample], likelihood_model_);
                     }
                 }
                 for (auto& s : genotype_support) {
-                    safe_realign_to_reference(s.second, s.first);
+                    safe_realign_to_reference(s.second, s.first, likelihood_model_);
                     std::sort(std::begin(s.second), std::end(s.second));
                     result_.support[sample][s.first] = std::move(s.second);
                 }
