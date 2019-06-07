@@ -45,8 +45,10 @@ auto safe_expand(const GenomicRegion& region, const GenomicRegion::Size n)
 HaplotypeLikelihoodModel make_default_haplotype_likelihood_model()
 {
     HaplotypeLikelihoodModel::Config config {};
+    config.max_indel_error = 8;
+    config.use_flank_state = false;
     config.use_mapping_quality = false;
-    return {nullptr, make_indel_error_model(), config};
+    return {config};
 }
 
 } // namespace

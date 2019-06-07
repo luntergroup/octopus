@@ -538,6 +538,11 @@ GenomeCallingComponents::Components::Components(ReferenceGenome&& reference, Rea
         if (temp_directory) fs::remove_all(*temp_directory);
         throw;
     }
+    bamout_config.alignment_model = haplotype_likelihood_model;
+    auto new_config = haplotype_likelihood_model.config();
+    new_config.use_mapping_quality = false;
+    new_config.use_flank_state = false;
+    bamout_config.alignment_model.set(std::move(new_config));
     bamout_config.copy_hom_ref_reads = options::full_bamouts_requested(options);
     bamout_config.max_buffer = read_buffer_footprint;
     bamout_config.max_threads = num_threads;
