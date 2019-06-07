@@ -76,6 +76,9 @@ public:
     
     ~HaplotypeLikelihoodModel() = default;
     
+    const Config& config() const noexcept;
+    void set(Config config);
+    
     unsigned pad_requirement() const noexcept;
     
     bool can_use_flank_state() const noexcept;

@@ -34,6 +34,22 @@ HaplotypeLikelihoodModel::ShortHaplotypeError::required_extension() const noexce
 
 // public methods
 
+const HaplotypeLikelihoodModel::Config& HaplotypeLikelihoodModel::config() const noexcept
+{
+    return config_;
+}
+
+void HaplotypeLikelihoodModel::set(Config config)
+{
+    if (config.max_indel_error != this->config_.max_indel_error) {
+        hmm_ = HMM {config.max_indel_error};
+    }
+    config_ = std::move(config);
+    if (config_.mapping_quality_cap_trigger && *config_.mapping_quality_cap_trigger >= config_.mapping_quality_cap) {
+        config_.mapping_quality_cap_trigger = boost::none;
+    }
+}
+
 unsigned HaplotypeLikelihoodModel::pad_requirement() const noexcept
 {
     return hmm_.band_size();
