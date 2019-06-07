@@ -1501,11 +1501,63 @@ class BadSampleCount : public UserError
     }
 };
 
+template <typename T>
+void print_with_quotes(const std::vector<T>& values, std::ostream& os, const char* delim = " ")
+{
+    if (!values.empty()) {
+        std::for_each(std::cbegin(values), std::prev(std::cend(values)), [&] (const auto& value) {
+            os << '"' << value << '"' << delim;
+        });
+        os << '"' << values.back() << '"';
+    }
+}
+
+class BadNormalSample : public UserError
+{
+    std::string do_where() const override
+    {
+        return "check_caller";
+    }
+    
+    std::string do_why() const override
+    {
+        std::ostringstream ss {};
+        ss << "The specified normal \"" << given_<< "\""
+           << " is not one of the input samples [";
+        print_with_quotes(available_, ss);
+        ss << "]";
+        return ss.str();
+    }
+    
+    std::string do_help() const override
+    {
+        return "Choose one of the input samples as the normal sample";
+    }
+    SampleName given_;
+    std::vector<SampleName> available_;
+public:
+    BadNormalSample(SampleName given, std::vector<SampleName> available)
+    : given_ {std::move(given)}
+    , available_ {std::move(available)}
+    {}
+};
+
+void check_normal_sample(const SampleName& normal, const std::vector<SampleName>& samples)
+{
+    if (std::find(std::cbegin(samples), std::cend(samples), normal) == std::cend(samples)) {
+        throw BadNormalSample {normal, samples};
+    }
+}
+
 void check_caller(const std::string& caller, const std::vector<SampleName>& samples, const OptionMap& options)
 {
     if (caller == "polyclone") {
         if (samples.size() != 1) {
             throw BadSampleCount {};
+        }
+    } else if (caller == "cancer") {
+        if (is_set("normal-sample", options)) {
+            check_normal_sample(options.at("normal-sample").as<std::string>(), samples);
         }
     }
 }
