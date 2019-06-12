@@ -131,18 +131,18 @@ DeNovoModel::LogProbability DeNovoModel::evaluate(const unsigned target, const u
 namespace {
 
 void pad_given(const Haplotype::NucleotideSequence& target, const Haplotype::NucleotideSequence& given,
-               const std::size_t pad, std::string& result)
+               const std::size_t flank_pad, std::string& result)
 {
-    const auto required_size = std::max(target.size(), given.size()) + pad;
+    const auto required_size = std::max(target.size(), given.size()) + 2 * flank_pad;
     result.resize(required_size);
-    auto itr = std::fill_n(std::begin(result), pad, 'N');
+    auto itr = std::fill_n(std::begin(result), flank_pad, 'N');
     itr = std::copy(std::cbegin(given), std::cend(given), itr);
     std::fill(itr, std::end(result), 'N');
 }
 
-void pad_given(const Haplotype& target, const Haplotype& given, std::size_t pad, std::string& result)
+void pad_given(const Haplotype& target, const Haplotype& given, std::size_t flank_pad, std::string& result)
 {
-    pad_given(target.sequence(), given.sequence(), pad, result);
+    pad_given(target.sequence(), given.sequence(), flank_pad, result);
 }
 
 auto sequence_length_distance(const Haplotype& lhs, const Haplotype& rhs) noexcept
@@ -250,7 +250,7 @@ bool DeNovoModel::can_try_align_with_hmm(const Haplotype& target, const Haplotyp
 
 void DeNovoModel::align_with_hmm(const Haplotype& target, const Haplotype& given) const
 {
-    pad_given(target, given, 2 * hmm_.band_size(), padded_given_);
+    pad_given(target, given, hmm_.band_size(), padded_given_);
     local_indel_model_->open.resize(padded_given_.size(), snv_penalty_);
     local_indel_model_->extend.resize(padded_given_.size(), snv_penalty_);
     const auto hmm_params = make_hmm_parameters();
