@@ -30,6 +30,7 @@ std::int8_t probability_to_penalty(const double probability) noexcept
 
 DeNovoModel::DeNovoModel(Parameters parameters, std::size_t num_haplotypes_hint, CachingStrategy caching)
 : params_ {parameters}
+, pad_penalty_ {60}
 , snv_penalty_ {probability_to_penalty(params_.snv_mutation_rate)}
 , indel_model_ {{params_.indel_mutation_rate}}
 , min_ln_probability_ {}
@@ -222,8 +223,8 @@ DeNovoModel::LocalIndelModel DeNovoModel::generate_local_indel_model(const Haplo
     result.indel = indel_model_.evaluate(given);
     const auto num_bases = sequence_size(given);
     assert(result.indel.gap_open.size() == num_bases);
-    result.open.resize(num_bases + 2 * hmm_.band_size(), snv_penalty_);
-    result.extend.resize(num_bases + 2 * hmm_.band_size(), snv_penalty_);
+    result.open.resize(num_bases + 2 * hmm_.band_size(), pad_penalty_);
+    result.extend.resize(num_bases + 2 * hmm_.band_size(), pad_penalty_);
     set_penalties(result.indel, hmm_.band_size(), result.open, result.extend);
     return result;
 }
@@ -251,8 +252,8 @@ bool DeNovoModel::can_try_align_with_hmm(const Haplotype& target, const Haplotyp
 void DeNovoModel::align_with_hmm(const Haplotype& target, const Haplotype& given) const
 {
     pad_given(target, given, hmm_.band_size(), padded_given_);
-    local_indel_model_->open.resize(padded_given_.size(), snv_penalty_);
-    local_indel_model_->extend.resize(padded_given_.size(), snv_penalty_);
+    local_indel_model_->open.resize(padded_given_.size(), pad_penalty_);
+    local_indel_model_->extend.resize(padded_given_.size(), pad_penalty_);
     const auto hmm_params = make_hmm_parameters();
     hmm_.set(hmm_params);
     hmm_.align(target.sequence(), padded_given_, alignment_);

@@ -74,7 +74,7 @@ private:
     using HMM = hmm::PairHMM<hmm::VariableGapExtendMutationModel, 32, int>;
     
     Parameters params_;
-    std::int8_t snv_penalty_;
+    std::int8_t pad_penalty_, snv_penalty_;
     IndelMutationModel indel_model_;
     boost::optional<LogProbability> min_ln_probability_;
     std::size_t num_haplotypes_hint_;
