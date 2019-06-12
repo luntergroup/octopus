@@ -17,6 +17,7 @@
 #include <immintrin.h>
 
 #include <boost/container/small_vector.hpp>
+#include <boost/align/aligned_allocator.hpp>
 
 namespace octopus { namespace hmm { namespace simd {
 
@@ -29,10 +30,8 @@ public:
 
 private:
     using VectorType  = typename InstructionSet::VectorType;
-    
     using Initializer = InitializerType<InstructionSet>;
-    
-    using SmallVector = boost::container::small_vector<VectorType, 10000>;
+    using SmallVector = boost::container::small_vector<VectorType, 10'000, boost::alignment::aligned_allocator<VectorType>>;
     
     struct NullType {};
     
