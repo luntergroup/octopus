@@ -948,7 +948,7 @@ public:
           const Sequence2& truth,
           const std::vector<std::uint8_t>& target_base_qualities,
           const std::size_t target_offset,
-          Alignment& result) const noexcept
+          Alignment& result) const
     {
         assert(params_);
         if (!detail::try_naive_align(truth, target, target_base_qualities, target_offset, *params_, result)) {
@@ -961,7 +961,7 @@ public:
     align(const Sequence1& target,
           const Sequence2& truth,
           const std::vector<std::uint8_t>& target_base_qualities,
-          const std::size_t target_offset) const noexcept
+          const std::size_t target_offset) const
     {
         Alignment result {};
         this->align(target, truth, target_base_qualities, target_offset, result);
@@ -973,7 +973,7 @@ public:
     void
     align(const Sequence1& target,
           const Sequence2& truth,
-          Alignment& result) const noexcept
+          Alignment& result) const
     {
         assert(params_);
         thread_local std::vector<std::uint8_t> target_base_qualities;
@@ -984,7 +984,7 @@ public:
               typename Sequence2>
     Alignment
     align(const Sequence1& target,
-          const Sequence2& truth) const noexcept
+          const Sequence2& truth) const
     {
         Alignment result {};
         this->align(target, truth, result);
