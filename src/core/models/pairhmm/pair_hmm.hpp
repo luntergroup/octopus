@@ -1000,8 +1000,24 @@ private:
     const Parameters* params_ = nullptr;
     
     void reset(unsigned min_band_size) { reset(min_band_size, std::conditional_t<is_static, std::true_type, std::false_type> {}); }
-    void reset(unsigned min_band_size, std::true_type) const noexcept { }
-    void reset(unsigned min_band_size, std::false_type) { hmm_.reset(min_band_size); }
+    void reset(unsigned min_band_size, std::true_type) const noexcept {}
+    void reset(unsigned min_band_size, std::false_type) { hmm_.reset(min_band_size, score_precision()); }
+    simd::PairHMMWrapper::ScorePrecision score_precision(NullType) const noexcept
+    {
+        return simd::PairHMMWrapper::ScorePrecision::int16;
+    }
+    simd::PairHMMWrapper::ScorePrecision score_precision(short) const noexcept
+    {
+        return simd::PairHMMWrapper::ScorePrecision::int16;
+    }
+    simd::PairHMMWrapper::ScorePrecision score_precision(int) const noexcept
+    {
+        return simd::PairHMMWrapper::ScorePrecision::int32;
+    }
+    simd::PairHMMWrapper::ScorePrecision score_precision() const noexcept
+    {
+        return score_precision(ScoreType {});
+    }
 };
 
 } // namespace hmm
