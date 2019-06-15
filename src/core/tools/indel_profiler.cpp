@@ -420,15 +420,15 @@ unsigned count_errors(const AlignedRead& read)
     return count_errors(read.cigar());
 }
 
-bool over_hmm_band_limit(const CigarString& cigar) noexcept
+bool over_hmm_band_limit(const CigarString& cigar, const HaplotypeLikelihoodModel& model) noexcept
 {
     auto gap_len = static_cast<unsigned>(std::max(std::abs(max_indel_size(cigar)), std::abs(sum_indel_sizes(cigar))));
-    return gap_len > HaplotypeLikelihoodModel::pad_requirement();
+    return gap_len > model.pad_requirement();
 }
 
-bool is_likely_misaligned(const AlignedRead& read)
+bool is_likely_misaligned(const AlignedRead& read, const HaplotypeLikelihoodModel& model)
 {
-    if (over_hmm_band_limit(read.cigar())) return true;
+    if (over_hmm_band_limit(read.cigar(), model)) return true;
     const auto expected_errors = static_cast<unsigned>(std::ceil(error_expectation(read)));
     const auto max_expected_errors = 5 * expected_errors;
     const auto observed_errors = count_errors(read);
@@ -446,17 +446,17 @@ void IndelProfiler::evaluate_support(const Genotype<Haplotype>& genotype, ReadCo
     HaplotypeSupportMap haplotype_support;
     if (genotype.ploidy() > 1) {
         const AssignmentConfig assigner_config {AssignmentConfig::AmbiguousAction::random};
-        haplotype_support = compute_haplotype_support(genotype, buffer, assigner_config);
+        haplotype_support = compute_haplotype_support(genotype, buffer, config_.alignment_model, assigner_config);
     } else {
         haplotype_support.emplace(genotype[0], std::move(buffer));
     }
     buffer.clear();
     buffer.shrink_to_fit();
     for (auto& p : haplotype_support) {
-        safe_realign(p.second, p.first);
+        safe_realign(p.second, p.first, config_.alignment_model);
         if (config_.check_read_misalignments) {
             p.second.erase(std::remove_if(std::begin(p.second), std::end(p.second),
-                                          [] (const auto& read) { return is_likely_misaligned(read); }),
+                                          [this] (const auto& read) { return is_likely_misaligned(read, config_.alignment_model); }),
                            std::end(p.second));
             p.second.shrink_to_fit();
         }
@@ -543,6 +543,15 @@ profile_indels(const ReadPipe& reads, VcfReader::Path variants, const ReferenceG
 }
 
 IndelProfiler::IndelProfile
+profile_indels(const ReadPipe& reads, VcfReader::Path variants, const ReferenceGenome& reference,
+               IndelProfiler::ProfileConfig config)
+{
+    VcfReader vcf {std::move(variants)};
+    IndelProfiler profiler {std::move(config)};
+    return profiler.profile(reads, vcf, reference);
+}
+
+IndelProfiler::IndelProfile
 profile_indels(const ReadPipe& reads, VcfReader::Path variants, const ReferenceGenome& reference, const InputRegionMap& regions)
 {
     VcfReader vcf {std::move(variants)};
@@ -551,10 +560,28 @@ profile_indels(const ReadPipe& reads, VcfReader::Path variants, const ReferenceG
 }
 
 IndelProfiler::IndelProfile
+profile_indels(const ReadPipe& reads, VcfReader::Path variants, const ReferenceGenome& reference, const InputRegionMap& regions,
+               IndelProfiler::ProfileConfig config)
+{
+    VcfReader vcf {std::move(variants)};
+    IndelProfiler profiler {std::move(config)};
+    return profiler.profile(reads, vcf, reference, regions);
+}
+
+IndelProfiler::IndelProfile
 profile_indels(const ReadPipe& reads, VcfReader::Path variants, const ReferenceGenome& reference, const GenomicRegion& region)
 {
     VcfReader vcf {std::move(variants)};
     IndelProfiler profiler {};
+    return profiler.profile(reads, vcf, reference, region);
+}
+
+IndelProfiler::IndelProfile
+profile_indels(const ReadPipe& reads, VcfReader::Path variants, const ReferenceGenome& reference, const GenomicRegion& region,
+               IndelProfiler::ProfileConfig config)
+{
+    VcfReader vcf {std::move(variants)};
+    IndelProfiler profiler {std::move(config)};
     return profiler.profile(reads, vcf, reference, region);
 }
 

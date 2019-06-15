@@ -13,6 +13,8 @@
 
 namespace octopus {
 
+Haplotype expand_for_realignment(const Haplotype& haplotype, const std::vector<AlignedRead>& reads,
+                                 const HaplotypeLikelihoodModel& model);
 Haplotype expand_for_realignment(const Haplotype& haplotype, const std::vector<AlignedRead>& reads);
 
 void realign(std::vector<AlignedRead>& reads, const Haplotype& haplotype, HaplotypeLikelihoodModel model);

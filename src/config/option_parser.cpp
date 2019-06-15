@@ -529,6 +529,10 @@ OptionMap parse_options(const int argc, const char** argv)
     ("max-vb-seeds",
      po::value<int>()->default_value(12),
      "Maximum number of seeds to use for Variational Bayes algorithms")
+     
+     ("max-indel-errors",
+      po::value<int>()->default_value(8),
+      "Maximum number of indel errors allowed during haplotype likelihood calculation")
     ;
     
     po::options_description cancer("Calling (cancer)");
@@ -747,6 +751,7 @@ OptionMap parse_options(const int argc, const char** argv)
     if (vm_init.count("version") == 1) {
         std::cout << "octopus version " << config::Version << '\n'
                   << "Target: " << config::System.system_processor << ' ' << config::System.system_name << " " << config::System.system_version << '\n'
+                  << "SIMD extension: " << config::System.simd_extension << '\n'
                   << "Compiler: " << config::System.compiler_name << ' ' << config::System.compiler_version << '\n'
                   << "Boost: " << config::System.boost_version
                   << std::endl;

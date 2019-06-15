@@ -35,19 +35,28 @@ FacetFactory::FacetFactory(VcfHeader input_header)
     setup_facet_makers();
 }
 
-FacetFactory::FacetFactory(VcfHeader input_header, const ReferenceGenome& reference, BufferedReadPipe read_pipe, PloidyMap ploidies)
+FacetFactory::FacetFactory(VcfHeader input_header,
+                           const ReferenceGenome& reference,
+                           BufferedReadPipe read_pipe,
+                           PloidyMap ploidies,
+                           HaplotypeLikelihoodModel likelihood_model)
 : input_header_ {std::move(input_header)}
 , samples_ {input_header_.samples()}
 , reference_ {reference}
 , read_pipe_ {std::move(read_pipe)}
 , ploidies_ {std::move(ploidies)}
 , pedigree_ {}
+, likelihood_model_ {std::move(likelihood_model)}
 , facet_makers_ {}
 {
     setup_facet_makers();
 }
 
-FacetFactory::FacetFactory(VcfHeader input_header, const ReferenceGenome& reference, BufferedReadPipe read_pipe, PloidyMap ploidies,
+FacetFactory::FacetFactory(VcfHeader input_header,
+                           const ReferenceGenome& reference,
+                           BufferedReadPipe read_pipe,
+                           PloidyMap ploidies,
+                           HaplotypeLikelihoodModel likelihood_model,
                            octopus::Pedigree pedigree)
 : input_header_ {std::move(input_header)}
 , samples_ {input_header_.samples()}
@@ -55,6 +64,7 @@ FacetFactory::FacetFactory(VcfHeader input_header, const ReferenceGenome& refere
 , read_pipe_ {std::move(read_pipe)}
 , ploidies_ {std::move(ploidies)}
 , pedigree_ {std::move(pedigree)}
+, likelihood_model_ {std::move(likelihood_model)}
 , facet_makers_ {}
 {
     setup_facet_makers();
@@ -67,6 +77,7 @@ FacetFactory::FacetFactory(FacetFactory&& other)
 , read_pipe_ {std::move(other.read_pipe_)}
 , ploidies_ {std::move(other.ploidies_)}
 , pedigree_ {std::move(other.pedigree_)}
+, likelihood_model_ {std::move(other.likelihood_model_)}
 , facet_makers_ {}
 {
     setup_facet_makers();
@@ -81,6 +92,7 @@ FacetFactory& FacetFactory::operator=(FacetFactory&& other)
     swap(read_pipe_, other.read_pipe_);
     swap(ploidies_, other.ploidies_);
     swap(pedigree_, other.pedigree_);
+    swap(likelihood_model_, other.likelihood_model_);
     setup_facet_makers();
     return *this;
 }
@@ -249,7 +261,11 @@ void FacetFactory::setup_facet_makers()
     facet_makers_[name<ReadAssignments>()] = [this] (const BlockData& block) -> FacetWrapper
     {
         assert(block.reads && block.genotypes);
-        return {std::make_unique<ReadAssignments>(*reference_, *block.genotypes, *block.reads)};
+        if (likelihood_model_) {
+            return {std::make_unique<ReadAssignments>(*reference_, *block.genotypes, *block.reads, *likelihood_model_)};
+        } else {
+            return {std::make_unique<ReadAssignments>(*reference_, *block.genotypes, *block.reads)};
+        }
     };
     facet_makers_[name<ReferenceContext>()] = [this] (const BlockData& block) -> FacetWrapper
     {

@@ -45,6 +45,8 @@ set(CORE_TEST_SOURCES
 
     core/tools/global_aligner_tests.cpp
     core/tools/assembler_tests.cpp
+
+    core/models/pair_hmm_tests.cpp
 )
 
 set(OCTOPUS_TEST_SOURCES
@@ -59,6 +61,11 @@ set(OCTOPUS_TEST_SOURCES
     ${UTILS_TEST_SOURCES}
     ${CORE_TEST_SOURCES}
 )
+
+find_package(SSE)
+if (AVX2_FOUND)
+    add_compile_options(-mavx2)
+endif()
 
 add_definitions(-DBOOST_TEST_DYN_LINK)
 find_package(Boost 1.65 REQUIRED COMPONENTS unit_test_framework REQUIRED)

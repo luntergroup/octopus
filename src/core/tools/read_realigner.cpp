@@ -42,12 +42,22 @@ auto safe_expand(const GenomicRegion& region, const GenomicRegion::Size n)
     }
 }
 
+HaplotypeLikelihoodModel make_default_haplotype_likelihood_model()
+{
+    HaplotypeLikelihoodModel::Config config {};
+    config.max_indel_error = 8;
+    config.use_flank_state = false;
+    config.use_mapping_quality = false;
+    return {config};
+}
+
 } // namespace
 
-Haplotype expand_for_realignment(const Haplotype& haplotype, const std::vector<AlignedRead>& reads)
+Haplotype expand_for_realignment(const Haplotype& haplotype, const std::vector<AlignedRead>& reads,
+                                 const HaplotypeLikelihoodModel& model)
 {
     const auto reads_region = encompassing_region(reads);
-    auto required_flank_pad = 2 * HaplotypeLikelihoodModel::pad_requirement();
+    auto required_flank_pad = 2 * model.pad_requirement();
     if (region_size(haplotype) > sequence_size(haplotype)) {
         required_flank_pad += region_size(haplotype) - sequence_size(haplotype);
     }
@@ -58,6 +68,11 @@ Haplotype expand_for_realignment(const Haplotype& haplotype, const std::vector<A
     } else {
         return remap(haplotype, encompassing_region(haplotype, required_haplotype_region));
     }
+}
+
+Haplotype expand_for_realignment(const Haplotype& haplotype, const std::vector<AlignedRead>& reads)
+{
+    return expand_for_realignment(haplotype, reads, make_default_haplotype_likelihood_model());
 }
 
 namespace {
@@ -83,13 +98,6 @@ void realign(AlignedRead& read, const Haplotype& haplotype,
 void realign(AlignedRead& read, const Haplotype& haplotype, HaplotypeLikelihoodModel::Alignment alignment)
 {
     realign(read, haplotype, alignment.mapping_position, std::move(alignment.cigar));
-}
-
-HaplotypeLikelihoodModel make_default_haplotype_likelihood_model()
-{
-    HaplotypeLikelihoodModel::Config config {};
-    config.use_mapping_quality = false;
-    return {nullptr, make_indel_error_model(), config};
 }
 
 } // namespace
@@ -132,7 +140,7 @@ std::vector<AlignedRead> realign(const std::vector<AlignedRead>& reads, const Ha
 void safe_realign(std::vector<AlignedRead>& reads, const Haplotype& haplotype, HaplotypeLikelihoodModel model)
 {
     if (!reads.empty()) {
-        auto expanded_haplotype = expand_for_realignment(haplotype, reads);
+        auto expanded_haplotype = expand_for_realignment(haplotype, reads, model);
         try {
             realign(reads, expanded_haplotype, std::move(model));
         } catch (const HaplotypeLikelihoodModel::ShortHaplotypeError& e) {

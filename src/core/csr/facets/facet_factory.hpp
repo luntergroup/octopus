@@ -14,6 +14,7 @@
 #include "config/common.hpp"
 #include "basics/pedigree.hpp"
 #include "basics/ploidy_map.hpp"
+#include "core/models/haplotype_likelihood_model.hpp"
 #include "io/variant/vcf_header.hpp"
 #include "io/variant/vcf_record.hpp"
 #include "io/reference/reference_genome.hpp"
@@ -33,8 +34,16 @@ public:
     FacetFactory() = delete;
     
     FacetFactory(VcfHeader input_header);
-    FacetFactory(VcfHeader input_header, const ReferenceGenome& reference, BufferedReadPipe read_pipe, PloidyMap ploidies);
-    FacetFactory(VcfHeader input_header, const ReferenceGenome& reference, BufferedReadPipe read_pipe, PloidyMap ploidies,
+    FacetFactory(VcfHeader input_header,
+                 const ReferenceGenome& reference,
+                 BufferedReadPipe read_pipe,
+                 PloidyMap ploidies,
+                 HaplotypeLikelihoodModel likelihood_model);
+    FacetFactory(VcfHeader input_header,
+                 const ReferenceGenome& reference,
+                 BufferedReadPipe read_pipe,
+                 PloidyMap ploidies,
+                 HaplotypeLikelihoodModel likelihood_model,
                  octopus::Pedigree pedigree);
     
     FacetFactory(const FacetFactory&)            = delete;
@@ -63,6 +72,7 @@ private:
     boost::optional<BufferedReadPipe> read_pipe_;
     boost::optional<PloidyMap> ploidies_;
     boost::optional<octopus::Pedigree> pedigree_;
+    boost::optional<HaplotypeLikelihoodModel> likelihood_model_;
     
     std::unordered_map<std::string, std::function<FacetWrapper(const BlockData& data)>> facet_makers_;
     

@@ -1345,9 +1345,67 @@ auto get_max_indicator_join_distance() noexcept
     return HaplotypeLikelihoodModel{}.pad_requirement();
 }
 
-auto get_min_flank_pad() noexcept
+bool allow_flank_scoring(const OptionMap& options)
 {
-    return 2 * (2 * HaplotypeLikelihoodModel{}.pad_requirement() - 1);
+    return options.at("inactive-flank-scoring").as<bool>() && !is_very_fast_mode(options);
+}
+
+auto make_error_model(const OptionMap& options)
+{
+    const auto& model_label = options.at("sequence-error-model").as<std::string>();
+    try {
+        return octopus::make_error_model(model_label);
+    } catch (const UserError& err) {
+        try {
+            const auto model_path = resolve_path(model_label, options);
+            return octopus::make_error_model(model_path);
+        } catch (...) {}
+        throw;
+    }
+}
+
+AlignedRead::MappingQuality calculate_mapping_quality_cap(const OptionMap& options, const boost::optional<ReadSetProfile>& read_profile)
+{
+    constexpr AlignedRead::MappingQuality minimum {60u}; // BWA cap
+    if (read_profile) {
+        if (read_profile->median_read_length > 200) {
+            return 2 * minimum;
+        } else {
+            return std::max(read_profile->max_mapping_quality, minimum);
+        }
+    } else {
+        return minimum;
+    }
+}
+
+AlignedRead::MappingQuality calculate_mapping_quality_cap_trigger(const OptionMap& options, const boost::optional<ReadSetProfile>& read_profile)
+{
+    constexpr AlignedRead::MappingQuality minimum {60u}; // BWA cap
+    if (read_profile) {
+        return std::max(read_profile->max_mapping_quality, minimum);
+    } else {
+        return minimum;
+    }
+}
+
+HaplotypeLikelihoodModel make_haplotype_likelihood_model(const OptionMap& options, const boost::optional<ReadSetProfile>& read_profile)
+{
+    auto error_model = make_error_model(options);
+    HaplotypeLikelihoodModel::Config config {};
+    config.use_mapping_quality = options.at("model-mapping-quality").as<bool>();
+    config.use_flank_state = allow_flank_scoring(options);
+    if (config.use_mapping_quality) {
+        config.mapping_quality_cap = calculate_mapping_quality_cap(options, read_profile);
+        config.mapping_quality_cap_trigger = calculate_mapping_quality_cap_trigger(options, read_profile);
+    }
+    config.max_indel_error = as_unsigned("max-indel-errors", options);
+    return HaplotypeLikelihoodModel {std::move(error_model.snv), std::move(error_model.indel), config};
+}
+
+auto get_min_haplotype_flank_pad(const OptionMap& options, const boost::optional<ReadSetProfile>& input_reads_profile)
+{
+    auto model = make_haplotype_likelihood_model(options, input_reads_profile);
+    return 2 * model.pad_requirement();
 }
 
 auto make_haplotype_generator_builder(const OptionMap& options, const boost::optional<ReadSetProfile>& input_reads_profile)
@@ -1362,7 +1420,7 @@ auto make_haplotype_generator_builder(const OptionMap& options, const boost::opt
     .set_lagging_policy(lagging_policy).set_max_holdout_depth(max_holdout_depth)
     .set_max_indicator_join_distance(get_max_indicator_join_distance())
     .set_dense_variation_detector(get_dense_variation_detector(options, input_reads_profile))
-    .set_min_flank_pad(get_min_flank_pad());
+    .set_min_flank_pad(get_min_haplotype_flank_pad(options, input_reads_profile));
 }
 
 boost::optional<Pedigree> read_ped_file(const OptionMap& options)
@@ -1651,62 +1709,6 @@ public:
     UnimplementedCaller(std::string caller) : caller_ {caller} {}
 };
 
-bool allow_flank_scoring(const OptionMap& options)
-{
-    return options.at("inactive-flank-scoring").as<bool>() && !is_very_fast_mode(options);
-}
-
-auto make_error_model(const OptionMap& options)
-{
-    const auto& model_label = options.at("sequence-error-model").as<std::string>();
-    try {
-        return octopus::make_error_model(model_label);
-    } catch (const UserError& err) {
-        try {
-            const auto model_path = resolve_path(model_label, options);
-            return octopus::make_error_model(model_path);
-        } catch (...) {}
-        throw;
-    }
-}
-
-AlignedRead::MappingQuality calculate_mapping_quality_cap(const OptionMap& options, const boost::optional<ReadSetProfile>& read_profile)
-{
-    constexpr AlignedRead::MappingQuality minimum {60u}; // BWA cap
-    if (read_profile) {
-        if (read_profile->median_read_length > 200) {
-            return 2 * minimum;
-        } else {
-            return std::max(read_profile->max_mapping_quality, minimum);
-        }
-    } else {
-        return minimum;
-    }
-}
-
-AlignedRead::MappingQuality calculate_mapping_quality_cap_trigger(const OptionMap& options, const boost::optional<ReadSetProfile>& read_profile)
-{
-    constexpr AlignedRead::MappingQuality minimum {60u}; // BWA cap
-    if (read_profile) {
-        return std::max(read_profile->max_mapping_quality, minimum);
-    } else {
-        return minimum;
-    }
-}
-
-HaplotypeLikelihoodModel make_likelihood_model(const OptionMap& options, const boost::optional<ReadSetProfile>& read_profile)
-{
-    auto error_model = make_error_model(options);
-    HaplotypeLikelihoodModel::Config config {};
-    config.use_mapping_quality = options.at("model-mapping-quality").as<bool>();
-    config.use_flank_state = allow_flank_scoring(options);
-    if (config.use_mapping_quality) {
-        config.mapping_quality_cap = calculate_mapping_quality_cap(options, read_profile);
-        config.mapping_quality_cap_trigger = calculate_mapping_quality_cap_trigger(options, read_profile);
-    }
-    return HaplotypeLikelihoodModel {std::move(error_model.snv), std::move(error_model.indel), config};
-}
-
 bool allow_model_filtering(const OptionMap& options)
 {
     return options.count("model-posterior") == 1 && options.at("model-posterior").as<bool>();
@@ -1837,7 +1839,7 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
     if (call_sites_only(options) && !is_call_filtering_requested(options)) {
         vc_builder.set_sites_only();
     }
-    vc_builder.set_likelihood_model(make_likelihood_model(options, read_profile));
+    vc_builder.set_likelihood_model(make_haplotype_likelihood_model(options, read_profile));
     const auto target_working_memory = get_target_working_memory(options);
     if (target_working_memory) vc_builder.set_target_memory_footprint(*target_working_memory);
     vc_builder.set_execution_policy(get_thread_execution_policy(options));

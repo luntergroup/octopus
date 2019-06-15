@@ -192,6 +192,7 @@ set(UTILS_SOURCES
     utils/random_select.hpp
     utils/read_duplicates.hpp
     utils/read_duplicates.cpp
+    utils/array_tricks.hpp
 )
 
 set(CORE_SOURCES
@@ -435,9 +436,13 @@ set(CORE_SOURCES
     core/models/genotype/single_cell_model.cpp
 
     core/models/pairhmm/pair_hmm.hpp
-    core/models/pairhmm/pair_hmm.cpp
     core/models/pairhmm/simd_pair_hmm.hpp
-    core/models/pairhmm/simd_pair_hmm.cpp
+    core/models/pairhmm/rolling_initializer.hpp
+    core/models/pairhmm/sse2_pair_hmm_impl.hpp
+    core/models/pairhmm/avx2_pair_hmm_impl.hpp
+    core/models/pairhmm/avx512_pair_hmm_impl.hpp
+    core/models/pairhmm/simd_pair_hmm_factory.hpp
+    core/models/pairhmm/simd_pair_hmm_wrapper.hpp
 
     core/models/error/indel_error_model.hpp
     core/models/error/indel_error_model.cpp
@@ -595,6 +600,11 @@ if(CMAKE_COMPILER_IS_GNUCXX)
     add_compile_options(${GCCWarningIgnores})
 endif()
 
+find_package(SSE)
+if (AVX2_FOUND)
+    add_compile_options(-mavx2)
+endif()
+
 set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
 set(THREADS_PREFER_PTHREAD_FLAG TRUE)
 
@@ -606,6 +616,7 @@ if (BUILD_TESTING)
     # Make a library of all octopus non-main.cpp sources so can be used with tests
     add_library(Octopus ${OCTOPUS_SOURCES} ${INCLUDE_SOURCES})
     target_compile_features(Octopus PRIVATE cxx_thread_local)
+    target_compile_options(Octopus PRIVATE -ffast-math -funroll-loops -march=native)
     target_include_directories(Octopus PUBLIC ${octopus_SOURCE_DIR}/lib ${octopus_SOURCE_DIR}/src)
     target_link_libraries(Octopus tandem ranger)
     target_compile_definitions(Octopus PRIVATE -DBOOST_LOG_DYN_LINK) # Required for log
@@ -622,6 +633,17 @@ if (BUILD_TESTING)
         ${GMP_INCLUDE_DIR}
         ${HTSlib_INCLUDE_DIRS})
     target_link_libraries (Octopus tandem ranger ${Boost_LIBRARIES} ${GMP_LIBRARIES} ${HTSlib_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
+    check_ipo_supported(RESULT ipo_supported OUTPUT output)
+    if(ipo_supported)
+        message(STATUS "IPO is supported!")
+        set_property(TARGET Octopus PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+    else()
+        message(WARNING "IPO is not supported: ${output}")
+    endif()
+    configure_file (
+        "${PROJECT_SOURCE_DIR}/src/config/system.h.in"
+        "${PROJECT_BINARY_DIR}/generated/system.hpp"
+    )
 elseif (CMAKE_BUILD_TYPE MATCHES Debug)
     add_executable(octopus-debug main.cpp ${OCTOPUS_SOURCES} ${INCLUDE_SOURCES})
     target_compile_features(octopus-debug PRIVATE cxx_thread_local)

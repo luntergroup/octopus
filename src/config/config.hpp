@@ -23,17 +23,19 @@ struct VersionNumber
 
 struct SystemInfo
 {
+    enum class SIMDExtension { sse2, avx2, avx512 };
     std::string system_processor, system_name, system_version;
     std::string compiler_name, compiler_version;
     std::string boost_version;
     std::string build_type;
+    SIMDExtension simd_extension;
 };
 
 extern const VersionNumber Version;
 extern const SystemInfo System;
 
 std::ostream& operator<<(std::ostream& os, const VersionNumber& version);
-std::ostream& operator<<(std::ostream& os, const SystemInfo& system);
+std::ostream& operator<<(std::ostream& os, SystemInfo::SIMDExtension simd);
 
 extern const std::string HelpForum, BugReport;
 

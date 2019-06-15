@@ -12,6 +12,7 @@
 #include "basics/aligned_read.hpp"
 #include "core/types/haplotype.hpp"
 #include "core/types/genotype.hpp"
+#include "core/models/haplotype_likelihood_model.hpp"
 #include "containers/mappable_flat_set.hpp"
 #include "io/reference/reference_genome.hpp"
 #include "io/read/read_reader.hpp"
@@ -32,6 +33,7 @@ public:
     
     struct Config
     {
+        HaplotypeLikelihoodModel alignment_model = {};
         bool primary_only = true;
         bool copy_hom_ref_reads = false;
         bool simplify_cigars = false;
@@ -60,11 +62,6 @@ public:
     Report realign(ReadReader& src, VcfReader& variants, ReadWriter& dst,
                    const ReferenceGenome& reference) const;
     
-    Report realign(ReadReader& src, VcfReader& variants, std::vector<ReadWriter>& dsts,
-                   const ReferenceGenome& reference, SampleList samples) const;
-    Report realign(ReadReader& src, VcfReader& variants, std::vector<ReadWriter>& dsts,
-                   const ReferenceGenome& reference) const;
-    
 private:
     using VcfIterator = VcfReader::RecordIterator;
     using CallBlock   = std::vector<VcfRecord>;
@@ -86,14 +83,12 @@ private:
     void merge(BatchList& src, BatchList& dst) const;
 };
 
-BAMRealigner::Report realign(io::ReadReader::Path src, VcfReader::Path variants, io::ReadWriter::Path dst,
-                             const ReferenceGenome& reference);
-BAMRealigner::Report realign(io::ReadReader::Path src, VcfReader::Path variants, io::ReadWriter::Path dst,
-                             const ReferenceGenome& reference, BAMRealigner::Config config);
-BAMRealigner::Report realign(io::ReadReader::Path src, VcfReader::Path variants, std::vector<io::ReadWriter::Path> dsts,
-                             const ReferenceGenome& reference);
-BAMRealigner::Report realign(io::ReadReader::Path src, VcfReader::Path variants, std::vector<io::ReadWriter::Path> dsts,
-                             const ReferenceGenome& reference, BAMRealigner::Config config);
+BAMRealigner::Report
+realign(io::ReadReader::Path src, VcfReader::Path variants, io::ReadWriter::Path dst,
+        const ReferenceGenome& reference);
+BAMRealigner::Report
+realign(io::ReadReader::Path src, VcfReader::Path variants, io::ReadWriter::Path dst,
+        const ReferenceGenome& reference, BAMRealigner::Config config);
 
 } // namespace octopus
 

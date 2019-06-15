@@ -138,9 +138,9 @@ auto compute_read_hashes(const Container& reads)
 }
 
 auto expand_for_alignment(const Haplotype& haplotype, const GenomicRegion& reads_region,
-                          const GenomicRegion::Size indel_factor)
+                          const GenomicRegion::Size indel_factor, const HaplotypeLikelihoodModel& model)
 {
-    const auto min_flank_pad = 2 * HaplotypeLikelihoodModel::pad_requirement();
+    const auto min_flank_pad = 2 * model.pad_requirement();
     const auto& haplotype_region = mapped_region(haplotype);
     unsigned min_lhs_expansion {min_flank_pad}, min_rhs_expansion {min_flank_pad};
     if (begins_before(reads_region, haplotype_region)) {
@@ -166,7 +166,7 @@ auto calculate_likelihoods(const std::vector<Haplotype>& haplotypes, const Conta
     result.reserve(haplotypes.size());
     const auto indel_factor = estimate_max_indel_size(haplotypes) + estimate_max_indel_size(reads);
     for (const auto& haplotype : haplotypes) {
-        const auto expanded_haplotype = expand_for_alignment(haplotype, reads_region, indel_factor);
+        const auto expanded_haplotype = expand_for_alignment(haplotype, reads_region, indel_factor, model);
         populate_kmer_hash_table<mapperKmerSize>(expanded_haplotype.sequence(), haplotype_hashes);
         auto haplotype_mapping_counts = init_mapping_counts(haplotype_hashes);
         model.reset(expanded_haplotype);
@@ -233,8 +233,10 @@ compute_haplotype_support(const Genotype<Haplotype>& genotype,
 static HaplotypeLikelihoodModel make_default_haplotype_likelihood_model()
 {
     HaplotypeLikelihoodModel::Config config {};
+    config.max_indel_error = 8;
+    config.use_flank_state = false;
     config.use_mapping_quality = false;
-    return {nullptr, make_indel_error_model(), config};
+    return {config};
 }
 
 HaplotypeSupportMap

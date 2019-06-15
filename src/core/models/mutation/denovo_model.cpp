@@ -30,6 +30,7 @@ std::int8_t probability_to_penalty(const double probability) noexcept
 
 DeNovoModel::DeNovoModel(Parameters parameters, std::size_t num_haplotypes_hint, CachingStrategy caching)
 : params_ {parameters}
+, pad_penalty_ {60}
 , snv_penalty_ {probability_to_penalty(params_.snv_mutation_rate)}
 , indel_model_ {{params_.indel_mutation_rate}}
 , min_ln_probability_ {}
@@ -131,29 +132,24 @@ DeNovoModel::LogProbability DeNovoModel::evaluate(const unsigned target, const u
 namespace {
 
 void pad_given(const Haplotype::NucleotideSequence& target, const Haplotype::NucleotideSequence& given,
-               std::string& result)
+               const std::size_t flank_pad, std::string& result)
 {
-    const auto required_size = std::max(target.size(), given.size()) + 2 * hmm::min_flank_pad();
+    const auto required_size = std::max(target.size(), given.size()) + 2 * flank_pad;
     result.resize(required_size);
-    auto itr = std::fill_n(std::begin(result), hmm::min_flank_pad(), 'N');
+    auto itr = std::fill_n(std::begin(result), flank_pad, 'N');
     itr = std::copy(std::cbegin(given), std::cend(given), itr);
     std::fill(itr, std::end(result), 'N');
 }
 
-void pad_given(const Haplotype& target, const Haplotype& given, std::string& result)
+void pad_given(const Haplotype& target, const Haplotype& given, std::size_t flank_pad, std::string& result)
 {
-    pad_given(target.sequence(), given.sequence(), result);
+    pad_given(target.sequence(), given.sequence(), flank_pad, result);
 }
 
 auto sequence_length_distance(const Haplotype& lhs, const Haplotype& rhs) noexcept
 {
     const auto p = std::minmax({sequence_size(lhs), sequence_size(rhs)});
     return p.second - p.first;
-}
-
-bool can_try_align_with_hmm(const Haplotype& target, const Haplotype& given) noexcept
-{
-    return sequence_length_distance(target, given) < hmm::min_flank_pad();
 }
 
 double calculate_log_probability(const Variant& variant, const Haplotype& context,
@@ -184,16 +180,17 @@ double calculate_approx_log_probability(const Haplotype& target, const Haplotype
 }
 
 void set_penalties(const IndelMutationModel::ContextIndelModel& indel_model,
-                   hmm::VariableGapExtendMutationModel::PenaltyVector& open_penalties,
-                   hmm::VariableGapExtendMutationModel::PenaltyVector& extend_penalties)
+                   const std::size_t flank_pad,
+                   hmm::PenaltyVector& open_penalties,
+                   hmm::PenaltyVector& extend_penalties)
 {
-    assert(indel_model.gap_open.size() + 2 * hmm::min_flank_pad() == open_penalties.size());
+    assert(indel_model.gap_open.size() + 2 *flank_pad == open_penalties.size());
     std::transform(std::cbegin(indel_model.gap_open), std::cend(indel_model.gap_open),
-                   std::next(std::begin(open_penalties), hmm::min_flank_pad()),
+                   std::next(std::begin(open_penalties), flank_pad),
                    probability_to_penalty);
-    assert(indel_model.gap_extend.size() + 2 * hmm::min_flank_pad() == extend_penalties.size());
+    assert(indel_model.gap_extend.size() + 2 * flank_pad == extend_penalties.size());
     std::transform(std::cbegin(indel_model.gap_extend), std::cend(indel_model.gap_extend),
-                   std::next(std::begin(extend_penalties), hmm::min_flank_pad()),
+                   std::next(std::begin(extend_penalties), flank_pad),
                    [] (const auto& probs) noexcept { return probability_to_penalty(probs[1]); });
 }
 
@@ -226,9 +223,9 @@ DeNovoModel::LocalIndelModel DeNovoModel::generate_local_indel_model(const Haplo
     result.indel = indel_model_.evaluate(given);
     const auto num_bases = sequence_size(given);
     assert(result.indel.gap_open.size() == num_bases);
-    result.open.resize(num_bases + 2 * hmm::min_flank_pad(), snv_penalty_);
-    result.extend.resize(num_bases + 2 * hmm::min_flank_pad(), snv_penalty_);
-    set_penalties(result.indel, result.open, result.extend);
+    result.open.resize(num_bases + 2 * hmm_.band_size(), pad_penalty_);
+    result.extend.resize(num_bases + 2 * hmm_.band_size(), pad_penalty_);
+    set_penalties(result.indel, hmm_.band_size(), result.open, result.extend);
     return result;
 }
 
@@ -242,23 +239,29 @@ void DeNovoModel::set_local_indel_model(const unsigned given) const
     local_indel_model_ = std::addressof(*cached_result);
 }
 
-hmm::VariableGapExtendMutationModel DeNovoModel::make_hmm_model_from_cache() const
+DeNovoModel::HMM::ParameterType DeNovoModel::make_hmm_parameters() const noexcept
 {
-    return {snv_penalty_, local_indel_model_->open, local_indel_model_->extend};
+    return {local_indel_model_->open, local_indel_model_->extend, {}, {}, snv_penalty_};
+}
+
+bool DeNovoModel::can_try_align_with_hmm(const Haplotype& target, const Haplotype& given) const noexcept
+{
+    return sequence_length_distance(target, given) < static_cast<unsigned>(hmm_.band_size());
 }
 
 void DeNovoModel::align_with_hmm(const Haplotype& target, const Haplotype& given) const
 {
-    pad_given(target, given, padded_given_);
-    local_indel_model_->open.resize(padded_given_.size(), snv_penalty_);
-    local_indel_model_->extend.resize(padded_given_.size(), snv_penalty_);
-    const auto hmm_model = make_hmm_model_from_cache();
-    hmm::align(target.sequence(), padded_given_, hmm_model, alignment_);
+    pad_given(target, given, hmm_.band_size(), padded_given_);
+    local_indel_model_->open.resize(padded_given_.size(), pad_penalty_);
+    local_indel_model_->extend.resize(padded_given_.size(), pad_penalty_);
+    const auto hmm_params = make_hmm_parameters();
+    hmm_.set(hmm_params);
+    hmm_.align(target.sequence(), padded_given_, alignment_);
 }
 
-bool is_valid_alignment(const hmm::Alignment& alignment) noexcept
+bool is_valid_alignment(const hmm::Alignment& alignment, std::size_t flank_pad) noexcept
 {
-    return alignment.target_offset == hmm::min_flank_pad();
+    return alignment.target_offset == flank_pad;
 }
 
 DeNovoModel::LogProbability
@@ -272,7 +275,7 @@ DeNovoModel::evaluate_uncached(const Haplotype& target, const Haplotype& given, 
     if (can_try_align_with_hmm(target, given)) {
         try {
             align_with_hmm(target, given);
-            if (is_valid_alignment(alignment_)) {
+            if (is_valid_alignment(alignment_, hmm_.band_size())) {
                 result = recalculate_log_probability(alignment_.cigar, params_.snv_mutation_rate, local_indel_model_->indel);
             } else {
                 result = calculate_approx_log_probability(target, given, params_.snv_mutation_rate, local_indel_model_->indel);

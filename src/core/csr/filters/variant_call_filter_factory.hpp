@@ -47,6 +47,7 @@ public:
          BufferedReadPipe read_pipe,
          VcfHeader input_header,
          PloidyMap ploidies,
+         HaplotypeLikelihoodModel likelihood_model,
          boost::optional<Pedigree> pedigree,
          VariantCallFilter::OutputOptions output_config,
          boost::optional<ProgressMeter&> progress = boost::none,
@@ -57,6 +58,7 @@ public:
          BufferedReadPipe read_pipe,
          VcfHeader input_header,
          PloidyMap ploidies,
+         HaplotypeLikelihoodModel likelihood_model,
          boost::optional<Pedigree> pedigree,
          boost::optional<ProgressMeter&> progress = boost::none,
          boost::optional<unsigned> max_threads = 1) const;

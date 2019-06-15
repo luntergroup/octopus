@@ -47,13 +47,23 @@ const VersionNumber Version {VERSION_MAJOR,
                              get_git_branch_name(),
                              get_git_commit()};
 
+static auto get_simd_extension()
+{
+    if (AVX2_AVAILABLE) {
+        return SystemInfo::SIMDExtension::avx2;
+    } else {
+        return SystemInfo::SIMDExtension::sse2;
+    }
+}
+
 const SystemInfo System {SYSTEM_PROCESSOR,
                          SYSTEM_NAME,
                          SYSTEM_VERSION,
                          COMPILER_NAME,
                          COMPILER_VERSION,
                          BOOSTLIB_VERSION,
-                         BUILD_TYPE};
+                         BUILD_TYPE,
+                         get_simd_extension()};
 
 std::ostream& operator<<(std::ostream& os, const VersionNumber& version)
 {
@@ -69,6 +79,17 @@ std::ostream& operator<<(std::ostream& os, const VersionNumber& version)
         }
         if (version.commit) os << space << *version.commit;
         os << ')';
+    }
+    return os;
+}
+
+std::ostream& operator<<(std::ostream& os, const SystemInfo::SIMDExtension simd)
+{
+    using SIMD = SystemInfo::SIMDExtension;
+    switch (simd) {
+        case SIMD::sse2: os << "SSE2"; break;
+        case SIMD::avx2: os << "AVX2"; break;
+        case SIMD::avx512: os << "AVX-512"; break;
     }
     return os;
 }
