@@ -265,6 +265,7 @@ auto assign_and_realign(const std::vector<AlignedRead>& reads,
                         const Genotype<Haplotype>& genotype,
                         const ReferenceGenome& reference,
                         const HaplotypeLikelihoodModel& alignment_model,
+                        const ReadLinkage read_linkage,
                         BAMRealigner::Report& report)
 {
     std::vector<AnnotatedAlignedRead> result {};
