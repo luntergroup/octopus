@@ -546,6 +546,8 @@ GenomeCallingComponents::Components::Components(ReferenceGenome&& reference, Rea
     bamout_config.copy_hom_ref_reads = options::full_bamouts_requested(options);
     bamout_config.max_buffer = read_buffer_footprint;
     bamout_config.max_threads = num_threads;
+    bamout_config.use_paired_reads = options::use_paired_reads(options);
+    bamout_config.use_linked_reads = options::use_linked_reads(options);
 }
 
 void GenomeCallingComponents::Components::setup_progress_meter(const options::OptionMap& options)

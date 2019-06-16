@@ -114,8 +114,13 @@ private:
     NucleotideSequence sequence_;
     std::size_t cached_hash_;
     std::reference_wrapper<const ReferenceGenome> reference_;
-    
+
+public:
     using AlleleIterator = decltype(explicit_alleles_)::const_iterator;
+    
+    std::pair<AlleleIterator, AlleleIterator> alleles() const noexcept;
+
+private:
     
     void append(NucleotideSequence& result, const ContigAllele& allele) const;
     void append(NucleotideSequence& result, AlleleIterator first, AlleleIterator last) const;
@@ -312,13 +317,11 @@ struct StrictLess
 };
 
 // Removes all duplicates haplotypes (w.r.t operator==) keeping the duplicate which is considered least complex w.r.t cmp.
-template <typename Cmp>
-unsigned remove_duplicates(std::vector<Haplotype>& haplotypes, const Cmp& cmp)
+template <typename RandomIt, typename Compare>
+RandomIt remove_duplicates(RandomIt first_itr, RandomIt last_itr, const Compare& cmp)
 {
-    using std::begin; using std::end;
-    std::sort(begin(haplotypes), end(haplotypes), StrictLess {});
-    auto first_dup_itr  = begin(haplotypes);
-    const auto last_itr = end(haplotypes);
+    std::sort(first_itr, last_itr, StrictLess {});
+    auto first_dup_itr  = first_itr;
     while (true) {
         first_dup_itr = std::adjacent_find(first_dup_itr, last_itr);
         if (first_dup_itr == last_itr) break;
@@ -335,14 +338,29 @@ unsigned remove_duplicates(std::vector<Haplotype>& haplotypes, const Cmp& cmp)
         std::iter_swap(first_dup_itr, dup_keep_itr);
         first_dup_itr = last_dup_itr;
     }
-    const auto last_keep_itr = std::unique(begin(haplotypes), end(haplotypes));
-    const auto result = std::distance(last_keep_itr, end(haplotypes));
-    haplotypes.erase(last_keep_itr, last_itr);
-    return static_cast<unsigned>(result);
+    return std::unique(first_itr, last_itr);
 }
 
-unsigned remove_duplicates(std::vector<Haplotype>& haplotypes);
-unsigned remove_duplicates(std::vector<Haplotype>& haplotypes, Haplotype reference);
+template <typename Container, typename Compare>
+unsigned remove_duplicates(Container& haplotypes, const Compare& cmp)
+{
+    const auto erasable_itr = remove_duplicates(std::begin(haplotypes), std::end(haplotypes), cmp);
+    const auto result = std::distance(erasable_itr, std::end(haplotypes));
+    haplotypes.erase(erasable_itr, std::end(haplotypes));
+    return result;
+}
+
+template <typename Container>
+unsigned remove_duplicates(Container& haplotypes)
+{
+    return remove_duplicates(haplotypes, IsLessComplex {});
+}
+template <typename Container>
+unsigned remove_duplicates(Container& haplotypes, Haplotype reference)
+{
+    IsLessComplex cmp {std::move(reference)};
+    return remove_duplicates(haplotypes, cmp);
+}
 
 std::ostream& operator<<(std::ostream& os, const Haplotype& haplotype);
 

@@ -60,7 +60,7 @@ private:
     {
         return evaluate_helper(indices);
     }
-    void do_prime(const std::vector<Haplotype>& haplotypes) override
+    void do_prime(const HaplotypeBlock& haplotypes) override
     {
         segregation_model_.prime(haplotypes);
     }

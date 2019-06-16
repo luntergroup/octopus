@@ -1289,15 +1289,26 @@ auto get_extension_policy(const OptionMap& options)
     }
 }
 
+auto get_backtrack_policy(const OptionMap& options)
+{
+    using BacktrackPolicy = HaplotypeGenerator::Builder::Policies::Backtrack;
+    switch (options.at("backtrack-level").as<BacktrackLevel>()) {
+        case BacktrackLevel::none: return BacktrackPolicy::none;
+        case BacktrackLevel::normal: return BacktrackPolicy::normal;
+        case BacktrackLevel::aggressive: return BacktrackPolicy::aggressive;
+        default: return BacktrackPolicy::none; // to stop GCC warning
+    }
+}
+
 auto get_lagging_policy(const OptionMap& options)
 {
     using LaggingPolicy = HaplotypeGenerator::Builder::Policies::Lagging;
     if (is_fast_mode(options)) return LaggingPolicy::none;
-    switch (options.at("phasing-level").as<PhasingLevel>()) {
-        case PhasingLevel::conservative: return LaggingPolicy::conservative;
-        case PhasingLevel::moderate: return LaggingPolicy::moderate;
-        case PhasingLevel::normal: return LaggingPolicy::normal;
-        case PhasingLevel::aggressive: return LaggingPolicy::aggressive;
+    switch (options.at("lagging-level").as<LaggingLevel>()) {
+        case LaggingLevel::conservative: return LaggingPolicy::conservative;
+        case LaggingLevel::moderate: return LaggingPolicy::moderate;
+        case LaggingLevel::normal: return LaggingPolicy::normal;
+        case LaggingLevel::aggressive: return LaggingPolicy::aggressive;
         default: return LaggingPolicy::none;
     }
 }
@@ -1415,7 +1426,7 @@ auto make_haplotype_generator_builder(const OptionMap& options, const boost::opt
     const auto holdout_limit     = as_unsigned("haplotype-holdout-threshold", options);
     const auto overflow_limit    = as_unsigned("haplotype-overflow", options);
     const auto max_holdout_depth = as_unsigned("max-holdout-depth", options);
-    return HaplotypeGenerator::Builder().set_extension_policy(get_extension_policy(options))
+    return HaplotypeGenerator::Builder().set_extension_policy(get_extension_policy(options)).set_backtrack_policy(get_backtrack_policy(options))
     .set_target_limit(max_haplotypes).set_holdout_limit(holdout_limit).set_overflow_limit(overflow_limit)
     .set_lagging_policy(lagging_policy).set_max_holdout_depth(max_holdout_depth)
     .set_max_indicator_join_distance(get_max_indicator_join_distance())
@@ -1745,6 +1756,16 @@ bool is_experimental_caller(const std::string& caller) noexcept
     return caller == "population" || caller == "polyclone" || caller == "cell";
 }
 
+bool use_paired_reads(const OptionMap& options)
+{
+    return options.at("paired-reads").as<bool>();
+}
+
+bool use_linked_reads(const OptionMap& options)
+{
+    return options.at("linked-reads").as<bool>();
+}
+
 CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& read_pipe,
                                   const InputRegionMap& regions, const OptionMap& options,
                                   const boost::optional<ReadSetProfile> read_profile)
@@ -1843,6 +1864,7 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
     const auto target_working_memory = get_target_working_memory(options);
     if (target_working_memory) vc_builder.set_target_memory_footprint(*target_working_memory);
     vc_builder.set_execution_policy(get_thread_execution_policy(options));
+    vc_builder.set_use_paired_reads(use_paired_reads(options)).set_use_linked_reads(use_linked_reads(options));
     return CallerFactory {std::move(vc_builder)};
 }
 

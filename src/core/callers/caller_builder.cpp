@@ -129,6 +129,18 @@ CallerBuilder& CallerBuilder::set_execution_policy(ExecutionPolicy policy) noexc
     return *this;
 }
 
+CallerBuilder& CallerBuilder::set_use_paired_reads(bool use) noexcept
+{
+    params_.general.use_paired_reads = use;
+    return *this;
+}
+
+CallerBuilder& CallerBuilder::set_use_linked_reads(bool use) noexcept
+{
+    params_.general.use_linked_reads = use;
+    return *this;
+}
+
 CallerBuilder& CallerBuilder::set_min_variant_posterior(Phred<double> posterior) noexcept
 {
     params_.min_variant_posterior = posterior;
@@ -330,7 +342,7 @@ Caller::Components CallerBuilder::make_components() const
         components_.variant_generator_builder.build(components_.reference),
         components_.haplotype_generator_builder,
         components_.likelihood_model,
-        Phaser {params_.min_phase_score}
+        Phaser {Phaser::Config {Phaser::GenotypeMatchType::unique, params_.min_phase_score}}
     };
 }
 

@@ -1038,7 +1038,7 @@ template <typename Container>
 auto normalise_exp(Container& logs)
 {
     const auto norm = log_sum_exp(logs);
-    for (auto& p : logs) p = std::exp(p -= norm);
+    for (auto& p : logs) p = std::exp(p - norm);
     return norm;
 }
 

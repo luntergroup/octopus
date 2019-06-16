@@ -7,13 +7,18 @@
 #include <unordered_map>
 #include <vector>
 #include <algorithm>
+#include <iterator>
 #include <functional>
+#include <iostream>
+#include <iomanip>
 
 #include <boost/optional.hpp>
 
 #include "config/common.hpp"
-#include "core/types/haplotype.hpp"
 #include "basics/aligned_read.hpp"
+#include "basics/aligned_template.hpp"
+#include "containers/mappable_block.hpp"
+#include "core/types/haplotype.hpp"
 #include "utils/kmer_mapper.hpp"
 #include "haplotype_likelihood_model.hpp"
 
@@ -52,7 +57,9 @@ public:
     
     ~HaplotypeLikelihoodArray() = default;
     
-    void populate(const ReadMap& reads, const std::vector<Haplotype>& haplotypes,
+    void populate(const ReadMap& reads, const MappableBlock<Haplotype>& haplotypes,
+                  boost::optional<FlankState> flank_state = boost::none);
+    void populate(const TemplateMap& reads, const MappableBlock<Haplotype>& haplotypes,
                   boost::optional<FlankState> flank_state = boost::none);
     
     std::size_t num_likelihoods(const SampleName& sample) const;
@@ -90,6 +97,13 @@ private:
         Iterator first, last;
         std::size_t num_reads;
     };
+    struct TemplatePacket
+    {
+        using Iterator = TemplateMap::mapped_type::const_iterator;
+        TemplatePacket(Iterator first, Iterator last);
+        Iterator first, last;
+        std::size_t num_templates;
+    };
     
     std::unordered_map<Haplotype, std::vector<LikelihoodVector>, HaplotypeHash> cache_;
     std::unordered_map<SampleName, std::size_t> sample_indices_;
@@ -98,9 +112,11 @@ private:
     
     // Just to optimise population
     std::vector<ReadPacket> read_iterators_;
+    std::vector<TemplatePacket> template_iterators_;
     std::vector<std::size_t> mapping_positions_;
     
     void set_read_iterators_and_sample_indices(const ReadMap& reads);
+    void set_template_iterators_and_sample_indices(const TemplateMap& reads);
 };
 
 template <typename S, typename Container>
@@ -121,21 +137,40 @@ void HaplotypeLikelihoodArray::erase(const Container& haplotypes)
 
 // non-member methods
 
-HaplotypeLikelihoodArray merge_samples(const std::vector<SampleName>& samples,
-                                       const SampleName& new_sample,
-                                       const std::vector<Haplotype>& haplotypes,
-                                       const HaplotypeLikelihoodArray& haplotype_likelihoods);
+HaplotypeLikelihoodArray 
+merge_samples(const std::vector<SampleName>& samples,
+              const SampleName& new_sample,
+              const MappableBlock<Haplotype>& haplotypes,
+              const HaplotypeLikelihoodArray& haplotype_likelihoods);
 
 namespace debug {
 
 std::vector<std::reference_wrapper<const Haplotype>>
-rank_haplotypes(const std::vector<Haplotype>& haplotypes, const SampleName& sample,
+rank_haplotypes(const MappableBlock<Haplotype>& haplotypes, const SampleName& sample,
                 const HaplotypeLikelihoodArray& haplotype_likelihoods);
 
 template <typename S>
+void print_read_likelihood_helper(S& stream, const AlignedRead& read, const double likelihood)
+{
+    stream << read.name() << " "
+           << mapped_region(read) << " "
+           << read.cigar() << ": "
+           << likelihood << '\n';
+}
+template <typename S>
+void print_read_likelihood_helper(S& stream, const AlignedTemplate& reads, const double likelihood)
+{
+    stream << "[ ";
+    for (const auto& read : reads) {
+        stream <<  "<" << read.name() << " " << mapped_region(read) << " " << read.cigar() << "> "; 
+    }
+    stream << "] : " << likelihood << '\n';
+}
+
+template <typename S, typename Read>
 void print_read_haplotype_likelihoods(S&& stream,
-                                     const std::vector<Haplotype>& haplotypes,
-                                     const ReadMap& reads,
+                                     const MappableBlock<Haplotype>& haplotypes,
+                                     const MappableMap<SampleName, Read>& reads,
                                      const HaplotypeLikelihoodArray& haplotype_likelihoods,
                                      const std::size_t n = 5)
 {
@@ -151,7 +186,7 @@ void print_read_haplotype_likelihoods(S&& stream,
         stream << "each sample";
     }
     stream << '\n';
-    using ReadReference = std::reference_wrapper<const AlignedRead>;
+    using ReadReference = std::reference_wrapper<const Read>;
     for (const auto& sample_reads : reads) {
         const auto& sample = sample_reads.first;
         if (!is_single_sample) {
@@ -170,7 +205,7 @@ void print_read_haplotype_likelihoods(S&& stream,
             std::transform(std::cbegin(sample_reads.second), std::cend(sample_reads.second),
                            std::cbegin(haplotype_likelihoods(sample, haplotype)),
                            std::back_inserter(likelihoods),
-                           [] (const AlignedRead& read, const auto likelihood) {
+                           [] (const Read& read, const auto likelihood) {
                                return std::make_pair(std::cref(read), likelihood);
                            });
             const auto mth = std::next(std::begin(likelihoods), m);
@@ -178,26 +213,26 @@ void print_read_haplotype_likelihoods(S&& stream,
                               [] (const auto& lhs, const auto& rhs) {
                                   return lhs.second > rhs.second;
                               });
-            std::for_each(std::begin(likelihoods), mth, [&] (const auto& p) {
+            std::for_each(std::begin(likelihoods), mth, [&stream, is_single_sample] (const auto& p) {
                 if (is_single_sample) {
                     stream << "\t";
                 } else {
                     stream << "\t\t";
                 }
-                const auto& read = p.first.get();
-                stream << read.name() << " "
-                       << mapped_region(read) << " "
-                       << p.first.get().cigar() << ": "
-                       << p.second << '\n';
+                print_read_likelihood_helper(stream, p.first.get(), p.second);
             });
         }
     }
 }
 
-void print_read_haplotype_likelihoods(const std::vector<Haplotype>& haplotypes,
-                                      const ReadMap& reads,
+template <typename Read>
+void print_read_haplotype_likelihoods(const MappableBlock<Haplotype>& haplotypes,
+                                      const MappableMap<SampleName, Read>& reads,
                                       const HaplotypeLikelihoodArray& haplotype_likelihoods,
-                                      std::size_t n = 5);
+                                      std::size_t n = 5)
+{
+    print_read_haplotype_likelihoods(std::cout, haplotypes, reads, haplotype_likelihoods, n);
+}
 
 } // namespace debug
 

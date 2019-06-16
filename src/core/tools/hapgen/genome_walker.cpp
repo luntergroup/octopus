@@ -147,12 +147,15 @@ bool is_optimal_to_extend(const BidirIt first_included, const BidirIt proposed_i
 
 }
 
-GenomicRegion GenomeWalker::walk(const GenomicRegion& previous_region,
-                                 const ReadMap& reads,
-                                 const AlleleSet& alleles) const
+GenomicRegion
+GenomeWalker::walk(const GenomicRegion& previous_region,
+                   const ReadMap& reads,
+                   const AlleleSet& alleles) const
 {
     using std::cbegin; using std::cend; using std::next; using std::prev; using std::min;
     using std::distance; using std::advance;
+    
+    if (alleles.empty()) return previous_region;
     
     auto last_allele_itr  = cend(alleles);
     auto previous_alleles = bases(overlap_range(alleles, previous_region));

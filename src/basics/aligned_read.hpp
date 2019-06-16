@@ -85,15 +85,15 @@ public:
     
     AlignedRead() = default;
     
-    template <typename String1_, typename GenomicRegion_, typename Seq_, typename Qualities_,
-              typename CigarString_, typename String2_>
-    AlignedRead(String1_&& name, GenomicRegion_&& reference_region, Seq_&& sequence, Qualities_&& qualities,
-                CigarString_&& cigar, MappingQuality mapping_quality, const Flags& flags, String2_&& read_group);
-    
-    template <typename String1_, typename GenomicRegion_, typename Seq_, typename Qualities_,
-              typename CigarString_, typename String2_, typename String3_>
-    AlignedRead(String1_&& name, GenomicRegion_&& reference_region, Seq_&& sequence, Qualities_&& qualities,
-                CigarString_&& cigar, MappingQuality mapping_quality, Flags flags, String2_&& read_group,
+    template <typename String1_, typename GenomicRegion_, typename Seq1_, typename Seq2_,
+              typename Qualities_, typename CigarString_, typename String2_>
+    AlignedRead(String1_&& name, GenomicRegion_&& reference_region, Seq1_&& sequence, Qualities_&& qualities,
+                CigarString_&& cigar, MappingQuality mapping_quality, const Flags& flags,
+                String2_&& read_group, Seq2_&& barcode);
+    template <typename String1_, typename GenomicRegion_, typename Seq1_, typename Seq2_,
+              typename Qualities_, typename CigarString_, typename String2_, typename String3_>
+    AlignedRead(String1_&& name, GenomicRegion_&& reference_region, Seq1_&& sequence, Qualities_&& qualities,
+                CigarString_&& cigar, MappingQuality mapping_quality, Flags flags, String2_&& read_group, Seq2_&& barcode,
                 String3_&& next_segment_contig_name, MappingDomain::Position next_segment_begin,
                 MappingDomain::Size inferred_template_length,
                 const Segment::Flags& next_segment_flags);
@@ -118,6 +118,7 @@ public:
     bool has_other_segment() const noexcept;
     const Segment& next_segment() const;
     Flags flags() const noexcept;
+    const NucleotideSequence& barcode() const noexcept;
     
     void realign(GenomicRegion new_region, CigarString new_cigar) noexcept;
     
@@ -144,7 +145,7 @@ private:
     // should be ordered by sizeof
     GenomicRegion region_;
     std::string name_;
-    NucleotideSequence sequence_;
+    NucleotideSequence sequence_, barcode_sequence_;
     BaseQualityVector base_qualities_;
     CigarString cigar_;
     std::string read_group_;
@@ -176,13 +177,15 @@ struct AlignedRead::Flags
     bool last_template_segment;
 };
 
-template <typename String_, typename GenomicRegion_, typename Seq, typename Qualities_, typename CigarString_,
-          typename String2_>
-AlignedRead::AlignedRead(String_&& name, GenomicRegion_&& reference_region, Seq&& sequence, Qualities_&& qualities,
-                         CigarString_&& cigar, MappingQuality mapping_quality, const Flags& flags, String2_&& read_group)
+template <typename String_, typename GenomicRegion_, typename Seq1, typename Seq2,
+          typename Qualities_, typename CigarString_, typename String2_>
+AlignedRead::AlignedRead(String_&& name, GenomicRegion_&& reference_region, Seq1&& sequence, Qualities_&& qualities,
+                         CigarString_&& cigar, MappingQuality mapping_quality, const Flags& flags,
+                         String2_&& read_group, Seq2&& barcode)
 : region_ {std::forward<GenomicRegion_>(reference_region)}
 , name_ {std::forward<String_>(name)}
-, sequence_ {std::forward<Seq>(sequence)}
+, sequence_ {std::forward<Seq1>(sequence)}
+, barcode_sequence_ {std::forward<Seq2>(barcode)}
 , base_qualities_ {std::forward<Qualities_>(qualities)}
 , cigar_ {std::forward<CigarString_>(cigar)}
 , read_group_ {std::forward<String2_>(read_group)}
@@ -191,15 +194,17 @@ AlignedRead::AlignedRead(String_&& name, GenomicRegion_&& reference_region, Seq&
 , mapping_quality_ {mapping_quality}
 {}
 
-template <typename String1_, typename GenomicRegion_, typename Seq, typename Qualities_, typename CigarString_,
-          typename String2_, typename String3_>
-AlignedRead::AlignedRead(String1_&& name, GenomicRegion_&& reference_region, Seq&& sequence, Qualities_&& qualities,
+template <typename String1_, typename GenomicRegion_, typename Seq1, typename Seq2, typename Qualities_,
+          typename CigarString_, typename String2_, typename String3_>
+AlignedRead::AlignedRead(String1_&& name, GenomicRegion_&& reference_region, Seq1&& sequence, Qualities_&& qualities,
                          CigarString_&& cigar, MappingQuality mapping_quality, Flags flags, String2_&& read_group,
+                         Seq2&& barcode,
                          String3_&& next_segment_contig_name, MappingDomain::Position next_segment_begin,
                          MappingDomain::Size inferred_template_length, const Segment::Flags& next_segment_flags)
 : region_ {std::forward<GenomicRegion_>(reference_region)}
 , name_ {std::forward<String1_>(name)}
-, sequence_ {std::forward<Seq>(sequence)}
+, sequence_ {std::forward<Seq1>(sequence)}
+, barcode_sequence_ {std::forward<Seq2>(barcode)}
 , base_qualities_ {std::forward<Qualities_>(qualities)}
 , cigar_ {std::forward<CigarString_>(cigar)}
 , read_group_ {std::forward<String2_>(read_group)}

@@ -17,6 +17,7 @@
 #include "config/common.hpp"
 #include "basics/genomic_region.hpp"
 #include "containers/mappable_flat_set.hpp"
+#include "containers/mappable_block.hpp"
 #include "core/types/allele.hpp"
 #include "readpipe/read_pipe.hpp"
 #include "logging/logging.hpp"
@@ -42,6 +43,7 @@ public:
     {
         enum class Lagging { none, conservative, moderate, normal, aggressive } lagging = Lagging::normal;
         enum class Extension { conservative, normal, optimistic, aggressive } extension = Extension::normal;
+        enum class Backtrack { none, normal, aggressive } backtrack = Backtrack::normal;
         struct HaplotypeLimits { unsigned target = 128, holdout = 2048, overflow = 8192; } haplotype_limits;
         unsigned max_holdout_depth = 2;
         Haplotype::MappingDomain::Size min_flank_pad = 30;
@@ -49,16 +51,24 @@ public:
         boost::optional<double> max_expected_log_allele_count_per_base = boost::none;
     };
     
+    enum class Mode { allele, haplotype, allele_and_haplotype };
+    
     class HaplotypeOverflow;
     class Builder;
     
-    using HaplotypePacket = std::tuple<std::vector<Haplotype>, boost::optional<GenomicRegion>, boost::optional<GenomicRegion>>;
+    using HaplotypeBlock = HaplotypeTree::HaplotypeBlock;
+    struct HaplotypePacket
+    {
+        HaplotypeBlock haplotypes;
+        boost::optional<GenomicRegion> active_region, backtrack_region;
+    };
     
     HaplotypeGenerator() = delete;
     
     HaplotypeGenerator(const ReferenceGenome& reference,
                        const MappableFlatSet<Variant>& candidates,
                        const ReadMap& reads,
+                       boost::optional<const TemplateMap&> read_templates,
                        boost::optional<const ReadPipe::Report&> reads_report,
                        Policies policies,
                        DenseVariationDetector dense_variation_detector);
@@ -69,7 +79,7 @@ public:
     HaplotypeGenerator& operator=(HaplotypeGenerator&&)      = default;
     
     ~HaplotypeGenerator() = default;
-    
+            
     // Generates the next HaplotypePacket, this will always move the generated
     // active region forward. The next generated region is automatically calculated
     // (i.e the region given by peek_next_active_region) unless jump has
@@ -94,6 +104,9 @@ public:
     // sub-haplotypes.
     template <typename Container> void remove(const Container& haplotypes);
     
+    // Remove all active haplotypes in the given region
+    void remove(const GenomicRegion& region);
+    
     // Returns true if calling remove will change the next active region.
     bool removal_has_impact() const;
     
@@ -103,7 +116,7 @@ public:
     
     // Discards any equivilant haplotypes that are not in the given set of
     // haplotypes.
-    template <typename Container> void collapse(const Container& haplotypes);
+    void collapse(const HaplotypeBlock& haplotypes);
     
 private:
     struct HoldoutSet
@@ -126,6 +139,7 @@ private:
     
     MappableFlatSet<Allele> alleles_;
     std::reference_wrapper<const ReadMap> reads_;
+    boost::optional<const TemplateMap&> read_templates_;
     
     MappableFlatSet<GenomicRegion> lagging_exclusion_zones_;
     
@@ -138,20 +152,33 @@ private:
     
     Allele rightmost_allele_;
     
+    std::deque<HaplotypeBlock> haplotype_blocks_;
+    std::vector<HaplotypeBlock> active_haplotype_blocks_;
+    
     mutable boost::optional<logging::DebugLogger> debug_log_;
     mutable boost::optional<logging::TraceLogger> trace_log_;
     
     bool is_lagging_enabled() const noexcept;
     bool is_lagging_enabled(const GenomicRegion& region) const;
+    bool is_backtracking_enabled() const noexcept;
+    bool is_backtrack_active() const noexcept;
     bool is_active_region_lagged() const;
     void reset_next_active_region() const noexcept;
     GenomicRegion find_max_lagged_region() const;
     void update_next_active_region() const;
     void update_lagged_next_active_region() const;
-    void remove_passed_alleles();
+    void prepare_for_next_active_region();
+    void safe_clear_tree(const GenomicRegion& region);
     void populate_tree();
     void populate_tree_with_novel_alleles();
     void populate_tree_with_holdouts();
+    unsigned extend_tree_with_cached_haplotypes(unsigned max_haplotypes);
+    void extend_tree_with_cached_haplotypes();
+    void clear_and_populate_tree_with_cached_haplotypes();
+    bool can_populate_tree_with_cached_haplotype(unsigned max_haplotypes) const;
+    bool can_populate_tree_with_cached_haplotype() const;
+    bool should_populate_tree_with_cached_haplotype() const;
+    std::size_t max_cached_haplotypes() const;
     bool in_holdout_mode() const noexcept;
     const GenomicRegion& top_holdout_region() const;
     bool can_try_extracting_holdouts(const GenomicRegion& region) const noexcept;
@@ -162,6 +189,12 @@ private:
     void clear_holdouts() noexcept;
     void resolve_sandwich_insertion();
     GenomicRegion calculate_haplotype_region() const;
+    bool is_finished() const noexcept;
+    void cleanup_tree();
+    void cache_active_haplotypes(const GenomicRegion& region);
+    void cache_active_haplotypes();
+    boost::optional<GenomicRegion> haplotype_block_region() const;
+    boost::optional<GenomicRegion> backtrack_region() const;
 };
 
 class HaplotypeGenerator::HaplotypeOverflow : public std::runtime_error
@@ -182,32 +215,14 @@ private:
 };
 
 template <typename Container>
-void HaplotypeGenerator::collapse(const Container& haplotypes)
-{
-    reset_next_active_region();
-    if (!is_active_region_lagged() || tree_.num_haplotypes() == haplotypes.size()) {
-        return;
-    }
-    prune_unique(haplotypes, tree_);
-}
-
-template <typename Container>
 void HaplotypeGenerator::remove(const Container& haplotypes)
 {
     if (haplotypes.empty()) return;
     reset_next_active_region();
-    if (!is_active_region_lagged() || haplotypes.size() == tree_.num_haplotypes()) {
-        tree_.clear();
-        if (!in_holdout_mode()) {
-            alleles_.erase_overlapped(active_region_);
-        } else {
-            // TODO: in this case we must be more selective and only erase those alleles
-            // which are not present in the remaining haplotype set
-            alleles_.erase_overlapped(active_region_);
-        }
-    } else {
-        prune_all(haplotypes, tree_);
-    }
+    prune_all(haplotypes, tree_);
+    if (debug_log_)
+        stream(*debug_log_) << "There are " << tree_.num_haplotypes() << " left in the tree after pruning "
+                            << haplotypes.size() << " haplotypes";
 }
 
 class HaplotypeGenerator::Builder
@@ -226,6 +241,7 @@ public:
     
     Builder& set_lagging_policy(Policies::Lagging policy) noexcept;
     Builder& set_extension_policy(Policies::Extension policy) noexcept;
+    Builder& set_backtrack_policy(Policies::Backtrack policy) noexcept;
     Builder& set_target_limit(unsigned n) noexcept;
     Builder& set_holdout_limit(unsigned n) noexcept;
     Builder& set_overflow_limit(unsigned n) noexcept;
@@ -235,10 +251,12 @@ public:
     Builder& set_max_expected_log_allele_count_per_base(double v) noexcept;
     Builder& set_dense_variation_detector(DenseVariationDetector detector) noexcept;
     
-    HaplotypeGenerator build(const ReferenceGenome& reference,
-                             const MappableFlatSet<Variant>& candidates,
-                             const ReadMap& reads,
-                             boost::optional<const ReadPipe::Report&> reads_report = boost::none) const;
+    HaplotypeGenerator
+    build(const ReferenceGenome& reference,
+          const MappableFlatSet<Variant>& candidates,
+          const ReadMap& reads,
+          boost::optional<const TemplateMap&> read_templates = boost::none,
+          boost::optional<const ReadPipe::Report&> reads_report = boost::none) const;
     
 private:
     Policies policies_;

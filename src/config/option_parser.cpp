@@ -425,6 +425,14 @@ OptionMap parse_options(const int argc, const char** argv)
     ("extension-level",
      po::value<ExtensionLevel>()->default_value(ExtensionLevel::normal),
      "Level of haplotype extension. Possible values are: conservative, normal, optimistic, aggressive")
+        
+    ("lagging-level",
+     po::value<LaggingLevel>()->default_value(LaggingLevel::normal),
+     "Level of haplotype lagging. Possible values are: minimal, conservative, moderate, normal, aggressive")
+
+    ("backtrack-level",
+     po::value<BacktrackLevel>()->default_value(BacktrackLevel::none),
+     "Level of backtracking. Possible values are: none, normal, aggressive")
     
     ("haplotype-extension-threshold,e",
      po::value<Phred<double>>()->default_value(Phred<double> {100.0}, "100"),
@@ -533,6 +541,18 @@ OptionMap parse_options(const int argc, const char** argv)
      ("max-indel-errors",
       po::value<int>()->default_value(8),
       "Maximum number of indel errors allowed during haplotype likelihood calculation")
+    
+    ("paired-reads",
+     po::bool_switch()->default_value(false),
+     "Use paired read information during variant calling")
+    
+    ("linked-reads",
+     po::bool_switch()->default_value(false),
+     "Use linked read information during variant calling")
+         
+    ("min-phase-score",
+     po::value<Phred<double>>()->default_value(Phred<double> {10.0}),
+     "Minimum phase score (phred scale) required to report sites as phased")
     ;
     
     po::options_description cancer("Calling (cancer)");
@@ -631,18 +651,6 @@ OptionMap parse_options(const int argc, const char** argv)
     "Allelic dropout concentration paramater")
     ;
     
-    po::options_description phasing("Phasing");
-    phasing.add_options()
-    ("phasing-level,l",
-     po::value<PhasingLevel>()->default_value(PhasingLevel::normal),
-     "Level of phasing - longer range phasing can improve calling accuracy at the cost"
-     " of runtime speed. Possible values are: minimal, conservative, moderate, normal, aggressive")
-    
-    ("min-phase-score",
-     po::value<Phred<double>>()->default_value(Phred<double> {10.0}),
-     "Minimum phase score (phred scale) required to report sites as phased")
-    ;
-    
     po::options_description call_filtering("Variant filtering");
     call_filtering.add_options()
     ("call-filtering,f",
@@ -693,7 +701,7 @@ OptionMap parse_options(const int argc, const char** argv)
     po::options_description all("octopus options");
     all.add(general).add(backend).add(input).add(transforms).add(filters)
     .add(variant_generation).add(haplotype_generation).add(caller)
-    .add(cancer).add(trio).add(polyclone).add(cell).add(phasing).add(call_filtering);
+    .add(cancer).add(trio).add(polyclone).add(cell).add(call_filtering);
     
     OptionMap vm_init;
     po::store(run(po::command_line_parser(argc, argv).options(general).allow_unregistered()), vm_init);
@@ -706,38 +714,33 @@ OptionMap parse_options(const int argc, const char** argv)
             if (selected_caller == "individual") {
                 po::options_description individual_options("octopus individual calling options");
                 individual_options.add(general).add(backend).add(input).add(transforms).add(filters)
-                .add(variant_generation).add(haplotype_generation).add(caller)
-                .add(phasing).add(call_filtering);
+                .add(variant_generation).add(haplotype_generation).add(caller).add(call_filtering);
                 std::cout << individual_options << std::endl;
             } else if (selected_caller == "trio") {
                 po::options_description trio_options("octopus trio calling options");
                 trio_options.add(general).add(backend).add(input).add(transforms).add(filters)
-                .add(variant_generation).add(haplotype_generation).add(caller).add(trio)
-                .add(phasing).add(call_filtering);
+                .add(variant_generation).add(haplotype_generation).add(caller).add(trio).add(call_filtering);
                 std::cout << trio_options << std::endl;
             } else if (selected_caller == "population") {
                 po::options_description population_options("octopus population calling options");
                 population_options.add(general).add(backend).add(input).add(transforms).add(filters)
-                .add(variant_generation).add(haplotype_generation).add(caller)
-                .add(phasing).add(call_filtering);
+                .add(variant_generation).add(haplotype_generation).add(caller).add(call_filtering);
                 std::cout << population_options << std::endl;
             } else if (selected_caller == "cancer") {
                 po::options_description cancer_options("octopus cancer calling options");
                 cancer_options.add(general).add(backend).add(input).add(transforms).add(filters)
-                .add(variant_generation).add(haplotype_generation).add(caller).add(cancer)
-                .add(phasing).add(call_filtering);
+                .add(variant_generation).add(haplotype_generation).add(caller).add(cancer).add(call_filtering);
                 std::cout << cancer_options << std::endl;
             } else if (selected_caller == "polyclone") {
                 po::options_description polyclone_options("octopus polyclone calling options");
                 polyclone_options.add(general).add(backend).add(input).add(transforms).add(filters)
-                .add(variant_generation).add(haplotype_generation).add(caller).add(polyclone)
-                .add(phasing).add(call_filtering);
+                .add(variant_generation).add(haplotype_generation).add(caller).add(polyclone).add(call_filtering);
                 std::cout << polyclone_options << std::endl;
             } else if (selected_caller == "cell") {
                 po::options_description polyclone_options("octopus polyclone calling options");
                 polyclone_options.add(general).add(backend).add(input).add(transforms).add(filters)
                                  .add(variant_generation).add(haplotype_generation).add(caller).add(cell)
-                                 .add(phasing).add(call_filtering);
+                                 .add(call_filtering);
                 std::cout << polyclone_options << std::endl;
             } else {
                 std::cout << all << std::endl;
@@ -1107,7 +1110,7 @@ void validate(const OptionMap& vm)
     validate_caller(vm);
 }
 
-std::istream& operator>>(std::istream& in, ContigPloidy& result)
+std::istream& operator>>(std::istream& in, ContigPloidy& plodies)
 {
     static const std::regex re {"(?:([^:]*):)?([^=]+)=(\\d+)"};
     
@@ -1117,10 +1120,10 @@ std::istream& operator>>(std::istream& in, ContigPloidy& result)
     
     if (std::regex_match(token, match, re) && match.size() == 4) {
         if (match.length(1) > 0) {
-            result.sample = match.str(1);
+            plodies.sample = match.str(1);
         }
-        result.contig = match.str(2);
-        result.ploidy = boost::lexical_cast<decltype(result.ploidy)>(match.str(3));
+        plodies.contig = match.str(2);
+        plodies.ploidy = boost::lexical_cast<decltype(plodies.ploidy)>(match.str(3));
     } else {
         using Error = po::validation_error;
         throw Error {Error::kind_t::invalid_option_value, token, "contig-ploidies"};
@@ -1129,21 +1132,21 @@ std::istream& operator>>(std::istream& in, ContigPloidy& result)
     return in;
 }
 
-std::ostream& operator<<(std::ostream& out, const ContigPloidy& cp)
+std::ostream& operator<<(std::ostream& out, const ContigPloidy& plodies)
 {
-    if (cp.sample) out << *cp.sample << ':';
-    out << cp.contig << "=" << cp.ploidy;
+    if (plodies.sample) out << *plodies.sample << ':';
+    out << plodies.contig << "=" << plodies.ploidy;
     return out;
 }
 
-std::istream& operator>>(std::istream& in, RefCallType& result)
+std::istream& operator>>(std::istream& in, RefCallType& type)
 {
     std::string token;
     in >> token;
     if (token == "positional")
-        result = RefCallType::positional;
+        type = RefCallType::positional;
     else if (token == "blocked")
-        result = RefCallType::blocked;
+        type = RefCallType::blocked;
     else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token, "refcalls"};
     return in;
 }
@@ -1161,24 +1164,24 @@ std::ostream& operator<<(std::ostream& out, const RefCallType& type)
     return out;
 }
 
-std::istream& operator>>(std::istream& in, ContigOutputOrder& result)
+std::istream& operator>>(std::istream& in, ContigOutputOrder& order)
 {
     std::string token;
     in >> token;
     if (token == "lexicographicalAscending")
-        result = ContigOutputOrder::lexicographicalAscending;
+        order = ContigOutputOrder::lexicographicalAscending;
     else if (token == "lexicographicalDescending")
-        result = ContigOutputOrder::lexicographicalDescending;
+        order = ContigOutputOrder::lexicographicalDescending;
     else if (token == "contigSizeAscending")
-        result = ContigOutputOrder::contigSizeAscending;
+        order = ContigOutputOrder::contigSizeAscending;
     else if (token == "contigSizeDescending")
-        result = ContigOutputOrder::contigSizeDescending;
+        order = ContigOutputOrder::contigSizeDescending;
     else if (token == "asInReference")
-        result = ContigOutputOrder::asInReferenceIndex;
+        order = ContigOutputOrder::asInReferenceIndex;
     else if (token == "asInReferenceReversed")
-        result = ContigOutputOrder::asInReferenceIndexReversed;
+        order = ContigOutputOrder::asInReferenceIndexReversed;
     else if (token == "unspecified")
-        result = ContigOutputOrder::unspecified;
+        order = ContigOutputOrder::unspecified;
     else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token, "contig-output-order"};
     return in;
 }
@@ -1211,18 +1214,18 @@ std::ostream& operator<<(std::ostream& out, const ContigOutputOrder& order)
     return out;
 }
 
-std::istream& operator>>(std::istream& in, ExtensionLevel& result)
+std::istream& operator>>(std::istream& in, ExtensionLevel& level)
 {
     std::string token;
     in >> token;
     if (token == "conservative")
-        result = ExtensionLevel::conservative;
+        level = ExtensionLevel::conservative;
     else if (token == "normal")
-        result = ExtensionLevel::normal;
+        level = ExtensionLevel::normal;
     else if (token == "optimistic")
-        result = ExtensionLevel::optimistic;
+        level = ExtensionLevel::optimistic;
     else if (token == "aggressive")
-        result = ExtensionLevel::aggressive;
+        level = ExtensionLevel::aggressive;
     else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token, "extension-level"};
     return in;
 }
@@ -1246,40 +1249,70 @@ std::ostream& operator<<(std::ostream& out, const ExtensionLevel& level)
     return out;
 }
 
-std::istream& operator>>(std::istream& in, PhasingLevel& result)
+std::istream& operator>>(std::istream& in, BacktrackLevel& level)
+{
+    std::string token;
+    in >> token;
+    if (token == "none")
+        level = BacktrackLevel::none;
+    else if (token == "normal")
+        level = BacktrackLevel::normal;
+    else if (token == "aggressive")
+        level = BacktrackLevel::aggressive;
+    else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token, "backtrack-level"};
+    return in;
+}
+
+std::ostream& operator<<(std::ostream& out, const BacktrackLevel& level)
+{
+    switch (level) {
+    case BacktrackLevel::none:
+        out << "none";
+        break;
+    case BacktrackLevel::normal:
+        out << "normal";
+        break;
+    case BacktrackLevel::aggressive:
+        out << "aggressive";
+        break;
+    }
+    return out;
+}
+
+std::istream& operator>>(std::istream& in, LaggingLevel& level)
 {
     std::string token;
     in >> token;
     if (token == "minimal")
-        result = PhasingLevel::minimal;
+        level = LaggingLevel::minimal;
     else if (token == "conservative")
-        result = PhasingLevel::conservative;
+        level = LaggingLevel::conservative;
     else if (token == "moderate")
-        result = PhasingLevel::moderate;
+        level = LaggingLevel::moderate;
     else if (token == "normal")
-        result = PhasingLevel::normal;
+        level = LaggingLevel::normal;
     else if (token == "aggressive")
-        result = PhasingLevel::aggressive;
-    else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token, "phasing-level"};
+        level = LaggingLevel::aggressive;
+    else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token, "lagging-level"};
     return in;
 }
 
-std::ostream& operator<<(std::ostream& out, const PhasingLevel& level)
+std::ostream& operator<<(std::ostream& out, const LaggingLevel& level)
 {
     switch (level) {
-        case PhasingLevel::minimal:
+        case LaggingLevel::minimal:
             out << "minimal";
             break;
-        case PhasingLevel::conservative:
+        case LaggingLevel::conservative:
             out << "conservative";
             break;
-        case PhasingLevel::moderate:
+        case LaggingLevel::moderate:
             out << "moderate";
             break;
-        case PhasingLevel::normal:
+        case LaggingLevel::normal:
             out << "normal";
             break;
-        case PhasingLevel::aggressive:
+        case LaggingLevel::aggressive:
             out << "aggressive";
             break;
     }

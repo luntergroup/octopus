@@ -25,9 +25,10 @@
 
 namespace octopus { namespace io {
 
-static const std::string readGroupTag   {"RG"};
-static const std::string readGroupIdTag {"ID"};
-static const std::string sampleIdTag    {"SM"};
+static const std::string readGroupTag       {"RG"};
+static const std::string readGroupIdTag     {"ID"};
+static const std::string sampleIdTag        {"SM"};
+static const std::string barcodeSequenceTag {"BX"};
 
 class MissingBAM : public MissingFileError
 {
@@ -874,6 +875,12 @@ auto extract_next_segment_flags(const bam1_core_t& c) noexcept
     return result;
 }
 
+AlignedRead::NucleotideSequence extract_barcode(const bam1_t* record) noexcept
+{
+    const auto ptr = bam_aux_get(record, barcodeSequenceTag.c_str());
+    return ptr ? bam_aux2Z(ptr) : "";
+}
+
 AlignedRead HtslibSamFacade::HtslibIterator::operator*() const
 {
     using std::begin; using std::end; using std::next; using std::move;
@@ -911,6 +918,7 @@ AlignedRead HtslibSamFacade::HtslibIterator::operator*() const
             mapping_quality(info),
             extract_flags(info),
             read_group(),
+            extract_barcode(hts_bam1_.get()),
             hts_facade_.get_contig_name(info.mtid),
             next_segment_position(info),
             template_length(info),
@@ -925,7 +933,8 @@ AlignedRead HtslibSamFacade::HtslibIterator::operator*() const
             move(cigar),
             mapping_quality(info),
             extract_flags(info),
-            read_group()
+            read_group(),
+            extract_barcode(hts_bam1_.get()),
         };
     }
 }
@@ -1055,9 +1064,12 @@ auto calculate_annotation_bytes(const std::string& tag, const std::string& annot
     return tag.size() + annotation.size() + 2;// 1 for tag, 1 for '\0'
 }
 
-std::size_t calculate_aux_bytes(const AlignedRead& read)
+auto calculate_aux_bytes(const AlignedRead& read)
 {
-    return read.read_group().empty() ? 0 : calculate_annotation_bytes(readGroupTag, read.read_group());
+    std::size_t result {0};
+    if (!read.read_group().empty()) result += calculate_annotation_bytes(readGroupTag, read.read_group());
+    if (!read.barcode().empty()) result += calculate_annotation_bytes(barcodeSequenceTag, read.barcode());
+    return result;
 }
 
 std::size_t calculate_aux_bytes(const AnnotatedAlignedRead& read)
@@ -1168,6 +1180,7 @@ void set_annotation(const std::string& tag, const std::string& annotation, bam1_
 void set_aux_data(const AlignedRead& read, bam1_t* result) noexcept
 {
     if (!read.read_group().empty()) set_annotation(readGroupTag, read.read_group(), result);
+    if (!read.barcode().empty()) set_annotation(barcodeSequenceTag, read.barcode(), result);
 }
 
 void set_aux_data(const AnnotatedAlignedRead& read, bam1_t* result) noexcept

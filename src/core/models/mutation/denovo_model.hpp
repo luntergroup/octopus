@@ -13,6 +13,7 @@
 #include <boost/functional/hash.hpp>
 
 #include "core/types/haplotype.hpp"
+#include "containers/mappable_block.hpp"
 #include "../pairhmm/pair_hmm.hpp"
 #include "indel_mutation_model.hpp"
 
@@ -45,7 +46,7 @@ public:
     
     Parameters parameters() const;
     
-    void prime(std::vector<Haplotype> haplotypes);
+    void prime(MappableBlock<Haplotype> haplotypes);
     void unprime() noexcept;
     bool is_primed() const noexcept;
     
@@ -78,7 +79,7 @@ private:
     IndelMutationModel indel_model_;
     boost::optional<LogProbability> min_ln_probability_;
     std::size_t num_haplotypes_hint_;
-    std::vector<Haplotype> haplotypes_;
+    MappableBlock<Haplotype> haplotypes_;
     CachingStrategy caching_;
     
     mutable hmm::Alignment alignment_;

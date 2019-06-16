@@ -38,7 +38,7 @@ private:
     {
         return model_.evaluate(genotype);
     }
-    void do_prime(const std::vector<Haplotype>& haplotypes) override
+    void do_prime(const HaplotypeBlock& haplotypes) override
     {
         model_.prime(haplotypes);
     }

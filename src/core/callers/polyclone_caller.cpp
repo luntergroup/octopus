@@ -59,13 +59,13 @@ unsigned PolycloneCaller::do_max_callable_ploidy() const
     return parameters_.max_clones;
 }
 
-std::size_t PolycloneCaller::do_remove_duplicates(std::vector<Haplotype>& haplotypes) const
+std::size_t PolycloneCaller::do_remove_duplicates(HaplotypeBlock& haplotypes) const
 {
     if (parameters_.deduplicate_haplotypes_with_germline_model) {
         if (haplotypes.size() < 2) return 0;
         CoalescentModel::Parameters model_params {};
         if (parameters_.prior_model_params) model_params = *parameters_.prior_model_params;
-        Haplotype reference {mapped_region(haplotypes.front()), reference_.get()};
+        Haplotype reference {mapped_region(haplotypes), reference_.get()};
         CoalescentModel model {std::move(reference), model_params, haplotypes.size(), CoalescentModel::CachingStrategy::none};
         const CoalescentProbabilityGreater cmp {std::move(model)};
         return octopus::remove_duplicates(haplotypes, cmp);
@@ -121,7 +121,7 @@ PolycloneCaller::Latents::genotype_posteriors() const noexcept
     if (genotype_posteriors_ == nullptr) {
         const auto genotypes = concat(haploid_genotypes_, polyploid_genotypes_);
         auto posteriors = concat(haploid_model_inferences_.posteriors.genotype_probabilities,
-                                 subclone_model_inferences_.posteriors.genotype_probabilities);
+                                 subclone_model_inferences_.max_evidence_params.genotype_probabilities);
         std::for_each(std::begin(posteriors), std::next(std::begin(posteriors), haploid_genotypes_.size()),
                       [this] (auto& p) { p *= model_posteriors_.clonal; });
         std::for_each(std::next(std::begin(posteriors), haploid_genotypes_.size()), std::end(posteriors),
@@ -173,7 +173,7 @@ void reduce(std::vector<Genotype<Haplotype>>& genotypes, const GenotypePriorMode
                     std::end(genotypes));
 }
 
-void fit_sublone_model(const std::vector<Haplotype>& haplotypes, const HaplotypeLikelihoodArray& haplotype_likelihoods,
+void fit_sublone_model(const MappableBlock<Haplotype>& haplotypes, const HaplotypeLikelihoodArray& haplotype_likelihoods,
                        const GenotypePriorModel& genotype_prior_model, const SampleName& sample, const unsigned max_clones,
                        const double haploid_model_evidence, const std::function<double(unsigned)>& clonality_prior,
                        const std::size_t max_genotypes, std::vector<Genotype<Haplotype>>& polyploid_genotypes,
@@ -209,7 +209,7 @@ void fit_sublone_model(const std::vector<Haplotype>& haplotypes, const Haplotype
 } // namespace
 
 std::unique_ptr<PolycloneCaller::Caller::Latents>
-PolycloneCaller::infer_latents(const std::vector<Haplotype>& haplotypes, const HaplotypeLikelihoodArray& haplotype_likelihoods) const
+PolycloneCaller::infer_latents(const HaplotypeBlock& haplotypes, const HaplotypeLikelihoodArray& haplotype_likelihoods) const
 {
     auto haploid_genotypes = generate_all_genotypes(haplotypes, 1);
     if (debug_log_) stream(*debug_log_) << "There are " << haploid_genotypes.size() << " candidate haploid genotypes";
@@ -230,7 +230,7 @@ PolycloneCaller::infer_latents(const std::vector<Haplotype>& haplotypes, const H
 }
 
 boost::optional<double>
-PolycloneCaller::calculate_model_posterior(const std::vector<Haplotype>& haplotypes,
+PolycloneCaller::calculate_model_posterior(const HaplotypeBlock& haplotypes,
                                            const HaplotypeLikelihoodArray& haplotype_likelihoods,
                                            const Caller::Latents& latents) const
 {
@@ -238,7 +238,7 @@ PolycloneCaller::calculate_model_posterior(const std::vector<Haplotype>& haploty
 }
 
 boost::optional<double>
-PolycloneCaller::calculate_model_posterior(const std::vector<Haplotype>& haplotypes,
+PolycloneCaller::calculate_model_posterior(const HaplotypeBlock& haplotypes,
                                            const HaplotypeLikelihoodArray& haplotype_likelihoods,
                                            const Latents& latents) const
 {
@@ -480,11 +480,11 @@ const SampleName& PolycloneCaller::sample() const noexcept
     return samples_.front();
 }
 
-std::unique_ptr<GenotypePriorModel> PolycloneCaller::make_prior_model(const std::vector<Haplotype>& haplotypes) const
+std::unique_ptr<GenotypePriorModel> PolycloneCaller::make_prior_model(const HaplotypeBlock& haplotypes) const
 {
     if (parameters_.prior_model_params) {
         return std::make_unique<CoalescentGenotypePriorModel>(CoalescentModel {
-        Haplotype {mapped_region(haplotypes.front()), reference_},
+        Haplotype {mapped_region(haplotypes), reference_},
         *parameters_.prior_model_params, haplotypes.size(), CoalescentModel::CachingStrategy::address
         });
     } else {

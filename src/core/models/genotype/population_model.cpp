@@ -53,8 +53,8 @@ using GenotypeMarginalPosteriorMatrix  = std::vector<GenotypeMarginalPosteriorVe
 
 using InverseGenotypeTable = std::vector<std::vector<std::size_t>>;
 
-auto make_inverse_genotype_table(const std::vector<Haplotype>& haplotypes,
-                                 const std::vector<Genotype<Haplotype>>& genotypes)
+auto make_inverse_genotype_table(const MappableBlock<Haplotype>& haplotypes,
+                                 const PopulationModel::GenotypeVector& genotypes)
 {
     assert(!haplotypes.empty() && !genotypes.empty());
     using HaplotypeReference = std::reference_wrapper<const Haplotype>;
@@ -106,15 +106,15 @@ struct EMOptions
 
 struct ModelConstants
 {
-    const std::vector<Haplotype>& haplotypes;
-    const std::vector<Genotype<Haplotype>>& genotypes;
+    const MappableBlock<Haplotype>& haplotypes;
+    const PopulationModel::GenotypeVector& genotypes;
     const GenotypeLogLikelihoodMatrix& genotype_log_likilhoods;
     const unsigned ploidy;
     const double frequency_update_norm;
     const InverseGenotypeTable genotypes_containing_haplotypes;
     
-    ModelConstants(const std::vector<Haplotype>& haplotypes,
-                   const std::vector<Genotype<Haplotype>>& genotypes,
+    ModelConstants(const MappableBlock<Haplotype>& haplotypes,
+                   const PopulationModel::GenotypeVector& genotypes,
                    const GenotypeLogLikelihoodMatrix& genotype_log_likilhoods)
     : haplotypes {haplotypes}
     , genotypes {genotypes}
@@ -123,8 +123,8 @@ struct ModelConstants
     , frequency_update_norm {calculate_frequency_update_norm(genotype_log_likilhoods.size(), ploidy)}
     , genotypes_containing_haplotypes {make_inverse_genotype_table(haplotypes, genotypes)}
     {}
-    ModelConstants(const std::vector<Haplotype>& haplotypes,
-                   const std::vector<Genotype<Haplotype>>& genotypes,
+    ModelConstants(const MappableBlock<Haplotype>& haplotypes,
+                   const PopulationModel::GenotypeVector& genotypes,
                    const std::vector<GenotypeIndex>& genotype_indices,
                    const GenotypeLogLikelihoodMatrix& genotype_log_likilhoods)
     : haplotypes {haplotypes}
@@ -147,7 +147,7 @@ HardyWeinbergModel make_hardy_weinberg_model(const ModelConstants& constants)
 
 GenotypeLogLikelihoodMatrix
 compute_genotype_log_likelihoods(const std::vector<SampleName>& samples,
-                                 const std::vector<Genotype<Haplotype>>& genotypes,
+                                 const PopulationModel::GenotypeVector& genotypes,
                                  const HaplotypeLikelihoodArray& haplotype_likelihoods)
 {
     assert(!genotypes.empty());
@@ -168,7 +168,7 @@ compute_genotype_log_likelihoods(const std::vector<SampleName>& samples,
 }
 
 GenotypeLogMarginalVector
-init_genotype_log_marginals(const std::vector<Genotype<Haplotype>>& genotypes,
+init_genotype_log_marginals(const PopulationModel::GenotypeVector& genotypes,
                             const HardyWeinbergModel& hw_model)
 {
     GenotypeLogMarginalVector result {};
@@ -231,7 +231,7 @@ auto collapse_genotype_posteriors(const GenotypeMarginalPosteriorMatrix& genotyp
     return result;
 }
 
-double update_haplotype_frequencies(const std::vector<Haplotype>& haplotypes,
+double update_haplotype_frequencies(const MappableBlock<Haplotype>& haplotypes,
                                     HardyWeinbergModel& hw_model,
                                     const GenotypeMarginalPosteriorMatrix& genotype_posteriors,
                                     const InverseGenotypeTable& genotypes_containing_haplotypes,
@@ -283,8 +283,8 @@ void run_em(GenotypeMarginalPosteriorMatrix& genotype_posteriors,
     }
 }
 
-auto compute_approx_genotype_marginal_posteriors(const std::vector<Haplotype>& haplotypes,
-                                                 const std::vector<Genotype<Haplotype>>& genotypes,
+auto compute_approx_genotype_marginal_posteriors(const MappableBlock<Haplotype>& haplotypes,
+                                                 const PopulationModel::GenotypeVector& genotypes,
                                                  const GenotypeLogLikelihoodMatrix& genotype_likelihoods,
                                                  const EMOptions options)
 {
@@ -296,8 +296,8 @@ auto compute_approx_genotype_marginal_posteriors(const std::vector<Haplotype>& h
     return result;
 }
 
-auto compute_approx_genotype_marginal_posteriors(const std::vector<Haplotype>& haplotypes,
-                                                 const std::vector<Genotype<Haplotype>>& genotypes,
+auto compute_approx_genotype_marginal_posteriors(const MappableBlock<Haplotype>& haplotypes,
+                                                 const PopulationModel::GenotypeVector& genotypes,
                                                  const std::vector<GenotypeIndex>& genotype_indices,
                                                  const GenotypeLogLikelihoodMatrix& genotype_likelihoods,
                                                  const EMOptions options)
@@ -310,7 +310,7 @@ auto compute_approx_genotype_marginal_posteriors(const std::vector<Haplotype>& h
     return result;
 }
 
-auto compute_approx_genotype_marginal_posteriors(const std::vector<Genotype<Haplotype>>& genotypes,
+auto compute_approx_genotype_marginal_posteriors(const PopulationModel::GenotypeVector& genotypes,
                                                  const GenotypeLogLikelihoodMatrix& genotype_likelihoods,
                                                  const EMOptions options)
 {
@@ -366,7 +366,8 @@ bool is_homozygous_reference(const Genotype<Haplotype>& genotype)
     return genotype.is_homozygous() && is_reference(genotype[0]);
 }
 
-boost::optional<std::size_t> find_hom_ref_idx(const std::vector<Genotype<Haplotype>>& genotypes)
+template <typename Range>
+boost::optional<std::size_t> find_hom_ref_idx(const Range& genotypes)
 {
     auto itr = std::find_if(std::cbegin(genotypes), std::cend(genotypes),
                             [] (const auto& g) { return is_homozygous_reference(g); });
@@ -388,7 +389,7 @@ auto zip_index(const std::vector<T>& v)
 }
 
 std::vector<unsigned>
-select_top_k_genotypes(const std::vector<Genotype<Haplotype>>& genotypes,
+select_top_k_genotypes(const PopulationModel::GenotypeVector& genotypes,
                        const GenotypeMarginalPosteriorMatrix& em_genotype_marginals,
                        const std::size_t k)
 {
@@ -426,7 +427,7 @@ select_top_k_genotypes(const std::vector<Genotype<Haplotype>>& genotypes,
     }
 }
 
-auto propose_joint_genotypes(const std::vector<Genotype<Haplotype>>& genotypes,
+auto propose_joint_genotypes(const PopulationModel::GenotypeVector& genotypes,
                              const GenotypeMarginalPosteriorMatrix& em_genotype_marginals,
                              const std::size_t max_joint_genotypes)
 {
@@ -477,15 +478,15 @@ void fill(const GenotypeLogLikelihoodMatrix& genotype_likelihoods,
 
 using GenotypeReferenceVector = std::vector<std::reference_wrapper<const Genotype<Haplotype>>>;
 
-template <typename T, typename V>
-void fill(const std::vector<T>& genotypes, const GenotypeCombinationVector& indices, V& result)
+template <typename Range, typename V>
+void fill(const Range& genotypes, const GenotypeCombinationVector& indices, V& result)
 {
     result.clear();
     std::transform(std::cbegin(indices), std::cend(indices), std::back_inserter(result),
                    [&genotypes] (const auto index) { return std::cref(genotypes[index]); });
 }
 
-auto calculate_posteriors(const std::vector<Genotype<Haplotype>>& genotypes,
+auto calculate_posteriors(const PopulationModel::GenotypeVector& genotypes,
                           const GenotypeCombinationMatrix& joint_genotypes,
                           const GenotypeLogLikelihoodMatrix& genotype_likelihoods,
                           const PopulationPriorModel& prior_model)
@@ -537,8 +538,8 @@ void set_posterior_marginals(const GenotypeCombinationMatrix& joint_genotypes,
     result.posteriors.marginal_genotype_probabilities = std::move(marginals);
 }
 
-template <typename T>
-void calculate_posterior_marginals(const std::vector<T>& genotypes,
+template <typename Range>
+void calculate_posterior_marginals(const Range& genotypes,
                                    const GenotypeCombinationMatrix& joint_genotypes,
                                    const GenotypeLogLikelihoodMatrix& genotype_likelihoods,
                                    const PopulationPriorModel& prior_model,

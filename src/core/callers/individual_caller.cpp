@@ -56,13 +56,13 @@ unsigned IndividualCaller::do_min_callable_ploidy() const
     return parameters_.ploidy;
 }
 
-std::size_t IndividualCaller::do_remove_duplicates(std::vector<Haplotype>& haplotypes) const
+std::size_t IndividualCaller::do_remove_duplicates(HaplotypeBlock& haplotypes) const
 {
     if (parameters_.deduplicate_haplotypes_with_germline_model) {
         if (haplotypes.size() < 2) return 0;
         CoalescentModel::Parameters model_params {};
         if (parameters_.prior_model_params) model_params = *parameters_.prior_model_params;
-        Haplotype reference {mapped_region(haplotypes.front()), reference_.get()};
+        Haplotype reference {mapped_region(haplotypes), reference_.get()};
         CoalescentModel model {std::move(reference), model_params, haplotypes.size(), CoalescentModel::CachingStrategy::none};
         const CoalescentProbabilityGreater cmp {std::move(model)};
         return octopus::remove_duplicates(haplotypes, cmp);
@@ -74,7 +74,7 @@ std::size_t IndividualCaller::do_remove_duplicates(std::vector<Haplotype>& haplo
 // IndividualCaller::Latents public methods
 
 IndividualCaller::Latents::Latents(const SampleName& sample,
-                                   const std::vector<Haplotype>& haplotypes,
+                                   const HaplotypeBlock& haplotypes,
                                    std::vector<Genotype<Haplotype>>&& genotypes,
                                    ModelInferences&& inferences)
 : genotype_posteriors_ {}
@@ -105,7 +105,7 @@ IndividualCaller::Latents::genotype_posteriors() const noexcept
 // IndividualCaller::Latents private methods
 
 IndividualCaller::Latents::HaplotypeProbabilityMap
-IndividualCaller::Latents::calculate_haplotype_posteriors(const std::vector<Haplotype>& haplotypes)
+IndividualCaller::Latents::calculate_haplotype_posteriors(const HaplotypeBlock& haplotypes)
 {
     assert(genotype_posteriors_ != nullptr);
     HaplotypeProbabilityMap result {haplotypes.size()};
@@ -122,7 +122,7 @@ IndividualCaller::Latents::calculate_haplotype_posteriors(const std::vector<Hapl
 }
 
 std::unique_ptr<IndividualCaller::Caller::Latents>
-IndividualCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
+IndividualCaller::infer_latents(const HaplotypeBlock& haplotypes,
                                 const HaplotypeLikelihoodArray& haplotype_likelihoods) const
 {
     std::vector<GenotypeIndex> genotype_indices {};
@@ -130,7 +130,7 @@ IndividualCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
     if (debug_log_) stream(*debug_log_) << "There are " << genotypes.size() << " candidate genotypes";
     auto prior_model = make_prior_model(haplotypes);
     prior_model->prime(haplotypes);
-    model::IndividualModel model {*prior_model, debug_log_};
+    model::IndividualModel model {*prior_model, debug_log_, trace_log_};
     model.prime(haplotypes);
     haplotype_likelihoods.prime(sample());
     auto inferences = model.evaluate(genotypes, genotype_indices, haplotype_likelihoods);
@@ -138,7 +138,7 @@ IndividualCaller::infer_latents(const std::vector<Haplotype>& haplotypes,
 }
 
 boost::optional<double>
-IndividualCaller::calculate_model_posterior(const std::vector<Haplotype>& haplotypes,
+IndividualCaller::calculate_model_posterior(const HaplotypeBlock& haplotypes,
                                             const HaplotypeLikelihoodArray& haplotype_likelihoods,
                                             const Caller::Latents& latents) const
 {
@@ -157,7 +157,7 @@ static auto calculate_model_posterior(const double normal_model_log_evidence,
 }
 
 boost::optional<double>
-IndividualCaller::calculate_model_posterior(const std::vector<Haplotype>& haplotypes,
+IndividualCaller::calculate_model_posterior(const HaplotypeBlock& haplotypes,
                                             const HaplotypeLikelihoodArray& haplotype_likelihoods,
                                             const Latents& latents) const
 {
@@ -521,11 +521,11 @@ const SampleName& IndividualCaller::sample() const noexcept
     return samples_.front();
 }
 
-std::unique_ptr<GenotypePriorModel> IndividualCaller::make_prior_model(const std::vector<Haplotype>& haplotypes) const
+std::unique_ptr<GenotypePriorModel> IndividualCaller::make_prior_model(const HaplotypeBlock& haplotypes) const
 {
     if (parameters_.prior_model_params) {
         return std::make_unique<CoalescentGenotypePriorModel>(CoalescentModel {
-        Haplotype {mapped_region(haplotypes.front()), reference_},
+        Haplotype {mapped_region(haplotypes), reference_},
         *parameters_.prior_model_params, haplotypes.size(), CoalescentModel::CachingStrategy::address
         });
     } else {

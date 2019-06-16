@@ -28,7 +28,7 @@ const GenotypePriorModel& IndividualModel::prior_model() const noexcept
     return genotype_prior_model_;
 }
 
-void IndividualModel::prime(const std::vector<Haplotype>& haplotypes)
+void IndividualModel::prime(const MappableBlock<Haplotype>& haplotypes)
 {
     haplotypes_ = std::addressof(haplotypes);
 }
@@ -63,7 +63,7 @@ void print_genotype_likelihoods(const std::vector<Genotype<Haplotype>>& genotype
 } // namespace debug
 
 IndividualModel::InferredLatents
-IndividualModel::evaluate(const std::vector<Genotype<Haplotype>>& genotypes,
+IndividualModel::evaluate(const MappableBlock<Genotype<Haplotype>>& genotypes,
                           const HaplotypeLikelihoodArray& haplotype_likelihoods) const
 {
     assert(!genotypes.empty());
@@ -76,7 +76,7 @@ IndividualModel::evaluate(const std::vector<Genotype<Haplotype>>& genotypes,
 }
 
 IndividualModel::InferredLatents
-IndividualModel::evaluate(const std::vector<Genotype<Haplotype>>& genotypes,
+IndividualModel::evaluate(const MappableBlock<Genotype<Haplotype>>& genotypes,
                           const std::vector<GenotypeIndex>& genotype_indices,
                           const HaplotypeLikelihoodArray& haplotype_likelihoods) const
 {

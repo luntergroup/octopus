@@ -57,6 +57,8 @@ set(BASICS_SOURCES
     basics/read_pileup.cpp
     basics/tandem_repeat.hpp
     basics/tandem_repeat.cpp
+    basics/aligned_template.hpp
+    basics/aligned_template.cpp
 )
 
 set(CONTAINERS_SOURCES
@@ -65,6 +67,7 @@ set(CONTAINERS_SOURCES
     containers/mappable_map.hpp
     containers/matrix_map.hpp
     containers/probability_matrix.hpp
+    containers/mappable_block.hpp
 )
 
 set(LOGGING_SOURCES

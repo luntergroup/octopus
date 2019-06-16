@@ -24,6 +24,7 @@
 #include "core/types/allele.hpp"
 #include "core/types/haplotype.hpp"
 #include "core/types/variant.hpp"
+#include "containers/mappable_block.hpp"
 
 namespace octopus {
 
@@ -34,6 +35,8 @@ namespace coretools {
 class HaplotypeTree
 {
 public:
+    using HaplotypeBlock = MappableBlock<Haplotype>;
+    
     using HaplotypeLength = Haplotype::NucleotideSequence::size_type;
     
     HaplotypeTree() = delete;
@@ -63,6 +66,7 @@ public:
     // Only extends existing leafs
     HaplotypeTree& extend(const ContigAllele& allele);
     HaplotypeTree& extend(const Allele& allele);
+    HaplotypeTree& extend(const Haplotype& haplotype);
     
     // Splices into the tree wherever allele can be made a new leaf
     void splice(const ContigAllele& allele);
@@ -70,8 +74,8 @@ public:
     
     GenomicRegion encompassing_region() const;
     
-    std::vector<Haplotype> extract_haplotypes() const;
-    std::vector<Haplotype> extract_haplotypes(const GenomicRegion& region) const;
+    HaplotypeBlock extract_haplotypes() const;
+    HaplotypeBlock extract_haplotypes(const GenomicRegion& region) const;
     
     std::vector<HaplotypeLength> extract_haplotype_lengths() const;
     std::vector<HaplotypeLength> extract_haplotype_lengths(const GenomicRegion& region) const;
@@ -107,7 +111,8 @@ private:
     mutable HaplotypeVertexMultiMap haplotype_leaf_cache_;
     mutable boost::optional<GenomicRegion> tree_region_;
     
-    using LeafIterator  = decltype(haplotype_leafs_)::const_iterator;
+    using LeafIterator = decltype(haplotype_leafs_)::iterator;
+    using LeafConstIterator = decltype(haplotype_leafs_)::const_iterator;
     using CacheIterator = decltype(haplotype_leaf_cache_)::iterator;
     
     bool is_leaf(Vertex v) const;
@@ -116,17 +121,21 @@ private:
     Vertex remove_backward(Vertex v);
     Vertex get_previous_allele(Vertex allele) const;
     Vertex find_allele_before(Vertex v, const ContigAllele& allele) const;
+    Vertex find_allele_on_branch(LeafIterator leaf, const ContigAllele& allele) const;
     bool allele_exists(Vertex leaf, const ContigAllele& allele) const;
-    LeafIterator extend_haplotype(LeafIterator leaf, const ContigAllele& new_allele);
+    std::pair<LeafIterator, bool> extend_haplotype(LeafIterator leaf, const ContigAllele& new_allele);
+    LeafIterator extend_haplotype(LeafIterator leaf, const Haplotype& other);
     Haplotype extract_haplotype(Vertex leaf, const GenomicRegion& region) const;
     HaplotypeLength extract_haplotype_length(Vertex leaf, const GenomicRegion& region) const;
     bool define_same_haplotype(Vertex leaf1, Vertex leaf2) const;
     bool is_branch_exact_haplotype(Vertex branch_vertex, const Haplotype& haplotype) const;
     bool is_branch_equal_haplotype(Vertex branch_vertex, const Haplotype& haplotype) const;
-    LeafIterator find_exact_haplotype_leaf(LeafIterator first, LeafIterator last,
-                                           const Haplotype& haplotype) const;
-    LeafIterator find_equal_haplotype_leaf(LeafIterator first, LeafIterator last,
-                                           const Haplotype& haplotype) const;
+    LeafConstIterator
+     find_exact_haplotype_leaf(LeafConstIterator first, LeafConstIterator last,
+                               const Haplotype& haplotype) const;
+    LeafConstIterator 
+    find_equal_haplotype_leaf(LeafConstIterator first, LeafConstIterator last,
+                              const Haplotype& haplotype) const;
     void clear_overlapped(const ContigRegion& region);
     std::pair<Vertex, bool> clear(Vertex leaf, const ContigRegion& region);
     std::pair<Vertex, bool> clear_external(Vertex leaf, const ContigRegion& region);
@@ -137,14 +146,14 @@ private:
 
 namespace detail {
 
-template <typename InputIt, typename A>
-void extend_tree(InputIt first, InputIt last, HaplotypeTree& tree, A)
+template <typename InputIt>
+void extend_tree(InputIt first, InputIt last, HaplotypeTree& tree, std::false_type)
 {
-    std::for_each(first, last, [&] (const auto& allele) { tree.extend(allele); });
+    std::for_each(first, last, [&] (const auto& allele_or_haplotype) { tree.extend(allele_or_haplotype); });
 }
 
 template <typename InputIt>
-void extend_tree(InputIt first, InputIt last, HaplotypeTree& tree, Variant)
+void extend_tree(InputIt first, InputIt last, HaplotypeTree& tree, std::true_type)
 {
     std::for_each(first, last, [&] (const auto& variant) {
         tree.extend(variant.ref_allele());
@@ -183,7 +192,7 @@ RandomIt extend_tree_until(RandomIt first, RandomIt last, HaplotypeTree& tree, c
                            A, std::random_access_iterator_tag)
 {
     if (max_log_haplotypes_after_extension(tree, std::distance(first, last)) <= std::log2(max_haplotypes)) {
-        extend_tree(first, last, tree, A {});
+        extend_tree(first, last, tree, std::false_type {});
         return last;
     } else {
         return extend_tree_until(first, last, tree, max_haplotypes, A {}, std::input_iterator_tag {});
@@ -234,9 +243,10 @@ InputIt extend_tree_until(InputIt first, InputIt last, HaplotypeTree& tree, cons
 }
 
 template <typename T>
-constexpr bool is_variant_or_allele = std::is_same<T, ContigAllele>::value
-                                        || std::is_same<T, Allele>::value
-                                        || std::is_same<T, Variant>::value;
+constexpr bool is_variant_or_allele_or_haplotype = std::is_same<T, ContigAllele>::value
+                                                || std::is_same<T, Allele>::value
+                                                || std::is_same<T, Variant>::value
+                                                || std::is_same<T, Haplotype>::value;
 
 } // namespace detail
 
@@ -244,8 +254,8 @@ template <typename InputIt>
 void extend_tree(InputIt first, InputIt last, HaplotypeTree& tree)
 {
     using MappableType = std::decay_t<typename std::iterator_traits<InputIt>::value_type>;
-    static_assert(detail::is_variant_or_allele<MappableType>, "not Allele or Variant");
-    detail::extend_tree(first, last, tree, MappableType {});
+    static_assert(detail::is_variant_or_allele_or_haplotype<MappableType>, "not Allele or Variant or Haplotype");
+    detail::extend_tree(first, last, tree, std::is_same<MappableType, Variant> {});
 }
 
 template <typename Container>
@@ -258,7 +268,7 @@ template <typename InputIt>
 InputIt extend_tree_until(InputIt first, InputIt last, HaplotypeTree& tree, const std::size_t max_haplotypes)
 {
     using MappableType = std::decay_t<typename std::iterator_traits<InputIt>::value_type>;
-    static_assert(detail::is_variant_or_allele<MappableType>, "not Allele or Variant");
+    static_assert(detail::is_variant_or_allele_or_haplotype<MappableType>, "not Allele or Variant or Haplotype");
     return detail::extend_tree_until(first, last, tree, max_haplotypes, MappableType {});
 }
 
@@ -296,7 +306,7 @@ template <typename InputIt>
 auto generate_all_haplotypes(InputIt first, InputIt last, const ReferenceGenome& reference)
 {
     using MappableType = std::decay_t<typename std::iterator_traits<InputIt>::value_type>;
-    static_assert(detail::is_variant_or_allele<MappableType>, "not Allele or Variant");
+    static_assert(detail::is_variant_or_allele_or_haplotype<MappableType>, "not Allele or Variant");
     if (first == last) return std::vector<Haplotype> {};
     HaplotypeTree tree {contig_name(*first), reference};
     extend_tree(first, last, tree);

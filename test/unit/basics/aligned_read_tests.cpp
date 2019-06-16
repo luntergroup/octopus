@@ -33,7 +33,7 @@ AlignedRead make_mock_read()
 {
     return AlignedRead {
         "test", GenomicRegion {"1", 0, 4}, "ACGT", AlignedRead::BaseQualityVector {1, 2, 3, 4},
-        parse_cigar("4M"), 10, AlignedRead::Flags {}, "",
+        parse_cigar("4M"), 10, AlignedRead::Flags {}, "", "",
         "1", 10, 30, AlignedRead::Segment::Flags {}
     };
 }
@@ -63,6 +63,7 @@ BOOST_AUTO_TEST_CASE(can_copy_read_subregions)
         parse_cigar("5M1D10M3I4M"),
         0,
         AlignedRead::Flags {},
+        "",
         ""
     };
     

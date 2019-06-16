@@ -172,8 +172,93 @@ auto realign_and_annotate(const std::vector<AlignedRead>& reads,
         if (haplotype_id) {
             result.back().annotate("hi", std::to_string(*haplotype_id));
         }
+        result.back().annotate("PS", to_string(mapped_region(haplotype)));
     }
     return result;
+}
+
+auto make_paired_read_templates(const std::vector<AlignedRead>& reads)
+{
+    std::vector<AlignedTemplate> result {};
+    make_paired_read_templates(std::cbegin(reads), std::cend(reads), std::back_inserter(result));
+    return result;
+}
+
+auto make_linked_read_templates(const std::vector<AlignedRead>& reads)
+{
+    std::vector<AlignedTemplate> result {};
+    make_linked_read_templates(std::cbegin(reads), std::cend(reads), std::back_inserter(result));
+    return result;
+}
+
+std::size_t count_reads(const std::vector<AlignedTemplate>& templates) noexcept
+{
+    return std::accumulate(std::cbegin(templates), std::cend(templates), std::size_t {0},
+                           [] (auto curr, const auto& reads) { return curr + reads.size(); });
+}
+
+HaplotypeSupportMap
+compute_haplotype_support_helper(const Genotype<Haplotype>& genotype,
+                                 const std::vector<AlignedTemplate>& templates,
+                                 AmbiguousReadList& unassigned_reads,
+                                 const HaplotypeLikelihoodModel& alignment_model)
+{
+    AssignmentConfig assigner_config {};
+    assigner_config.ambiguous_record = AssignmentConfig::AmbiguousRecord::haplotypes;
+    AmbiguousTemplateList unassigned_templates {};
+    const auto template_support = compute_haplotype_support(genotype, templates, unassigned_templates, alignment_model, assigner_config);
+    HaplotypeSupportMap result {};
+    result.reserve(template_support.size());
+    for (const auto& p : template_support) {
+        result[p.first].reserve(count_reads(p.second));
+        for (const auto& template_reads : p.second) {
+            std::copy(std::cbegin(template_reads), std::cend(template_reads), std::back_inserter(result[p.first]));
+        }
+    }
+    for (const auto& unassigned_template : unassigned_templates) {
+        for (const auto& read : unassigned_template.read_template) {
+            assert(unassigned_template.haplotypes);
+            unassigned_reads.emplace_back(read, *unassigned_template.haplotypes);
+        }
+    }
+    return result;
+}
+
+enum class ReadLinkage { none, paired, linked };
+
+ReadLinkage get_rad_linkage_type(const BAMRealigner::Config& config)
+{
+    if (config.use_linked_reads) {
+        return ReadLinkage::linked;
+    } else if (config.use_paired_reads) {
+        return ReadLinkage::paired;
+    } else {
+        return ReadLinkage::none;
+    }
+}
+
+HaplotypeSupportMap
+compute_haplotype_support_helper(const Genotype<Haplotype>& genotype,
+                                 const std::vector<AlignedRead>& reads,
+                                 AmbiguousReadList& unassigned_reads,
+                                 const HaplotypeLikelihoodModel& alignment_model,
+                                 const ReadLinkage read_linkage)
+{
+    switch (read_linkage) {
+        case ReadLinkage::paired: {
+            const auto templates = make_paired_read_templates(reads);
+            return compute_haplotype_support_helper(genotype, templates, unassigned_reads, alignment_model);
+        }
+        case ReadLinkage::linked: {
+            const auto templates = make_linked_read_templates(reads);
+            return compute_haplotype_support_helper(genotype, templates, unassigned_reads, alignment_model);
+        }
+        default: {
+            AssignmentConfig assigner_config {};
+            assigner_config.ambiguous_record = AssignmentConfig::AmbiguousRecord::haplotypes;
+            return compute_haplotype_support(genotype, reads, unassigned_reads, alignment_model, assigner_config);
+        }
+    }
 }
 
 auto assign_and_realign(const std::vector<AlignedRead>& reads,
@@ -189,9 +274,7 @@ auto assign_and_realign(const std::vector<AlignedRead>& reads,
             utils::append(realign_and_annotate(reads, genotype[0], reference, alignment_model, genotype.ploidy()), result);
         } else {
             AmbiguousReadList unassigned_reads {};
-            AssignmentConfig assigner_config {};
-            assigner_config.ambiguous_record = AssignmentConfig::AmbiguousRecord::haplotypes;
-            auto support = compute_haplotype_support(genotype, reads, unassigned_reads, alignment_model, assigner_config);
+            auto support = compute_haplotype_support_helper(genotype, reads, unassigned_reads, alignment_model, read_linkage);
             int haplotype_id {0};
             for (auto& p : support) {
                 if (!p.second.empty()) {
@@ -207,7 +290,7 @@ auto assign_and_realign(const std::vector<AlignedRead>& reads,
                 random_assigned_reads.reserve(genotype.ploidy());
                 for (AmbiguousRead& ambiguous : unassigned_reads) {
                     assert(ambiguous.haplotypes && !ambiguous.haplotypes->empty());
-                    random_assigned_reads[random_select(*ambiguous.haplotypes)].push_back(std::move(ambiguous.read));
+                    random_assigned_reads[*random_select(*ambiguous.haplotypes)].push_back(std::move(ambiguous.read));
                 }
                 for (auto& p : random_assigned_reads) {
                     utils::append(realign_and_annotate(std::move(p.second), p.first, reference, alignment_model, genotype.ploidy()), result);
@@ -249,6 +332,7 @@ BAMRealigner::realign(ReadReader& src, VcfReader& variants, ReadWriter& dst,
     Report report {};
     BatchList batch {};
     boost::optional<GenomicRegion> batch_region {};
+    const auto read_linkage = get_rad_linkage_type(config_);
     for (auto p = variants.iterate(); p.first != p.second;) {
         std::tie(batch, batch_region) = read_next_batch(p.first, p.second, src, reference, samples, batch_region);
         for (auto& sample : batch) {
@@ -262,7 +346,7 @@ BAMRealigner::realign(ReadReader& src, VcfReader& variants, ReadWriter& dst,
                                       std::make_move_iterator(overlapped_reads.end()));
                 sample_reads_itr = sample.reads.erase(overlapped_reads.begin(), overlapped_reads.end());
                 auto bad_reads = to_annotated(remove_unalignable_reads(genotype_reads));
-                auto realignments = assign_and_realign(genotype_reads, genotype, reference, config_.alignment_model, report);
+                auto realignments = assign_and_realign(genotype_reads, genotype, reference, config_.alignment_model, read_linkage, report);
                 report.n_reads_unassigned += bad_reads.size();
                 move_merge(bad_reads, realignments);
                 move_merge(realignments, realigned_reads);

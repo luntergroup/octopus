@@ -54,6 +54,8 @@ public:
     CallerBuilder& set_reference_haplotype_protection(bool b) noexcept;
     CallerBuilder& set_target_memory_footprint(MemoryFootprint memory) noexcept;
     CallerBuilder& set_execution_policy(ExecutionPolicy policy) noexcept;
+    CallerBuilder& set_use_paired_reads(bool use) noexcept;
+    CallerBuilder& set_use_linked_reads(bool use) noexcept;
     
     CallerBuilder& set_min_variant_posterior(Phred<double> posterior) noexcept;
     CallerBuilder& set_min_refcall_posterior(Phred<double> posterior) noexcept;

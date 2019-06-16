@@ -19,6 +19,7 @@
 #include "basics/contig_region.hpp"
 #include "basics/cigar_string.hpp"
 #include "basics/aligned_read.hpp"
+#include "basics/aligned_template.hpp"
 #include "core/types/haplotype.hpp"
 #include "core/models/error/snv_error_model.hpp"
 #include "core/models/error/indel_error_model.hpp"
@@ -91,6 +92,10 @@ public:
     LogProbability evaluate(const AlignedRead& read) const;
     LogProbability evaluate(const AlignedRead& read, const MappingPositionVector& mapping_positions) const;
     LogProbability evaluate(const AlignedRead& read, MappingPositionItr first_mapping_position, MappingPositionItr last_mapping_position) const;
+    
+    // ln p(read template | haplotype, model)
+    LogProbability evaluate(const AlignedTemplate& reads) const;
+    LogProbability evaluate(const AlignedTemplate& reads, const std::vector<MappingPositionVector>& mapping_positions) const;
     
     Alignment align(const AlignedRead& read) const;
     Alignment align(const AlignedRead& read, const MappingPositionVector& mapping_positions) const;

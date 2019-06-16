@@ -15,6 +15,7 @@
 #include "core/types/genotype.hpp"
 #include "core/types/cancer_genotype.hpp"
 #include "core/models/haplotype_likelihood_array.hpp"
+#include "containers/mappable_block.hpp"
 #include "exceptions/unimplemented_feature_error.hpp"
 #include "variational_bayes_mixture_model.hpp"
 #include "genotype_prior_model.hpp"
@@ -56,8 +57,9 @@ public:
     
     struct InferredLatents
     {
-        Latents posteriors;
+        Latents max_evidence_params;
         typename Latents::ProbabilityVector genotype_log_priors;
+        typename Latents::ProbabilityVector weighted_genotype_posteriors;
         double approx_log_evidence;
     };
     
@@ -75,7 +77,7 @@ public:
     
     const Priors& priors() const noexcept;
     
-    void prime(const std::vector<Haplotype>& haplotypes);
+    void prime(const MappableBlock<Haplotype>& haplotypes);
     void unprime() noexcept;
     bool is_primed() const noexcept;
     
@@ -90,7 +92,7 @@ private:
     std::vector<SampleName> samples_;
     Priors priors_;
     AlgorithmParameters parameters_;
-    const std::vector<Haplotype>* haplotypes_;
+    const MappableBlock<Haplotype>* haplotypes_;
 };
 
 using SubcloneModel = SubcloneModelBase<Genotype<Haplotype>, GenotypeIndex, GenotypePriorModel>;
@@ -115,7 +117,7 @@ const typename SubcloneModelBase<G, GI, GPM>::Priors& SubcloneModelBase<G, GI, G
 }
 
 template <typename G, typename GI, typename GPM>
-void SubcloneModelBase<G, GI, GPM>::prime(const std::vector<Haplotype>& haplotypes)
+void SubcloneModelBase<G, GI, GPM>::prime(const MappableBlock<Haplotype>& haplotypes)
 {
     haplotypes_ = std::addressof(haplotypes);
 }
@@ -138,7 +140,7 @@ template <typename GI>
 struct IndexData
 {
     const std::vector<GI>& genotype_indices;
-    const std::vector<Haplotype>* haplotypes;
+    const MappableBlock<Haplotype>* haplotypes;
 };
 
 template <typename G, typename GI, typename GPM>
@@ -275,11 +277,11 @@ auto expand(const std::vector<SampleName>& samples, VBAlphaVector<K>&& alphas)
 
 template <std::size_t K, typename G, typename GI, typename GPM>
 typename SubcloneModelBase<G, GI, GPM>::InferredLatents
-expand(const std::vector<SampleName>& samples, VBLatents<K>&& inferred_latents, LogProbabilityVector genotype_log_priors, double evidence)
+expand(VBResultPacket<K>& vb_results, const std::vector<SampleName>& samples, LogProbabilityVector genotype_log_priors)
 {
-    typename SubcloneModelBase<G, GI, GPM>::Latents posterior_latents {std::move(inferred_latents.genotype_posteriors),
-                                                                       expand<K, G, GI, GPM>(samples, std::move(inferred_latents.alphas))};
-    return {std::move(posterior_latents), std::move(genotype_log_priors), evidence};
+    typename SubcloneModelBase<G, GI, GPM>::Latents posterior_latents {std::move(vb_results.map_latents.genotype_posteriors),
+                                                                       expand<K, G, GI, GPM>(samples, std::move(vb_results.map_latents.alphas))};
+    return {std::move(posterior_latents), std::move(genotype_log_priors), std::move(vb_results.evidence_weighted_genotype_posteriors), vb_results.max_log_evidence};
 }
 
 template <std::size_t K, typename G, typename GI, typename GPM>
@@ -304,8 +306,8 @@ run_variational_bayes_helper(const std::vector<SampleName>& samples,
     }
     const auto vb_prior_alphas = flatten<K, G, GI, GPM>(prior_alphas, samples);
     const auto log_likelihoods = flatten<K>(genotypes, samples, haplotype_log_likelihoods);
-    auto p = octopus::model::run_variational_bayes(vb_prior_alphas, genotype_log_priors, log_likelihoods, vb_params, std::move(seeds));
-    return expand<K, G, GI, GPM>(samples, std::move(p.first), std::move(genotype_log_priors), p.second);
+    auto vb_results = octopus::model::run_variational_bayes(vb_prior_alphas, genotype_log_priors, log_likelihoods, vb_params, std::move(seeds));
+    return expand<K, G, GI, GPM>(vb_results, samples, std::move(genotype_log_priors));
 }
 
 template <typename G, typename GI, typename GPM>

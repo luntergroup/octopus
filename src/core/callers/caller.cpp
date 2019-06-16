@@ -25,6 +25,8 @@
 #include "utils/maths.hpp"
 #include "utils/append.hpp"
 
+#include "basics/aligned_template.hpp"
+
 namespace octopus {
 
 // public methods
@@ -213,10 +215,11 @@ enum class Resolution {
     sequenceAndAlleles, SequenceAndVariantAlleles
 };
 
-template <typename S>
-void print_haplotypes(S&& stream, const std::vector<Haplotype>& haplotypes,
+template <typename S, typename Container>
+void print_haplotypes(S&& stream, const Container& haplotypes,
                       Resolution resolution = Resolution::sequenceAndAlleles);
-void print_haplotypes(const std::vector<Haplotype>& haplotypes,
+template <typename Container>
+void print_haplotypes(const Container& haplotypes,
                       Resolution resolution = Resolution::sequenceAndAlleles);
 
 template <typename S, typename Map>
@@ -247,12 +250,13 @@ void run_likelihood_calculation(const std::string& haplotype_str,
 
 } // namespace debug
 
-namespace {
-
-const auto& haplotype_region(const std::vector<Haplotype>& haplotypes)
+template <typename Container1, typename MappableType, typename Container2>
+auto append(Container1&& src, MappableBlock<MappableType, Container2>& dst)
 {
-    return mapped_region(haplotypes.front());
+    return utils::append(std::forward<Container1>(src), static_cast<Container2&>(dst));
 }
+
+namespace {
 
 void remap_each(std::deque<Haplotype>& haplotypes, const GenomicRegion& region)
 {
@@ -260,18 +264,11 @@ void remap_each(std::deque<Haplotype>& haplotypes, const GenomicRegion& region)
                    [&] (const Haplotype& haplotype) { return remap(haplotype, region); });
 }
 
-template <typename T>
-void merge_unique(std::deque<T>&& src, std::deque<T>& dst)
+template <typename Container1, typename Container2>
+void merge_unique(Container1&& src, Container2& dst)
 {
-    const auto itr = utils::append(std::move(src), dst);
-    std::inplace_merge(std::begin(dst), itr, std::end(dst));
-    dst.erase(std::unique(std::begin(dst), std::end(dst)), std::end(dst));
-}
-
-template <typename T>
-void merge_unique(std::vector<T>&& src, std::vector<T>& dst)
-{
-    const auto itr = utils::append(std::move(src), dst);
+    using utils::append;
+    const auto itr = append(std::move(src), dst);
     std::inplace_merge(std::begin(dst), itr, std::end(dst));
     dst.erase(std::unique(std::begin(dst), std::end(dst)), std::end(dst));
 }
@@ -294,7 +291,107 @@ bool has_reference(const Container& haplotypes)
     return find_reference(haplotypes) != std::cend(haplotypes);
 }
 
+TemplateContainer make_paired_read_templates_helper(const ReadContainer& reads)
+{
+    std::vector<AlignedTemplate> buffer {};
+    buffer.reserve(reads.size());
+    make_paired_read_templates(std::cbegin(reads), std::cend(reads), std::back_inserter(buffer));
+    std::sort(std::begin(buffer), std::end(buffer));
+    return {ForwardSortedTag {}, std::make_move_iterator(std::begin(buffer)), std::make_move_iterator(std::end(buffer))};
+}
+
+TemplateMap make_paired_read_templates_helper(const ReadMap& reads)
+{
+    TemplateMap result {};
+    result.reserve(reads.size());
+    for (const auto& p : reads) {
+        result.emplace(p.first, make_paired_read_templates_helper(p.second));
+    }
+    return result;
+}
+
+TemplateContainer make_linked_read_templates_helper(const ReadContainer& reads)
+{
+    std::vector<AlignedTemplate> buffer {};
+    buffer.reserve(reads.size());
+    make_linked_read_templates(std::cbegin(reads), std::cend(reads), std::back_inserter(buffer));
+    std::sort(std::begin(buffer), std::end(buffer));
+    return {ForwardSortedTag {}, std::make_move_iterator(std::begin(buffer)), std::make_move_iterator(std::end(buffer))};
+}
+
+TemplateMap make_linked_read_templates_helper(const ReadMap& reads)
+{
+    TemplateMap result {};
+    result.reserve(reads.size());
+    for (const auto& p : reads) {
+        result.emplace(p.first, make_linked_read_templates_helper(p.second));
+    }
+    return result;
+}
+
+AlignedTemplate copy_overlapped(const AlignedTemplate& reads, const GenomicRegion& region)
+{
+    const auto overlapped = overlap_range(reads, region);
+    return AlignedTemplate {std::cbegin(overlapped), std::cend(overlapped)};
+}
+
+TemplateContainer copy_overlapped(const TemplateContainer& templates, const GenomicRegion& region)
+{
+    const auto overlapped = overlap_range(templates, region);
+    TemplateContainer result {};
+    result.reserve(size(overlapped));
+    for (const auto& read_template : overlapped) {
+        // Need to check overlap of reads in template as template region is encompassing
+        // region of all read fragements
+        if (has_overlapped(read_template, region)) {
+            result.insert(copy_overlapped(read_template, region));
+        }
+    }
+    return result;
+}
+
+TemplateMap copy_overlapped(const TemplateMap& templates, const GenomicRegion& region)
+{
+    TemplateMap result {};
+    result.reserve(templates.size());
+    for (const auto& p : templates) {
+        result.emplace(p.first, copy_overlapped(p.second, region));
+    }
+    return result;
+}
+
+bool has_coverage(const boost::variant<ReadMap, TemplateMap>& reads)
+{
+    return boost::apply_visitor([] (const auto& reads) { return octopus::has_coverage(reads); }, reads);
+}
+
+std::size_t count_reads(const boost::variant<ReadMap, TemplateMap>& reads)
+{
+    return boost::apply_visitor([] (const auto& reads) { return octopus::count_reads(reads); }, reads);
+}
+
+bool have_callable_region(const GenomicRegion& active_region,
+                          const boost::optional<GenomicRegion>& next_active_region,
+                          const boost::optional<GenomicRegion>& backtrack_region,
+                          const GenomicRegion& call_region)
+{
+    return (!backtrack_region || begins_before(active_region, *backtrack_region))
+           && (!next_active_region || begins_before(active_region, *next_active_region))
+           && overlaps(active_region, call_region);
+}
+
 } // namespace
+
+boost::optional<TemplateMap> Caller::make_read_templates(const ReadMap& reads) const
+{
+    if (parameters_.use_linked_reads) {
+        return make_linked_read_templates_helper(reads);
+    } else if (parameters_.use_paired_reads) {
+        return make_paired_read_templates_helper(reads);
+    } else {
+        return boost::none;
+    }
+}
 
 std::deque<CallWrapper>
 Caller::call_variants(const GenomicRegion& call_region, const MappableFlatSet<Variant>& candidates,
@@ -302,7 +399,6 @@ Caller::call_variants(const GenomicRegion& call_region, const MappableFlatSet<Va
                       ProgressMeter& progress_meter) const
 {
     std::deque<CallWrapper> result {};
-    auto haplotype_likelihoods = make_haplotype_likelihood_cache();
     if (candidates.empty()) {
         if (refcalls_requested()) {
             utils::append(call_reference(call_region, reads), result);
@@ -310,16 +406,19 @@ Caller::call_variants(const GenomicRegion& call_region, const MappableFlatSet<Va
         progress_meter.log_completed(call_region);
         return result;
     }
-    auto haplotype_generator = make_haplotype_generator(candidates, reads, read_report);
+    const auto read_templates = make_read_templates(reads);
+    auto haplotype_likelihoods = make_haplotype_likelihood_cache();
+    auto haplotype_generator = make_haplotype_generator(candidates, reads, read_templates, read_report);
     GeneratorStatus status;
-    std::vector<Haplotype> haplotypes {}, next_haplotypes {};
+    HaplotypeBlock haplotypes {call_region}, next_haplotypes {call_region};
     GenomicRegion active_region;
     boost::optional<GenomicRegion> next_active_region {}, prev_called_region {}, backtrack_region {};
     auto completed_region = head_region(call_region);
     std::deque<Haplotype> protected_haplotypes {};
+    boost::variant<ReadMap, TemplateMap> active_reads;
     while (true) {
-        status = generate_active_haplotypes(call_region, haplotype_generator, active_region,
-                                            next_active_region, haplotypes, next_haplotypes);
+        status = generate_active_haplotypes(call_region, haplotype_generator, active_region, next_active_region,
+                                            haplotypes, next_haplotypes, backtrack_region);
         if (status == GeneratorStatus::done) {
             if (refcalls_requested()) {
                 if (!prev_called_region) {
@@ -337,13 +436,17 @@ Caller::call_variants(const GenomicRegion& call_region, const MappableFlatSet<Va
             progress_meter.log_completed(active_region);
             continue;
         }
-        const auto active_reads = copy_overlapped(reads, active_region);
+        if (read_templates) {
+            active_reads = copy_overlapped(*read_templates, active_region);
+        } else {
+            active_reads = copy_overlapped(reads, active_region);
+        }
         if (!refcalls_requested() && !has_coverage(active_reads)) {
             if (debug_log_) stream(*debug_log_) << "Skipping active region " << active_region << " as there are no active reads";
             continue;
         }
         if (debug_log_) stream(*debug_log_) << "There are " << count_reads(active_reads) << " active reads in " << active_region;
-        if (!populate(haplotype_likelihoods, active_region, haplotypes, candidates, active_reads)) {
+        if (!compute_haplotype_likelihoods(haplotype_likelihoods, active_region, haplotypes, candidates, active_reads)) {
             haplotype_generator.clear_progress();
             haplotype_likelihoods.clear();
             continue;
@@ -351,7 +454,7 @@ Caller::call_variants(const GenomicRegion& call_region, const MappableFlatSet<Va
         if (!protected_haplotypes.empty()) {
             assert(!haplotypes.empty());
             std::sort(std::begin(haplotypes), std::end(haplotypes));
-            remap_each(protected_haplotypes, haplotype_region(haplotypes));
+            remap_each(protected_haplotypes, mapped_region(haplotypes));
             std::sort(std::begin(protected_haplotypes), std::end(protected_haplotypes));
         }
         if (parameters_.protect_reference_haplotype && !has_reference(protected_haplotypes)) {
@@ -372,10 +475,15 @@ Caller::call_variants(const GenomicRegion& call_region, const MappableFlatSet<Va
             filter_haplotypes(has_removal_impact, haplotypes, haplotype_generator,
                               haplotype_likelihoods, *caller_latents, protected_haplotypes);
         } else {
-            if (debug_log_) {
-                *debug_log_ << "Haplotypes are saturated, clearing lagging";
-            }
+            if (debug_log_) *debug_log_ << "Haplotypes are saturated, clearing lagging";
             haplotype_generator.clear_progress();
+        }
+        if (try_early_detect_phase_regions(haplotypes, candidates, active_region, *caller_latents, backtrack_region)) {
+            auto phased_region = find_phased_head(haplotypes, candidates, active_region, *caller_latents);
+            if (phased_region) {
+                if (debug_log_) stream(*debug_log_) << "Detected phased region " << *phased_region << "... removing this from haplotype generator";
+                haplotype_generator.remove(*phased_region);
+            }
         }
         status = generate_next_active_haplotypes(next_haplotypes, next_active_region, backtrack_region, haplotype_generator);
         if (backtrack_region) {
@@ -386,9 +494,11 @@ Caller::call_variants(const GenomicRegion& call_region, const MappableFlatSet<Va
             protected_haplotypes.clear();
         }
         if (status != GeneratorStatus::skipped) {
-            call_variants(active_region, call_region, next_active_region, backtrack_region,
-                          candidates, haplotypes, haplotype_likelihoods, reads, *caller_latents,
-                          result, prev_called_region, completed_region);
+            if (have_callable_region(active_region, next_active_region, backtrack_region, call_region)) {
+                call_variants(active_region, call_region, next_active_region, backtrack_region,
+                              candidates, haplotypes, haplotype_likelihoods, reads, *caller_latents,
+                              result, prev_called_region, completed_region);
+            }
         }
         haplotype_likelihoods.clear();
         progress_meter.log_completed(completed_region);
@@ -396,9 +506,9 @@ Caller::call_variants(const GenomicRegion& call_region, const MappableFlatSet<Va
     return result;
 }
 
-std::size_t Caller::do_remove_duplicates(std::vector<Haplotype>& haplotypes) const
+std::size_t Caller::do_remove_duplicates(HaplotypeBlock& haplotypes) const
 {
-    return octopus::remove_duplicates(haplotypes, Haplotype {haplotype_region(haplotypes), reference_.get()});
+    return octopus::remove_duplicates(haplotypes, Haplotype {mapped_region(haplotypes), reference_.get()});
 }
 
 boost::optional<MemoryFootprint> Caller::target_max_memory() const noexcept
@@ -416,8 +526,9 @@ Caller::generate_active_haplotypes(const GenomicRegion& call_region,
                                    HaplotypeGenerator& haplotype_generator,
                                    GenomicRegion& active_region,
                                    boost::optional<GenomicRegion>& next_active_region,
-                                   std::vector<Haplotype>& haplotypes,
-                                   std::vector<Haplotype>& next_haplotypes) const
+                                   HaplotypeBlock& haplotypes,
+                                   HaplotypeBlock& next_haplotypes,
+                                   boost::optional<GenomicRegion> backtrack_region) const
 {
     if (next_active_region) {
         haplotypes = std::move(next_haplotypes);
@@ -425,11 +536,13 @@ Caller::generate_active_haplotypes(const GenomicRegion& call_region,
         next_active_region = boost::none;
     } else {
         try {
-            std::tie(haplotypes, next_active_region, std::ignore) = haplotype_generator.generate();
-            if (next_active_region) {
-                active_region = std::move(*next_active_region);
-                next_active_region = boost::none;
+            auto packet = haplotype_generator.generate();
+            haplotypes = std::move(packet.haplotypes);
+            if (packet.active_region) {
+                active_region = std::move(*packet.active_region);
             }
+            next_active_region = boost::none;
+            backtrack_region = std::move(packet.backtrack_region);
         } catch (const HaplotypeGenerator::HaplotypeOverflow& e) {
             logging::WarningLogger warn_log {};
             stream(warn_log) << "Skipping region " << e.region() << " as there are too many haplotypes";
@@ -439,7 +552,8 @@ Caller::generate_active_haplotypes(const GenomicRegion& call_region,
         }
     }
     if (debug_log_) stream(*debug_log_) << "Active region is " << active_region;
-    if (is_after(active_region, call_region) || haplotypes.empty()) {
+    
+    if ((is_after(active_region, call_region) && !backtrack_region) || haplotypes.empty()) {
         if (debug_log_) {
             if (haplotypes.empty()) {
                 stream(*debug_log_) << "No haplotypes were generated in active region " << active_region;
@@ -452,12 +566,13 @@ Caller::generate_active_haplotypes(const GenomicRegion& call_region,
         }
         return GeneratorStatus::done;
     }
+    if (debug_log_) stream(*debug_log_) << "Generated " << haplotypes.size() << " haplotypes in " << mapped_region(haplotypes);
     remove_duplicates(haplotypes);
-    if (debug_log_) stream(*debug_log_) << "There are " << haplotypes.size() << " unfiltered haplotypes";
+    if (debug_log_) stream(*debug_log_) << "There are " << haplotypes.size() << " haplotypes after removing duplicates";
     return GeneratorStatus::good;
 }
 
-void Caller::remove_duplicates(std::vector<Haplotype>& haplotypes) const
+void Caller::remove_duplicates(HaplotypeBlock& haplotypes) const
 {
     const auto num_removed = do_remove_duplicates(haplotypes);
     if (debug_log_) {
@@ -469,7 +584,7 @@ void Caller::remove_duplicates(std::vector<Haplotype>& haplotypes) const
     }
 }
 
-bool Caller::filter_haplotypes(std::vector<Haplotype>& haplotypes,
+bool Caller::filter_haplotypes(HaplotypeBlock& haplotypes,
                                HaplotypeGenerator& haplotype_generator,
                                HaplotypeLikelihoodArray& haplotype_likelihoods,
                                const std::deque<Haplotype>& protected_haplotypes) const
@@ -498,13 +613,16 @@ bool Caller::filter_haplotypes(std::vector<Haplotype>& haplotypes,
 }
 
 Caller::GeneratorStatus
-Caller::generate_next_active_haplotypes(std::vector<Haplotype>& next_haplotypes,
+Caller::generate_next_active_haplotypes(HaplotypeBlock& next_haplotypes,
                                         boost::optional<GenomicRegion>& next_active_region,
                                         boost::optional<GenomicRegion>& backtrack_region,
                                         HaplotypeGenerator& haplotype_generator) const
 {
     try {
-        std::tie(next_haplotypes, next_active_region, backtrack_region) = haplotype_generator.generate();
+        auto packet = haplotype_generator.generate();
+        next_haplotypes = std::move(packet.haplotypes);
+        next_active_region = std::move(packet.active_region);
+        backtrack_region = std::move(packet.backtrack_region);
     } catch (const HaplotypeGenerator::HaplotypeOverflow& e) {
         logging::WarningLogger warn_log {};
         stream(warn_log) << "Skipping region " << e.region() << " as there are too many haplotypes";
@@ -514,7 +632,7 @@ Caller::generate_next_active_haplotypes(std::vector<Haplotype>& next_haplotypes,
     return GeneratorStatus::good;
 }
 
-bool Caller::is_saturated(const std::vector<Haplotype>& haplotypes, const Latents& latents) const
+bool Caller::is_saturated(const HaplotypeBlock& haplotypes, const Latents& latents) const
 {
     return haplotypes.size() == parameters_.max_haplotypes
            && count_probable_haplotypes(*latents.haplotype_posteriors()) > parameters_.max_haplotypes / 2;
@@ -527,7 +645,7 @@ unsigned Caller::count_probable_haplotypes(const Caller::Latents::HaplotypeProba
 }
 
 void Caller::filter_haplotypes(bool prefilter_had_removal_impact,
-                               const std::vector<Haplotype>& haplotypes,
+                               const HaplotypeBlock& haplotypes,
                                HaplotypeGenerator& haplotype_generator,
                                const HaplotypeLikelihoodArray& haplotype_likelihoods,
                                const Latents& latents,
@@ -549,17 +667,51 @@ void Caller::filter_haplotypes(bool prefilter_had_removal_impact,
     }
 }
 
-namespace {
-
-bool have_callable_region(const GenomicRegion& active_region,
-                          const boost::optional<GenomicRegion>& next_active_region,
-                          const boost::optional<GenomicRegion>& backtrack_region,
-                          const GenomicRegion& call_region)
+bool Caller::try_early_detect_phase_regions(const MappableBlock<Haplotype>& haplotypes,
+                                            const MappableFlatSet<Variant>& candidates,
+                                            const GenomicRegion& active_region,
+                                            const Latents& latents,
+                                            const boost::optional<GenomicRegion>& backtrack_region) const
 {
-    return (!backtrack_region || begins_before(active_region, *backtrack_region))
-           && (!next_active_region || begins_before(active_region, *next_active_region))
-           && overlaps(active_region, call_region);
+    return !backtrack_region
+        && count_overlapped(candidates, active_region) > 10
+        && haplotypes.size() > parameters_.max_haplotypes / 2;
 }
+
+std::vector<GenomicRegion>
+find_common_phase_regions(const Phaser::PhaseSet::PhaseRegions& phasings)
+{
+    auto result = extract_regions(std::cbegin(phasings)->second);
+    std::for_each(std::next(std::cbegin(phasings)), std::cend(phasings), [&] (const auto& p) {
+        const auto sample_phase_regions = extract_regions(p.second);
+        std::vector<GenomicRegion> intersect {};
+        intersect.reserve(std::min(result.size(), sample_phase_regions.size()));
+        std::set_intersection(std::cbegin(result), std::cend(result),
+                              std::cbegin(sample_phase_regions), std::cend(sample_phase_regions),
+                              std::back_inserter(intersect));
+        result = std::move(intersect);
+    });
+    return result;
+}
+
+boost::optional<GenomicRegion>
+Caller::find_phased_head(const MappableBlock<Haplotype>& haplotypes, const MappableFlatSet<Variant>& candidates,
+                         const GenomicRegion& active_region, const Latents& latents) const
+{
+    if (debug_log_) stream(*debug_log_) << "Trying to find complete phase regions in " << active_region;
+    const auto active_candidates = contained_range(candidates, active_region);
+    const auto viable_phase_regions = extract_mutually_exclusive_regions(active_candidates);
+    const auto phasings = phaser_.phase(haplotypes, *latents.genotype_posteriors(),
+                                        viable_phase_regions, get_genotype_calls(latents));
+    auto common_phase_regions = find_common_phase_regions(phasings.phase_regions);
+    if (common_phase_regions.size() > 1) {
+        return closed_region(active_region, head_region(common_phase_regions.back()));
+    } else {
+        return boost::none;
+    }
+}
+
+namespace {
 
 auto get_passed_region(const GenomicRegion& active_region,
                        const boost::optional<GenomicRegion>& next_active_region,
@@ -679,7 +831,7 @@ void Caller::call_variants(const GenomicRegion& active_region,
                            const boost::optional<GenomicRegion>& next_active_region,
                            const boost::optional<GenomicRegion>& backtrack_region,
                            const MappableFlatSet<Variant>& candidates,
-                           const std::vector<Haplotype>& haplotypes,
+                           const HaplotypeBlock& haplotypes,
                            const HaplotypeLikelihoodArray& haplotype_likelihoods,
                            const ReadMap& reads,
                            const Latents& latents,
@@ -687,32 +839,30 @@ void Caller::call_variants(const GenomicRegion& active_region,
                            boost::optional<GenomicRegion>& prev_called_region,
                            GenomicRegion& completed_region) const
 {
-    if (have_callable_region(active_region, next_active_region, backtrack_region, call_region)) {
-        const auto passed_region = get_passed_region(active_region, next_active_region, backtrack_region);
-        const auto uncalled_region = get_uncalled_region(active_region, passed_region, completed_region);
-        auto active_candidates = extract_callable_variants(candidates, uncalled_region, prev_called_region,
-                                                           next_active_region, backtrack_region);
-        std::vector<CallWrapper> calls {};
-        if (!active_candidates.empty()) {
-            if (debug_log_) stream(*debug_log_) << "Calling variants in region " << uncalled_region;
-            calls = wrap(call_variants(active_candidates, latents));
-            if (!calls.empty()) {
-                set_model_posteriors(calls, latents, haplotypes, haplotype_likelihoods);
-                set_phasing(calls, latents, haplotypes, call_region);
-            }
+    const auto passed_region = get_passed_region(active_region, next_active_region, backtrack_region);
+    const auto uncalled_region = get_uncalled_region(active_region, passed_region, completed_region);
+    auto active_candidates = extract_callable_variants(candidates, uncalled_region, prev_called_region,
+                                                       next_active_region, backtrack_region);
+    std::vector<CallWrapper> calls {};
+    if (!active_candidates.empty()) {
+        if (debug_log_) stream(*debug_log_) << "Calling variants in region " << uncalled_region;
+        calls = wrap(call_variants(active_candidates, latents));
+        if (!calls.empty()) {
+            set_model_posteriors(calls, latents, haplotypes, haplotype_likelihoods);
+            set_phasing(calls, latents, haplotypes, call_region);
         }
-        if (refcalls_requested()) {
-            const auto refcall_region = right_overhang_region(uncalled_region, completed_region);
-            const auto pileups = make_pileups(reads, latents, refcall_region);
-            auto alleles = generate_reference_alleles(refcall_region, active_candidates, calls);
-            auto reference_calls = call_reference_helper(alleles, latents, pileups);
-            const auto itr = utils::append(std::move(reference_calls), calls);
-            std::inplace_merge(std::begin(calls), itr, std::end(calls));
-        }
-        utils::append(std::move(calls), result);
-        prev_called_region = uncalled_region;
-        completed_region = encompassing_region(completed_region, passed_region);
     }
+    if (refcalls_requested()) {
+        const auto refcall_region = right_overhang_region(uncalled_region, completed_region);
+        const auto pileups = make_pileups(reads, latents, refcall_region);
+        auto alleles = generate_reference_alleles(refcall_region, active_candidates, calls);
+        auto reference_calls = call_reference_helper(alleles, latents, pileups);
+        const auto itr = utils::append(std::move(reference_calls), calls);
+        std::inplace_merge(std::begin(calls), itr, std::end(calls));
+    }
+    utils::append(std::move(calls), result);
+    prev_called_region = uncalled_region;
+    completed_region = encompassing_region(completed_region, passed_region);
 }
 
 Genotype<Haplotype> Caller::call_genotype(const Latents& latents, const SampleName& sample) const
@@ -744,7 +894,7 @@ bool requires_model_evaluation(const std::vector<CallWrapper>& calls)
 }
 
 void Caller::set_model_posteriors(std::vector<CallWrapper>& calls, const Latents& latents,
-                                  const std::vector<Haplotype>& haplotypes,
+                                  const HaplotypeBlock& haplotypes,
                                   const HaplotypeLikelihoodArray& haplotype_likelihoods) const
 {
     if (parameters_.allow_model_filtering || requires_model_evaluation(calls)) {
@@ -807,14 +957,56 @@ void set_phasing(std::vector<CallWrapper>& calls, const Phaser::PhaseSet& phase_
 
 } // namespace
 
+namespace debug {
+
+template <typename S>
+void print_genotype_posteriors(S&& stream,
+                               const SampleName& sample,
+                               const ProbabilityMatrix<Genotype<Haplotype>>::InnerMap& genotype_posteriors,
+                               const std::size_t n)
+{
+    const auto m = std::min(n, genotype_posteriors.size());
+    if (m == genotype_posteriors.size()) {
+        stream << "Printing all genotype posteriors for sample " << sample << '\n';
+    } else {
+        stream << "Printing top " << m << " genotype posteriors for sample " << sample << '\n';
+    }
+    using GenotypeReference = std::reference_wrapper<const Genotype<Haplotype>>;
+    std::vector<std::pair<GenotypeReference, double>> v {};
+    v.reserve(genotype_posteriors.size());
+    std::copy(std::cbegin(genotype_posteriors), std::cend(genotype_posteriors), std::back_inserter(v));
+    const auto mth = std::next(std::begin(v), m);
+    std::partial_sort(std::begin(v), mth, std::end(v),
+                      [] (const auto& lhs, const auto& rhs) { return lhs.second > rhs.second; });
+    std::for_each(std::begin(v), mth,
+                  [&] (const auto& p) {
+                      print_variant_alleles(stream, p.first);
+                      stream << " " << p.second << '\n';
+                  });
+}
+
+template <typename S>
+void print_genotype_posteriors(S&& stream,
+                               const ProbabilityMatrix<Genotype<Haplotype>>& genotype_posteriors,
+                               const std::size_t n = -1)
+{
+    for (const auto& p : genotype_posteriors) {
+        print_genotype_posteriors(stream, p.first, p.second, n);
+    }
+}
+
+} // namespace debug
+
 void Caller::set_phasing(std::vector<CallWrapper>& calls, const Latents& latents,
-                         const std::vector<Haplotype>& haplotypes,
+                         const HaplotypeBlock& haplotypes,
                          const GenomicRegion& call_region) const
 {
-    const auto phase = phaser_.force_phase(haplotypes, *latents.genotype_posteriors(),
-                                           extract_regions(calls), get_genotype_calls(latents));
-    if (debug_log_) debug::print_phase_sets(stream(*debug_log_), phase);
-    octopus::set_phasing(calls, phase, call_region);
+    if (debug_log_) stream(*debug_log_) << "Phasing " << calls.size() << " calls in " << call_region;
+    if (trace_log_) debug::print_genotype_posteriors(stream(*trace_log_), *latents.genotype_posteriors());
+    const auto phasings = phaser_.phase(haplotypes, *latents.genotype_posteriors(),
+                                        extract_regions(calls), get_genotype_calls(latents));
+    if (debug_log_) debug::print_phase_sets(stream(*debug_log_), phasings);
+    octopus::set_phasing(calls, phasings, call_region);
 }
 
 bool Caller::refcalls_requested() const noexcept
@@ -844,10 +1036,17 @@ MappableFlatSet<Variant> Caller::generate_candidate_variants(const GenomicRegion
                                      std::make_move_iterator(std::end(final_candidates))};
 }
 
-HaplotypeGenerator Caller::make_haplotype_generator(const MappableFlatSet<Variant>& candidates,
-                                                    const ReadMap& reads, const ReadPipe::Report& read_report) const
+HaplotypeGenerator 
+Caller::make_haplotype_generator(const MappableFlatSet<Variant>& candidates,
+                                 const ReadMap& reads, 
+                                 const boost::optional<TemplateMap>& read_templates,
+                                 const ReadPipe::Report& read_report) const
 {
-    return haplotype_generator_builder_.build(reference_, candidates, reads, read_report);
+    if (read_templates) {
+        return haplotype_generator_builder_.build(reference_, candidates, reads, *read_templates, read_report);
+    } else {
+        return haplotype_generator_builder_.build(reference_, candidates, reads, boost::none, read_report);
+    }
 }
 
 HaplotypeLikelihoodArray Caller::make_haplotype_likelihood_cache() const
@@ -889,38 +1088,37 @@ auto calculate_flank_regions(const GenomicRegion& haplotype_region,
     return std::make_pair(std::move(lhs_flank), std::move(rhs_flank));
 }
 
-auto calculate_flank_state(const std::vector<Haplotype>& haplotypes,
-                            const GenomicRegion& active_region,
-                            const MappableFlatSet<Variant>& candidates)
+HaplotypeLikelihoodArray::FlankState
+calculate_flank_state(const MappableBlock<Haplotype>& haplotypes,
+                      const GenomicRegion& active_region,
+                      const MappableFlatSet<Variant>& candidates)
 {
-    const auto flank_regions = calculate_flank_regions(haplotype_region(haplotypes), active_region, candidates);
-    return HaplotypeLikelihoodArray::FlankState {
-        size(flank_regions.first), size(flank_regions.second)
-    };
+    const auto flank_regions = calculate_flank_regions(mapped_region(haplotypes), active_region, candidates);
+    return {size(flank_regions.first), size(flank_regions.second)};
 }
 
-bool Caller::populate(HaplotypeLikelihoodArray& haplotype_likelihoods,
-                      const GenomicRegion& active_region,
-                      const std::vector<Haplotype>& haplotypes,
-                      const MappableFlatSet<Variant>& candidates,
-                      const ReadMap& active_reads) const
+bool Caller::compute_haplotype_likelihoods(HaplotypeLikelihoodArray& haplotype_likelihoods,
+                                           const GenomicRegion& active_region,
+                                           const HaplotypeBlock& haplotypes,
+                                           const MappableFlatSet<Variant>& candidates,
+                                           const boost::variant<ReadMap, TemplateMap>& active_reads) const
 {
     assert(haplotype_likelihoods.is_empty());
     boost::optional<HaplotypeLikelihoodArray::FlankState> flank_state {};
     if (debug_log_) {
         stream(*debug_log_) << "Calculating likelihoods for " << haplotypes.size() << " haplotypes";
         debug::print_active_candidates(stream(*debug_log_), candidates, active_region);
-        stream(*debug_log_) << "Haplotype region is " << haplotype_region(haplotypes);
     }
     if (likelihood_model_.can_use_flank_state()) {
         flank_state = calculate_flank_state(haplotypes, active_region, candidates);
         if (debug_log_) {
             debug::print_inactive_flanking_candidates(stream(*debug_log_), candidates, active_region,
-                                                      haplotype_region(haplotypes));
+                                                      mapped_region(haplotypes));
         }
     }
     try {
-        haplotype_likelihoods.populate(active_reads, haplotypes, std::move(flank_state));
+        boost::apply_visitor([&] (const auto& reads) { 
+            haplotype_likelihoods.populate(reads, haplotypes, std::move(flank_state)); }, active_reads);
     } catch(const HaplotypeLikelihoodModel::ShortHaplotypeError& e) {
         if (debug_log_) {
             stream(*debug_log_) << "Skipping " << active_region << " as a haplotype was too short by "
@@ -929,14 +1127,15 @@ bool Caller::populate(HaplotypeLikelihoodArray& haplotype_likelihoods,
         return false;
     }
     if (trace_log_) {
-        debug::print_read_haplotype_likelihoods(stream(*trace_log_), haplotypes, active_reads,
-                                               haplotype_likelihoods, -1);
+        boost::apply_visitor([&] (const auto& reads) { 
+            debug::print_read_haplotype_likelihoods(stream(*trace_log_), haplotypes, reads,
+                                               haplotype_likelihoods, -1); }, active_reads);
     }
     return true;
 }
 
 std::vector<Haplotype>
-Caller::filter(std::vector<Haplotype>& haplotypes, const HaplotypeLikelihoodArray& haplotype_likelihoods,
+Caller::filter(HaplotypeBlock& haplotypes, const HaplotypeLikelihoodArray& haplotype_likelihoods,
                const std::deque<Haplotype>& protected_haplotypes) const
 {
     std::vector<Haplotype> removed_haplotypes {};
@@ -987,7 +1186,7 @@ Caller::filter(std::vector<Haplotype>& haplotypes, const HaplotypeLikelihoodArra
 }
 
 std::vector<std::reference_wrapper<const Haplotype>>
-Caller::get_removable_haplotypes(const std::vector<Haplotype>& haplotypes,
+Caller::get_removable_haplotypes(const HaplotypeBlock& haplotypes,
                                  const HaplotypeLikelihoodArray& haplotype_likelihoods,
                                  const Caller::Latents::HaplotypeProbabilityMap& haplotype_posteriors,
                                  const std::deque<Haplotype>& protected_haplotypes, const unsigned max_to_remove) const
@@ -1012,9 +1211,6 @@ Caller::get_removable_haplotypes(const std::vector<Haplotype>& haplotypes,
         std::set_difference(std::cbegin(haplotypes), std::cend(haplotypes),
                             std::cbegin(protected_haplotypes), std::cend(protected_haplotypes),
                             std::back_inserter(removable_haplotypes));
-        if (debug_log_) {
-            stream(*debug_log_) << "There are " << removable_haplotypes.size() << " removable haplotypes";
-        }
         return extract_removable(removable_haplotypes, haplotype_posteriors, samples_, haplotype_likelihoods,
                                  max_to_remove, parameters_.haplotype_extension_threshold.probability_false());
     }
@@ -1043,7 +1239,7 @@ std::vector<CallWrapper> Caller::call_reference(const GenomicRegion& region, con
 {
     const auto active_reads = copy_overlapped(reads, region);
     auto haplotype_likelihoods = make_haplotype_likelihood_cache();
-    std::vector<Haplotype> haplotypes;
+    HaplotypeBlock haplotypes {region};
     if (has_coverage(active_reads)) {
         const auto active_reads_region = encompassing_region(active_reads);
         const auto haplotype_region = expand(active_reads_region, HaplotypeLikelihoodModel{}.pad_requirement());
@@ -1407,8 +1603,8 @@ void print_inactive_flanking_candidates(const MappableFlatSet<Variant>& candidat
                                        number_only);
 }
 
-template <typename S>
-void print_haplotypes(S&& stream, const std::vector<Haplotype>& haplotypes,
+template <typename S, typename Container>
+void print_haplotypes(S&& stream, const Container& haplotypes,
                       Resolution resolution)
 {
     stream << "Printing " << haplotypes.size() << " haplotypes" << '\n';
@@ -1426,7 +1622,8 @@ void print_haplotypes(S&& stream, const std::vector<Haplotype>& haplotypes,
     }
 }
 
-void print_haplotypes(const std::vector<Haplotype>& haplotypes, const Resolution resolution)
+template <typename Container>
+void print_haplotypes(const Container& haplotypes, const Resolution resolution)
 {
     print_haplotypes(std::cout, haplotypes, resolution);
 }

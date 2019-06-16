@@ -41,7 +41,7 @@ SingleCellModel::evaluate(const std::vector<Genotype<Haplotype>>& genotypes,
         SubcloneModel helper_model {samples_, std::move(subclone_priors)};
         auto subclone_inferences = helper_model.evaluate(genotypes, haplotype_likelihoods);
         Inferences::GroupInferences founder {};
-        founder.genotype_posteriors = std::move(subclone_inferences.posteriors.genotype_probabilities);
+        founder.genotype_posteriors = std::move(subclone_inferences.max_evidence_params.genotype_probabilities);
         founder.sample_attachment_posteriors.assign(samples_.size(), 1.0);
         result.phylogeny.set_founder({0, std::move(founder)});
         result.log_evidence = subclone_inferences.approx_log_evidence;

@@ -59,13 +59,13 @@ unsigned CellCaller::do_max_callable_ploidy() const
     return parameters_.ploidy;
 }
 
-std::size_t CellCaller::do_remove_duplicates(std::vector<Haplotype>& haplotypes) const
+std::size_t CellCaller::do_remove_duplicates(HaplotypeBlock& haplotypes) const
 {
     if (parameters_.deduplicate_haplotypes_with_prior_model) {
         if (haplotypes.size() < 2) return 0;
         CoalescentModel::Parameters model_params {};
         if (parameters_.prior_model_params) model_params = *parameters_.prior_model_params;
-        Haplotype reference {mapped_region(haplotypes.front()), reference_.get()};
+        Haplotype reference {mapped_region(haplotypes), reference_.get()};
         CoalescentModel model {std::move(reference), model_params, haplotypes.size(), CoalescentModel::CachingStrategy::none};
         const CoalescentProbabilityGreater cmp {std::move(model)};
         return octopus::remove_duplicates(haplotypes, cmp);
@@ -77,7 +77,7 @@ std::size_t CellCaller::do_remove_duplicates(std::vector<Haplotype>& haplotypes)
 // CellCaller::Latents public methods
 
 CellCaller::Latents::Latents(const CellCaller& caller,
-                             std::vector<Haplotype> haplotypes,
+                             HaplotypeBlock haplotypes,
                              std::vector<Genotype<Haplotype>> genotypes,
                              std::vector<model::SingleCellModel::Inferences> inferences)
 : caller_ {caller}
@@ -95,7 +95,7 @@ namespace {
 
 using InverseGenotypeTable = std::vector<std::vector<std::size_t>>;
 
-auto make_inverse_genotype_table(const std::vector<Haplotype>& haplotypes,
+auto make_inverse_genotype_table(const MappableBlock<Haplotype>& haplotypes,
                                  const std::vector<Genotype<Haplotype>>& genotypes)
 {
     assert(!haplotypes.empty() && !genotypes.empty());
@@ -128,7 +128,7 @@ auto make_inverse_genotype_table(const std::vector<Haplotype>& haplotypes,
 using GenotypeMarginalPosteriorVector = std::vector<double>;
 using GenotypeMarginalPosteriorMatrix = std::vector<GenotypeMarginalPosteriorVector>;
 
-auto calculate_haplotype_posteriors(const std::vector<Haplotype>& haplotypes,
+auto calculate_haplotype_posteriors(const MappableBlock<Haplotype>& haplotypes,
                                     const std::vector<Genotype<Haplotype>>& genotypes,
                                     const ProbabilityMatrix<Genotype<Haplotype>>& genotype_posteriors,
                                     const InverseGenotypeTable& inverse_genotypes)
@@ -161,7 +161,7 @@ auto calculate_haplotype_posteriors(const std::vector<Haplotype>& haplotypes,
     return result;
 }
 
-auto calculate_haplotype_posteriors(const std::vector<Haplotype>& haplotypes,
+auto calculate_haplotype_posteriors(const MappableBlock<Haplotype>& haplotypes,
                                     const std::vector<Genotype<Haplotype>>& genotypes,
                                     const ProbabilityMatrix<Genotype<Haplotype>>& genotype_posteriors)
 {
@@ -263,7 +263,7 @@ void log(const model::SingleCellModel::Inferences& inferences,
 }
 
 std::unique_ptr<CellCaller::Caller::Latents>
-CellCaller::infer_latents(const std::vector<Haplotype>& haplotypes, const HaplotypeLikelihoodArray& haplotype_likelihoods) const
+CellCaller::infer_latents(const HaplotypeBlock& haplotypes, const HaplotypeLikelihoodArray& haplotype_likelihoods) const
 {
     std::vector<GenotypeIndex> genotype_indices {};
     auto genotypes = generate_all_genotypes(haplotypes, parameters_.ploidy, genotype_indices);
@@ -299,7 +299,7 @@ CellCaller::infer_latents(const std::vector<Haplotype>& haplotypes, const Haplot
 }
 
 boost::optional<double>
-CellCaller::calculate_model_posterior(const std::vector<Haplotype>& haplotypes,
+CellCaller::calculate_model_posterior(const HaplotypeBlock& haplotypes,
                                       const HaplotypeLikelihoodArray& haplotype_likelihoods,
                                       const Caller::Latents& latents) const
 {
@@ -307,7 +307,7 @@ CellCaller::calculate_model_posterior(const std::vector<Haplotype>& haplotypes,
 }
 
 boost::optional<double>
-CellCaller::calculate_model_posterior(const std::vector<Haplotype>& haplotypes,
+CellCaller::calculate_model_posterior(const HaplotypeBlock& haplotypes,
                                       const HaplotypeLikelihoodArray& haplotype_likelihoods,
                                       const Latents& latents) const
 {
@@ -600,11 +600,11 @@ CellCaller::call_reference(const std::vector<Allele>& alleles, const Latents& la
     return {};
 }
 
-std::unique_ptr<GenotypePriorModel> CellCaller::make_prior_model(const std::vector<Haplotype>& haplotypes) const
+std::unique_ptr<GenotypePriorModel> CellCaller::make_prior_model(const HaplotypeBlock& haplotypes) const
 {
     if (parameters_.prior_model_params) {
         return std::make_unique<CoalescentGenotypePriorModel>(CoalescentModel {
-        Haplotype {mapped_region(haplotypes.front()), reference_},
+        Haplotype {mapped_region(haplotypes), reference_},
         *parameters_.prior_model_params, haplotypes.size(), CoalescentModel::CachingStrategy::address
         });
     } else {

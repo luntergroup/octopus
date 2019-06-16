@@ -6,6 +6,7 @@
 
 #include "core/types/haplotype.hpp"
 #include "core/types/genotype.hpp"
+#include "containers/mappable_block.hpp"
 #include "utils/maths.hpp"
 
 namespace octopus {
@@ -14,6 +15,7 @@ class GenotypePriorModel
 {
 public:
     using LogProbability = double;
+    using HaplotypeBlock = MappableBlock<Haplotype>;
     
     GenotypePriorModel() = default;
     
@@ -24,7 +26,7 @@ public:
     
     virtual ~GenotypePriorModel() = default;
     
-    void prime(const std::vector<Haplotype>& haplotypes) { do_prime(haplotypes); }
+    void prime(const HaplotypeBlock& haplotypes) { do_prime(haplotypes); }
     void unprime() noexcept { do_unprime(); }
     bool is_primed() const noexcept { return check_is_primed(); }
     
@@ -34,7 +36,7 @@ public:
 private:
     virtual LogProbability do_evaluate(const Genotype<Haplotype>& genotype) const = 0;
     virtual LogProbability do_evaluate(const GenotypeIndex& genotype) const = 0;
-    virtual void do_prime(const std::vector<Haplotype>& haplotypes) {};
+    virtual void do_prime(const HaplotypeBlock& haplotypes) {};
     virtual void do_unprime() noexcept {};
     virtual bool check_is_primed() const noexcept = 0;
 };
