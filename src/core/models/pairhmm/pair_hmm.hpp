@@ -860,8 +860,8 @@ template <typename Sequence1,
           typename PairHMM,
           typename PairHMMParameters>
 void
-align(const Sequence1& target,
-      const Sequence2& truth,
+align(const Sequence1& truth,
+      const Sequence2& target,
       const std::vector<std::uint8_t>& target_base_qualities,
       const std::size_t target_offset,
       const PairHMM& hmm,
@@ -878,8 +878,8 @@ template <typename Sequence1,
           typename PairHMM,
           typename PairHMMParameters>
 void
-align(const Sequence1& target,
-      const Sequence2& truth,
+align(const Sequence1& truth,
+      const Sequence2& target,
       const PairHMM& hmm,
       const PairHMMParameters& model_params,
       Alignment& result) noexcept
@@ -925,7 +925,7 @@ public:
              const std::size_t target_offset) const noexcept
     {
         assert(params_);
-        return octopus::hmm::evaluate(target, truth, target_base_qualities, target_offset, hmm_, *params_);
+        return octopus::hmm::evaluate(truth, target, target_base_qualities, target_offset, hmm_, *params_);
     }
     
     template <typename Sequence1,
@@ -935,7 +935,7 @@ public:
              const Sequence2& truth) const noexcept
     {
         assert(params_);
-        return octopus::hmm::evaluate(target, truth, hmm_, *params_);
+        return octopus::hmm::evaluate(truth, target, hmm_, *params_);
     }
     
     template <typename Sequence1,
