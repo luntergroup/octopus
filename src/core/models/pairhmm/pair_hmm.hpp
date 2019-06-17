@@ -702,7 +702,7 @@ simd_evaluate_helper(const Sequence1& truth,
                      const std::size_t target_offset,
                      const PairHMM& hmm,
                      const PairHMMParameters& hmm_params,
-                     std::true_type)
+                     std::true_type) noexcept
 {
     const auto pad = hmm.band_size();
     const auto truth_size  = static_cast<int>(truth.size());
@@ -726,7 +726,7 @@ simd_evaluate_helper(const Sequence1& truth,
                      const std::size_t target_offset,
                      const PairHMM& hmm,
                      const PairHMMParameters& hmm_params,
-                     std::false_type)
+                     std::false_type) noexcept
 {
     const auto pad = hmm.band_size();
     const auto truth_size  = static_cast<int>(truth.size());
@@ -775,7 +775,7 @@ simd_evaluate(const Sequence1& truth,
               const std::vector<std::uint8_t>& target_base_qualities,
               const std::size_t target_offset,
               const PairHMM& hmm,
-              const PairHMMParameters& hmm_params)
+              const PairHMMParameters& hmm_params) noexcept
 {
     return simd_evaluate_helper(truth, target,target_base_qualities, target_offset, hmm, hmm_params,
                                 std::is_same<decltype(hmm_params.lhs_flank_size), NullType> {});
