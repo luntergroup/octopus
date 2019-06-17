@@ -925,8 +925,7 @@ public:
              const std::size_t target_offset) const noexcept
     {
         assert(params_);
-        auto p = detail::try_naive_evaluate(truth, target, target_base_qualities, target_offset, *params_);
-        return p.second ? p.first : detail::simd_evaluate(truth, target, target_base_qualities, target_offset, hmm_, *params_);
+        return octopus::hmm::evaluate(target, truth, target_base_qualities, target_offset, hmm_, *params_);
     }
     
     template <typename Sequence1,
@@ -936,9 +935,7 @@ public:
              const Sequence2& truth) const noexcept
     {
         assert(params_);
-        thread_local std::vector<std::uint8_t> target_base_qualities;
-        target_base_qualities.assign(target.size(), params_->mismatch);
-        return this->evaluate(target, truth, target_base_qualities, band_size());
+        return octopus::hmm::evaluate(target, truth, hmm_, *params_);
     }
     
     template <typename Sequence1,
@@ -951,9 +948,7 @@ public:
           Alignment& result) const
     {
         assert(params_);
-        if (!detail::try_naive_align(truth, target, target_base_qualities, target_offset, *params_, result)) {
-            detail::simd_align(truth, target, target_base_qualities, target_offset, hmm_, *params_, result);
-        }
+        octopus::hmm::align(truth, target, target_base_qualities, target_offset, hmm_, *params_, result);
     }
     template <typename Sequence1,
               typename Sequence2>
@@ -976,9 +971,7 @@ public:
           Alignment& result) const
     {
         assert(params_);
-        thread_local std::vector<std::uint8_t> target_base_qualities;
-        target_base_qualities.assign(target.size(), params_->mismatch);
-        this->align(target, truth, target_base_qualities, band_size(), result);
+        octopus::hmm::align(truth, target, hmm_, *params_, result);
     }
     template <typename Sequence1,
               typename Sequence2>
