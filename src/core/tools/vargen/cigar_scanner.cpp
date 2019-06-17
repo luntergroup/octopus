@@ -115,7 +115,7 @@ void CigarScanner::add_read(const SampleName& sample, const AlignedRead& read,
                               read, read_index, sample);
                 read_index += op_size;
                 ref_index  += op_size;
-                misalignment_penalty += op_size * options_.misalignment_parameters.snv_penalty;
+                if (options_.misalignment_parameters) misalignment_penalty += op_size * options_.misalignment_parameters->snv_penalty;
                 break;
             }
             case Flag::insertion:
@@ -125,7 +125,7 @@ void CigarScanner::add_read(const SampleName& sample, const AlignedRead& read,
                               copy(read_sequence, read_index, op_size),
                               read, read_index, sample);
                 read_index += op_size;
-                misalignment_penalty += options_.misalignment_parameters.indel_penalty;
+                if (options_.misalignment_parameters)  misalignment_penalty += options_.misalignment_parameters->indel_penalty;
                 break;
             }
             case Flag::deletion:
@@ -136,22 +136,22 @@ void CigarScanner::add_read(const SampleName& sample, const AlignedRead& read,
                               "",
                               read, read_index, sample);
                 ref_index += op_size;
-                misalignment_penalty += options_.misalignment_parameters.indel_penalty;
+                if (options_.misalignment_parameters)  misalignment_penalty += options_.misalignment_parameters->indel_penalty;
                 break;
             }
             case Flag::softClipped:
             {
                 read_index += op_size;
                 ref_index  += op_size;
-                if (op_size > options_.misalignment_parameters.max_unpenalised_clip_size) {
-                    misalignment_penalty += options_.misalignment_parameters.clip_penalty;
+                if (options_.misalignment_parameters && op_size > options_.misalignment_parameters->max_unpenalised_clip_size) {
+                    misalignment_penalty += options_.misalignment_parameters->clip_penalty;
                 }
                 break;
             }
             case Flag::hardClipped:
             {
-                if (op_size > options_.misalignment_parameters.max_unpenalised_clip_size) {
-                    misalignment_penalty += options_.misalignment_parameters.clip_penalty;
+                if (options_.misalignment_parameters && op_size > options_.misalignment_parameters->max_unpenalised_clip_size) {
+                    misalignment_penalty += options_.misalignment_parameters->clip_penalty;
                 }
                 break;
             }
@@ -294,8 +294,8 @@ double CigarScanner::add_snvs_in_match_range(const GenomicRegion& region, const 
             const auto begin_pos = region.begin() + static_cast<GenomicRegion::Position>(ref_index);
             add_candidate(GenomicRegion {region.contig_name(), begin_pos, begin_pos + 1},
                           ref_base, read_base, read, read_index, origin);
-            if (read.base_qualities()[read_index] >= options_.misalignment_parameters.snv_threshold) {
-                misalignment_penalty += options_.misalignment_parameters.snv_penalty;
+            if (options_.misalignment_parameters && read.base_qualities()[read_index] >= options_.misalignment_parameters->snv_threshold) {
+                misalignment_penalty += options_.misalignment_parameters->snv_penalty;
             }
         }
     }
@@ -353,10 +353,13 @@ unsigned CigarScanner::sum_base_qualities(const Candidate& candidate) const noex
 
 bool CigarScanner::is_likely_misaligned(const AlignedRead& read, const double penalty) const
 {
-    auto mu = options_.misalignment_parameters.max_expected_mutation_rate;
-    auto ln_prob_misaligned = ln_probability_read_correctly_aligned(penalty, read, mu);
-    auto min_ln_prob_misaligned = options_.misalignment_parameters.min_ln_prob_correctly_aligned;
-    return ln_prob_misaligned < min_ln_prob_misaligned;
+    if (options_.misalignment_parameters) {
+        auto mu = options_.misalignment_parameters->max_expected_mutation_rate;
+        auto ln_prob_misaligned = ln_probability_read_correctly_aligned(penalty, read, mu);
+        return ln_prob_misaligned < options_.misalignment_parameters->min_ln_prob_correctly_aligned;
+    } else {
+        return false;
+    }
 }
 
 CigarScanner::VariantObservation

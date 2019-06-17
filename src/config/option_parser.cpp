@@ -317,7 +317,7 @@ OptionMap parse_options(const int argc, const char** argv)
     
     po::options_description variant_generation("Candidate variant generation");
     variant_generation.add_options()
-    ("raw-cigar-candidate-generator,g",
+    ("pileup-candidate-generator,g",
      po::value<bool>()->default_value(true),
      "Enable candidate generation from raw read alignments (CIGAR strings)")
     
@@ -353,6 +353,10 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<int>()->implicit_value(2),
      "Minimum number of reads that must support a variant if it is to be considered a candidate."
      " By default octopus will automatically determine this value")
+     
+    ("ignore-pileup-candidates-from-misaligned-read",
+     po::value<bool>()->default_value(true),
+     "Ignore pileup candidate variants from reads that are likely to be missmapped/misaligned")
     
     ("max-variant-size",
      po::value<int>()->default_value(2000),

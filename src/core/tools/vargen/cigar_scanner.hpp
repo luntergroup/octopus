@@ -63,7 +63,7 @@ public:
         MatchPredicate match = std::equal_to<> {};
         bool use_clipped_coverage_tracking = false;
         Variant::MappingDomain::Size max_variant_size = 2000;
-        MisalignmentParameters misalignment_parameters = MisalignmentParameters {};
+        boost::optional<MisalignmentParameters> misalignment_parameters = MisalignmentParameters {};
     };
     
     CigarScanner() = delete;

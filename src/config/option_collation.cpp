@@ -1027,7 +1027,7 @@ auto make_variant_generator_builder(const OptionMap& options)
     VariantGeneratorBuilder result {};
     const bool use_assembler {allow_assembler_generation(options)};
     
-    if (options.at("raw-cigar-candidate-generator").as<bool>()) {
+    if (options.at("pileup-candidate-generator").as<bool>()) {
         CigarScanner::Options scanner_options {};
         if (is_set("min-supporting-reads", options)) {
             auto min_support = as_unsigned("min-supporting-reads", options);
@@ -1041,15 +1041,19 @@ auto make_variant_generator_builder(const OptionMap& options)
         }
         scanner_options.match = get_default_match_predicate();
         scanner_options.use_clipped_coverage_tracking = true;
-        CigarScanner::Options::MisalignmentParameters misalign_params {};
-        misalign_params.max_expected_mutation_rate = get_max_expected_heterozygosity(options);
-        misalign_params.snv_threshold = as_unsigned("min-base-quality", options);
-        if (use_assembler) {
-            misalign_params.indel_penalty = 1.5;
-            misalign_params.clip_penalty = 2;
-            misalign_params.min_ln_prob_correctly_aligned = std::log(0.005);
+        if (options.at("ignore-pileup-candidates-from-misaligned-read").as<bool>()) {
+            CigarScanner::Options::MisalignmentParameters misalign_params {};
+            misalign_params.max_expected_mutation_rate = get_max_expected_heterozygosity(options);
+            misalign_params.snv_threshold = as_unsigned("min-base-quality", options);
+            if (use_assembler) {
+                misalign_params.indel_penalty = 1.5;
+                misalign_params.clip_penalty = 2;
+                misalign_params.min_ln_prob_correctly_aligned = std::log(0.005);
+            }
+            scanner_options.misalignment_parameters = misalign_params;
+        } else {
+            scanner_options.misalignment_parameters = boost::none;
         }
-        scanner_options.misalignment_parameters = misalign_params;
         result.set_cigar_scanner(std::move(scanner_options));
     }
     if (options.at("repeat-candidate-generator").as<bool>()) {
