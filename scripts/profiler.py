@@ -72,7 +72,7 @@ def rate_to_phred(rate):
     return -10 * log10(rate + 1e-100)
 
 def complex_indel_penalty(profile_df):
-    return rate_to_phred(float(list(profile_df['period'].query('period == 0')['error_rate'])[0]))
+    return rate_to_phred(float(list(profile_df['period'].query('period == 0')['error_rate'])[0])) + 2
 
 def get_repeat_error_df(profile_df, pattern, max_periods):
     profile_index = 'period'
