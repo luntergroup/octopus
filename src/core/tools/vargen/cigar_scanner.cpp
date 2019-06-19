@@ -643,11 +643,57 @@ bool is_good_somatic(const Variant& v, const CigarScanner::VariantObservation::S
                            observation.edge_support, observation.observed_base_qualities, min_expected_vaf);
 }
 
+bool is_good_pacbio(const Variant& variant, const unsigned depth, const unsigned forward_strand_depth,
+                    const unsigned forward_strand_support, std::vector<unsigned> observed_qualities)
+{
+    const auto support = observed_qualities.size();
+    if (support < 2) return false;
+    const auto vaf = static_cast<double>(support) / depth;
+    if (is_snv(variant)) {
+        return vaf > 0.1;
+    } else if (is_insertion(variant)) {
+        if (alt_sequence_size(variant) <= 2) {
+            return vaf > 0.2;
+        } else {
+            return vaf > 0.1;
+        }
+    } else { // deletion or mnv
+        if (region_size(variant) <= 2) {
+            return vaf > 0.2;
+        } else {
+            return vaf > 0.1;
+        }
+    }
+}
+
+bool is_good_pacbio(const Variant& v, const CigarScanner::VariantObservation::SampleObservationStats& observation)
+{
+    return is_good_pacbio(v, observation.depth, observation.forward_strand_depth,
+                          observation.forward_strand_support, observation.observed_base_qualities);
+}
+
+bool any_good_pacbio_samples(const CigarScanner::VariantObservation& candidate)
+{
+    return std::any_of(std::cbegin(candidate.sample_observations), std::cend(candidate.sample_observations),
+                       [&] (const auto& observation) { return is_good_pacbio(candidate.variant, observation); });
+}
+
+bool is_good_pacbio_pooled(const CigarScanner::VariantObservation& candidate)
+{
+    return is_good_pacbio(candidate.variant, candidate.total_depth, count_forward_strand_depth(candidate),
+                          count_forward_strand_support(candidate), concat_observed_base_qualities(candidate));
+}
+
 } // namespace
 
 bool DefaultInclusionPredicate::operator()(const CigarScanner::VariantObservation& candidate)
 {
     return any_good_germline_samples(candidate) || (candidate.sample_observations.size() > 1 && is_good_germline_pooled(candidate));
+}
+
+bool PacBioInclusionPredicate::operator()(const CigarScanner::VariantObservation& candidate)
+{
+    return any_good_pacbio_samples(candidate) || (candidate.sample_observations.size() > 1 && is_good_pacbio_pooled(candidate));
 }
 
 bool DefaultSomaticInclusionPredicate::operator()(const CigarScanner::VariantObservation& candidate)

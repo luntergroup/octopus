@@ -166,6 +166,11 @@ struct DefaultInclusionPredicate
     bool operator()(const CigarScanner::VariantObservation& candidate);
 };
 
+struct PacBioInclusionPredicate
+{
+    bool operator()(const CigarScanner::VariantObservation& candidate);
+};
+
 struct DefaultSomaticInclusionPredicate
 {
     DefaultSomaticInclusionPredicate() = default;
