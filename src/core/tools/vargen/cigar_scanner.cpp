@@ -747,16 +747,20 @@ bool SimpleThresholdInclusionPredicate::operator()(const CigarScanner::VariantOb
     return count_observations(candidate) >= min_observations_;
 }
 
-bool DefaultMatchPredicate::operator()(const Variant& lhs, const Variant& rhs) noexcept
+bool TolerantMatchPredicate::operator()(const Variant& lhs, const Variant& rhs) noexcept
 {
     if (!are_same_type(lhs, rhs) || is_snv(lhs) || is_mnv(lhs)) {
         return lhs == rhs;
     }
-    if (is_insertion(lhs) && alt_sequence_size(lhs) == alt_sequence_size(rhs)) {
-        const auto& lhs_alt = alt_sequence(lhs);
-        const auto& rhs_alt = alt_sequence(rhs);
-        return std::count(std::cbegin(lhs_alt), std::cend(lhs_alt), 'N')
-               == std::count(std::cbegin(rhs_alt), std::cend(rhs_alt), 'N');
+    if (is_insertion(lhs)) {
+        if (alt_sequence_size(lhs) == alt_sequence_size(rhs)) {
+            const auto& lhs_alt = alt_sequence(lhs);
+            const auto& rhs_alt = alt_sequence(rhs);
+            return std::count(std::cbegin(lhs_alt), std::cend(lhs_alt), 'N')
+                   == std::count(std::cbegin(rhs_alt), std::cend(rhs_alt), 'N');
+        } else {
+            return false;
+        }
     }
     return overlaps(lhs, rhs);
 }

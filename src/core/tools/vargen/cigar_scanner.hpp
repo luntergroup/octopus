@@ -197,7 +197,7 @@ private:
     std::size_t min_observations_;
 };
 
-struct DefaultMatchPredicate
+struct TolerantMatchPredicate
 {
     bool operator()(const Variant& lhs, const Variant& rhs) noexcept;
 };
