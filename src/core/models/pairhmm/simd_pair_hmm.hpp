@@ -134,7 +134,7 @@ private:
         current = _add(current, _min(_andnot(_cmpeq(_targetwin, _truthwin), _qualitieswin), _truthnqual));
     }
     
-    auto make_traceback_array(int target_len, int) const noexcept { return SmallVector(2 * (target_len + band_size_)); }
+    auto make_traceback_array(int target_len, int) const noexcept { return SmallVector(2 * (target_len + band_size_) + 1); }
     auto make_traceback_array(int target_len, NullType) const noexcept { return NullType {}; }
     
     void
