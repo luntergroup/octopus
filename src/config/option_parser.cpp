@@ -317,6 +317,10 @@ OptionMap parse_options(const int argc, const char** argv)
     
     po::options_description variant_generation("Candidate variant generation");
     variant_generation.add_options()
+    ("variant-discovery-protocol",
+     po::value<CandidateVariantDiscoveryProtocol>()->default_value(CandidateVariantDiscoveryProtocol::illumina),
+     "Protocl to use for candidate variant discovery (options: illumina, pacbio)")
+     
     ("pileup-candidate-generator,g",
      po::value<bool>()->default_value(true),
      "Enable candidate generation from raw read alignments (CIGAR strings)")
@@ -1343,6 +1347,31 @@ std::ostream& operator<<(std::ostream& out, const NormalContaminationRisk& risk)
             break;
         case NormalContaminationRisk::high:
             out << "high";
+            break;
+    }
+    return out;
+}
+
+std::istream& operator>>(std::istream& in, CandidateVariantDiscoveryProtocol& result)
+{
+    std::string token;
+    in >> token;
+    if (token == "illumina")
+        result = CandidateVariantDiscoveryProtocol::illumina;
+    else if (token == "pacbio")
+        result = CandidateVariantDiscoveryProtocol::pacbio;
+    else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token, "variant-discovery-protocol"};
+    return in;
+}
+
+std::ostream& operator<<(std::ostream& out, const CandidateVariantDiscoveryProtocol& protocol)
+{
+    switch (protocol) {
+        case CandidateVariantDiscoveryProtocol::illumina:
+            out << "illumina";
+            break;
+        case CandidateVariantDiscoveryProtocol::pacbio:
+            out << "pacbio";
             break;
     }
     return out;

@@ -909,28 +909,36 @@ auto get_default_single_cell_inclusion_predicate(const OptionMap& options)
     return coretools::CellInclusionPredicate {};
 }
 
-auto get_default_inclusion_predicate(const OptionMap& options) noexcept
+coretools::CigarScanner::Options::InclusionPredicate get_candidate_variant_inclusion_predicate(const OptionMap& options) noexcept
 {
-    using namespace coretools;
-    using InclusionPredicate = CigarScanner::Options::InclusionPredicate;
     if (is_cancer_calling(options)) {
         boost::optional<SampleName> normal{};
         if (is_set("normal-sample", options)) {
             normal = options.at("normal-sample").as<SampleName>();
         }
-        return InclusionPredicate {get_default_somatic_inclusion_predicate(options, normal)};
+        return get_default_somatic_inclusion_predicate(options, normal);
     } else if (is_polyclone_calling(options)) {
-        return InclusionPredicate {get_default_somatic_inclusion_predicate(options)};
+        return get_default_somatic_inclusion_predicate(options);
     } else if (is_single_cell_calling(options)) {
-        return InclusionPredicate {get_default_single_cell_inclusion_predicate(options)};
+        return get_default_single_cell_inclusion_predicate(options);
     } else {
-        return InclusionPredicate {get_default_germline_inclusion_predicate()};
+        using CVDP = CandidateVariantDiscoveryProtocol;
+        if (options.at("variant-discovery-protocol").as<CVDP>() == CVDP::illumina) {
+            return get_default_germline_inclusion_predicate();
+        } else {
+            return coretools::PacBioInclusionPredicate {};
+        }
     }
 }
 
-auto get_default_match_predicate() noexcept
+coretools::CigarScanner::Options::MatchPredicate get_candidate_variant_match_predicate(const OptionMap& options)
 {
-    return coretools::DefaultMatchPredicate {};
+    using CVDP = CandidateVariantDiscoveryProtocol;
+    if (options.at("variant-discovery-protocol").as<CVDP>() == CVDP::illumina) {
+        return coretools::TolerantMatchPredicate {};
+    } else {
+        return std::equal_to<> {};
+    }
 }
 
 auto get_assembler_region_generator_frequency_trigger(const OptionMap& options)
@@ -1037,9 +1045,9 @@ auto make_variant_generator_builder(const OptionMap& options)
             }
             scanner_options.include = coretools::SimpleThresholdInclusionPredicate {min_support};
         } else {
-            scanner_options.include = get_default_inclusion_predicate(options);
+            scanner_options.include = get_candidate_variant_inclusion_predicate(options);
         }
-        scanner_options.match = get_default_match_predicate();
+        scanner_options.match = get_candidate_variant_match_predicate(options);
         scanner_options.use_clipped_coverage_tracking = true;
         if (options.at("ignore-pileup-candidates-from-misaligned-read").as<bool>()) {
             CigarScanner::Options::MisalignmentParameters misalign_params {};
