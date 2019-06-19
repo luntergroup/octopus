@@ -25,9 +25,9 @@ namespace octopus {
 static constexpr std::array<LibraryPreparation, 3> libraries {
     LibraryPreparation::pcr, LibraryPreparation::pcr_free, LibraryPreparation::tenx
 };
-static constexpr std::array<Sequencer, 6> sequencers {
+static constexpr std::array<Sequencer, 7> sequencers {
     Sequencer::hiseq_2000, Sequencer::hiseq_2500, Sequencer::hiseq_4000,
-    Sequencer::xten, Sequencer::novaseq, Sequencer::bgiseq_500
+    Sequencer::xten, Sequencer::novaseq, Sequencer::bgiseq_500, Sequencer::pacbio
 };
 
 std::ostream& operator<<(std::ostream& out, const LibraryPreparation& library)
@@ -117,6 +117,9 @@ std::ostream& operator<<(std::ostream& out, const Sequencer& sequencer)
         case Sequencer::bgiseq_500:
             out << "BGISEQ-500";
             break;
+        case Sequencer::pacbio:
+            out << "PacBio";
+            break;
     }
     return out;
 }
@@ -162,6 +165,8 @@ std::istream& operator>>(std::istream& in, Sequencer& result)
         result = Sequencer::novaseq;
     else if (token == "BGISEQ-500")
         result = Sequencer::bgiseq_500;
+    else if (token == "PACBIO")
+        result = Sequencer::pacbio;
     else throw UnknownSequencer {token};
     return in;
 }
@@ -257,6 +262,15 @@ static const RepeatBasedIndelModelParameterMap builtin_indel_models {{
         }
     },
     {
+        {LibraryPreparation::pcr_free, Sequencer::pacbio},
+        {
+            {12,12,11,9,8,8,8,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6},
+            {12,12,10,8,8,7,6,6,6,6,6,5,5,5,5,4,4,4,4,4},
+            {12,12,8,7,7,7,7,7,7,7,6,6,6,6,6,6,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5},
+            {12,12,7,6,6,6,6,6,5,5,5,5,5,5,5,5,4,3}
+        }
+    },
+    {
         {LibraryPreparation::pcr, Sequencer::hiseq_2000},
         {
             {45,45,43,41,40,36,34,30,24,20,16,13,12,11,10,10,9,9,8,8,7,7,7,6,6,6,6,5,5,5,4,4,4,4,4,4,4,4,4,4,3},
@@ -308,6 +322,15 @@ static const RepeatBasedIndelModelParameterMap builtin_indel_models {{
             {60,60,48,45,42,38,32,26,22,17,14,12,10,9,8,7,6,6,6,5,5,5,5,5,4,4,4,4,4,4,4,4,3},
             {60,60,44,42,36,29,22,19,17,15,15,14,14,13,13,13,12,12,12,11, 11,10,10,10,9,9,9,8,8,8,8,8,8,7,7,6,6,6,5,4,4,4,4,3},
             {60,60,41,36,28,23,21,20,19,18,18,17,17,16,15,15,14,13,12,12,12,12,10,9,9,9,9,8,8,7,7,7,7,6,6,6,6,5,5,5,5,4,4,4,4,4,4,4,3}
+        }
+    },
+    {
+        {LibraryPreparation::pcr, Sequencer::pacbio},
+        {
+            {12,12,11,9,8,8,8,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6},
+            {12,12,10,8,8,7,6,6,6,6,6,5,5,5,5,4,4,4,4,4},
+            {12,12,8,7,7,7,7,7,7,7,6,6,6,6,6,6,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5},
+            {12,12,7,6,6,6,6,6,5,5,5,5,5,5,5,5,4,3}
         }
     },
     {
