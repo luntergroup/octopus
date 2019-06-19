@@ -211,7 +211,7 @@ private:
     constexpr static int max_band_size() { return std::tuple_element_t<std::tuple_size<Hmms>::value - 1, Hmms>::band_size(); }
     
     template <typename Hmms, std::size_t... Is>
-    static PairHmmVariant make_simd_pair_hmm_helper(const int min_band_size, std::index_sequence<Is...>)
+    PairHmmVariant make_simd_pair_hmm_helper(const int min_band_size, std::index_sequence<Is...>) const
     {
         if (min_band_size <= max_band_size<Hmms>()) {
             PairHmmVariant result {};
@@ -224,9 +224,7 @@ private:
             throw TooLargeBandSizeError {min_band_size, max_band_size<Hmms>()};
         }
     }
-    
-    PairHmmVariant
-    make_simd_pair_hmm(const int min_band_size, const ScorePrecision score_precision)
+    PairHmmVariant make_simd_pair_hmm(const int min_band_size, const ScorePrecision score_precision) const
     {
         if (score_precision == ScorePrecision::int16) {
             using Hmms = ShortPairHMMs;
