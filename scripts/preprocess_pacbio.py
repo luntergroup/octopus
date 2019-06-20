@@ -4,6 +4,7 @@ import argparse
 import os
 import pysam as ps
 from copy import copy
+from math import ceil
 
 def copy_cigar(read, pos, length):
     result = []
@@ -30,7 +31,7 @@ def split_read(read, chunk_len):
         return [read]
     result = []
     chunk_reference_start = read.reference_start
-    for idx in range(int(read_len / chunk_len)):
+    for idx in range(int(ceil(read_len / chunk_len))):
         sequence_offset = idx * chunk_len
         chunk_cigar = copy_cigar(read, sequence_offset, chunk_len)
         chunk_ref_len = reference_len(chunk_cigar)
