@@ -34,9 +34,12 @@ def aggregate_errors(df, aggregators=['period', 'periods']):
         del(errors_attributes[errors_attributes.index('indel_length')])
     return errors_df[errors_attributes]
 
+def get_error_rate_norm(row):
+    return max(row.reads, 1) if row.period > 0 else row.reference_footprint
+
 def read_indel_profile(csv):
     result = pd.read_csv(csv)
-    result['error_rate'] = result.apply(lambda row: row.errors / max(row.reads, 1), axis=1)
+    result['error_rate'] = result.apply(lambda row: row.errors / get_error_rate_norm(row), axis=1)
     result['tract_length'] = result.apply(lambda row: row.period * row.periods, axis=1)
     return result
 
