@@ -383,6 +383,7 @@ void IndelProfiler::evaluate_indel_profile(const DataBatch& data, IndelProfile& 
         }
         // Add errors
         for (const auto& p : data.support) {
+            state.footprint += count_base_pairs(p.second, region);
             for (const auto& read : overlap_range(p.second, region)) {
                 ++state.read_count;
                 const auto indel_error = find_indel_error(read, region);
@@ -587,7 +588,7 @@ profile_indels(const ReadPipe& reads, VcfReader::Path variants, const ReferenceG
 
 std::ostream& operator<<(std::ostream& os, const IndelProfiler::IndelProfile::RepeaStateArray& states)
 {
-    os << "period,periods,motif,reference_count,reference_span,indel_length,polymorphisms,errors,reads";
+    os << "period,periods,motif,reference_count,reference_span,reference_footprint,indel_length,polymorphisms,errors,reads";
     if (states.empty()) return os;
     const auto max_period = states.size() - 1;
     for (std::size_t period {0}; period <= max_period; ++period) {
@@ -600,7 +601,7 @@ std::ostream& operator<<(std::ostream& os, const IndelProfiler::IndelProfile::Re
                 const auto max_indel_length = std::max({state.polymorphism_counts.size(), state.error_counts.size(), std::size_t {2}}) - 1;
                 for (std::size_t indel_length {1}; indel_length <= max_indel_length; ++indel_length) {
                     os << '\n' << period << ',' << periods << ',' << state.motif << ','
-                       << state.reference_count << ',' << state.span << ',' << indel_length << ',';
+                       << state.reference_count << ',' << state.span << ',' << state.footprint << ',' << indel_length << ',';
                     if (indel_length < state.polymorphism_counts.size()) {
                         os << state.polymorphism_counts[indel_length];
                     } else {
