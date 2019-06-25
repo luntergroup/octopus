@@ -551,6 +551,12 @@ struct UnknownExpectedVAFStats
     double min_vaf, min_probability;
 };
 
+auto beta_sf(unsigned a, unsigned b, double x)
+{
+    // Haldane's prior but make sure is proper
+    return maths::beta_sf(static_cast<double>(std::max(a, 1u)), static_cast<double>(std::max(b, 1u)), x);
+}
+
 bool is_good_somatic(const Variant& variant, const unsigned depth, const unsigned forward_strand_depth,
                      const unsigned forward_strand_support, const unsigned num_edge_observations,
                      std::vector<unsigned> observed_qualities, const UnknownExpectedVAFStats vaf_def)
@@ -563,12 +569,11 @@ bool is_good_somatic(const Variant& variant, const unsigned depth, const unsigne
         || (support > 50 && is_strongly_strand_biased(forward_strand_support, reverse_strand_support))){
         return false;
     }
-    const auto adjusted_depth = depth - std::min(static_cast<unsigned>(std::sqrt(depth)), depth - 1);
     if (is_snv(variant)) {
         if (is_likely_runthrough_artifact(forward_strand_support, reverse_strand_support, observed_qualities)) return false;
         erase_below(observed_qualities, 15);
         const auto good_support = observed_qualities.size() - num_edge_observations;
-        const auto probability_vaf_greater_than_min_vaf = maths::beta_sf(good_support + 0.5, adjusted_depth - good_support + 0.5, vaf_def.min_vaf);
+        const auto probability_vaf_greater_than_min_vaf = beta_sf(good_support, depth - good_support, vaf_def.min_vaf);
         return good_support > 1
             && probability_vaf_greater_than_min_vaf >= vaf_def.min_probability
             && num_edge_observations < support
@@ -577,12 +582,11 @@ bool is_good_somatic(const Variant& variant, const unsigned depth, const unsigne
         if (support == 1 && alt_sequence_size(variant) > 8) return false;
         erase_below(observed_qualities, 15);
         const auto good_support = observed_qualities.size();
-        const auto probability_vaf_greater_than_min_vaf = maths::beta_sf(good_support + 0.5, adjusted_depth - good_support + 0.5, vaf_def.min_vaf);
+        const auto probability_vaf_greater_than_min_vaf = beta_sf(good_support, depth - good_support, vaf_def.min_vaf);
         return good_support > 1 && probability_vaf_greater_than_min_vaf >= vaf_def.min_probability;
     } else {
         // deletion or mnv
-        const auto probability_vaf_greater_than_min_vaf = maths::beta_sf(support + 0.5, adjusted_depth - support + 0.5, vaf_def.min_vaf);
-        return probability_vaf_greater_than_min_vaf >= vaf_def.min_probability;
+        const auto probability_vaf_greater_than_min_vaf = beta_sf(support, depth - support, vaf_def.min_vaf);
         return support > 1 && probability_vaf_greater_than_min_vaf >= vaf_def.min_probability;
     }
 }
