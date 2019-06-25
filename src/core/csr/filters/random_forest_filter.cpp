@@ -172,6 +172,7 @@ static double get_prob_false(std::string& prediction_line, const bool tp_first)
 
 void RandomForestFilter::prepare_for_classification(boost::optional<Log>& log) const
 {
+    if (num_records_ == 0) return;
     const Path ranger_prefix {temp_directory() / "octopus_ranger_temp"};
     const Path ranger_prediction_fname {ranger_prefix.string() + ".prediction"};
     data_buffer_.resize(num_records_);
