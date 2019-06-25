@@ -13,10 +13,10 @@
 #include <iterator>
 #include <cassert>
 #include <limits>
+#include <vector>
 #include <emmintrin.h>
 #include <immintrin.h>
 
-#include <boost/container/small_vector.hpp>
 #include <boost/align/aligned_allocator.hpp>
 
 namespace octopus { namespace hmm { namespace simd {
@@ -31,7 +31,7 @@ public:
 private:
     using VectorType  = typename InstructionSet::VectorType;
     using Initializer = InitializerType<InstructionSet>;
-    using SmallVector = boost::container::small_vector<VectorType, 10'000, boost::alignment::aligned_allocator<VectorType>>;
+    using SmallVector = std::vector<VectorType, boost::alignment::aligned_allocator<VectorType>>;
     
     struct NullType {};
     
@@ -134,7 +134,7 @@ private:
         current = _add(current, _min(_andnot(_cmpeq(_targetwin, _truthwin), _qualitieswin), _truthnqual));
     }
     
-    auto make_traceback_array(int target_len, int) const noexcept { return SmallVector(2 * (target_len + band_size_)); }
+    auto make_traceback_array(int target_len, int) const noexcept { return SmallVector(2 * (target_len + band_size_) + 1); }
     auto make_traceback_array(int target_len, NullType) const noexcept { return NullType {}; }
     
     void

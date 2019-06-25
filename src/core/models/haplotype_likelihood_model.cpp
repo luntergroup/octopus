@@ -261,7 +261,7 @@ HaplotypeLikelihoodModel::evaluate(const AlignedRead& read,
         throw std::runtime_error {"HaplotypeLikelihoodModel: no buffered Haplotype"};
     }
     const auto is_forward = !read.is_marked_reverse_mapped();
-    hmm::MutationModel model {
+    HMM::ParameterType model {
         haplotype_gap_open_penalities_,
         haplotype_gap_extend_penalities_,
         is_forward ? haplotype_snv_forward_mask_ : haplotype_snv_reverse_mask_,
@@ -395,7 +395,7 @@ HaplotypeLikelihoodModel::align(const AlignedRead& read, MappingPositionItr firs
         throw std::runtime_error {"HaplotypeLikelihoodModel: no buffered Haplotype"};
     }
     const auto is_forward = !read.is_marked_reverse_mapped();
-    hmm::MutationModel model {haplotype_gap_open_penalities_,
+    HMM::ParameterType model {haplotype_gap_open_penalities_,
                               haplotype_gap_extend_penalities_,
                               is_forward ? haplotype_snv_forward_mask_ : haplotype_snv_reverse_mask_,
                               is_forward ? haplotype_snv_forward_priors_ : haplotype_snv_reverse_priors_};

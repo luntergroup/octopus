@@ -259,6 +259,7 @@ public:
 void ConditionalRandomForestFilter::prepare_for_classification(boost::optional<Log>& log) const
 {
     close_data_files();
+    if (num_records_ == 0) return;
     const Path ranger_prefix {temp_directory() / "octopus_ranger_temp"};
     const Path ranger_prediction_fname {ranger_prefix.string() + ".prediction"};
     data_buffer_.resize(1);
