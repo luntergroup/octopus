@@ -399,6 +399,10 @@ OptionMap parse_options(const int argc, const char** argv)
     ("min-bubble-score",
      po::value<double>()->default_value(2.0),
      "Minimum bubble score that will be extracted from the assembly graph")
+    
+    ("min-candidate-credible-vaf-probability",
+     po::value<float>()->default_value(0.75),
+     "")
     ;
     
     po::options_description haplotype_generation("Haplotype generation");

@@ -875,10 +875,11 @@ bool is_single_cell_calling(const OptionMap& options)
 auto get_default_somatic_inclusion_predicate(const OptionMap& options, boost::optional<SampleName> normal = boost::none)
 {
     const auto min_credible_vaf = options.at("min-credible-somatic-frequency").as<float>();
+    const auto min_credible_vaf_probability = options.at("min-candidate-credible-vaf-probability").as<float>();
     if (normal) {
-        return coretools::UnknownCopyNumberInclusionPredicate {*normal, min_credible_vaf};
+        return coretools::UnknownCopyNumberInclusionPredicate {*normal, min_credible_vaf, min_credible_vaf_probability};
     } else {
-        return coretools::UnknownCopyNumberInclusionPredicate {min_credible_vaf};
+        return coretools::UnknownCopyNumberInclusionPredicate {min_credible_vaf, min_credible_vaf_probability};
     }
 }
 
