@@ -1338,9 +1338,9 @@ auto get_dense_variation_detector(const OptionMap& options, const boost::optiona
     coretools::BadRegionDetector::Parameters params {heterozygosity, heterozygosity_stdev};
     using Tolerance = coretools::BadRegionDetector::Parameters::Tolerance;
     switch (options.at("bad-region-tolerance").as<BadRegionTolerance>()) {
-        case BadRegionTolerance::high: params.tolerance = Tolerance::high;
-        case BadRegionTolerance::normal: params.tolerance = Tolerance::normal;
-        case BadRegionTolerance::low: params.tolerance = Tolerance::low;
+        case BadRegionTolerance::high: params.tolerance = Tolerance::high; break;
+        case BadRegionTolerance::normal: params.tolerance = Tolerance::normal; break;
+        case BadRegionTolerance::low: params.tolerance = Tolerance::low; break;
     }
     return coretools::BadRegionDetector {params, input_reads_profile};
 }
