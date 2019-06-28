@@ -1322,33 +1322,27 @@ auto get_max_haplotypes(const OptionMap& options)
     }
 }
 
-bool have_low_tolerance_for_dense_regions(const OptionMap& options, const boost::optional<ReadSetProfile>& input_reads_profile)
-{
-    if (is_cancer_calling(options)) {
-        if (as_unsigned("max-somatic-haplotypes", options) < 2) {
-            return false;
-        }
-        if (input_reads_profile) {
-            const auto approx_average_depth = maths::median(input_reads_profile->sample_median_positive_depth);
-            if (approx_average_depth > 2000) {
-                return true;
-            }
-        }
-    }
-    return false;
-}
-
 auto get_dense_variation_detector(const OptionMap& options, const boost::optional<ReadSetProfile>& input_reads_profile)
 {
-    const auto snp_heterozygosity = options.at("snp-heterozygosity").as<float>();
-    const auto indel_heterozygosity = options.at("indel-heterozygosity").as<float>();
-    const auto heterozygosity = snp_heterozygosity + indel_heterozygosity;
-    const auto heterozygosity_stdev = options.at("snp-heterozygosity-stdev").as<float>();
-    coretools::DenseVariationDetector::Parameters params {heterozygosity, heterozygosity_stdev};
-    if (have_low_tolerance_for_dense_regions(options, input_reads_profile)) {
-        params.density_tolerance = coretools::DenseVariationDetector::Parameters::Tolerance::low;
+    auto snp_heterozygosity = options.at("snp-heterozygosity").as<float>();
+    auto indel_heterozygosity = options.at("indel-heterozygosity").as<float>();
+    if (is_cancer_calling(options)) {
+        snp_heterozygosity += options.at("somatic-snv-mutation-rate").as<float>();
+        indel_heterozygosity += options.at("somatic-indel-mutation-rate").as<float>();
     }
-    return coretools::DenseVariationDetector {params, input_reads_profile};
+    const auto heterozygosity = snp_heterozygosity + indel_heterozygosity;
+    auto heterozygosity_stdev = options.at("snp-heterozygosity-stdev").as<float>();
+    if (is_cancer_calling(options)) {
+        heterozygosity_stdev *= (1.0 /  options.at("min-expected-somatic-frequency").as<float>());
+    }
+    coretools::BadRegionDetector::Parameters params {heterozygosity, heterozygosity_stdev};
+    using Tolerance = coretools::BadRegionDetector::Parameters::Tolerance;
+    switch (options.at("bad-region-tolerance").as<BadRegionTolerance>()) {
+        case BadRegionTolerance::high: params.tolerance = Tolerance::high;
+        case BadRegionTolerance::normal: params.tolerance = Tolerance::normal;
+        case BadRegionTolerance::low: params.tolerance = Tolerance::low;
+    }
+    return coretools::BadRegionDetector {params, input_reads_profile};
 }
 
 auto get_max_indicator_join_distance() noexcept

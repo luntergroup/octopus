@@ -140,13 +140,13 @@ HaplotypeGenerator::HaplotypeGenerator(const ReferenceGenome& reference,
                                        boost::optional<const TemplateMap&> read_templates,
                                        boost::optional<const ReadPipe::Report&> reads_report,
                                        Policies policies,
-                                       DenseVariationDetector dense_variation_detector)
-: policies_{std::move(policies)}
-, tree_{get_contig(candidates), reference}
-, default_walker_{
-max_included(policies_.haplotype_limits.target),
-GenomeWalker::IndicatorPolicy::includeNone,
-get_walker_policy(policies.extension)
+                                       BadRegionDetector dense_variation_detector)
+: policies_ {std::move(policies)}
+, tree_ {get_contig(candidates), reference}
+, default_walker_ {
+    max_included(policies_.haplotype_limits.target),
+    GenomeWalker::IndicatorPolicy::includeNone,
+    get_walker_policy(policies.extension)
 }
 , holdout_walker_{
 max_included(policies_.haplotype_limits.target),
@@ -174,7 +174,7 @@ get_walker_policy(policies.extension)
     if (!all_empty(reads_)) {
         const auto dense_regions = dense_variation_detector.detect(candidates, reads, reads_report);
         for (const auto& dense : dense_regions) {
-            if (dense.action == DenseVariationDetector::DenseRegion::RecommendedAction::skip) {
+            if (dense.action == BadRegionDetector::BadRegion::RecommendedAction::skip) {
                 if (debug_log_) {
                     stream(*debug_log_) << "Erasing " << count_contained(alleles_, dense.region)
                                         << " alleles in dense region " << dense.region;
@@ -1608,7 +1608,7 @@ HaplotypeGenerator::Builder& HaplotypeGenerator::Builder::set_max_expected_log_a
     return *this;
 }
 
-HaplotypeGenerator::Builder& HaplotypeGenerator::Builder::set_dense_variation_detector(DenseVariationDetector detector) noexcept
+HaplotypeGenerator::Builder& HaplotypeGenerator::Builder::set_dense_variation_detector(BadRegionDetector detector) noexcept
 {
     dense_variation_detector_ = std::move(detector);
     return *this;

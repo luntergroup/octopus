@@ -2108,6 +2108,45 @@ auto select_regions(const Region& region, const Range& values, UnaryPredicate pr
     return select_regions(region, std::cbegin(values), std::cend(values), std::move(pred));
 }
 
+namespace detail {
+
+inline auto make_region_helper(const ContigRegion& template_region, ContigRegion::Position begin, ContigRegion::Position end)
+{
+    return ContigRegion {begin, end};
+}
+
+inline auto make_region_helper(const GenomicRegion& template_region, ContigRegion::Position begin, ContigRegion::Position end)
+{
+    return GenomicRegion {template_region.contig_name(), begin, end};
+}
+
+} // namespace detail
+
+template <typename T, typename RegionTp>
+std::vector<RegionTp>
+find_high_coverage_regions(const std::vector<T>& depths, const RegionTp& region, const T threshold)
+{
+    using Position = typename RegionTp::Position;
+    using Iterator = typename std::vector<T>::const_iterator;
+    Iterator first {depths.cbegin()};
+    Iterator current {first};
+    Iterator last {depths.cend()};
+    Iterator high_range_first, high_range_last;
+    Position high_range_begin, high_range_end;
+    std::vector<RegionTp> result {};
+    while (current != last) {
+        const auto is_high_coverage = [threshold] (const auto coverage) { return coverage > threshold; };
+        high_range_first = std::find_if(current, last, is_high_coverage);
+        if (high_range_first == last) break;
+        high_range_last  = std::find_if_not(high_range_first, last, is_high_coverage);
+        high_range_begin = mapped_begin(region) + static_cast<Position>(std::distance(first, high_range_first));
+        high_range_end   = high_range_begin + static_cast<Position>(std::distance(high_range_first, high_range_last));
+        result.emplace_back(detail::make_region_helper(region, high_range_begin, high_range_end));
+        current = high_range_last;
+    }
+    return result;
+}
+
 } // namespace octopus
 
 #endif

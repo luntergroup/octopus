@@ -14,6 +14,7 @@
 #include "config/common.hpp"
 #include "basics/genomic_region.hpp"
 #include "io/read/read_manager.hpp"
+#include "utils/coverage_tracker.hpp"
 #include "logging/logging.hpp"
 #include "filtering/read_filterer.hpp"
 #include "transformers/read_transformer.hpp"
@@ -40,6 +41,8 @@ public:
     
     struct Report
     {
+        using DepthMap = std::unordered_map<SampleName, CoverageTracker<GenomicRegion>>;
+        DepthMap raw_depths;
         readpipe::DownsamplerReportMap downsample_report;
     };
     
