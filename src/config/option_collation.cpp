@@ -1027,7 +1027,7 @@ auto make_variant_generator_builder(const OptionMap& options)
     VariantGeneratorBuilder result {};
     const bool use_assembler {allow_assembler_generation(options)};
     
-    if (options.at("raw-cigar-candidate-generator").as<bool>()) {
+    if (options.at("pileup-candidate-generator").as<bool>()) {
         CigarScanner::Options scanner_options {};
         if (is_set("min-supporting-reads", options)) {
             auto min_support = as_unsigned("min-supporting-reads", options);

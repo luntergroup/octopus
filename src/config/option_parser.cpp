@@ -317,7 +317,7 @@ OptionMap parse_options(const int argc, const char** argv)
     
     po::options_description variant_generation("Candidate variant generation");
     variant_generation.add_options()
-    ("raw-cigar-candidate-generator,g",
+    ("pileup-candidate-generator,g",
      po::value<bool>()->default_value(true),
      "Enable candidate generation from raw read alignments (CIGAR strings)")
     
