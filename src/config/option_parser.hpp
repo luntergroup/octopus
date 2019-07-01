@@ -37,6 +37,7 @@ enum class LaggingLevel { minimal, conservative, moderate, normal, aggressive };
 enum class BacktrackLevel { none, normal, aggressive };
 enum class NormalContaminationRisk { low, high };
 enum class BadRegionTolerance { low, normal, high };
+enum class ReadLinkage { none, paired, linked };
 
 std::istream& operator>>(std::istream& in, ContigOutputOrder& order);
 std::ostream& operator<<(std::ostream& os, const ContigOutputOrder& order);
@@ -54,6 +55,8 @@ std::istream& operator>>(std::istream& in, NormalContaminationRisk& risk);
 std::ostream& operator<<(std::ostream& os, const NormalContaminationRisk& risk);
 std::istream& operator>>(std::istream& in, BadRegionTolerance& risk);
 std::ostream& operator<<(std::ostream& os, const BadRegionTolerance& risk);
+std::istream& operator>>(std::istream& in, ReadLinkage& linkage);
+std::ostream& operator<<(std::ostream& os, const ReadLinkage& linkage);
 
 } // namespace Options
 } // namespace octopus

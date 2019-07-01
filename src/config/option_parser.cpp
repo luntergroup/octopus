@@ -550,13 +550,9 @@ OptionMap parse_options(const int argc, const char** argv)
       po::value<int>()->default_value(16),
       "Maximum number of indel errors allowed during haplotype likelihood calculation")
     
-    ("paired-reads",
-     po::bool_switch()->default_value(false),
-     "Use paired read information during variant calling")
-    
-    ("linked-reads",
-     po::bool_switch()->default_value(false),
-     "Use linked read information during variant calling")
+    ("read-linkage",
+     po::value<ReadLinkage>()->default_value(ReadLinkage::paired),
+     "Read linkage information to use for calling [none, paired, linked]")
          
     ("min-phase-score",
      po::value<Phred<double>>()->default_value(Phred<double> {10.0}),
@@ -1377,6 +1373,36 @@ std::ostream& operator<<(std::ostream& out, const BadRegionTolerance& tolerance)
             break;
         case BadRegionTolerance::high:
             out << "high";
+            break;
+    }
+    return out;
+}
+
+std::istream& operator>>(std::istream& in, ReadLinkage& result)
+{
+    std::string token;
+    in >> token;
+    if (token == "none")
+        result = ReadLinkage::none;
+    else if (token == "paired")
+        result = ReadLinkage::paired;
+    else if (token == "linked")
+        result = ReadLinkage::linked;
+    else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token, "read-linkage"};
+    return in;
+}
+
+std::ostream& operator<<(std::ostream& out, const ReadLinkage& linkage)
+{
+    switch (linkage) {
+        case ReadLinkage::none:
+            out << "none";
+            break;
+        case ReadLinkage::paired:
+            out << "paired";
+            break;
+        case ReadLinkage::linked:
+            out << "linked";
             break;
     }
     return out;

@@ -1752,12 +1752,12 @@ bool is_experimental_caller(const std::string& caller) noexcept
 
 bool use_paired_reads(const OptionMap& options)
 {
-    return options.at("paired-reads").as<bool>();
+    return options.at("read-linkage").as<ReadLinkage>() == ReadLinkage::paired;
 }
 
 bool use_linked_reads(const OptionMap& options)
 {
-    return options.at("linked-reads").as<bool>();
+    return options.at("read-linkage").as<ReadLinkage>() == ReadLinkage::linked;
 }
 
 CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& read_pipe,
