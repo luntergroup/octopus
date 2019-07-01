@@ -547,7 +547,7 @@ OptionMap parse_options(const int argc, const char** argv)
      "Maximum number of seeds to use for Variational Bayes algorithms")
      
      ("max-indel-errors",
-      po::value<int>()->default_value(8),
+      po::value<int>()->default_value(16),
       "Maximum number of indel errors allowed during haplotype likelihood calculation")
     
     ("paired-reads",
@@ -1094,7 +1094,7 @@ void validate(const OptionMap& vm)
         "max-region-to-assemble", "fallback-kmer-gap", "organism-ploidy",
         "max-haplotypes", "haplotype-holdout-threshold", "haplotype-overflow",
         "max-genotypes", "max-joint-genotypes", "max-somatic-haplotypes", "max-clones",
-        "max-vb-seeds"
+        "max-vb-seeds", "max-indel-errors"
     };
     const std::vector<std::string> probability_options {
         "snp-heterozygosity", "snp-heterozygosity-stdev", "indel-heterozygosity",
