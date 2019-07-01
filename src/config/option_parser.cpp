@@ -402,7 +402,7 @@ OptionMap parse_options(const int argc, const char** argv)
     
     ("min-candidate-credible-vaf-probability",
      po::value<float>()->default_value(0.75),
-     "")
+     "Minimum probability that pileup candidate variant has frequency above '--min-credible-somatic-frequency'")
     ;
     
     po::options_description haplotype_generation("Haplotype generation");
@@ -1099,7 +1099,7 @@ void validate(const OptionMap& vm)
     const std::vector<std::string> probability_options {
         "snp-heterozygosity", "snp-heterozygosity-stdev", "indel-heterozygosity",
         "somatic-mutation-rate", "min-expected-somatic-frequency", "min-credible-somatic-frequency", "credible-mass",
-        "denovo-snv-mutation-rate", "denovo-indel-mutation-rate"
+        "denovo-snv-mutation-rate", "denovo-indel-mutation-rate", "min-candidate-credible-vaf-probability"
     };
     conflicting_options(vm, "maternal-sample", "normal-sample");
     conflicting_options(vm, "paternal-sample", "normal-sample");
