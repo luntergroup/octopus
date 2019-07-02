@@ -1017,7 +1017,7 @@ auto get_max_expected_heterozygosity(const OptionMap& options)
     return std::min(static_cast<double>(heterozygosity + 2 * heterozygosity_stdev), 0.9999);
 }
 
-auto make_variant_generator_builder(const OptionMap& options)
+auto make_variant_generator_builder(const OptionMap& options, const boost::optional<ReadSetProfile>& read_profile)
 {
     using namespace coretools;
     
@@ -1128,6 +1128,9 @@ auto make_variant_generator_builder(const OptionMap& options)
         active_region_options.assemble_all = true;
     } else {
         AssemblerActiveRegionGenerator::Options assembler_region_options {};
+        using TT = AssemblerActiveRegionGenerator::Options::TriggerType;
+        assembler_region_options.trigger_types = {TT::indel, TT::structual};
+        assembler_region_options.read_profile = read_profile;
         assembler_region_options.min_expected_mutation_frequency = get_assembler_region_generator_frequency_trigger(options);
         active_region_options.assembler_active_region_generator_options = assembler_region_options;
     }
@@ -1765,7 +1768,7 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
                                   const boost::optional<ReadSetProfile> read_profile)
 {
     CallerBuilder vc_builder {reference, read_pipe,
-                              make_variant_generator_builder(options),
+                              make_variant_generator_builder(options, read_profile),
                               make_haplotype_generator_builder(options, read_profile)};
 	const auto pedigree = read_ped_file(options);
     const auto caller = get_caller_type(options, read_pipe.samples(), pedigree);

@@ -50,6 +50,7 @@ AssemblerActiveRegionGenerator::AssemblerActiveRegionGenerator(const ReferenceGe
     trigger_quality_ = options.trigger_quality;
     trigger_clip_size_ = options.trigger_clip_size;
     min_expected_mutation_frequency_ = options.min_expected_mutation_frequency;
+    read_profile_ = options.read_profile;
 }
 
 void AssemblerActiveRegionGenerator::add(const SampleName& sample, const AlignedRead& read)
@@ -178,11 +179,12 @@ auto expand_each(const Container& regions, const GenomicRegion::Distance n)
     return result;
 }
 
-auto get_deletion_hotspots(const GenomicRegion& region, const CoverageTracker<GenomicRegion>& tracker)
+auto get_deletion_hotspots(const GenomicRegion& region, const CoverageTracker<GenomicRegion>& tracker,
+                           const boost::optional<ReadSetProfile>& read_profile = boost::none)
 {
     const auto coverages = tracker.get(region);
-    const auto mean_coverage = tracker.mean(region);
-    const auto stdev_coverage = tracker.stdev(region);
+    const auto mean_coverage = read_profile ? read_profile->mean_positive_depth : tracker.mean(region);
+    const auto stdev_coverage = read_profile ? read_profile->depth_stdev : tracker.stdev(region);
     const auto deletion_base_probs = compute_base_deletion_probabilities(coverages, mean_coverage, stdev_coverage);
     std::vector<bool> deletion_bases(deletion_base_probs.size());
     std::transform(std::cbegin(deletion_base_probs), std::cend(deletion_base_probs), std::begin(deletion_bases),
@@ -277,7 +279,7 @@ std::vector<GenomicRegion> AssemblerActiveRegionGenerator::generate(const Genomi
     auto interesting_regions = get_interesting_hotspots(region, interesting_read_coverages_, coverage_tracker_, min_expected_mutation_frequency_);
     if (structual_interesting_) {
         for (const auto& p : clipped_coverage_tracker_) {
-            auto deletion_regions = get_deletion_hotspots(region, p.second);
+            auto deletion_regions = get_deletion_hotspots(region, p.second, read_profile_);
             merge(std::move(deletion_regions), interesting_regions);
         }
     }
