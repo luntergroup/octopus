@@ -407,6 +407,10 @@ OptionMap parse_options(const int argc, const char** argv)
     ("min-bubble-score",
      po::value<double>()->default_value(2.0),
      "Minimum bubble score that will be extracted from the assembly graph")
+    
+    ("min-candidate-credible-vaf-probability",
+     po::value<float>()->default_value(0.75),
+     "Minimum probability that pileup candidate variant has frequency above '--min-credible-somatic-frequency'")
     ;
     
     po::options_description haplotype_generation("Haplotype generation");
@@ -453,6 +457,10 @@ OptionMap parse_options(const int argc, const char** argv)
     ("protect-reference-haplotype",
      po::value<bool>()->default_value(true),
      "Protect the reference haplotype from filtering")
+    
+    ("bad-region-tolerance",
+     po::value<BadRegionTolerance>()->default_value(BadRegionTolerance::normal),
+     "Tolerance for 'bad' region skipping - regions that are likely uncallable and will slow down calling [low, normal, high]")
     ;
     
     po::options_description caller("Calling (general)");
@@ -547,16 +555,12 @@ OptionMap parse_options(const int argc, const char** argv)
      "Maximum number of seeds to use for Variational Bayes algorithms")
      
      ("max-indel-errors",
-      po::value<int>()->default_value(8),
+      po::value<int>()->default_value(16),
       "Maximum number of indel errors allowed during haplotype likelihood calculation")
     
-    ("paired-reads",
-     po::bool_switch()->default_value(false),
-     "Use paired read information during variant calling")
-    
-    ("linked-reads",
-     po::bool_switch()->default_value(false),
-     "Use linked read information during variant calling")
+    ("read-linkage",
+     po::value<ReadLinkage>()->default_value(ReadLinkage::paired),
+     "Read linkage information to use for calling [none, paired, linked]")
          
     ("min-phase-score",
      po::value<Phred<double>>()->default_value(Phred<double> {10.0}),
@@ -1094,12 +1098,12 @@ void validate(const OptionMap& vm)
         "max-region-to-assemble", "fallback-kmer-gap", "organism-ploidy",
         "max-haplotypes", "haplotype-holdout-threshold", "haplotype-overflow",
         "max-genotypes", "max-joint-genotypes", "max-somatic-haplotypes", "max-clones",
-        "max-vb-seeds"
+        "max-vb-seeds", "max-indel-errors"
     };
     const std::vector<std::string> probability_options {
         "snp-heterozygosity", "snp-heterozygosity-stdev", "indel-heterozygosity",
         "somatic-mutation-rate", "min-expected-somatic-frequency", "min-credible-somatic-frequency", "credible-mass",
-        "denovo-snv-mutation-rate", "denovo-indel-mutation-rate"
+        "denovo-snv-mutation-rate", "denovo-indel-mutation-rate", "min-candidate-credible-vaf-probability"
     };
     conflicting_options(vm, "maternal-sample", "normal-sample");
     conflicting_options(vm, "paternal-sample", "normal-sample");
@@ -1347,6 +1351,66 @@ std::ostream& operator<<(std::ostream& out, const NormalContaminationRisk& risk)
             break;
         case NormalContaminationRisk::high:
             out << "high";
+            break;
+    }
+    return out;
+}
+
+std::istream& operator>>(std::istream& in, BadRegionTolerance& result)
+{
+    std::string token;
+    in >> token;
+    if (token == "low")
+        result = BadRegionTolerance::low;
+    else if (token == "normal")
+        result = BadRegionTolerance::normal;
+    else if (token == "high")
+        result = BadRegionTolerance::high;
+    else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token, "bad-region-tolerance"};
+    return in;
+}
+
+std::ostream& operator<<(std::ostream& out, const BadRegionTolerance& tolerance)
+{
+    switch (tolerance) {
+        case BadRegionTolerance::low:
+            out << "low";
+            break;
+        case BadRegionTolerance::normal:
+            out << "normal";
+            break;
+        case BadRegionTolerance::high:
+            out << "high";
+            break;
+    }
+    return out;
+}
+
+std::istream& operator>>(std::istream& in, ReadLinkage& result)
+{
+    std::string token;
+    in >> token;
+    if (token == "none")
+        result = ReadLinkage::none;
+    else if (token == "paired")
+        result = ReadLinkage::paired;
+    else if (token == "linked")
+        result = ReadLinkage::linked;
+    else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token, "read-linkage"};
+    return in;
+}
+
+std::ostream& operator<<(std::ostream& out, const ReadLinkage& linkage)
+{
+    switch (linkage) {
+        case ReadLinkage::none:
+            out << "none";
+            break;
+        case ReadLinkage::paired:
+            out << "paired";
+            break;
+        case ReadLinkage::linked:
+            out << "linked";
             break;
     }
     return out;

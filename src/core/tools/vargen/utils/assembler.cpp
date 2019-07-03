@@ -152,6 +152,7 @@ void Assembler::insert_read(const NucleotideSequence& sequence, const Direction 
                 const auto v = add_vertex(kmer);
                 if (v) {
                     if (prev_kmer_good) {
+                        assert(vertex_cache_.count(prev_kmer) == 1);
                         const auto u = vertex_cache_.at(prev_kmer);
                         add_edge(u, *v, 1, is_forward_strand);
                     }

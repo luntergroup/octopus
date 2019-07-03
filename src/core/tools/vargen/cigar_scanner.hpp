@@ -161,9 +161,12 @@ void CigarScanner::add_candidate(T1&& region, T2&& sequence_removed, T3&& sequen
     }
 }
 
-struct DefaultInclusionPredicate
+struct KnownCopyNumberInclusionPredicate
 {
+    KnownCopyNumberInclusionPredicate(unsigned copy_number = 2) : copy_number_ {copy_number} {}
     bool operator()(const CigarScanner::VariantObservation& candidate);
+private:
+    unsigned copy_number_;
 };
 
 struct PacBioInclusionPredicate
@@ -171,17 +174,17 @@ struct PacBioInclusionPredicate
     bool operator()(const CigarScanner::VariantObservation& candidate);
 };
 
-struct DefaultSomaticInclusionPredicate
+struct UnknownCopyNumberInclusionPredicate
 {
-    DefaultSomaticInclusionPredicate() = default;
-    DefaultSomaticInclusionPredicate(double min_expected_vaf)
-    : normal_ {}, min_expected_vaf_ {min_expected_vaf} {}
-    DefaultSomaticInclusionPredicate(SampleName normal, double min_expected_vaf = 0.01)
-    : normal_ {std::move(normal)}, min_expected_vaf_ {min_expected_vaf} {}
+    UnknownCopyNumberInclusionPredicate() = default;
+    
+    UnknownCopyNumberInclusionPredicate(double min_vaf, double min_probability = 0.5);
+    UnknownCopyNumberInclusionPredicate(SampleName normal, double min_vaf, double min_probability = 0.5);
+    
     bool operator()(const CigarScanner::VariantObservation& candidate);
 private:
     boost::optional<SampleName> normal_;
-    double min_expected_vaf_ = 0.01;
+    double min_vaf_ = 0.01, min_probability_ = 0.5;
 };
 
 struct CellInclusionPredicate

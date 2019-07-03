@@ -36,6 +36,8 @@ enum class ExtensionLevel { conservative, normal, optimistic, aggressive };
 enum class LaggingLevel { minimal, conservative, moderate, normal, aggressive };
 enum class BacktrackLevel { none, normal, aggressive };
 enum class NormalContaminationRisk { low, high };
+enum class BadRegionTolerance { low, normal, high };
+enum class ReadLinkage { none, paired, linked };
 enum class CandidateVariantDiscoveryProtocol { illumina, pacbio };
 
 std::istream& operator>>(std::istream& in, ContigOutputOrder& order);
@@ -52,6 +54,10 @@ std::istream& operator>>(std::istream& in, LaggingLevel& level);
 std::ostream& operator<<(std::ostream& os, const LaggingLevel& level);
 std::istream& operator>>(std::istream& in, NormalContaminationRisk& risk);
 std::ostream& operator<<(std::ostream& os, const NormalContaminationRisk& risk);
+std::istream& operator>>(std::istream& in, BadRegionTolerance& risk);
+std::ostream& operator<<(std::ostream& os, const BadRegionTolerance& risk);
+std::istream& operator>>(std::istream& in, ReadLinkage& linkage);
+std::ostream& operator<<(std::ostream& os, const ReadLinkage& linkage);
 std::istream& operator>>(std::istream& in, CandidateVariantDiscoveryProtocol& protocol);
 std::ostream& operator<<(std::ostream& os, const CandidateVariantDiscoveryProtocol& protocol);
 

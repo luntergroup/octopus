@@ -25,6 +25,7 @@
 #include <boost/math/distributions/beta.hpp>
 #include <boost/math/distributions/geometric.hpp>
 #include <boost/math/distributions/binomial.hpp>
+#include <boost/math/distributions/normal.hpp>
 
 #include "fmath.hpp"
 
@@ -520,6 +521,22 @@ template <typename IntegerType, typename RealType,
 RealType log_poisson_sf(const IntegerType k, const RealType mu)
 {
     return std::log(poisson_sf(k, mu));
+}
+
+template <typename RealType,
+          typename = std::enable_if_t<std::is_floating_point<RealType>::value>>
+RealType normal_cdf(const RealType x, const RealType mu, const RealType sigma)
+{
+    boost::math::normal_distribution<RealType> dist {mu, sigma};
+    return boost::math::cdf(dist, x);
+}
+
+template <typename RealType,
+          typename = std::enable_if_t<std::is_floating_point<RealType>::value>>
+RealType normal_sf(const RealType x, const RealType mu, const RealType sigma)
+{
+    boost::math::normal_distribution<RealType> dist {mu, sigma};
+    return boost::math::cdf(boost::math::complement(dist, x));
 }
 
 template <typename ForwardIt>

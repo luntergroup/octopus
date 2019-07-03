@@ -23,7 +23,7 @@
 #include "logging/logging.hpp"
 #include "genome_walker.hpp"
 #include "haplotype_tree.hpp"
-#include "dense_variation_detector.hpp"
+#include "bad_region_detector.hpp"
 
 namespace octopus {
 
@@ -71,7 +71,7 @@ public:
                        boost::optional<const TemplateMap&> read_templates,
                        boost::optional<const ReadPipe::Report&> reads_report,
                        Policies policies,
-                       DenseVariationDetector dense_variation_detector);
+                       BadRegionDetector dense_variation_detector);
     
     HaplotypeGenerator(const HaplotypeGenerator&)            = default;
     HaplotypeGenerator& operator=(const HaplotypeGenerator&) = default;
@@ -249,7 +249,7 @@ public:
     Builder& set_min_flank_pad(Haplotype::MappingDomain::Size n) noexcept;
     Builder& set_max_indicator_join_distance(Haplotype::NucleotideSequence::size_type n) noexcept;
     Builder& set_max_expected_log_allele_count_per_base(double v) noexcept;
-    Builder& set_dense_variation_detector(DenseVariationDetector detector) noexcept;
+    Builder& set_dense_variation_detector(BadRegionDetector detector) noexcept;
     
     HaplotypeGenerator
     build(const ReferenceGenome& reference,
@@ -260,7 +260,7 @@ public:
     
 private:
     Policies policies_;
-    DenseVariationDetector dense_variation_detector_;
+    BadRegionDetector dense_variation_detector_;
 };
 
 } // namespace coretools

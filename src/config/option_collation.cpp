@@ -852,9 +852,9 @@ ReadPipe make_read_pipe(ReadManager& read_manager, const ReferenceGenome& refere
     }
 }
 
-auto get_default_germline_inclusion_predicate()
+auto get_default_germline_inclusion_predicate(const OptionMap& options)
 {
-    return coretools::DefaultInclusionPredicate {};
+    return coretools::KnownCopyNumberInclusionPredicate {static_cast<unsigned>(options.at("organism-ploidy").as<int>())};
 }
 
 bool is_cancer_calling(const OptionMap& options)
@@ -872,24 +872,14 @@ bool is_single_cell_calling(const OptionMap& options)
     return options.at("caller").as<std::string>() == "cell";
 }
 
-double get_min_somatic_vaf(const OptionMap& options)
-{
-    const auto min_credible_frequency = options.at("min-credible-somatic-frequency").as<float>();
-    const auto min_expected_frequency = options.at("min-expected-somatic-frequency").as<float>();
-    if (std::min(min_credible_frequency, min_expected_frequency) <= 1.0) {
-        return std::max(min_credible_frequency, min_expected_frequency);
-    } else {
-        return std::min(min_credible_frequency, min_expected_frequency);
-    }
-}
-
 auto get_default_somatic_inclusion_predicate(const OptionMap& options, boost::optional<SampleName> normal = boost::none)
 {
-    const auto min_vaf = get_min_somatic_vaf(options);
+    const auto min_credible_vaf = options.at("min-credible-somatic-frequency").as<float>();
+    const auto min_credible_vaf_probability = options.at("min-candidate-credible-vaf-probability").as<float>();
     if (normal) {
-        return coretools::DefaultSomaticInclusionPredicate {*normal, min_vaf};
+        return coretools::UnknownCopyNumberInclusionPredicate {*normal, min_credible_vaf, min_credible_vaf_probability};
     } else {
-        return coretools::DefaultSomaticInclusionPredicate {min_vaf};
+        return coretools::UnknownCopyNumberInclusionPredicate {min_credible_vaf, min_credible_vaf_probability};
     }
 }
 
@@ -900,8 +890,7 @@ double get_min_clone_vaf(const OptionMap& options)
 
 auto get_default_polyclone_inclusion_predicate(const OptionMap& options)
 {
-    const auto min_vaf = get_min_clone_vaf(options);
-    return coretools::DefaultSomaticInclusionPredicate {min_vaf};
+    return coretools::UnknownCopyNumberInclusionPredicate {get_min_clone_vaf(options)};
 }
 
 auto get_default_single_cell_inclusion_predicate(const OptionMap& options)
@@ -924,7 +913,7 @@ coretools::CigarScanner::Options::InclusionPredicate get_candidate_variant_inclu
     } else {
         using CVDP = CandidateVariantDiscoveryProtocol;
         if (options.at("variant-discovery-protocol").as<CVDP>() == CVDP::illumina) {
-            return get_default_germline_inclusion_predicate();
+            return get_default_germline_inclusion_predicate(options);
         } else {
             return coretools::PacBioInclusionPredicate {};
         }
@@ -941,10 +930,21 @@ coretools::CigarScanner::Options::MatchPredicate get_candidate_variant_match_pre
     }
 }
 
+double get_min_expected_somatic_vaf(const OptionMap& options)
+{
+    const auto min_credible_frequency = options.at("min-credible-somatic-frequency").as<float>();
+    const auto min_expected_frequency = options.at("min-expected-somatic-frequency").as<float>();
+    if (std::min(min_credible_frequency, min_expected_frequency) <= 1.0) {
+        return std::max(min_credible_frequency, min_expected_frequency);
+    } else {
+        return std::min(min_credible_frequency, min_expected_frequency);
+    }
+}
+
 auto get_assembler_region_generator_frequency_trigger(const OptionMap& options)
 {
     if (is_cancer_calling(options)) {
-        return get_min_somatic_vaf(options);
+        return get_min_expected_somatic_vaf(options);
     } else if (is_polyclone_calling(options)) {
         return get_min_clone_vaf(options);
     } else {
@@ -1025,7 +1025,7 @@ auto get_max_expected_heterozygosity(const OptionMap& options)
     return std::min(static_cast<double>(heterozygosity + 2 * heterozygosity_stdev), 0.9999);
 }
 
-auto make_variant_generator_builder(const OptionMap& options)
+auto make_variant_generator_builder(const OptionMap& options, const boost::optional<ReadSetProfile>& read_profile)
 {
     using namespace coretools;
     
@@ -1140,6 +1140,9 @@ auto make_variant_generator_builder(const OptionMap& options)
         active_region_options.assemble_all = true;
     } else {
         AssemblerActiveRegionGenerator::Options assembler_region_options {};
+        using TT = AssemblerActiveRegionGenerator::Options::TriggerType;
+        assembler_region_options.trigger_types = {TT::indel, TT::structual};
+        assembler_region_options.read_profile = read_profile;
         assembler_region_options.min_expected_mutation_frequency = get_assembler_region_generator_frequency_trigger(options);
         active_region_options.assembler_active_region_generator_options = assembler_region_options;
     }
@@ -1334,33 +1337,27 @@ auto get_max_haplotypes(const OptionMap& options)
     }
 }
 
-bool have_low_tolerance_for_dense_regions(const OptionMap& options, const boost::optional<ReadSetProfile>& input_reads_profile)
-{
-    if (is_cancer_calling(options)) {
-        if (as_unsigned("max-somatic-haplotypes", options) < 2) {
-            return false;
-        }
-        if (input_reads_profile) {
-            const auto approx_average_depth = maths::median(input_reads_profile->sample_median_positive_depth);
-            if (approx_average_depth > 2000) {
-                return true;
-            }
-        }
-    }
-    return false;
-}
-
 auto get_dense_variation_detector(const OptionMap& options, const boost::optional<ReadSetProfile>& input_reads_profile)
 {
-    const auto snp_heterozygosity = options.at("snp-heterozygosity").as<float>();
-    const auto indel_heterozygosity = options.at("indel-heterozygosity").as<float>();
-    const auto heterozygosity = snp_heterozygosity + indel_heterozygosity;
-    const auto heterozygosity_stdev = options.at("snp-heterozygosity-stdev").as<float>();
-    coretools::DenseVariationDetector::Parameters params {heterozygosity, heterozygosity_stdev};
-    if (have_low_tolerance_for_dense_regions(options, input_reads_profile)) {
-        params.density_tolerance = coretools::DenseVariationDetector::Parameters::Tolerance::low;
+    auto snp_heterozygosity = options.at("snp-heterozygosity").as<float>();
+    auto indel_heterozygosity = options.at("indel-heterozygosity").as<float>();
+    if (is_cancer_calling(options)) {
+        snp_heterozygosity += options.at("somatic-snv-mutation-rate").as<float>();
+        indel_heterozygosity += options.at("somatic-indel-mutation-rate").as<float>();
     }
-    return coretools::DenseVariationDetector {params, input_reads_profile};
+    const auto heterozygosity = snp_heterozygosity + indel_heterozygosity;
+    auto heterozygosity_stdev = options.at("snp-heterozygosity-stdev").as<float>();
+    if (is_cancer_calling(options)) {
+        heterozygosity_stdev *= (1.0 /  options.at("min-expected-somatic-frequency").as<float>());
+    }
+    coretools::BadRegionDetector::Parameters params {heterozygosity, heterozygosity_stdev};
+    using Tolerance = coretools::BadRegionDetector::Parameters::Tolerance;
+    switch (options.at("bad-region-tolerance").as<BadRegionTolerance>()) {
+        case BadRegionTolerance::high: params.tolerance = Tolerance::high; break;
+        case BadRegionTolerance::normal: params.tolerance = Tolerance::normal; break;
+        case BadRegionTolerance::low: params.tolerance = Tolerance::low; break;
+    }
+    return coretools::BadRegionDetector {params, input_reads_profile};
 }
 
 auto get_max_indicator_join_distance() noexcept
@@ -1770,12 +1767,12 @@ bool is_experimental_caller(const std::string& caller) noexcept
 
 bool use_paired_reads(const OptionMap& options)
 {
-    return options.at("paired-reads").as<bool>();
+    return options.at("read-linkage").as<ReadLinkage>() == ReadLinkage::paired;
 }
 
 bool use_linked_reads(const OptionMap& options)
 {
-    return options.at("linked-reads").as<bool>();
+    return options.at("read-linkage").as<ReadLinkage>() == ReadLinkage::linked;
 }
 
 CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& read_pipe,
@@ -1783,7 +1780,7 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
                                   const boost::optional<ReadSetProfile> read_profile)
 {
     CallerBuilder vc_builder {reference, read_pipe,
-                              make_variant_generator_builder(options),
+                              make_variant_generator_builder(options, read_profile),
                               make_haplotype_generator_builder(options, read_profile)};
 	const auto pedigree = read_ped_file(options);
     const auto caller = get_caller_type(options, read_pipe.samples(), pedigree);
