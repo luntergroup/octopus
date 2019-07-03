@@ -115,7 +115,7 @@ void CigarScanner::add_read(const SampleName& sample, const AlignedRead& read,
                               read, read_index, sample);
                 read_index += op_size;
                 ref_index  += op_size;
-                misalignment_penalty += op_size * options_.misalignment_parameters.snv_penalty;
+                if (options_.misalignment_parameters) misalignment_penalty += op_size * options_.misalignment_parameters->snv_penalty;
                 break;
             }
             case Flag::insertion:
@@ -125,7 +125,7 @@ void CigarScanner::add_read(const SampleName& sample, const AlignedRead& read,
                               copy(read_sequence, read_index, op_size),
                               read, read_index, sample);
                 read_index += op_size;
-                misalignment_penalty += options_.misalignment_parameters.indel_penalty;
+                if (options_.misalignment_parameters)  misalignment_penalty += options_.misalignment_parameters->indel_penalty;
                 break;
             }
             case Flag::deletion:
@@ -136,22 +136,22 @@ void CigarScanner::add_read(const SampleName& sample, const AlignedRead& read,
                               "",
                               read, read_index, sample);
                 ref_index += op_size;
-                misalignment_penalty += options_.misalignment_parameters.indel_penalty;
+                if (options_.misalignment_parameters)  misalignment_penalty += options_.misalignment_parameters->indel_penalty;
                 break;
             }
             case Flag::softClipped:
             {
                 read_index += op_size;
                 ref_index  += op_size;
-                if (op_size > options_.misalignment_parameters.max_unpenalised_clip_size) {
-                    misalignment_penalty += options_.misalignment_parameters.clip_penalty;
+                if (options_.misalignment_parameters && op_size > options_.misalignment_parameters->max_unpenalised_clip_size) {
+                    misalignment_penalty += options_.misalignment_parameters->clip_penalty;
                 }
                 break;
             }
             case Flag::hardClipped:
             {
-                if (op_size > options_.misalignment_parameters.max_unpenalised_clip_size) {
-                    misalignment_penalty += options_.misalignment_parameters.clip_penalty;
+                if (options_.misalignment_parameters && op_size > options_.misalignment_parameters->max_unpenalised_clip_size) {
+                    misalignment_penalty += options_.misalignment_parameters->clip_penalty;
                 }
                 break;
             }
@@ -294,8 +294,8 @@ double CigarScanner::add_snvs_in_match_range(const GenomicRegion& region, const 
             const auto begin_pos = region.begin() + static_cast<GenomicRegion::Position>(ref_index);
             add_candidate(GenomicRegion {region.contig_name(), begin_pos, begin_pos + 1},
                           ref_base, read_base, read, read_index, origin);
-            if (read.base_qualities()[read_index] >= options_.misalignment_parameters.snv_threshold) {
-                misalignment_penalty += options_.misalignment_parameters.snv_penalty;
+            if (options_.misalignment_parameters && read.base_qualities()[read_index] >= options_.misalignment_parameters->snv_threshold) {
+                misalignment_penalty += options_.misalignment_parameters->snv_penalty;
             }
         }
     }
@@ -353,10 +353,13 @@ unsigned CigarScanner::sum_base_qualities(const Candidate& candidate) const noex
 
 bool CigarScanner::is_likely_misaligned(const AlignedRead& read, const double penalty) const
 {
-    auto mu = options_.misalignment_parameters.max_expected_mutation_rate;
-    auto ln_prob_misaligned = ln_probability_read_correctly_aligned(penalty, read, mu);
-    auto min_ln_prob_misaligned = options_.misalignment_parameters.min_ln_prob_correctly_aligned;
-    return ln_prob_misaligned < min_ln_prob_misaligned;
+    if (options_.misalignment_parameters) {
+        auto mu = options_.misalignment_parameters->max_expected_mutation_rate;
+        auto ln_prob_misaligned = ln_probability_read_correctly_aligned(penalty, read, mu);
+        return ln_prob_misaligned < options_.misalignment_parameters->min_ln_prob_correctly_aligned;
+    } else {
+        return false;
+    }
 }
 
 CigarScanner::VariantObservation
@@ -644,11 +647,57 @@ bool is_good_somatic(const Variant& v, const CigarScanner::VariantObservation::S
                            observation.edge_support, observation.observed_base_qualities, vaf_def);
 }
 
+bool is_good_pacbio(const Variant& variant, const unsigned depth, const unsigned forward_strand_depth,
+                    const unsigned forward_strand_support, std::vector<unsigned> observed_qualities)
+{
+    const auto support = observed_qualities.size();
+    if (support < 2) return false;
+    const auto vaf = static_cast<double>(support) / depth;
+    if (is_snv(variant)) {
+        return vaf > 0.1;
+    } else if (is_insertion(variant)) {
+        if (alt_sequence_size(variant) <= 2) {
+            return vaf > 0.2;
+        } else {
+            return vaf > 0.1;
+        }
+    } else { // deletion or mnv
+        if (region_size(variant) <= 2) {
+            return vaf > 0.2;
+        } else {
+            return vaf > 0.1;
+        }
+    }
+}
+
+bool is_good_pacbio(const Variant& v, const CigarScanner::VariantObservation::SampleObservationStats& observation)
+{
+    return is_good_pacbio(v, observation.depth, observation.forward_strand_depth,
+                          observation.forward_strand_support, observation.observed_base_qualities);
+}
+
+bool any_good_pacbio_samples(const CigarScanner::VariantObservation& candidate)
+{
+    return std::any_of(std::cbegin(candidate.sample_observations), std::cend(candidate.sample_observations),
+                       [&] (const auto& observation) { return is_good_pacbio(candidate.variant, observation); });
+}
+
+bool is_good_pacbio_pooled(const CigarScanner::VariantObservation& candidate)
+{
+    return is_good_pacbio(candidate.variant, candidate.total_depth, count_forward_strand_depth(candidate),
+                          count_forward_strand_support(candidate), concat_observed_base_qualities(candidate));
+}
+
 } // namespace
 
 bool KnownCopyNumberInclusionPredicate::operator()(const CigarScanner::VariantObservation& candidate)
 {
     return any_good_germline_samples(candidate, copy_number_) || (candidate.sample_observations.size() > 1 && is_good_germline_pooled(candidate));
+}
+
+bool PacBioInclusionPredicate::operator()(const CigarScanner::VariantObservation& candidate)
+{
+    return any_good_pacbio_samples(candidate) || (candidate.sample_observations.size() > 1 && is_good_pacbio_pooled(candidate));
 }
 
 UnknownCopyNumberInclusionPredicate::UnknownCopyNumberInclusionPredicate(double min_vaf, double min_probability)
@@ -716,16 +765,20 @@ bool SimpleThresholdInclusionPredicate::operator()(const CigarScanner::VariantOb
     return count_observations(candidate) >= min_observations_;
 }
 
-bool DefaultMatchPredicate::operator()(const Variant& lhs, const Variant& rhs) noexcept
+bool TolerantMatchPredicate::operator()(const Variant& lhs, const Variant& rhs) noexcept
 {
     if (!are_same_type(lhs, rhs) || is_snv(lhs) || is_mnv(lhs)) {
         return lhs == rhs;
     }
-    if (is_insertion(lhs) && alt_sequence_size(lhs) == alt_sequence_size(rhs)) {
-        const auto& lhs_alt = alt_sequence(lhs);
-        const auto& rhs_alt = alt_sequence(rhs);
-        return std::count(std::cbegin(lhs_alt), std::cend(lhs_alt), 'N')
-               == std::count(std::cbegin(rhs_alt), std::cend(rhs_alt), 'N');
+    if (is_insertion(lhs)) {
+        if (alt_sequence_size(lhs) == alt_sequence_size(rhs)) {
+            const auto& lhs_alt = alt_sequence(lhs);
+            const auto& rhs_alt = alt_sequence(rhs);
+            return std::count(std::cbegin(lhs_alt), std::cend(lhs_alt), 'N')
+                   == std::count(std::cbegin(rhs_alt), std::cend(rhs_alt), 'N');
+        } else {
+            return false;
+        }
     }
     return overlaps(lhs, rhs);
 }

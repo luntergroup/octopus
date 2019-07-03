@@ -34,9 +34,12 @@ def aggregate_errors(df, aggregators=['period', 'periods']):
         del(errors_attributes[errors_attributes.index('indel_length')])
     return errors_df[errors_attributes]
 
+def get_error_rate_norm(row):
+    return max(row.reads, 1) if row.period > 0 else row.reference_footprint
+
 def read_indel_profile(csv):
     result = pd.read_csv(csv)
-    result['error_rate'] = result.apply(lambda row: row.errors / max(row.reads, 1), axis=1)
+    result['error_rate'] = result.apply(lambda row: row.errors / get_error_rate_norm(row), axis=1)
     result['tract_length'] = result.apply(lambda row: row.period * row.periods, axis=1)
     return result
 
@@ -72,7 +75,7 @@ def rate_to_phred(rate):
     return -10 * log10(rate + 1e-100)
 
 def complex_indel_penalty(profile_df):
-    return 43
+    return rate_to_phred(float(list(profile_df['period'].query('period == 0')['error_rate'])[0])) + 2
 
 def get_repeat_error_df(profile_df, pattern, max_periods):
     profile_index = 'period'

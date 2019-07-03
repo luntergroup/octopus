@@ -104,7 +104,7 @@ struct IndelProfiler::IndelProfile
     struct RepeatState
     {
         Haplotype::NucleotideSequence motif;
-        GenomicRegion::Size span;
+        GenomicRegion::Size span, footprint;
         unsigned reference_count, read_count;
         std::vector<unsigned> polymorphism_counts, error_counts;
     };

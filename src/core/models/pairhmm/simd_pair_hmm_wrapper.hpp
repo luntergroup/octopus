@@ -15,8 +15,13 @@ namespace octopus { namespace hmm { namespace simd {
 
 namespace detail {
 
-template <typename T, unsigned step,  std::size_t... I>
-constexpr auto make_phmm_tuple(std::index_sequence<I...>) { return std::make_tuple(SimdPairHMM<step * (I + 1), T>{}...); }
+constexpr unsigned ipow(unsigned base, unsigned exponent) noexcept
+{
+    return exponent == 0 ? 1 : base * ipow(base, exponent - 1);
+}
+
+template <typename T, std::size_t... I>
+constexpr auto make_phmm_tuple(std::index_sequence<I...>) { return std::make_tuple(SimdPairHMM<ipow(2, I + 3), T>{}...); }
 
 template <typename Tuple>
 struct to_variant;
@@ -199,8 +204,8 @@ public:
     }
 
 private:
-    using ShortPairHMMs = decltype(detail::make_phmm_tuple<short, 8>(std::make_index_sequence<10>()));
-    using IntPairHMMs   = decltype(detail::make_phmm_tuple<int, 8>(std::make_index_sequence<10>()));
+    using ShortPairHMMs = decltype(detail::make_phmm_tuple<short>(std::make_index_sequence<6>()));
+    using IntPairHMMs   = decltype(detail::make_phmm_tuple<int>(std::make_index_sequence<6>()));
     using PairHMMs      = decltype(std::tuple_cat(ShortPairHMMs {}, IntPairHMMs {}));
     
     using PairHmmVariant = detail::to_variant_t<PairHMMs>;

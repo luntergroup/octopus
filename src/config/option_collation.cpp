@@ -898,28 +898,36 @@ auto get_default_single_cell_inclusion_predicate(const OptionMap& options)
     return coretools::CellInclusionPredicate {};
 }
 
-auto get_default_inclusion_predicate(const OptionMap& options) noexcept
+coretools::CigarScanner::Options::InclusionPredicate get_candidate_variant_inclusion_predicate(const OptionMap& options) noexcept
 {
-    using namespace coretools;
-    using InclusionPredicate = CigarScanner::Options::InclusionPredicate;
     if (is_cancer_calling(options)) {
         boost::optional<SampleName> normal{};
         if (is_set("normal-sample", options)) {
             normal = options.at("normal-sample").as<SampleName>();
         }
-        return InclusionPredicate {get_default_somatic_inclusion_predicate(options, normal)};
+        return get_default_somatic_inclusion_predicate(options, normal);
     } else if (is_polyclone_calling(options)) {
-        return InclusionPredicate {get_default_somatic_inclusion_predicate(options)};
+        return get_default_somatic_inclusion_predicate(options);
     } else if (is_single_cell_calling(options)) {
-        return InclusionPredicate {get_default_single_cell_inclusion_predicate(options)};
+        return get_default_single_cell_inclusion_predicate(options);
     } else {
-        return InclusionPredicate {get_default_germline_inclusion_predicate(options)};
+        using CVDP = CandidateVariantDiscoveryProtocol;
+        if (options.at("variant-discovery-protocol").as<CVDP>() == CVDP::illumina) {
+            return get_default_germline_inclusion_predicate(options);
+        } else {
+            return coretools::PacBioInclusionPredicate {};
+        }
     }
 }
 
-auto get_default_match_predicate() noexcept
+coretools::CigarScanner::Options::MatchPredicate get_candidate_variant_match_predicate(const OptionMap& options)
 {
-    return coretools::DefaultMatchPredicate {};
+    using CVDP = CandidateVariantDiscoveryProtocol;
+    if (options.at("variant-discovery-protocol").as<CVDP>() == CVDP::illumina) {
+        return coretools::TolerantMatchPredicate {};
+    } else {
+        return std::equal_to<> {};
+    }
 }
 
 double get_min_expected_somatic_vaf(const OptionMap& options)
@@ -1037,19 +1045,23 @@ auto make_variant_generator_builder(const OptionMap& options, const boost::optio
             }
             scanner_options.include = coretools::SimpleThresholdInclusionPredicate {min_support};
         } else {
-            scanner_options.include = get_default_inclusion_predicate(options);
+            scanner_options.include = get_candidate_variant_inclusion_predicate(options);
         }
-        scanner_options.match = get_default_match_predicate();
+        scanner_options.match = get_candidate_variant_match_predicate(options);
         scanner_options.use_clipped_coverage_tracking = true;
-        CigarScanner::Options::MisalignmentParameters misalign_params {};
-        misalign_params.max_expected_mutation_rate = get_max_expected_heterozygosity(options);
-        misalign_params.snv_threshold = as_unsigned("min-base-quality", options);
-        if (use_assembler) {
-            misalign_params.indel_penalty = 1.5;
-            misalign_params.clip_penalty = 2;
-            misalign_params.min_ln_prob_correctly_aligned = std::log(0.005);
+        if (options.at("ignore-pileup-candidates-from-misaligned-read").as<bool>()) {
+            CigarScanner::Options::MisalignmentParameters misalign_params {};
+            misalign_params.max_expected_mutation_rate = get_max_expected_heterozygosity(options);
+            misalign_params.snv_threshold = as_unsigned("min-base-quality", options);
+            if (use_assembler) {
+                misalign_params.indel_penalty = 1.5;
+                misalign_params.clip_penalty = 2;
+                misalign_params.min_ln_prob_correctly_aligned = std::log(0.005);
+            }
+            scanner_options.misalignment_parameters = misalign_params;
+        } else {
+            scanner_options.misalignment_parameters = boost::none;
         }
-        scanner_options.misalignment_parameters = misalign_params;
         result.set_cigar_scanner(std::move(scanner_options));
     }
     if (options.at("repeat-candidate-generator").as<bool>()) {

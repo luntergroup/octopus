@@ -38,6 +38,7 @@ enum class BacktrackLevel { none, normal, aggressive };
 enum class NormalContaminationRisk { low, high };
 enum class BadRegionTolerance { low, normal, high };
 enum class ReadLinkage { none, paired, linked };
+enum class CandidateVariantDiscoveryProtocol { illumina, pacbio };
 
 std::istream& operator>>(std::istream& in, ContigOutputOrder& order);
 std::ostream& operator<<(std::ostream& os, const ContigOutputOrder& order);
@@ -57,6 +58,8 @@ std::istream& operator>>(std::istream& in, BadRegionTolerance& risk);
 std::ostream& operator<<(std::ostream& os, const BadRegionTolerance& risk);
 std::istream& operator>>(std::istream& in, ReadLinkage& linkage);
 std::ostream& operator<<(std::ostream& os, const ReadLinkage& linkage);
+std::istream& operator>>(std::istream& in, CandidateVariantDiscoveryProtocol& protocol);
+std::ostream& operator<<(std::ostream& os, const CandidateVariantDiscoveryProtocol& protocol);
 
 } // namespace Options
 } // namespace octopus

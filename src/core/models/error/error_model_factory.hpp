@@ -15,7 +15,7 @@
 namespace octopus {
 
 enum class LibraryPreparation { pcr, pcr_free, tenx };
-enum class Sequencer { hiseq_2000, hiseq_2500, hiseq_4000, xten, novaseq, bgiseq_500 };
+enum class Sequencer { hiseq_2000, hiseq_2500, hiseq_4000, xten, novaseq, bgiseq_500, pacbio };
 
 struct ModelConfig
 {
