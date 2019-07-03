@@ -380,7 +380,7 @@ OptionMap parse_options(const int argc, const char** argv)
      "The gap size used to generate local assembly fallback kmers")
     
     ("max-region-to-assemble",
-     po::value<int>()->default_value(400),
+     po::value<int>()->default_value(600),
      "The maximum region size that can be used for local assembly")
     
     ("max-assemble-region-overlap",
