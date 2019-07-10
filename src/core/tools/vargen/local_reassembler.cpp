@@ -450,6 +450,9 @@ void LocalReassembler::finalise_bins(BinList& bins, const RegionSet& active_regi
                std::end(bins));
     for (auto& bin : bins) {
         if (bin.read_region) {
+            if (size(bin.region) < max_bin_size_) {
+                bin.region = expand(bin.region, (max_bin_size_ - size(bin.region)) / 2);
+            }
             assert(overlaps(bin.region.contig_region(), *bin.read_region));
             bin.region = GenomicRegion {bin.region.contig_name(), *overlapped_region(bin.region.contig_region(), *bin.read_region)};
         }
