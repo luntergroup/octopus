@@ -658,14 +658,18 @@ bool is_good_pacbio(const Variant& variant, const unsigned depth, const unsigned
     } else if (is_insertion(variant)) {
         if (alt_sequence_size(variant) <= 2) {
             return vaf > 0.2;
-        } else {
+        } else if (alt_sequence_size(variant) < 4) {
             return vaf > 0.1;
+        } else {
+            return vaf > 0.05;
         }
     } else { // deletion or mnv
         if (region_size(variant) <= 2) {
             return vaf > 0.2;
-        } else {
+        } else if (region_size(variant) < 4) {
             return vaf > 0.1;
+        } else {
+            return vaf > 0.05;
         }
     }
 }
