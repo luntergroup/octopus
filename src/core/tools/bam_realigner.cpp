@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <utility>
 #include <thread>
+#include <cmath>
 #include <cassert>
 
 #include "basics/genomic_region.hpp"
@@ -20,6 +21,7 @@
 #include "utils/append.hpp"
 #include "utils/read_stats.hpp"
 #include "utils/random_select.hpp"
+#include "utils/maths.hpp"
 #include "read_assigner.hpp"
 #include "read_realigner.hpp"
 
@@ -157,7 +159,8 @@ auto realign_and_annotate(const std::vector<AlignedRead>& reads,
     std::vector<AnnotatedAlignedRead> result {};
     if (reads.empty()) return result;
     const auto expanded_haplotype = expand_for_realignment(haplotype, reads, alignment_model);
-    auto realignments = realign(reads, expanded_haplotype, alignment_model);
+    std::vector<HaplotypeLikelihoodModel::LogProbability> log_likelihoods {};
+    auto realignments = realign(reads, expanded_haplotype, alignment_model, log_likelihoods);
     const auto inferred_alignments = copy_alignments(realignments);
     rebase(realignments, haplotype);
     result.reserve(realignments.size());
@@ -173,6 +176,7 @@ auto realign_and_annotate(const std::vector<AlignedRead>& reads,
             result.back().annotate("hi", std::to_string(*haplotype_id));
         }
         result.back().annotate("PS", to_string(mapped_region(haplotype)));
+        result.back().annotate("LK", std::to_string(static_cast<unsigned>(std::abs(log_likelihoods[n] / maths::constants::ln10Div10<>)))); // std::abs to avoid -0.0
     }
     return result;
 }
