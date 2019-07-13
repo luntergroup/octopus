@@ -17,13 +17,23 @@ Haplotype expand_for_realignment(const Haplotype& haplotype, const std::vector<A
                                  const HaplotypeLikelihoodModel& model);
 Haplotype expand_for_realignment(const Haplotype& haplotype, const std::vector<AlignedRead>& reads);
 
-void realign(std::vector<AlignedRead>& reads, const Haplotype& haplotype, HaplotypeLikelihoodModel model);
+void realign(std::vector<AlignedRead>& reads, const Haplotype& haplotype,
+             HaplotypeLikelihoodModel model);
 void realign(std::vector<AlignedRead>& reads, const Haplotype& haplotype);
+
+void realign(std::vector<AlignedRead>& reads, const Haplotype& haplotype,
+             HaplotypeLikelihoodModel model,
+             std::vector<HaplotypeLikelihoodModel::LogProbability>& log_likelihoods);
 
 std::vector<AlignedRead>
 realign(const std::vector<AlignedRead>& reads, const Haplotype& haplotype, HaplotypeLikelihoodModel model);
 std::vector<AlignedRead>
 realign(const std::vector<AlignedRead>& reads, const Haplotype& haplotype);
+
+std::vector<AlignedRead>
+realign(const std::vector<AlignedRead>& reads, const Haplotype& haplotype,
+        HaplotypeLikelihoodModel model,
+        std::vector<HaplotypeLikelihoodModel::LogProbability>& log_likelihoods);
 
 void safe_realign(std::vector<AlignedRead>& reads, const Haplotype& haplotype, HaplotypeLikelihoodModel model);
 void safe_realign(std::vector<AlignedRead>& reads, const Haplotype& haplotype);
