@@ -238,6 +238,10 @@ OptionMap parse_options(const int argc, const char** argv)
     ("mask-3prime-shifted-soft-clipped-heads",
     po::value<bool>()->default_value(false),
     "Mask soft clipped read head sequence that is a copy of a proximate 3' sequence")
+
+    ("split-long-reads",
+     po::value<bool>()->default_value(false),
+     "Split reads longer than 'max-read-length' into linked fragments")
     ;
     
     po::options_description filters("Read filtering");
@@ -275,7 +279,7 @@ OptionMap parse_options(const int argc, const char** argv)
      "Filters reads shorter than this")
     
     ("max-read-length",
-     po::value<int>(),
+     po::value<int>()->default_value(10'000),
      "Filter reads longer than this")
     
     ("allow-marked-duplicates",

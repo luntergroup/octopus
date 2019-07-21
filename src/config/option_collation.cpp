@@ -850,12 +850,23 @@ boost::optional<readpipe::Downsampler> make_downsampler(const OptionMap& options
     return boost::none;
 }
 
+bool split_long_reads(const OptionMap& options)
+{
+    return options.at("split-long-reads").as<bool>();
+}
+
 ReadPipe make_read_pipe(ReadManager& read_manager, const ReferenceGenome& reference, std::vector<SampleName> samples, const OptionMap& options)
 {
     auto transformers = make_read_transformers(reference, options);
     if (transformers.second.num_transforms() > 0) {
-        return ReadPipe {read_manager, std::move(transformers.first), make_read_filterer(options),
-                         std::move(transformers.second), make_downsampler(options), std::move(samples)};
+        if (split_long_reads(options)) {
+            return ReadPipe {read_manager, as_unsigned("max-read-length", options), std::move(transformers.first),
+                             make_read_filterer(options),std::move(transformers.second), make_downsampler(options),
+                             std::move(samples)};
+        } else {
+            return ReadPipe {read_manager, std::move(transformers.first), make_read_filterer(options),
+                             std::move(transformers.second), make_downsampler(options), std::move(samples)};
+        }
     } else {
         return ReadPipe {read_manager, std::move(transformers.first), make_read_filterer(options),
                          make_downsampler(options), std::move(samples)};
