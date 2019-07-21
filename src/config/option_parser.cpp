@@ -199,9 +199,13 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<bool>()->default_value(true),
      "Enable all read transformations")
     
-    ("mask-low-quality-tails",
-     po::value<int>()->implicit_value(3),
-     "Masks read tail bases with base quality less than this")
+    ("max-base-quality",
+     po::value<int>(),
+     "Cap all base qualities to this value")
+     
+     ("mask-low-quality-tails",
+      po::value<int>()->implicit_value(3),
+      "Masks read tail bases with base quality less than this")
      
      ("mask-tails",
      po::value<int>()->implicit_value(1),
@@ -1098,7 +1102,7 @@ void validate(const OptionMap& vm)
         "max-region-to-assemble", "fallback-kmer-gap", "organism-ploidy",
         "max-haplotypes", "haplotype-holdout-threshold", "haplotype-overflow",
         "max-genotypes", "max-joint-genotypes", "max-somatic-haplotypes", "max-clones",
-        "max-vb-seeds", "max-indel-errors"
+        "max-vb-seeds", "max-indel-errors", "max-base-quality"
     };
     const std::vector<std::string> probability_options {
         "snp-heterozygosity", "snp-heterozygosity-stdev", "indel-heterozygosity",

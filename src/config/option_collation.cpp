@@ -691,12 +691,22 @@ bool allow_assembler_generation(const OptionMap& options)
     return options.at("assembly-candidate-generator").as<bool>() && !is_fast_mode(options);
 }
 
+AlignedRead::BaseQuality get_max_base_quality(const OptionMap& options)
+{
+    static constexpr AlignedRead::BaseQuality hard_max {125};
+    if (options.count("max-base-quality")) {
+        return std::min(options.at("max-base-quality").as<int>(), static_cast<int>(hard_max));
+    } else {
+        return hard_max;
+    }
+}
+
 auto make_read_transformers(const ReferenceGenome& reference, const OptionMap& options)
 {
     using namespace octopus::readpipe;
     ReadTransformer prefilter_transformer {}, postfilter_transformer {};
     prefilter_transformer.add(CapitaliseBases {});
-    prefilter_transformer.add(CapBaseQualities {125});
+    prefilter_transformer.add(CapBaseQualities {get_max_base_quality(options)});
     if (options.at("read-transforms").as<bool>()) {
         if (is_set("mask-tails", options)) {
             const auto mask_length = static_cast<MaskTail::Length>(options.at("mask-tails").as<int>());
