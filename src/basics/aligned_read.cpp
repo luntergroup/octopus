@@ -28,6 +28,11 @@ GenomicRegion::Size AlignedRead::Segment::inferred_template_length() const noexc
     return inferred_template_length_;
 }
 
+AlignedRead::Segment::Flags AlignedRead::Segment::flags() const noexcept
+{
+    return {flags_[0], flags_[1]};
+}
+
 bool AlignedRead::Segment::is_marked_unmapped() const
 {
     return flags_[0];
@@ -412,6 +417,55 @@ AlignedRead::NucleotideSequence copy_sequence(const AlignedRead& read, const Gen
 AlignedRead::BaseQualityVector copy_base_qualities(const AlignedRead& read, const GenomicRegion& region)
 {
     return copy_helper(read.base_qualities(), read.cigar(), read.mapped_region(), region);
+}
+
+namespace {
+
+template <typename Range>
+Range copy_subsequence(const Range& sequence, std::size_t start, std::size_t len)
+{
+    auto start_itr = std::next(std::cbegin(sequence), start);
+    return {start_itr, std::next(start_itr, std::min(len, sequence.size() - start))};
+}
+
+} // namespace
+
+std::vector<AlignedRead> split(const AlignedRead& read, const GenomicRegion::Size chunk_length, const bool append_index_to_read_name)
+{
+    const auto read_length = sequence_size(read);
+    if (chunk_length >= read_length) return {read};
+    std::vector<AlignedRead> result {};
+    const auto num_chunks = (read_length + chunk_length - 1) / chunk_length;
+    result.reserve(num_chunks);
+    GenomicRegion::Position chunk_reference_start {mapped_begin(read)};
+    for (unsigned idx {0}; idx < num_chunks; ++idx) {
+        const auto sequence_offset = idx * chunk_length;
+        auto chunk_cigar = copy_sequence(read.cigar(), sequence_offset, chunk_length);
+        if (chunk_cigar.empty()) continue;
+        // Edge deletions appear at tail and head of adjacent chunks
+        if (is_deletion(chunk_cigar.back())) chunk_cigar.pop_back();
+        const auto chunk_reference_length = reference_size(chunk_cigar);
+        if (chunk_reference_length == 0) continue;
+        auto chunk_sequence = copy_subsequence(read.sequence(), sequence_offset, chunk_length);
+        auto chunk_base_quals = copy_subsequence(read.base_qualities(), sequence_offset, chunk_length);
+        auto chunk_name = read.name();
+        if (append_index_to_read_name) chunk_name += "_" + std::to_string(idx);
+        GenomicRegion chunk_region {contig_name(read), chunk_reference_start, chunk_reference_start + chunk_reference_length};
+        if (read.has_other_segment()) {
+            result.emplace_back(std::move(chunk_name), std::move(chunk_region), std::move(chunk_sequence),
+                                std::move(chunk_base_quals), std::move(chunk_cigar),
+                                read.mapping_quality(), read.flags(), read.read_group(), read.barcode(),
+                                read.next_segment().contig_name(), read.next_segment().begin(),
+                                read.next_segment().inferred_template_length(),
+                                read.next_segment().flags());
+        } else {
+            result.emplace_back(std::move(chunk_name), std::move(chunk_region), std::move(chunk_sequence),
+                                std::move(chunk_base_quals), std::move(chunk_cigar),
+                                read.mapping_quality(), read.flags(), read.read_group(), read.barcode());
+        }
+        chunk_reference_start += chunk_reference_length;
+    }
+    return result;
 }
 
 namespace {
