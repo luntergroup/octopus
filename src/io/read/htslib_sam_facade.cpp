@@ -885,7 +885,7 @@ AlignedRead HtslibSamFacade::HtslibIterator::operator*() const
 {
     using std::begin; using std::end; using std::next; using std::move;
     auto qualities = extract_qualities(hts_bam1_.get());
-    if (qualities.empty() || qualities[0] == 0xff) {
+    if (qualities.empty()) {
         throw InvalidBamRecord {hts_facade_.file_path_, extract_read_name(hts_bam1_.get()), "corrupt sequence data"};
     }
     auto cigar = extract_cigar_string(hts_bam1_.get());
