@@ -261,10 +261,10 @@ CigarString copy(const CigarString& cigar, CigarOperation::Size offset, CigarOpe
     if (op_itr != last_op_itr && size_pred(*op_itr)) {
         const auto remainder = op_itr->size() - offset;
         if (remainder >= size) {
-            result.emplace_back(size, op_itr->flag());
+            if (size > 0) result.emplace_back(size, op_itr->flag());
             return result;
         }
-        result.emplace_back(remainder, op_itr->flag());
+        if (remainder > 0) result.emplace_back(remainder, op_itr->flag());
         size -= remainder;
         ++op_itr;
     }
@@ -276,7 +276,11 @@ CigarString copy(const CigarString& cigar, CigarOperation::Size offset, CigarOpe
         ++op_itr;
     }
     if (op_itr != last_op_itr) {
-        result.emplace_back(size_pred(*op_itr) ? size : op_itr->size(), op_itr->flag());
+        if (size_pred(*op_itr)) {
+            if (size > 0) result.emplace_back(size, op_itr->flag());
+        } else {
+            result.emplace_back(op_itr->size(), op_itr->flag());
+        }
     }
     return result;
 }
