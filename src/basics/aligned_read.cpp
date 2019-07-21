@@ -119,6 +119,11 @@ const AlignedRead::NucleotideSequence& AlignedRead::barcode() const noexcept
     return barcode_sequence_;
 }
 
+void AlignedRead::set_barcode(NucleotideSequence barcode) noexcept
+{
+    barcode_sequence_ = std::move(barcode);
+}
+
 void AlignedRead::realign(GenomicRegion new_region, CigarString new_cigar) noexcept
 {
     assert(sequence_size(new_cigar) == sequence_.size());

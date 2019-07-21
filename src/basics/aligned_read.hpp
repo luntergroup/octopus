@@ -119,6 +119,7 @@ public:
     const Segment& next_segment() const;
     Flags flags() const noexcept;
     const NucleotideSequence& barcode() const noexcept;
+    void set_barcode(NucleotideSequence barcode) noexcept;
     
     void realign(GenomicRegion new_region, CigarString new_cigar) noexcept;
     
