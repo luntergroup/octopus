@@ -87,10 +87,7 @@ def get_homebrew_name():
     return 'brew'
 
 def download_homebrew():
-    if is_osx():
-        git_clone('https://github.com/Homebrew/brew')
-    else:
-        git_clone('https://github.com/Linuxbrew/brew.git')
+    git_clone('https://github.com/Homebrew/brew')
 
 def install_homebrew():
     homebrew = get_homebrew_name()
