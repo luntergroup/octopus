@@ -61,7 +61,10 @@ std::ostream& operator<<(std::ostream& os, const ReadLinkage& linkage);
 std::istream& operator>>(std::istream& in, CandidateVariantDiscoveryProtocol& protocol);
 std::ostream& operator<<(std::ostream& os, const CandidateVariantDiscoveryProtocol& protocol);
 
-} // namespace Options
+std::ostream& operator<<(std::ostream& os, const OptionMap& options);
+std::string to_string(const OptionMap& options, bool one_line = false);
+
+} // namespace options
 } // namespace octopus
 
 #endif

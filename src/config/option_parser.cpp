@@ -55,6 +55,9 @@ OptionMap parse_options(const int argc, const char** argv)
     ("config",
      po::value<fs::path>(),
      "Config file to populate command line options")
+     
+    ("options",
+    "Log all command line option values at startup")
     
     ("debug",
      po::value<fs::path>()->implicit_value("octopus_debug.log"),
@@ -1425,6 +1428,141 @@ std::ostream& operator<<(std::ostream& out, const CandidateVariantDiscoveryProto
             break;
     }
     return out;
+}
+
+namespace {
+
+template <typename T>
+bool is_type(const OptionMap::mapped_type& value)
+{
+    try {
+        boost::any_cast<T>(value.value());
+        return true;
+    } catch (const boost::bad_any_cast&) {
+        return false;
+    }
+}
+
+template <typename T>
+bool is_vector_type(const OptionMap::mapped_type& value)
+{
+    return is_type<std::vector<T>>(value);
+}
+
+bool is_list_type(const OptionMap::mapped_type& value)
+{
+    return is_vector_type<int>(value) || is_vector_type<float>(value) || is_vector_type<double>(value)
+            || is_vector_type<std::string>(value) || is_vector_type<fs::path>(value) || is_vector_type<ContigPloidy>(value);
+}
+
+template <typename T>
+void write_vector(const OptionMap& options, const OptionMap::key_type& label, std::ostream& os, const char bullet)
+{
+    const auto& values = options[label].as<std::vector<T>>();
+    std::size_t i {0};
+    for (const auto& val : values) {
+        os << bullet << ' ' << label << "[" << i++ << "]=" << val;
+        if (i != values.size()) os << std::endl;
+    }
+}
+
+} // namespace
+
+std::ostream& operator<<(std::ostream& os, const OptionMap& options)
+{
+    std::size_t i {0};
+    for (const auto& p : options) {
+        const auto& label = p.first;
+        const auto& value = p.second;
+        const char bullet {options[label].defaulted() || value.defaulted() ? '>' : '~'};
+        if (!is_list_type(value)) {
+            os << bullet << ' ' << label;
+            if (((boost::any)value.value()).empty()) {
+                os << "(empty)";
+            }
+            os << "=";
+        }
+        if (static_cast<boost::any>(value.value()).type() == typeid(int)) {
+            os << options[label].as<int>();
+        } else if (static_cast<boost::any>(value.value()).type() == typeid(bool)) {
+            os << (options[label].as<bool>() ? "yes" : "no");
+        } else if (static_cast<boost::any>(value.value()).type() == typeid(float)) {
+            os << options[label].as<float>();
+        } else if (static_cast<boost::any>(value.value()).type() == typeid(double)) {
+            os << options[label].as<double>();
+        } else if (is_type<const char*>(value)) {
+            os << options[label].as<const char*>();
+        } else if (is_type<std::string>(value)) {
+            const auto str = options[label].as<std::string>();
+            if (str.size()) {
+                os << '"' << str << '"';
+            } else {
+                os << "true";
+            }
+        } else if (is_type<fs::path>(value)) {
+            os << options[label].as<fs::path>();
+        } else if (is_vector_type<int>(value)) {
+            write_vector<int>(options, label, os, bullet);
+        } else if (is_vector_type<float>(value)) {
+            write_vector<float>(options, label, os, bullet);
+        } else if (is_vector_type<double>(value)) {
+            write_vector<double>(options, label, os, bullet);
+        } else if (is_vector_type<std::string>(value)) {
+            write_vector<std::string>(options, label, os, bullet);
+        } else if (is_vector_type<fs::path>(value)) {
+            write_vector<fs::path>(options, label, os, bullet);
+        } else if (is_type<Phred<double>>(value)) {
+            os << options[label].as<Phred<double>>();
+        } else if (is_type<MemoryFootprint>(value)) {
+            os << options[label].as<MemoryFootprint>();
+        } else if (is_type<ContigOutputOrder>(value)) {
+            os << options[label].as<ContigOutputOrder>();
+        } else if (is_type<ContigPloidy>(value)) {
+            os << options[label].as<ContigPloidy>();
+        } else if (is_vector_type<ContigPloidy>(value)) {
+            write_vector<ContigPloidy>(options, label, os, bullet);
+        } else if (is_type<RefCallType>(value)) {
+            os << options[label].as<RefCallType>();
+        } else if (is_type<ExtensionLevel>(value)) {
+            os << options[label].as<ExtensionLevel>();
+        } else if (is_type<LaggingLevel>(value)) {
+            os << options[label].as<LaggingLevel>();
+        } else if (is_type<BacktrackLevel>(value)) {
+            os << options[label].as<BacktrackLevel>();
+        } else if (is_type<NormalContaminationRisk>(value)) {
+            os << options[label].as<NormalContaminationRisk>();
+        } else if (is_type<BadRegionTolerance>(value)) {
+            os << options[label].as<BadRegionTolerance>();
+        } else if (is_type<ReadLinkage>(value)) {
+            os << options[label].as<ReadLinkage>();
+        } else if (is_type<CandidateVariantDiscoveryProtocol>(value)) {
+            os << options[label].as<CandidateVariantDiscoveryProtocol>();
+        } else {
+            os << "UnknownType(" << ((boost::any)value.value()).type().name() << ")";
+        }
+        if (++i != options.size()) os << std::endl;
+    }
+    return os;
+}
+
+std::string to_string(const OptionMap& options, const bool one_line)
+{
+    std::ostringstream ss {};
+    ss << options;
+    auto result = ss.str();
+    if (one_line) {
+        auto chunks = utils::split(result, '\n');
+        for (auto& chunk : chunks) {
+            if (chunk[0] == '~') {
+                chunk.erase(0, 1);
+                chunk[0] = '*';
+            } else {
+                chunk.erase(0, 2);
+            }
+        }
+        result = utils::join(chunks, ' ');
+    }
+    return result;
 }
 
 } // namespace options
