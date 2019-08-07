@@ -89,6 +89,7 @@ int main(const int argc, const char** argv)
             logging::InfoLogger info_log {};
             const auto start = std::chrono::system_clock::now();
             sanity_check(options);
+            log_command_line_options(options);
             auto components = collate_genome_calling_components(options);
             auto end = std::chrono::system_clock::now();
             using utils::TimeInterval;
