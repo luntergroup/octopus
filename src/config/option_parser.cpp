@@ -41,7 +41,6 @@ void validate(const OptionMap& vm);
 
 po::parsed_options run(po::command_line_parser& parser);
 
-
 OptionMap parse_options(const int argc, const char** argv)
 {
     po::options_description general("General");
@@ -148,8 +147,8 @@ OptionMap parse_options(const int argc, const char** argv)
      "File to where output is written (calls are written to stdout if unspecified)")
     
     ("contig-output-order",
-     po::value<ContigOutputOrder>()->default_value(ContigOutputOrder::asInReferenceIndex),
-     "The order that contigs should be written to the output")
+     po::value<ContigOutputOrder>()->default_value(ContigOutputOrder::referenceIndex),
+     "The order that contigs should be written to the output [LEXICOGRAPHICAL_ASCENDING, LEXICOGRAPHICAL_DESCENDING, CONTIG_SIZE_ASCENDING, CONTIG_SIZE_DESCENDING, REFERENCE_INDEX, REFERENCE_INDEX_REVERSED]")
     
     ("sites-only",
      po::bool_switch()->default_value(false),
@@ -309,7 +308,7 @@ OptionMap parse_options(const int argc, const char** argv)
     variant_discovery.add_options()
     ("variant-discovery-protocol",
      po::value<CandidateVariantDiscoveryProtocol>()->default_value(CandidateVariantDiscoveryProtocol::illumina),
-     "Protocol to use for candidate variant discovery [illumina, pacbio]")
+     "Protocol to use for candidate variant discovery [ILLUMINA, PACBIO]")
      
     ("pileup-candidate-generator,g",
      po::value<bool>()->default_value(true),
@@ -426,15 +425,15 @@ OptionMap parse_options(const int argc, const char** argv)
     
     ("extension-level",
      po::value<ExtensionLevel>()->default_value(ExtensionLevel::normal),
-     "Level of haplotype extension [conservative, normal, optimistic, aggressive]")
+     "Level of haplotype extension [MINIMAL, NORMAL, AGGRESSIVE]")
      
     ("lagging-level",
      po::value<LaggingLevel>()->default_value(LaggingLevel::normal),
-     "Level of haplotype lagging [minimal, conservative, moderate, normal, aggressive]")
+     "Level of haplotype lagging [NONE, NORMAL, AGGRESSIVE]")
     
     ("backtrack-level",
      po::value<BacktrackLevel>()->default_value(BacktrackLevel::none),
-     "Level of backtracking [none, normal, aggressive]")
+     "Level of backtracking [NONE, NORMAL, AGGRESSIVE]")
     
     ("haplotype-extension-threshold,e",
      po::value<Phred<double>>()->default_value(Phred<double> {100.0}, "100"),
@@ -450,7 +449,7 @@ OptionMap parse_options(const int argc, const char** argv)
     
     ("bad-region-tolerance",
      po::value<BadRegionTolerance>()->default_value(BadRegionTolerance::normal),
-     "Tolerance for skipping regions that are considered unlikely to be callable [low, normal, high]")
+     "Tolerance for skipping regions that are considered unlikely to be callable [LOW, NORMAL, HIGH]")
     ;
     
     po::options_description general_variant_calling("Variant calling (general)");
@@ -483,8 +482,8 @@ OptionMap parse_options(const int argc, const char** argv)
     
     ("refcall",
      po::value<RefCallType>()->implicit_value(RefCallType::blocked),
-     "Caller will report reference confidence calls for each position (positional),"
-     " or in automatically sized blocks (blocked)")
+     "Caller will report reference confidence calls for each position [POSITIONAL],"
+     " or in automatically sized blocks [BLOCKED]")
      
     ("refcall-block-merge-threshold",
      po::value<Phred<double>>()->default_value(Phred<double> {10.0}),
@@ -549,7 +548,7 @@ OptionMap parse_options(const int argc, const char** argv)
     
     ("read-linkage",
      po::value<ReadLinkage>()->default_value(ReadLinkage::paired),
-     "Read linkage information to use for calling [none, paired, linked]")
+     "Read linkage information to use for calling [NONE, PAIRED, LINKED]")
      
     ("min-phase-score",
      po::value<Phred<double>>()->default_value(Phred<double> {10.0}),
@@ -596,7 +595,7 @@ OptionMap parse_options(const int argc, const char** argv)
     
     ("normal-contamination-risk",
      po::value<NormalContaminationRisk>()->default_value(NormalContaminationRisk::low),
-     "Risk that the normal sample is contaminated by the tumour")
+     "Risk that the normal sample is contaminated by the tumour [LOW, HIGH]")
     
     ("somatics-only",
      po::bool_switch()->default_value(false),
@@ -1144,9 +1143,9 @@ std::istream& operator>>(std::istream& in, RefCallType& type)
 {
     std::string token;
     in >> token;
-    if (token == "positional")
+    if (token == "POSITIONAL")
         type = RefCallType::positional;
-    else if (token == "blocked")
+    else if (token == "BLOCKED")
         type = RefCallType::blocked;
     else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token, "refcalls"};
     return in;
@@ -1156,10 +1155,10 @@ std::ostream& operator<<(std::ostream& out, const RefCallType& type)
 {
     switch (type) {
         case RefCallType::positional:
-            out << "positional";
+            out << "POSITIONAL";
             break;
         case RefCallType::blocked:
-            out << "blocked";
+            out << "BLOCKED";
             break;
     }
     return out;
@@ -1169,19 +1168,19 @@ std::istream& operator>>(std::istream& in, ContigOutputOrder& order)
 {
     std::string token;
     in >> token;
-    if (token == "lexicographicalAscending")
+    if (token == "LEXICOGRAPHICAL_ASCENDING")
         order = ContigOutputOrder::lexicographicalAscending;
-    else if (token == "lexicographicalDescending")
+    else if (token == "LEXICOGRAPHICAL_DESCENDING")
         order = ContigOutputOrder::lexicographicalDescending;
-    else if (token == "contigSizeAscending")
+    else if (token == "CONTIG_SIZE_ASCENDING")
         order = ContigOutputOrder::contigSizeAscending;
-    else if (token == "contigSizeDescending")
+    else if (token == "CONTIG_SIZE_DESCENDING")
         order = ContigOutputOrder::contigSizeDescending;
-    else if (token == "asInReference")
-        order = ContigOutputOrder::asInReferenceIndex;
-    else if (token == "asInReferenceReversed")
-        order = ContigOutputOrder::asInReferenceIndexReversed;
-    else if (token == "unspecified")
+    else if (token == "REFERENCE_INDEX")
+        order = ContigOutputOrder::referenceIndex;
+    else if (token == "REFERENCE_INDEX_REVERSED")
+        order = ContigOutputOrder::referenceIndexReversed;
+    else if (token == "UNSPECIFIED")
         order = ContigOutputOrder::unspecified;
     else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token, "contig-output-order"};
     return in;
@@ -1191,25 +1190,25 @@ std::ostream& operator<<(std::ostream& out, const ContigOutputOrder& order)
 {
     switch (order) {
         case ContigOutputOrder::lexicographicalAscending:
-            out << "lexicographicalAscending";
+            out << "LEXICOGRAPHICAL_ASCENDING";
             break;
         case ContigOutputOrder::lexicographicalDescending:
-            out << "lexicographicalDescending";
+            out << "LEXICOGRAPHICAL_DESCENDING";
             break;
         case ContigOutputOrder::contigSizeAscending:
-            out << "contigSizeAscending";
+            out << "CONTIG_SIZE_ASCENDING";
             break;
         case ContigOutputOrder::contigSizeDescending:
-            out << "contigSizeDescending";
+            out << "CONTIG_SIZE_DESCENDING";
             break;
-        case ContigOutputOrder::asInReferenceIndex:
-            out << "asInReferenceIndex";
+        case ContigOutputOrder::referenceIndex:
+            out << "REFERENCE_INDEX";
             break;
-        case ContigOutputOrder::asInReferenceIndexReversed:
-            out << "asInReferenceIndexReversed";
+        case ContigOutputOrder::referenceIndexReversed:
+            out << "REFERENCE_INDEX_REVERSED";
             break;
         case ContigOutputOrder::unspecified:
-            out << "unspecified";
+            out << "UNSPECIFIED";
             break;
     }
     return out;
@@ -1219,13 +1218,11 @@ std::istream& operator>>(std::istream& in, ExtensionLevel& level)
 {
     std::string token;
     in >> token;
-    if (token == "conservative")
+    if (token == "CONSERVATIVE")
         level = ExtensionLevel::conservative;
-    else if (token == "normal")
+    else if (token == "NORMAL")
         level = ExtensionLevel::normal;
-    else if (token == "optimistic")
-        level = ExtensionLevel::optimistic;
-    else if (token == "aggressive")
+    else if (token == "AGGRESSIVE")
         level = ExtensionLevel::aggressive;
     else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token, "extension-level"};
     return in;
@@ -1235,16 +1232,13 @@ std::ostream& operator<<(std::ostream& out, const ExtensionLevel& level)
 {
     switch (level) {
     case ExtensionLevel::conservative:
-        out << "conservative";
+        out << "CONSERVATIVE";
         break;
     case ExtensionLevel::normal:
-        out << "normal";
-        break;
-    case ExtensionLevel::optimistic:
-        out << "optimistic";
+        out << "NORMAL";
         break;
     case ExtensionLevel::aggressive:
-        out << "aggressive";
+        out << "AGGRESSIVE";
         break;
     }
     return out;
@@ -1254,11 +1248,11 @@ std::istream& operator>>(std::istream& in, BacktrackLevel& level)
 {
     std::string token;
     in >> token;
-    if (token == "none")
+    if (token == "NONE")
         level = BacktrackLevel::none;
-    else if (token == "normal")
+    else if (token == "NORMAL")
         level = BacktrackLevel::normal;
-    else if (token == "aggressive")
+    else if (token == "AGGRESSIVE")
         level = BacktrackLevel::aggressive;
     else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token, "backtrack-level"};
     return in;
@@ -1268,13 +1262,13 @@ std::ostream& operator<<(std::ostream& out, const BacktrackLevel& level)
 {
     switch (level) {
     case BacktrackLevel::none:
-        out << "none";
+        out << "NONE";
         break;
     case BacktrackLevel::normal:
-        out << "normal";
+        out << "NORMAL";
         break;
     case BacktrackLevel::aggressive:
-        out << "aggressive";
+        out << "AGGRESSIVE";
         break;
     }
     return out;
@@ -1284,15 +1278,11 @@ std::istream& operator>>(std::istream& in, LaggingLevel& level)
 {
     std::string token;
     in >> token;
-    if (token == "minimal")
-        level = LaggingLevel::minimal;
-    else if (token == "conservative")
-        level = LaggingLevel::conservative;
-    else if (token == "moderate")
-        level = LaggingLevel::moderate;
-    else if (token == "normal")
+    if (token == "NONE")
+        level = LaggingLevel::none;
+    else if (token == "NORMAL")
         level = LaggingLevel::normal;
-    else if (token == "aggressive")
+    else if (token == "AGGRESSIVE")
         level = LaggingLevel::aggressive;
     else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token, "lagging-level"};
     return in;
@@ -1301,20 +1291,14 @@ std::istream& operator>>(std::istream& in, LaggingLevel& level)
 std::ostream& operator<<(std::ostream& out, const LaggingLevel& level)
 {
     switch (level) {
-        case LaggingLevel::minimal:
-            out << "minimal";
-            break;
-        case LaggingLevel::conservative:
-            out << "conservative";
-            break;
-        case LaggingLevel::moderate:
-            out << "moderate";
+        case LaggingLevel::none:
+            out << "NONE";
             break;
         case LaggingLevel::normal:
-            out << "normal";
+            out << "NORMAL";
             break;
         case LaggingLevel::aggressive:
-            out << "aggressive";
+            out << "AGGRESSIVE";
             break;
     }
     return out;
@@ -1324,9 +1308,9 @@ std::istream& operator>>(std::istream& in, NormalContaminationRisk& result)
 {
     std::string token;
     in >> token;
-    if (token == "low")
+    if (token == "LOW")
         result = NormalContaminationRisk::low;
-    else if (token == "high")
+    else if (token == "HIGH")
         result = NormalContaminationRisk::high;
     else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token, "normal-contamination-risk"};
     return in;
@@ -1336,10 +1320,10 @@ std::ostream& operator<<(std::ostream& out, const NormalContaminationRisk& risk)
 {
     switch (risk) {
         case NormalContaminationRisk::low:
-            out << "low";
+            out << "LOW";
             break;
         case NormalContaminationRisk::high:
-            out << "high";
+            out << "HIGH";
             break;
     }
     return out;
@@ -1349,11 +1333,11 @@ std::istream& operator>>(std::istream& in, BadRegionTolerance& result)
 {
     std::string token;
     in >> token;
-    if (token == "low")
+    if (token == "LOW")
         result = BadRegionTolerance::low;
-    else if (token == "normal")
+    else if (token == "NORMAL")
         result = BadRegionTolerance::normal;
-    else if (token == "high")
+    else if (token == "HIGH")
         result = BadRegionTolerance::high;
     else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token, "bad-region-tolerance"};
     return in;
@@ -1363,13 +1347,13 @@ std::ostream& operator<<(std::ostream& out, const BadRegionTolerance& tolerance)
 {
     switch (tolerance) {
         case BadRegionTolerance::low:
-            out << "low";
+            out << "LOW";
             break;
         case BadRegionTolerance::normal:
-            out << "normal";
+            out << "NORMAL";
             break;
         case BadRegionTolerance::high:
-            out << "high";
+            out << "HIGH";
             break;
     }
     return out;
@@ -1379,11 +1363,11 @@ std::istream& operator>>(std::istream& in, ReadLinkage& result)
 {
     std::string token;
     in >> token;
-    if (token == "none")
+    if (token == "NONE")
         result = ReadLinkage::none;
-    else if (token == "paired")
+    else if (token == "PAIRED")
         result = ReadLinkage::paired;
-    else if (token == "linked")
+    else if (token == "LINKED")
         result = ReadLinkage::linked;
     else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token, "read-linkage"};
     return in;
@@ -1393,13 +1377,13 @@ std::ostream& operator<<(std::ostream& out, const ReadLinkage& linkage)
 {
     switch (linkage) {
         case ReadLinkage::none:
-            out << "none";
+            out << "NONE";
             break;
         case ReadLinkage::paired:
-            out << "paired";
+            out << "PAIRED";
             break;
         case ReadLinkage::linked:
-            out << "linked";
+            out << "LINKED";
             break;
     }
     return out;
@@ -1409,9 +1393,9 @@ std::istream& operator>>(std::istream& in, CandidateVariantDiscoveryProtocol& re
 {
     std::string token;
     in >> token;
-    if (token == "illumina")
+    if (token == "ILLUMINA")
         result = CandidateVariantDiscoveryProtocol::illumina;
-    else if (token == "pacbio")
+    else if (token == "PACBIO")
         result = CandidateVariantDiscoveryProtocol::pacbio;
     else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token, "variant-discovery-protocol"};
     return in;
@@ -1421,10 +1405,10 @@ std::ostream& operator<<(std::ostream& out, const CandidateVariantDiscoveryProto
 {
     switch (protocol) {
         case CandidateVariantDiscoveryProtocol::illumina:
-            out << "illumina";
+            out << "ILLUMINA";
             break;
         case CandidateVariantDiscoveryProtocol::pacbio:
-            out << "pacbio";
+            out << "PACBIO";
             break;
     }
     return out;

@@ -20,7 +20,7 @@ enum class ContigOutputOrder
 {
     lexicographicalAscending, lexicographicalDescending,
     contigSizeAscending, contigSizeDescending,
-    asInReferenceIndex, asInReferenceIndexReversed,
+    referenceIndex, referenceIndexReversed,
     unspecified
 };
 
@@ -32,8 +32,8 @@ struct ContigPloidy
 };
 
 enum class RefCallType { positional, blocked };
-enum class ExtensionLevel { conservative, normal, optimistic, aggressive };
-enum class LaggingLevel { minimal, conservative, moderate, normal, aggressive };
+enum class ExtensionLevel { conservative, normal, aggressive };
+enum class LaggingLevel { none, normal, aggressive };
 enum class BacktrackLevel { none, normal, aggressive };
 enum class NormalContaminationRisk { low, high };
 enum class BadRegionTolerance { low, normal, high };
