@@ -11,17 +11,17 @@
 #include <boost/filesystem.hpp>
 
 #include "threshold_filter.hpp"
-#include "conditional_random_forest_filter.hpp"
+#include "random_forest_filter.hpp"
 #include "logging/progress_meter.hpp"
 #include "../facets/facet_factory.hpp"
 #include "../measures/measure.hpp"
 
 namespace octopus { namespace csr {
 
-class SomaticRandomForestVariantCallFilter : public ConditionalRandomForestFilter
+class SomaticRandomForestVariantCallFilter : public RandomForestFilter
 {
 public:
-    using ConditionalRandomForestFilter::Options;
+    using RandomForestFilter::Options;
     
     SomaticRandomForestVariantCallFilter() = delete;
     

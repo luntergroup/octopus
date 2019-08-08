@@ -18,7 +18,7 @@ DeNovoRandomForestVariantCallFilter::DeNovoRandomForestVariantCallFilter(FacetFa
                                                                          Path temp_directory,
                                                                          Options options,
                                                                          boost::optional<ProgressMeter&> progress)
-: ConditionalRandomForestFilter {
+: RandomForestFilter {
     std::move(facet_factory),
     std::move(measures),
     {make_wrapped_measure<IsDenovo>(true)},
@@ -39,7 +39,7 @@ DeNovoRandomForestVariantCallFilter::DeNovoRandomForestVariantCallFilter(FacetFa
                                                                          Path temp_directory,
                                                                          Options options,
                                                                          boost::optional<ProgressMeter&> progress)
-: ConditionalRandomForestFilter {
+: RandomForestFilter {
     std::move(facet_factory),
     std::move(measures),
     {make_wrapped_measure<IsDenovo>(false)},

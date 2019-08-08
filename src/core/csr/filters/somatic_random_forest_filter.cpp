@@ -18,7 +18,7 @@ SomaticRandomForestVariantCallFilter::SomaticRandomForestVariantCallFilter(Facet
                                                                            Path temp_directory,
                                                                            Options options,
                                                                            boost::optional<ProgressMeter&> progress)
-: ConditionalRandomForestFilter {
+: RandomForestFilter {
     std::move(facet_factory),
     std::move(measures),
     {make_wrapped_measure<IsSomatic>(true), make_wrapped_measure<IsRefcall>(true)},
@@ -47,7 +47,7 @@ SomaticRandomForestVariantCallFilter::SomaticRandomForestVariantCallFilter(Facet
                                                                            Path temp_directory,
                                                                            Options options,
                                                                            boost::optional<ProgressMeter&> progress)
-: ConditionalRandomForestFilter {
+: RandomForestFilter {
     std::move(facet_factory),
     std::move(measures),
     {make_wrapped_measure<IsSomatic>(false)},
