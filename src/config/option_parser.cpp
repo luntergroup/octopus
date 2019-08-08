@@ -702,7 +702,7 @@ OptionMap parse_options(const int argc, const char** argv)
      "Minimum PASSing random forest probability (Phred scale)")
     ;
     
-    po::options_description all("octopus options");
+    po::options_description all("Octopus command line options");
     all.add(general).add(read_preprocessing)
     .add(variant_discovery).add(haplotype_generation).add(general_variant_calling)
     .add(cancer).add(trio).add(polyclone).add(cell).add(call_filtering);
@@ -712,36 +712,36 @@ OptionMap parse_options(const int argc, const char** argv)
     
     if (vm_init.count("help") == 1) {
         po::store(run(po::command_line_parser(argc, argv).options(general_variant_calling).allow_unregistered()), vm_init);
-        if (vm_init.count("caller") == 1) {
+        if (vm_init.count("caller") == 1 && !vm_init.at("caller").defaulted()) {
             const auto selected_caller = vm_init.at("caller").as<std::string>();
             validate_caller(vm_init);
             if (selected_caller == "individual") {
-                po::options_description individual_options("octopus individual calling options");
+                po::options_description individual_options("Octopus command line options (individual)");
                 individual_options.add(general).add(read_preprocessing)
                 .add(variant_discovery).add(haplotype_generation).add(general_variant_calling).add(call_filtering);
                 std::cout << individual_options << std::endl;
             } else if (selected_caller == "trio") {
-                po::options_description trio_options("octopus trio calling options");
+                po::options_description trio_options("Octopus command line options (trio)");
                 trio_options.add(general).add(read_preprocessing)
                 .add(variant_discovery).add(haplotype_generation).add(general_variant_calling).add(trio).add(call_filtering);
                 std::cout << trio_options << std::endl;
             } else if (selected_caller == "population") {
-                po::options_description population_options("octopus population calling options");
+                po::options_description population_options("Octopus command line options (population)");
                 population_options.add(general).add(read_preprocessing)
                 .add(variant_discovery).add(haplotype_generation).add(general_variant_calling).add(call_filtering);
                 std::cout << population_options << std::endl;
             } else if (selected_caller == "cancer") {
-                po::options_description cancer_options("octopus cancer calling options");
+                po::options_description cancer_options("Octopus command line options (cancer)");
                 cancer_options.add(general).add(read_preprocessing)
                 .add(variant_discovery).add(haplotype_generation).add(general_variant_calling).add(cancer).add(call_filtering);
                 std::cout << cancer_options << std::endl;
             } else if (selected_caller == "polyclone") {
-                po::options_description polyclone_options("octopus polyclone calling options");
+                po::options_description polyclone_options("Octopus command line options (polyclone)");
                 polyclone_options.add(general).add(read_preprocessing)
                 .add(variant_discovery).add(haplotype_generation).add(general_variant_calling).add(polyclone).add(call_filtering);
                 std::cout << polyclone_options << std::endl;
             } else if (selected_caller == "cell") {
-                po::options_description polyclone_options("octopus polyclone calling options");
+                po::options_description polyclone_options("Octopus command line options (cell)");
                 polyclone_options.add(general).add(read_preprocessing)
                                  .add(variant_discovery).add(haplotype_generation).add(general_variant_calling).add(cell)
                                  .add(call_filtering);
