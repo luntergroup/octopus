@@ -39,6 +39,7 @@ enum class NormalContaminationRisk { low, high };
 enum class BadRegionTolerance { low, normal, high };
 enum class ReadLinkage { none, paired, linked };
 enum class CandidateVariantDiscoveryProtocol { illumina, pacbio };
+enum class RealignedBAMType { full, mini };
 
 std::istream& operator>>(std::istream& in, ContigOutputOrder& order);
 std::ostream& operator<<(std::ostream& os, const ContigOutputOrder& order);
@@ -60,6 +61,8 @@ std::istream& operator>>(std::istream& in, ReadLinkage& linkage);
 std::ostream& operator<<(std::ostream& os, const ReadLinkage& linkage);
 std::istream& operator>>(std::istream& in, CandidateVariantDiscoveryProtocol& protocol);
 std::ostream& operator<<(std::ostream& os, const CandidateVariantDiscoveryProtocol& protocol);
+std::istream& operator>>(std::istream& in, RealignedBAMType& type);
+std::ostream& operator<<(std::ostream& os, const RealignedBAMType& type);
 
 std::ostream& operator<<(std::ostream& os, const OptionMap& options);
 std::string to_string(const OptionMap& options, bool one_line = false);

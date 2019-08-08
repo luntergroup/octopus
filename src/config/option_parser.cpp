@@ -167,9 +167,9 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<fs::path>(),
      "Output realigned BAM files")
     
-    ("full-bamout",
-     po::bool_switch()->default_value(false),
-     "Output all reads when producing realigned bam outputs rather than just variant read minibams")
+    ("bamout-type",
+     po::value<RealignedBAMType>()->default_value(RealignedBAMType::mini),
+     "Type of realigned evidence BAM to output [MINI, FULL]")
      
     ("data-profile",
      po::value<fs::path>(),
@@ -1418,6 +1418,31 @@ std::ostream& operator<<(std::ostream& out, const CandidateVariantDiscoveryProto
     return out;
 }
 
+std::istream& operator>>(std::istream& in, RealignedBAMType& result)
+{
+    std::string token;
+    in >> token;
+    if (token == "FULL")
+        result = RealignedBAMType::full;
+    else if (token == "MINI")
+        result = RealignedBAMType::mini;
+    else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token, "bamout-type"};
+    return in;
+}
+
+std::ostream& operator<<(std::ostream& out, const RealignedBAMType& type)
+{
+    switch (type) {
+        case RealignedBAMType::full:
+            out << "FULL";
+            break;
+        case RealignedBAMType::mini:
+            out << "MINI";
+            break;
+    }
+    return out;
+}
+
 namespace {
 
 template <typename T>
@@ -1525,6 +1550,8 @@ std::ostream& operator<<(std::ostream& os, const OptionMap& options)
             os << options[label].as<ReadLinkage>();
         } else if (is_type<CandidateVariantDiscoveryProtocol>(value)) {
             os << options[label].as<CandidateVariantDiscoveryProtocol>();
+        } else if (is_type<RealignedBAMType>(value)) {
+            os << options[label].as<RealignedBAMType>();
         } else {
             os << "UnknownType(" << ((boost::any)value.value()).type().name() << ")";
         }
