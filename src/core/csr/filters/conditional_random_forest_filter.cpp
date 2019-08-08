@@ -54,27 +54,14 @@ ConditionalRandomForestFilter::ConditionalRandomForestFilter(FacetFactory facet_
                                                              OutputOptions output_config,
                                                              ConcurrencyPolicy threading,
                                                              Path temp_directory,
-                                                             boost::optional<ProgressMeter&> progress)
-: ConditionalRandomForestFilter {std::move(facet_factory), std::move(measures), std::move(chooser_measures),
-                                 std::move(chooser), std::move(ranger_forests), probability_to_phred(0.5),
-                                 std::move(output_config), threading, std::move(temp_directory), progress} {}
-
-ConditionalRandomForestFilter::ConditionalRandomForestFilter(FacetFactory facet_factory,
-                                                             std::vector<MeasureWrapper> measures,
-                                                             std::vector<MeasureWrapper> chooser_measures,
-                                                             std::function<std::int8_t(std::vector<Measure::ResultType>)> chooser,
-                                                             std::vector<Path> ranger_forests,
-                                                             Phred<double> min_forest_quality,
-                                                             OutputOptions output_config,
-                                                             ConcurrencyPolicy threading,
-                                                             Path temp_directory,
+                                                             Options options,
                                                              boost::optional<ProgressMeter&> progress)
 : DoublePassVariantCallFilter {std::move(facet_factory), concat(std::move(measures), chooser_measures),
                                std::move(output_config), threading, std::move(temp_directory), progress}
 , forest_paths_ {std::move(ranger_forests)}
 , chooser_ {std::move(chooser)}
 , num_chooser_measures_ {chooser_measures.size()}
-, min_forest_quality_ {min_forest_quality}
+, options_ {std::move(options)}
 , num_records_ {0}
 , data_buffer_ {}
 {
@@ -85,16 +72,33 @@ ConditionalRandomForestFilter::ConditionalRandomForestFilter(FacetFactory facet_
 }
 
 const std::string ConditionalRandomForestFilter::genotype_quality_name_ = "RFQUAL";
+const std::string ConditionalRandomForestFilter::call_quality_name_ = "RFQUAL_ALL";
 
 boost::optional<std::string> ConditionalRandomForestFilter::genotype_quality_name() const
 {
     return genotype_quality_name_;
 }
 
+boost::optional<std::string> ConditionalRandomForestFilter::call_quality_name() const
+{
+    return call_quality_name_;
+}
+
 void ConditionalRandomForestFilter::annotate(VcfHeader::Builder& header) const
 {
+    header.add_info(call_quality_name_, "1", "Float", "Combined quality score for call using product of sample RFQUAL");
     header.add_format(genotype_quality_name_, "1", "Float", "Empirical quality score from random forest classifier");
     header.add_filter("RF", "Random Forest filtered");
+}
+
+Phred<double> ConditionalRandomForestFilter::min_soft_genotype_quality() const noexcept
+{
+    return options_.min_forest_quality;
+}
+
+Phred<double> ConditionalRandomForestFilter::min_soft_call_quality() const noexcept
+{
+    return min_soft_genotype_quality();
 }
 
 std::int8_t ConditionalRandomForestFilter::choose_forest(const MeasureVector& measures) const
@@ -340,8 +344,8 @@ VariantCallFilter::Classification ConditionalRandomForestFilter::classify(const 
         const auto& predictions = data_buffer_[0];
         assert(call_idx < predictions.size() && sample_idx < predictions[call_idx].size());
         const auto prob_false = predictions[call_idx][sample_idx];
-        result.quality = probability_to_phred(std::max(prob_false, 1e-10));
-        if (result.quality >= min_forest_quality_) {
+        result.quality = probability_false_to_phred(std::max(prob_false, 1e-10));
+        if (*result.quality >= min_soft_genotype_quality()) {
             result.category = Classification::Category::unfiltered;
         } else {
             result.category = Classification::Category::soft_filtered;
@@ -350,6 +354,22 @@ VariantCallFilter::Classification ConditionalRandomForestFilter::classify(const 
     } else {
         result.category = Classification::Category::hard_filtered;
     }
+    return result;
+}
+
+bool ConditionalRandomForestFilter::is_soft_filtered(const ClassificationList& sample_classifications,
+                                                     const boost::optional<Phred<double>> joint_quality,
+                                                     const MeasureVector& measures,
+                                                     std::vector<std::string>& reasons) const
+{
+    bool result {};
+    if (joint_quality) {
+        result = *joint_quality < min_soft_call_quality();
+    } else {
+        result = std::any_of(std::cbegin(sample_classifications), std::cend(sample_classifications),
+                             [] (const auto& c) { return c.category != Classification::Category::unfiltered; });
+    }
+    if (result) reasons.push_back("RF");
     return result;
 }
 

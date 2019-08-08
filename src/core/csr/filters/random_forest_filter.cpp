@@ -27,38 +27,44 @@ RandomForestFilter::RandomForestFilter(FacetFactory facet_factory,
                                        OutputOptions output_config,
                                        ConcurrencyPolicy threading,
                                        Path temp_directory,
+                                       Options options,
                                        boost::optional<ProgressMeter&> progress)
-: RandomForestFilter {std::move(facet_factory), std::move(measures), std::move(ranger_forest), probability_to_phred(0.5),
-                      std::move(output_config), threading, std::move(temp_directory), progress} {}
-
-RandomForestFilter::RandomForestFilter(FacetFactory facet_factory,
-                                       std::vector<MeasureWrapper> measures,
-                                       Path ranger_forest,
-                                       Phred<double> min_forest_quality,
-                                       OutputOptions output_config,
-                                       ConcurrencyPolicy threading,
-                                       Path temp_directory,
-                                       boost::optional<ProgressMeter&> progress)
-: DoublePassVariantCallFilter {std::move(facet_factory), std::move(measures), std::move(output_config), threading, progress}
+: DoublePassVariantCallFilter {std::move(facet_factory), std::move(measures), std::move(output_config), threading, std::move(temp_directory), progress}
 , forest_ {std::make_unique<ranger::ForestProbability>()}
 , ranger_forest_ {std::move(ranger_forest)}
-, temp_dir_ {std::move(temp_directory)}
-, min_forest_quality_ {min_forest_quality}
+, options_ {std::move(options)}
 , num_records_ {0}
 , data_buffer_ {}
 {}
 
-const std::string RandomForestFilter::call_qual_name_ = "RFQUAL";
+const std::string RandomForestFilter::genotype_quality_name_ = "RFQUAL";
+const std::string RandomForestFilter::call_quality_name_ = "RFQUAL_ALL";
 
 boost::optional<std::string> RandomForestFilter::genotype_quality_name() const
 {
-    return call_qual_name_;
+    return genotype_quality_name_;
+}
+
+boost::optional<std::string> RandomForestFilter::call_quality_name() const
+{
+    return call_quality_name_;
 }
 
 void RandomForestFilter::annotate(VcfHeader::Builder& header) const
 {
-    header.add_format(call_qual_name_, "1", "Float", "Empirical quality score from random forest classifier");
+    header.add_info(call_quality_name_, "1", "Float", "Combined quality score for call using product of sample RFQUAL");
+    header.add_format(genotype_quality_name_, "1", "Float", "Empirical quality score from random forest classifier");
     header.add_filter("RF", "Random Forest filtered");
+}
+
+Phred<double> RandomForestFilter::min_soft_genotype_quality() const noexcept
+{
+    return options_.min_forest_quality;
+}
+
+Phred<double> RandomForestFilter::min_soft_call_quality() const noexcept
+{
+    return min_soft_genotype_quality();
 }
 
 namespace {
@@ -220,13 +226,29 @@ VariantCallFilter::Classification RandomForestFilter::classify(const std::size_t
     assert(call_idx < data_buffer_.size() && sample_idx < data_buffer_[call_idx].size());
     const auto prob_false = data_buffer_[call_idx][sample_idx];
     Classification result {};
-    result.quality = probability_to_phred(std::max(prob_false, 1e-10));
-    if (result.quality >= min_forest_quality_) {
+    result.quality = probability_false_to_phred(std::max(prob_false, 1e-10));
+    if (*result.quality >= min_soft_genotype_quality()) {
         result.category = Classification::Category::unfiltered;
     } else {
         result.category = Classification::Category::soft_filtered;
         result.reasons.assign({"RF"});
     }
+    return result;
+}
+
+bool RandomForestFilter::is_soft_filtered(const ClassificationList& sample_classifications,
+                                          const boost::optional<Phred<double>> joint_quality,
+                                          const MeasureVector& measures,
+                                          std::vector<std::string>& reasons) const
+{
+    bool result {};
+    if (joint_quality) {
+        result = *joint_quality < min_soft_call_quality();
+    } else {
+        result = std::any_of(std::cbegin(sample_classifications), std::cend(sample_classifications),
+                             [] (const auto& c) { return c.category != Classification::Category::unfiltered; });
+    }
+    if (result) reasons.push_back("RF");
     return result;
 }
 

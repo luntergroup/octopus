@@ -23,6 +23,11 @@ class RandomForestFilter : public DoublePassVariantCallFilter
 public:
     using DoublePassVariantCallFilter::Path;
     
+    struct Options
+    {
+        Phred<double> min_forest_quality = probability_false_to_phred(0.5);
+    };
+    
     RandomForestFilter() = delete;
     
     RandomForestFilter(FacetFactory facet_factory,
@@ -30,16 +35,8 @@ public:
                        Path ranger_forest,
                        OutputOptions output_config,
                        ConcurrencyPolicy threading,
-                       Path temp_directory = "/tmp",
-                       boost::optional<ProgressMeter&> progress = boost::none);
-    
-    RandomForestFilter(FacetFactory facet_factory,
-                       std::vector<MeasureWrapper> measures,
-                       Path ranger_forest,
-                       Phred<double> min_forest_quality,
-                       OutputOptions output_config,
-                       ConcurrencyPolicy threading,
-                       Path temp_directory = "/tmp",
+                       Path temp_directory,
+                       Options options,
                        boost::optional<ProgressMeter&> progress = boost::none);
     
     RandomForestFilter(const RandomForestFilter&)            = delete;
@@ -49,6 +46,10 @@ public:
     
     virtual ~RandomForestFilter() override = default;
 
+protected:
+    Phred<double> min_soft_genotype_quality() const noexcept;
+    Phred<double> min_soft_call_quality() const noexcept;
+    
 private:
     struct File
     {
@@ -59,14 +60,19 @@ private:
     };
     
     std::unique_ptr<ranger::Forest> forest_;
-    Path ranger_forest_, temp_dir_;
-    Phred<double> min_forest_quality_ = probability_to_phred(0.5);
+    Path ranger_forest_;
+    Options options_;
     
     mutable std::vector<File> data_;
     mutable std::size_t num_records_;
     mutable std::vector<std::vector<double>> data_buffer_;
     
-    const static std::string call_qual_name_;
+    const static std::string genotype_quality_name_;
+    const static std::string call_quality_name_;
+    
+    virtual boost::optional<std::string> call_quality_name() const override;
+    virtual bool is_soft_filtered(const ClassificationList& sample_classifications, boost::optional<Phred<double>> joint_quality,
+                                  const MeasureVector& measures, std::vector<std::string>& reasons) const override;
     
     boost::optional<std::string> genotype_quality_name() const override;
     void annotate(VcfHeader::Builder& header) const override;

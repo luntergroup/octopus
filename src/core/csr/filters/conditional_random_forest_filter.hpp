@@ -18,6 +18,7 @@
 
 #include "basics/phred.hpp"
 #include "double_pass_variant_call_filter.hpp"
+#include "random_forest_filter.hpp"
 
 namespace octopus { namespace csr {
 
@@ -25,6 +26,8 @@ class ConditionalRandomForestFilter : public DoublePassVariantCallFilter
 {
 public:
     using Path = boost::filesystem::path;
+    
+    using Options = RandomForestFilter::Options;
     
     ConditionalRandomForestFilter() = delete;
     
@@ -35,18 +38,8 @@ public:
                                   std::vector<Path> ranger_forests,
                                   OutputOptions output_config,
                                   ConcurrencyPolicy threading,
-                                  Path temp_directory = "/tmp",
-                                  boost::optional<ProgressMeter&> progress = boost::none);
-    
-    ConditionalRandomForestFilter(FacetFactory facet_factory,
-                                  std::vector<MeasureWrapper> measures,
-                                  std::vector<MeasureWrapper> chooser_measures,
-                                  std::function<std::int8_t(std::vector<Measure::ResultType>)> chooser,
-                                  std::vector<Path> ranger_forests,
-                                  Phred<double> min_forest_quality,
-                                  OutputOptions output_config,
-                                  ConcurrencyPolicy threading,
-                                  Path temp_directory = "/tmp",
+                                  Path temp_directory,
+                                  Options options = Options {},
                                   boost::optional<ProgressMeter&> progress = boost::none);
     
     ConditionalRandomForestFilter(const ConditionalRandomForestFilter&)            = delete;
@@ -59,6 +52,9 @@ public:
 protected:
     virtual void annotate(VcfHeader::Builder& header) const override;
     
+    Phred<double> min_soft_genotype_quality() const noexcept;
+    Phred<double> min_soft_call_quality() const noexcept;
+    
 private:
     struct File
     {
@@ -69,11 +65,10 @@ private:
     };
     
     std::vector<Path> forest_paths_;
-    Path temp_dir_;
     std::vector<std::unique_ptr<ranger::Forest>> forests_;
     std::function<std::int8_t(std::vector<Measure::ResultType>)> chooser_;
     std::size_t num_chooser_measures_;
-    Phred<double> min_forest_quality_ = probability_to_phred(0.5);
+    Options options_;
     
     mutable std::vector<std::vector<File>> data_;
     mutable std::size_t num_records_;
@@ -83,6 +78,11 @@ private:
     mutable std::vector<bool> hard_filtered_;
     
     const static std::string genotype_quality_name_;
+    const static std::string call_quality_name_;
+    
+    virtual boost::optional<std::string> call_quality_name() const override;
+    virtual bool is_soft_filtered(const ClassificationList& sample_classifications, boost::optional<Phred<double>> joint_quality,
+                                  const MeasureVector& measures, std::vector<std::string>& reasons) const override;
     
     boost::optional<std::string> genotype_quality_name() const override;
     std::int8_t choose_forest(const MeasureVector& measures) const;

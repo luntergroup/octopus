@@ -45,7 +45,8 @@ public:
     virtual ~SomaticThresholdVariantCallFilter() override = default;
 
 private:
-    virtual bool is_soft_filtered(const ClassificationList& sample_classifications, const MeasureVector& measures) const override;
+    virtual bool is_soft_filtered(const ClassificationList& sample_classifications, boost::optional<Phred<double>> joint_quality,
+                                  const MeasureVector& measures, std::vector<std::string>& reasons) const override;
 };
 
 } // namespace csr

@@ -698,7 +698,7 @@ OptionMap parse_options(const int argc, const char** argv)
      "Trained Ranger random forest file for somatic variants")
     
     ("min-forest-quality",
-     po::value<Phred<double>>(),
+     po::value<Phred<double>>()->default_value(Phred<double> {3}),
      "Minimum PASSing random forest probability (Phred scale)")
     ;
     

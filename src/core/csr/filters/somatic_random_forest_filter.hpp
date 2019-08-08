@@ -21,6 +21,8 @@ namespace octopus { namespace csr {
 class SomaticRandomForestVariantCallFilter : public ConditionalRandomForestFilter
 {
 public:
+    using ConditionalRandomForestFilter::Options;
+    
     SomaticRandomForestVariantCallFilter() = delete;
     
     SomaticRandomForestVariantCallFilter(FacetFactory facet_factory,
@@ -28,15 +30,8 @@ public:
                                          Path germline_forest, Path somatic_forest,
                                          OutputOptions output_config,
                                          ConcurrencyPolicy threading,
-                                         Path temp_directory = "/tmp",
-                                         boost::optional<ProgressMeter&> progress = boost::none);
-    SomaticRandomForestVariantCallFilter(FacetFactory facet_factory,
-                                         std::vector<MeasureWrapper> measures,
-                                         Path germline_forest, Path somatic_forest,
-                                         Phred<double> min_forest_quality,
-                                         OutputOptions output_config,
-                                         ConcurrencyPolicy threading,
-                                         Path temp_directory = "/tmp",
+                                         Path temp_directory,
+                                         Options options,
                                          boost::optional<ProgressMeter&> progress = boost::none);
     // Somatics only
     SomaticRandomForestVariantCallFilter(FacetFactory facet_factory,
@@ -44,15 +39,8 @@ public:
                                          Path somatic_forest,
                                          OutputOptions output_config,
                                          ConcurrencyPolicy threading,
-                                         Path temp_directory = "/tmp",
-                                         boost::optional<ProgressMeter&> progress = boost::none);
-    SomaticRandomForestVariantCallFilter(FacetFactory facet_factory,
-                                         std::vector<MeasureWrapper> measures,
-                                         Path somatic_forest,
-                                         Phred<double> min_forest_quality,
-                                         OutputOptions output_config,
-                                         ConcurrencyPolicy threading,
-                                         Path temp_directory = "/tmp",
+                                         Path temp_directory,
+                                         Options options,
                                          boost::optional<ProgressMeter&> progress = boost::none);
     
     SomaticRandomForestVariantCallFilter(const SomaticRandomForestVariantCallFilter&)            = delete;
@@ -61,15 +49,6 @@ public:
     SomaticRandomForestVariantCallFilter& operator=(SomaticRandomForestVariantCallFilter&&)      = delete;
     
     virtual ~SomaticRandomForestVariantCallFilter() override = default;
-
-protected:
-    virtual void annotate(VcfHeader::Builder& header) const override;
-
-private:
-    const static std::string call_quality_name_;
-    
-    virtual bool is_soft_filtered(const ClassificationList& sample_classifications, const MeasureVector& measures) const override;
-    virtual boost::optional<std::string> call_quality_name() const override;
 };
 
 } // namespace csr

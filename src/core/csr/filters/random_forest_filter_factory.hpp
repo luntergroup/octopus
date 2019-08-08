@@ -28,13 +28,14 @@ public:
     using Path = RandomForestFilter::Path;
     enum class ForestType { germline, somatic, denovo };
     
+    using Options = RandomForestFilter::Options;
+    
     RandomForestFilterFactory();
-    RandomForestFilterFactory(Path ranger_forest, Path temp_directory, ForestType type = ForestType::germline);
-    RandomForestFilterFactory(Path ranger_forest, Path temp_directory, Phred<double> min_forest_quality,
-                              ForestType type = ForestType::germline);
-    RandomForestFilterFactory(Path germline_ranger_forest, Path somatic_ranger_forest, Path temp_directory);
-    RandomForestFilterFactory(Path germline_ranger_forest, Path somatic_ranger_forest, Path temp_directory,
-                              Phred<double> min_forest_quality);
+    
+    RandomForestFilterFactory(std::vector<Path> ranger_forests,
+                              std::vector<ForestType> forest_types,
+                              Path temp_directory,
+                              Options options = Options {});
     
     RandomForestFilterFactory(const RandomForestFilterFactory&)            = default;
     RandomForestFilterFactory& operator=(const RandomForestFilterFactory&) = default;
@@ -45,14 +46,12 @@ public:
     
     std::vector<MeasureWrapper> measures() const;
     
-    void set_min_forest_quality(Phred<double> quality);
-
 private:
     std::vector<MeasureWrapper> measures_;
     std::vector<Path> ranger_forests_;
     std::vector<ForestType> forest_types_;
     Path temp_directory_;
-    boost::optional<Phred<double>> min_forest_quality_;
+    Options options_;
     
     std::unique_ptr<VariantCallFilterFactory> do_clone() const override;
     std::unique_ptr<VariantCallFilter> do_make(FacetFactory facet_factory,

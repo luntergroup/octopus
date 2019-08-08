@@ -61,7 +61,9 @@ SomaticThresholdVariantCallFilter::SomaticThresholdVariantCallFilter(FacetFactor
 } {}
 
 bool SomaticThresholdVariantCallFilter::is_soft_filtered(const ClassificationList& sample_classifications,
-                                                         const MeasureVector& measures) const
+                                                         const boost::optional<Phred<double>> joint_quality,
+                                                         const MeasureVector& measures,
+                                                         std::vector<std::string>& reasons) const
 {
     return std::any_of(std::cbegin(sample_classifications), std::cend(sample_classifications),
                        [] (const auto& c) { return c.category != Classification::Category::unfiltered; });
