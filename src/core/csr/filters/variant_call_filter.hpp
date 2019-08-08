@@ -101,6 +101,8 @@ protected:
                VcfWriter& dest) const;
     bool measure_annotations_requested() const noexcept;
     void annotate(VcfRecord::Builder& call, const MeasureVector& measures, const VcfHeader& header) const;
+    Phred<double> compute_joint_probability(const std::vector<Phred<double>>& qualities) const;
+    std::vector<std::string> compute_reason_union(const ClassificationList& sample_classifications) const;
     
 private:
     using FacetNameSet = std::vector<std::string>;
@@ -116,8 +118,9 @@ private:
     virtual void filter(const VcfReader& source, VcfWriter& dest, const VcfHeader& dest_header) const = 0;
     virtual boost::optional<std::string> call_quality_name() const { return boost::none; }
     virtual boost::optional<std::string> genotype_quality_name() const { return boost::none; }
-    virtual bool is_soft_filtered(const ClassificationList& sample_classifications, const MeasureVector& measures) const;
-    virtual Phred<double> combine_sample_qualities(const std::vector<Phred<double>>& qualities) const;
+    virtual boost::optional<Phred<double>> compute_joint_quality(const ClassificationList& sample_classifications, const MeasureVector& measures) const;
+    virtual bool is_soft_filtered(const ClassificationList& sample_classifications, boost::optional<Phred<double>> joint_quality,
+                                  const MeasureVector& measures, std::vector<std::string>& reasons) const;
     
     VcfHeader make_header(const VcfReader& source) const;
     Measure::FacetMap compute_facets(const CallBlock& block) const;

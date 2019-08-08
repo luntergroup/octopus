@@ -21,6 +21,8 @@ namespace octopus { namespace csr {
 class DeNovoRandomForestVariantCallFilter : public ConditionalRandomForestFilter
 {
 public:
+    using ConditionalRandomForestFilter::Options;
+    
     DeNovoRandomForestVariantCallFilter() = delete;
     
     DeNovoRandomForestVariantCallFilter(FacetFactory facet_factory,
@@ -28,7 +30,8 @@ public:
                                         Path germline_forest, Path denovo_forest,
                                         OutputOptions output_config,
                                         ConcurrencyPolicy threading,
-                                        Path temp_directory = "/tmp",
+                                        Path temp_directory,
+                                        Options options,
                                         boost::optional<ProgressMeter&> progress = boost::none);
     // De novo only
     DeNovoRandomForestVariantCallFilter(FacetFactory facet_factory,
@@ -36,7 +39,8 @@ public:
                                         Path denovo_forest,
                                         OutputOptions output_config,
                                         ConcurrencyPolicy threading,
-                                        Path temp_directory = "/tmp",
+                                        Path temp_directory,
+                                        Options options,
                                         boost::optional<ProgressMeter&> progress = boost::none);
     
     DeNovoRandomForestVariantCallFilter(const DeNovoRandomForestVariantCallFilter&)            = delete;
@@ -45,9 +49,6 @@ public:
     DeNovoRandomForestVariantCallFilter& operator=(DeNovoRandomForestVariantCallFilter&&)      = delete;
     
     virtual ~DeNovoRandomForestVariantCallFilter() override = default;
-
-private:
-    virtual bool is_soft_filtered(const ClassificationList& sample_classifications, const MeasureVector& measures) const override;
 };
     
 } // namespace csr

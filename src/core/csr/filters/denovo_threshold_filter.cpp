@@ -63,7 +63,9 @@ DeNovoThresholdVariantCallFilter::DeNovoThresholdVariantCallFilter(FacetFactory 
 } {}
 
 bool DeNovoThresholdVariantCallFilter::is_soft_filtered(const ClassificationList& sample_classifications,
-                                                        const MeasureVector& measures) const
+                                                        const boost::optional<Phred<double>> joint_quality,
+                                                        const MeasureVector& measures,
+                                                        std::vector<std::string>& reasons) const
 {
     if (boost::get<bool>(measures.back())) {
         return std::any_of(std::cbegin(sample_classifications), std::cend(sample_classifications),

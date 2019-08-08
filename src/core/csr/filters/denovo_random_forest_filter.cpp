@@ -16,6 +16,7 @@ DeNovoRandomForestVariantCallFilter::DeNovoRandomForestVariantCallFilter(FacetFa
                                                                          OutputOptions output_config,
                                                                          ConcurrencyPolicy threading,
                                                                          Path temp_directory,
+                                                                         Options options,
                                                                          boost::optional<ProgressMeter&> progress)
 : ConditionalRandomForestFilter {
     std::move(facet_factory),
@@ -26,6 +27,7 @@ DeNovoRandomForestVariantCallFilter::DeNovoRandomForestVariantCallFilter(FacetFa
     std::move(output_config),
     std::move(threading),
     std::move(temp_directory),
+    std::move(options),
     progress
 } {}
 
@@ -35,6 +37,7 @@ DeNovoRandomForestVariantCallFilter::DeNovoRandomForestVariantCallFilter(FacetFa
                                                                          OutputOptions output_config,
                                                                          ConcurrencyPolicy threading,
                                                                          Path temp_directory,
+                                                                         Options options,
                                                                          boost::optional<ProgressMeter&> progress)
 : ConditionalRandomForestFilter {
     std::move(facet_factory),
@@ -45,15 +48,9 @@ DeNovoRandomForestVariantCallFilter::DeNovoRandomForestVariantCallFilter(FacetFa
     std::move(output_config),
     std::move(threading),
     std::move(temp_directory),
+    std::move(options),
     progress
 } {}
-
-bool DeNovoRandomForestVariantCallFilter::is_soft_filtered(const ClassificationList& sample_classifications,
-                                                           const MeasureVector& measures) const
-{
-    return std::any_of(std::cbegin(sample_classifications), std::cend(sample_classifications),
-                       [] (const auto& c) { return c.category != Classification::Category::unfiltered; });
-}
 
 } // namespace csr
 } // namespace octopus

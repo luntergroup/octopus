@@ -111,14 +111,12 @@ void VariantCallFilter::filter(const VcfReader& source, VcfWriter& dest) const
 // protected methods
 
 namespace {
-
 template <typename Range, typename BinaryPredicate>
 bool all_equal(const Range& values, BinaryPredicate pred)
 {
     const auto not_pred = [&](const auto& lhs, const auto& rhs) { return !pred(lhs, rhs); };
     return std::adjacent_find(std::cbegin(values), std::cend(values), not_pred) == std::cend(values);
 }
-
 } // namespace
 
 VariantCallFilter::Classification
@@ -129,34 +127,16 @@ VariantCallFilter::merge(const ClassificationList& sample_classifications, const
         return sample_classifications.front();
     }
     Classification result {};
-    if (all_equal(sample_classifications, [] (const auto& lhs, const auto& rhs) { return lhs.category == rhs.category; })) {
+    result.quality = compute_joint_quality(sample_classifications, measures);
+    if (!result.quality && all_equal(sample_classifications, [] (const auto& lhs, const auto& rhs) { return lhs.category == rhs.category; })) {
         result.category = sample_classifications.front().category;
-    } else if (is_soft_filtered(sample_classifications, measures)) {
+    } else if (is_soft_filtered(sample_classifications, result.quality, measures, result.reasons)) {
         result.category = Classification::Category::soft_filtered;
     } else {
         result.category = Classification::Category::unfiltered;
     }
-    if (result.category != Classification::Category::unfiltered) {
-        for (const auto& sample_classification : sample_classifications) {
-            utils::append(sample_classification.reasons, result.reasons);
-        }
-        std::sort(std::begin(result.reasons), std::end(result.reasons));
-        result.reasons.erase(std::unique(std::begin(result.reasons), std::end(result.reasons)), std::end(result.reasons));
-        result.reasons.shrink_to_fit();
-    }
-    std::vector<Phred<double>> sample_classification_qualities {};
-    sample_classification_qualities.reserve(sample_classifications.size());
-    for (const auto& sample_classification : sample_classifications) {
-        if (sample_classification.quality) {
-            sample_classification_qualities.push_back(*sample_classification.quality);
-        }
-    }
-    if (!sample_classification_qualities.empty()) {
-        if (sample_classification_qualities.size() == 1) {
-            result.quality = sample_classification_qualities.front();
-        } else {
-            result.quality = combine_sample_qualities(sample_classification_qualities);
-        }
+    if (result.category != Classification::Category::unfiltered && result.reasons.empty()) {
+        result.reasons = compute_reason_union(sample_classifications);
     }
     return result;
 }
@@ -336,7 +316,31 @@ void VariantCallFilter::annotate(VcfRecord::Builder& call, const MeasureVector& 
 
 // private methods
 
-bool VariantCallFilter::is_soft_filtered(const ClassificationList& sample_classifications, const MeasureVector& measures) const
+boost::optional<Phred<double>>
+VariantCallFilter::compute_joint_quality(const ClassificationList& sample_classifications, const MeasureVector& measures) const
+{
+    std::vector<Phred<double>> sample_classification_qualities {};
+    sample_classification_qualities.reserve(sample_classifications.size());
+    for (const auto& sample_classification : sample_classifications) {
+        if (sample_classification.quality) {
+            sample_classification_qualities.push_back(*sample_classification.quality);
+        }
+    }
+    if (!sample_classification_qualities.empty()) {
+        if (sample_classification_qualities.size() == 1) {
+            return sample_classification_qualities.front();
+        } else {
+            return compute_joint_probability(sample_classification_qualities);
+        }
+    }
+    return boost::none;
+}
+
+bool
+VariantCallFilter::is_soft_filtered(const ClassificationList& sample_classifications,
+                                    boost::optional<Phred<double>> joint_quality,
+                                    const MeasureVector& measures,
+                                    std::vector<std::string>& reasons) const
 {
     return std::all_of(std::cbegin(sample_classifications), std::cend(sample_classifications),
                        [] (const auto& c) { return c.category != Classification::Category::unfiltered; });
@@ -353,7 +357,7 @@ Phred<double> ln_probability_true_to_phred(const double ln_prob_true)
     }
 }
 
-Phred<double> VariantCallFilter::combine_sample_qualities(const std::vector<Phred<double>>& qualities) const
+Phred<double> VariantCallFilter::compute_joint_probability(const std::vector<Phred<double>>& qualities) const
 {
     if (std::any_of(std::cbegin(qualities), std::cend(qualities), [] (auto p) { return p.score() <= 0; })) {
         return Phred<double> {0.0};
@@ -362,6 +366,17 @@ Phred<double> VariantCallFilter::combine_sample_qualities(const std::vector<Phre
     std::transform(std::cbegin(qualities), std::cend(qualities), std::begin(log_probs),
                    [] (auto p) { return std::log(p.probability_true()); });
     return ln_probability_true_to_phred(std::accumulate(std::cbegin(log_probs), std::cend(log_probs), 0.0));
+}
+
+std::vector<std::string> VariantCallFilter::compute_reason_union(const ClassificationList& sample_classifications) const
+{
+    std::vector<std::string> result {};
+    for (const auto& sample_classification : sample_classifications) {
+        utils::append(sample_classification.reasons, result);
+    }
+    std::sort(std::begin(result), std::end(result));
+    result.erase(std::unique(std::begin(result), std::end(result)), std::end(result));
+    return result;
 }
 
 VcfHeader VariantCallFilter::make_header(const VcfReader& source) const
