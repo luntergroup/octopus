@@ -2200,7 +2200,7 @@ boost::optional<fs::path> bamout_request(const OptionMap& options)
 
 bool full_bamouts_requested(const OptionMap& options)
 {
-    return options.at("full-bamout").as<bool>();
+    return options.at("bamout-type").as<RealignedBAMType>() == RealignedBAMType::full;
 }
 
 unsigned max_open_read_files(const OptionMap& options)
