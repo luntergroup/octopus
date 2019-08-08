@@ -1568,11 +1568,11 @@ std::string to_string(const OptionMap& options, const bool one_line)
     if (one_line) {
         auto chunks = utils::split(result, '\n');
         for (auto& chunk : chunks) {
-            if (chunk[0] == '~') {
-                chunk.erase(0, 1);
-                chunk[0] = '*';
-            } else {
-                chunk.erase(0, 2);
+            const bool modified {chunk[0] == '~'};
+            chunk[0] = '-';
+            chunk[1] = '-';
+            if (modified) {
+                chunk.insert(0, 1,'*');
             }
         }
         result = utils::join(chunks, ' ');
