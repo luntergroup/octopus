@@ -55,8 +55,8 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<fs::path>(),
      "Config file to populate command line options")
      
-    ("options",
-    "Log all command line option values at startup")
+    ("show-options",
+    "Display all command line option values in the startup banner")
     
     ("debug",
      po::value<fs::path>()->implicit_value("octopus_debug.log"),
@@ -648,7 +648,7 @@ OptionMap parse_options(const int argc, const char** argv)
     
     ("dropout-concentration",
     po::value<float>()->default_value(2, "2"),
-    "Allelic dropout concentration paramater")
+    "Allelic dropout concentration parameter")
     ;
     
     po::options_description call_filtering("Variant filtering");

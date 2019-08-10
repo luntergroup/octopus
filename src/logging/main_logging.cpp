@@ -33,7 +33,7 @@ void log_program_startup()
 
 void log_command_line_options(const options::OptionMap& options)
 {
-    if (options.count("options") == 1) {
+    if (options.count("show-options") == 1) {
         logging::InfoLogger info_log {};
         const auto banner = detail::make_banner();
         info_log << "Program options: " + options::to_string(options, true);
