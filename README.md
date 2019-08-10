@@ -37,6 +37,8 @@ $ FOREST="$(pwd)/octopus/resources/forests/germline.v0.5.2-beta.forest"
 $ octopus -R hs37d5.fa -I NA12878.bam -T 1 to MT -o NA12878.octopus.vcf.gz --forest $FOREST --threads 8
 ```
 
+Consult the [command line reference](https://github.com/luntergroup/octopus/wiki/Command-line-reference) for descriptions of these options.
+
 ## Requirements
 * A C++14 compiler with SSE2 support
 * A C++14 standard library implementation
