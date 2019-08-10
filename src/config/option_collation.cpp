@@ -1052,7 +1052,7 @@ auto make_variant_generator_builder(const OptionMap& options, const boost::optio
         if (options.at("ignore-pileup-candidates-from-misaligned-reads").as<bool>()) {
             CigarScanner::Options::MisalignmentParameters misalign_params {};
             misalign_params.max_expected_mutation_rate = get_max_expected_heterozygosity(options);
-            misalign_params.snv_threshold = as_unsigned("min-base-quality", options);
+            misalign_params.snv_threshold = as_unsigned("min-pileup-base-quality", options);
             if (use_assembler) {
                 misalign_params.indel_penalty = 1.5;
                 misalign_params.clip_penalty = 2;

@@ -338,7 +338,7 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<bool>()->default_value(false),
      "Use variants from source VCF records that have been filtered")
     
-    ("min-base-quality",
+    ("min-pileup-base-quality",
      po::value<int>()->default_value(20),
      "Only bases with quality above this value are considered for candidate generation")
     
