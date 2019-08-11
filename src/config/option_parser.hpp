@@ -32,7 +32,7 @@ struct ContigPloidy
 };
 
 enum class RefCallType { positional, blocked };
-enum class ExtensionLevel { conservative, normal, aggressive };
+enum class ExtensionLevel { minimal, conservative, normal, aggressive, unlimited };
 enum class LaggingLevel { none, normal, aggressive };
 enum class BacktrackLevel { none, normal, aggressive };
 enum class NormalContaminationRisk { low, high };

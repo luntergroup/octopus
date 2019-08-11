@@ -425,7 +425,7 @@ OptionMap parse_options(const int argc, const char** argv)
     
     ("extension-level",
      po::value<ExtensionLevel>()->default_value(ExtensionLevel::normal),
-     "Level of haplotype extension [MINIMAL, NORMAL, AGGRESSIVE]")
+     "Level of haplotype extension [MINIMAL, CONSERVATIVE, NORMAL, AGGRESSIVE, UNLIMITED]")
      
     ("lagging-level",
      po::value<LaggingLevel>()->default_value(LaggingLevel::normal),
@@ -1222,12 +1222,16 @@ std::istream& operator>>(std::istream& in, ExtensionLevel& level)
 {
     std::string token;
     in >> token;
-    if (token == "CONSERVATIVE")
+    if (token == "MINIMAL")
+        level = ExtensionLevel::minimal;
+    else if (token == "CONSERVATIVE")
         level = ExtensionLevel::conservative;
     else if (token == "NORMAL")
         level = ExtensionLevel::normal;
     else if (token == "AGGRESSIVE")
         level = ExtensionLevel::aggressive;
+    else if (token == "UNLIMITED")
+        level = ExtensionLevel::unlimited;
     else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token, "extension-level"};
     return in;
 }
@@ -1235,6 +1239,9 @@ std::istream& operator>>(std::istream& in, ExtensionLevel& level)
 std::ostream& operator<<(std::ostream& out, const ExtensionLevel& level)
 {
     switch (level) {
+    case ExtensionLevel::minimal:
+        out << "MINIMAL";
+        break;
     case ExtensionLevel::conservative:
         out << "CONSERVATIVE";
         break;
@@ -1243,6 +1250,9 @@ std::ostream& operator<<(std::ostream& out, const ExtensionLevel& level)
         break;
     case ExtensionLevel::aggressive:
         out << "AGGRESSIVE";
+        break;
+    case ExtensionLevel::unlimited:
+        out << "UNLIMITED";
         break;
     }
     return out;

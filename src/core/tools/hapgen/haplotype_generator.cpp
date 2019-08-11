@@ -62,13 +62,15 @@ auto get_walker_policy(const HaplotypeGenerator::Policies::Extension policy) noe
     using HGP = HaplotypeGenerator::Policies::Extension;
     using GWP = GenomeWalker::ExtensionPolicy;
     switch (policy) {
-        case HGP::conservative:
+        case HGP::minimal:
             return GWP::includeIfWithinReadLengthOfFirstIncluded;
+        case HGP::conservative:
+            // fall through
         case HGP::normal:
             return GWP::includeIfAllSamplesSharedWithFrontier;
-        case HGP::optimistic:
-            return GWP::includeIfAnySampleSharedWithFrontier;
         case HGP::aggressive:
+            return GWP::includeIfAnySampleSharedWithFrontier;
+        case HGP::unlimited:
             return GWP::noLimit;
         default:
             return GWP::includeIfAllSamplesSharedWithFrontier; // prevents compiler warning
@@ -372,7 +374,7 @@ void HaplotypeGenerator::update_next_active_region() const
             // If we are in holdout mode then lagging is required
             update_lagged_next_active_region();
         } else {
-            next_active_region_ = default_walker_.walk(active_region_, reads_, alleles_);
+            next_active_region_ = walk_from_active_region(default_walker_);
         }
     }
     assert(in_holdout_mode() || active_region_ <= *next_active_region_);
@@ -411,12 +413,21 @@ void pop_front(std::vector<T>& v) {
 
 } // namespace
 
+GenomicRegion HaplotypeGenerator::walk_from_active_region(const GenomeWalker& walker) const
+{
+    if (policies_.extension == Policies::Extension::minimal || policies_.extension == Policies::Extension::conservative) {
+        return walker.walk(active_region_, reads_, alleles_);
+    } else {
+        return walker.walk(active_region_, reads_, alleles_, read_templates_);
+    }
+}
+
 GenomicRegion HaplotypeGenerator::find_max_lagged_region() const
 {
     if (in_holdout_mode()) {
-        return holdout_walker_.walk(active_region_, reads_, alleles_);
+        return walk_from_active_region(holdout_walker_);
     } else {
-        return lagged_walker_->walk(active_region_, reads_, alleles_);
+        return walk_from_active_region(*lagged_walker_);
     }
 }
 

@@ -42,7 +42,7 @@ public:
     struct Policies
     {
         enum class Lagging { none, conservative, moderate, normal, aggressive } lagging = Lagging::normal;
-        enum class Extension { conservative, normal, optimistic, aggressive } extension = Extension::normal;
+        enum class Extension { minimal, conservative, normal, aggressive, unlimited } extension = Extension::normal;
         enum class Backtrack { none, normal, aggressive } backtrack = Backtrack::normal;
         struct HaplotypeLimits { unsigned target = 128, holdout = 2048, overflow = 8192; } haplotype_limits;
         unsigned max_holdout_depth = 2;
@@ -164,6 +164,7 @@ private:
     bool is_backtrack_active() const noexcept;
     bool is_active_region_lagged() const;
     void reset_next_active_region() const noexcept;
+    GenomicRegion walk_from_active_region(const GenomeWalker& walker) const;
     GenomicRegion find_max_lagged_region() const;
     void update_next_active_region() const;
     void update_lagged_next_active_region() const;

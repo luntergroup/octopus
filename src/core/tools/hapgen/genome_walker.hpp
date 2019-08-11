@@ -51,17 +51,19 @@ public:
     
     ~GenomeWalker() = default;
     
-    GenomicRegion walk(const GenomicRegion::ContigName& contig,
-                       const ReadMap& reads,
-                       const AlleleSet& alleles) const;
-    GenomicRegion walk(const GenomicRegion& previous_region,
-                       const ReadMap& reads,
-                       const AlleleSet& alleles) const;
+    GenomicRegion
+    walk(const GenomicRegion& previous_region,
+         const ReadMap& reads,
+         const AlleleSet& alleles,
+         boost::optional<const TemplateMap&> read_templates = boost::none) const;
     
 private:
     unsigned max_included_;
     IndicatorPolicy indicator_policy_;
     ExtensionPolicy extension_policy_;
+    
+    bool can_extend(const Allele& active, const Allele& novel,
+                    const ReadMap& reads, boost::optional<const TemplateMap&> read_templates) const;
 };
 
 } // namespace coretools
