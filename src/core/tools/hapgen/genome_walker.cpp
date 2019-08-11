@@ -253,7 +253,7 @@ GenomeWalker::can_extend(const Allele& active, const Allele& novel,
             return has_shared(reads, active, novel);
         }
     }
-    return false;
+    return extension_policy_ == ExtensionPolicy::noLimit;
 }
 
 } // namespace coretools
