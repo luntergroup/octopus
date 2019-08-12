@@ -10,16 +10,15 @@
 
 namespace octopus { namespace csr {
 
-const std::string SomaticRandomForestVariantCallFilter::call_quality_name_ = "RFQUAL_ALL";
-
 SomaticRandomForestVariantCallFilter::SomaticRandomForestVariantCallFilter(FacetFactory facet_factory,
                                                                            std::vector<MeasureWrapper> measures,
                                                                            Path germline_forest, Path somatic_forest,
                                                                            OutputOptions output_config,
                                                                            ConcurrencyPolicy threading,
                                                                            Path temp_directory,
+                                                                           Options options,
                                                                            boost::optional<ProgressMeter&> progress)
-: ConditionalRandomForestFilter {
+: RandomForestFilter {
     std::move(facet_factory),
     std::move(measures),
     {make_wrapped_measure<IsSomatic>(true), make_wrapped_measure<IsRefcall>(true)},
@@ -36,6 +35,7 @@ SomaticRandomForestVariantCallFilter::SomaticRandomForestVariantCallFilter(Facet
     std::move(output_config),
     std::move(threading),
     std::move(temp_directory),
+    std::move(options),
     progress
 } {}
 
@@ -45,8 +45,9 @@ SomaticRandomForestVariantCallFilter::SomaticRandomForestVariantCallFilter(Facet
                                                                            OutputOptions output_config,
                                                                            ConcurrencyPolicy threading,
                                                                            Path temp_directory,
+                                                                           Options options,
                                                                            boost::optional<ProgressMeter&> progress)
-: ConditionalRandomForestFilter {
+: RandomForestFilter {
     std::move(facet_factory),
     std::move(measures),
     {make_wrapped_measure<IsSomatic>(false)},
@@ -58,26 +59,9 @@ SomaticRandomForestVariantCallFilter::SomaticRandomForestVariantCallFilter(Facet
     std::move(output_config),
     std::move(threading),
     std::move(temp_directory),
+    std::move(options),
     progress
 } {}
-
-void SomaticRandomForestVariantCallFilter::annotate(VcfHeader::Builder& header) const
-{
-    ConditionalRandomForestFilter::annotate(header);
-    header.add_info(call_quality_name_, "1", "Float", "Combined quality score for call using product of sample RFQUAL");
-}
-
-bool SomaticRandomForestVariantCallFilter::is_soft_filtered(const ClassificationList& sample_classifications,
-                                                            const MeasureVector& measures) const
-{
-    return std::any_of(std::cbegin(sample_classifications), std::cend(sample_classifications),
-                       [] (const auto& c) { return c.category != Classification::Category::unfiltered; });
-}
-
-boost::optional<std::string> SomaticRandomForestVariantCallFilter::call_quality_name() const
-{
-    return call_quality_name_;
-}
 
 } // namespace csr
 } // namespace octopus

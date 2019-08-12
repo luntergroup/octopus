@@ -1,20 +1,30 @@
 #!/usr/bin/env python3
 
 import argparse
-from os import makedirs, remove
-from os.path import join, basename, exists
+from os import makedirs, remove, pardir
+from os.path import join, basename, exists, dirname, abspath
 from subprocess import call
 import csv
 from pysam import VariantFile
 import random
 import numpy as np
+import shutil
+
+script_dir = dirname(abspath(__file__))
+default_octopus_bin = join(abspath(join(script_dir, pardir)), 'bin/octopus')
 
 default_measures = "AC AD ADP AF ARF BQ CC CRF DP FRF GC GQ GQD NC MC MF MP MRC MQ MQ0 MQD PP PPD QD QUAL REFCALL REB RSB RTB SB SD SF SHC SMQ SOMATIC STR_LENGTH STR_PERIOD VL".split()
 
-def run_octopus(octopus, ref_path, bam_path, regions_bed, threads, out_path):
-    call([octopus, '-R', ref_path, '-I', bam_path, '-t', regions_bed,
-         '-f', 'off', '--annotations', 'forest',
-          '--legacy', '--threads', str(threads), '-o', out_path])
+def make_sdf_ref(fasta_ref, rtg, out):
+    call([rtg, 'format', '-o', out, fasta_ref])
+
+def run_octopus(octopus, ref_path, bam_path, regions_bed, threads, out_path, config=None):
+    octopus_cmd = [octopus, '-R', ref_path, '-I', bam_path, '-t', regions_bed,
+                   '-f', 'off', '--annotations', 'forest',
+                   '--legacy', '--threads', str(threads), '-o', out_path]
+    if config is not None:
+        octopus_cmd += ['--config', config]
+    call(octopus_cmd)
 
 def get_reference_id(ref_path):
     return basename(ref_path).replace(".fasta", "")
@@ -22,11 +32,11 @@ def get_reference_id(ref_path):
 def get_bam_id(bam_path):
     return basename(bam_path).replace(".bam", "")
 
-def call_variants(octopus, ref_path, bam_path, regions_bed, threads, out_dir):
+def call_variants(octopus, ref_path, bam_path, regions_bed, threads, out_dir, config=None):
     ref_id = get_reference_id(ref_path)
     bam_id = get_bam_id(bam_path)
     out_vcf = join(out_dir, "octopus." + bam_id + "." + ref_id + ".vcf.gz")
-    run_octopus(octopus, ref_path, bam_path, regions_bed, threads, out_vcf)
+    run_octopus(octopus, ref_path, bam_path, regions_bed, threads, out_vcf, config=config)
     legacy_vcf = out_vcf.replace(".vcf.gz", ".legacy.vcf.gz")
     return legacy_vcf
 
@@ -35,8 +45,9 @@ def run_rtg(rtg, rtg_ref_path, truth_vcf_path, confident_bed_path, octopus_vcf_p
           '--ref-overlap', '-c', octopus_vcf_path, '-o', out_dir])
 
 def eval_octopus(octopus, ref_path, bam_path, regions_bed, threads,
-                 rtg, rtg_ref_path, truth_vcf_path, confident_bed_path, out_dir):
-    octopus_vcf = call_variants(octopus, ref_path, bam_path, regions_bed, threads, out_dir)
+                 rtg, rtg_ref_path, truth_vcf_path, confident_bed_path, out_dir,
+                 config=None):
+    octopus_vcf = call_variants(octopus, ref_path, bam_path, regions_bed, threads, out_dir, config=config)
     rtf_eval_dir = join(out_dir, basename(octopus_vcf).replace(".legacy.vcf.gz", ".eval"))
     run_rtg(rtg, rtg_ref_path, truth_vcf_path, confident_bed_path, octopus_vcf, rtf_eval_dir)
     return rtf_eval_dir
@@ -99,46 +110,81 @@ def run_ranger_training(ranger, data_path, n_trees, min_node_size, threads, out)
 def main(options):
     if not exists(options.out):
         makedirs(options.out)
-    rtg_eval_dirs = []
-    for bam_path in options.reads:
-        rtg_eval_dirs.append(eval_octopus(options.octopus, options.reference, bam_path, options.regions,
-                                          options.threads, options.rtg, options.sdf, options.truth, options.confident,
-                                          options.out))
-    data_paths = []
-    tmp_paths = []
-    for rtg_eval in rtg_eval_dirs:
+    tmp_files, tmp_dirs, rtg_eval_dirs = [], [], []
+    truth_sets, confident_sets = options.truth, options.confident
+    fasta_refs, rtg_sdf_refs = options.reference, []
+    call_region_beds = options.regions
+    if len(call_region_beds) == 1:
+        call_region_beds = len(options.reads) * [call_region_beds[0]]
+    for ref in fasta_refs:
+        rtg_sdf_ref = basename(ref) + '.tmp.sdf'
+        make_sdf_ref(ref, options.rtg, rtg_sdf_ref)
+        rtg_sdf_refs.append(rtg_sdf_ref)
+        tmp_dirs.append(rtg_sdf_ref)
+    if len(options.reference) == 1 and len(options.reads) > 1:
+        fasta_refs = len(options.reads) * [fasta_refs[0]]
+        rtg_sdf_refs = len(options.reads) * [rtg_sdf_refs[0]]
+    if len(truth_sets) == 1 and len(options.reads) > 1:
+        truth_sets, confident_sets = len(options.reads) * [truth_sets[0]], len(options.reads) * [confident_sets[0]]
+    configs = options.config
+    if configs is None or len(configs) == 1 and len(options.reads) > 1:
+        configs = len(options.reads) * [configs]
+    for fasta_ref, bam_path, regions_bed, config, rtg_ref, truth, confident in \
+            zip(fasta_refs, options.reads, call_region_beds, configs, rtg_sdf_refs, truth_sets, confident_sets):
+        rtg_eval_dirs.append(eval_octopus(options.octopus, fasta_ref, bam_path, regions_bed,
+                                          options.threads, options.rtg, rtg_ref, truth, confident,
+                                          options.out, config=config))
+    data_files = []
+    for rtg_eval, regions_bed in zip(rtg_eval_dirs, call_region_beds):
         tp_vcf_path = join(rtg_eval, "tp.vcf.gz")
         tp_train_vcf_path = tp_vcf_path.replace("tp.vcf", "tp.train.vcf")
-        subset(tp_vcf_path, tp_train_vcf_path, options.regions)
+        subset(tp_vcf_path, tp_train_vcf_path, regions_bed)
         tp_data_path = tp_train_vcf_path.replace(".vcf.gz", ".dat")
         make_ranger_data(tp_train_vcf_path, tp_data_path, True, default_measures, options.missing_value)
-        data_paths.append(tp_data_path)
+        data_files.append(tp_data_path)
         fp_vcf_path = join(rtg_eval, "fp.vcf.gz")
         fp_train_vcf_path = fp_vcf_path.replace("fp.vcf", "fp.train.vcf")
-        subset(fp_vcf_path, fp_train_vcf_path, options.regions)
+        subset(fp_vcf_path, fp_train_vcf_path, regions_bed)
         fp_data_path = fp_train_vcf_path.replace(".vcf.gz", ".dat")
         make_ranger_data(fp_train_vcf_path, fp_data_path, False, default_measures, options.missing_value)
-        data_paths.append(fp_data_path)
-        tmp_paths += [tp_train_vcf_path, fp_train_vcf_path]
-    master_data_path = join(options.out, options.prefix + ".dat")
-    concat(data_paths, master_data_path)
-    for path in data_paths:
+        data_files.append(fp_data_path)
+        tmp_files += [tp_train_vcf_path, fp_train_vcf_path]
+    master_data_file = join(options.out, options.prefix + ".dat")
+    concat(data_files, master_data_file)
+    for path in data_files:
         remove(path)
-    for path in tmp_paths:
-        remove(path)
-    shuffle(master_data_path)
+    for file in tmp_files:
+        remove(file)
+    for dir in tmp_dirs:
+        shutil.rmtree(dir)
+    shuffle(master_data_file)
     ranger_header = ' '.join(default_measures + ['TP'])
-    add_header(master_data_path, ranger_header)
+    add_header(master_data_file, ranger_header)
     ranger_out_prefix = join(options.out, options.prefix)
-    run_ranger_training(options.ranger, master_data_path, options.trees, options.min_node_size, options.threads, ranger_out_prefix)
+    run_ranger_training(options.ranger, master_data_file, options.trees, options.min_node_size, options.threads, ranger_out_prefix)
     try:
         remove(ranger_out_prefix + ".confusion")
     except FileNotFoundError:
         print('Ranger did not complete, perhaps it was killed due to insufficient memory')
 
+def check_options(options):
+    if len(options.truth) > 1:
+        if len(options.truth) != len(options.reads):
+            print("Must specify a --truth set for each --read set if using different truth sets")
+            return False
+        if len(options.confident) != len(options.truth):
+            print("Must specify a --confident set for each --truth set")
+            return False
+    if options.config is not None and len(options.config) > 1:
+        if len(options.config) != len(options.reads):
+            print("Must specify a --config file for each --read set if using different configs")
+            return False
+    return True
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-R', '--reference',
+                        nargs='+',
                         type=str,
                         required=True,
                         help='Reference to use for calling')
@@ -148,29 +194,32 @@ if __name__ == '__main__':
                         required=True,
                         help='Input BAM files')
     parser.add_argument('-T', '--regions',
+                        nargs='+',
                         type=str,
                         required=True,
                         help='BED files containing regions to call')
+    parser.add_argument('--config',
+                        nargs='+',
+                        type=str,
+                        help='Octopus config files for each read set, or one for all')
     parser.add_argument('--truth',
+                        nargs='+',
                         type=str,
                         required=True,
                         help='Truth VCF file')
     parser.add_argument('--confident',
+                        nargs='+',
                         type=str,
                         required=True,
                         help='BED files containing high confidence truth regions')
     parser.add_argument('--octopus',
                         type=str,
-                        required=True,
+                        default=default_octopus_bin,
                         help='Octopus binary')
     parser.add_argument('--rtg', 
                         type=str,
                         required=True,
                         help='RTG Tools binary')
-    parser.add_argument('--sdf',
-                        type=str,
-                        required=True,
-                        help='RTG Tools SDF reference index')
     parser.add_argument('--ranger', 
                         type=str,
                         required=True,
@@ -185,6 +234,7 @@ if __name__ == '__main__':
                         help='Node size to stop growing trees, implicitly limiting tree depth')
     parser.add_argument('-o', '--out',
                         type=str,
+                        required=True,
                         help='Output directory')
     parser.add_argument('--prefix',
                         type=str,
@@ -199,4 +249,6 @@ if __name__ == '__main__':
                         default=-1,
                         help='Value for missing measures')
     parsed, unparsed = parser.parse_known_args()
+    if not check_options(parsed):
+        exit(1)
     main(parsed)

@@ -25,13 +25,6 @@ GenomeWalker::GenomeWalker(unsigned max_included,
 , extension_policy_ {extension_policy}
 {}
 
-GenomicRegion GenomeWalker::walk(const GenomicRegion::ContigName& contig,
-                                 const ReadMap& reads,
-                                 const AlleleSet& alleles) const
-{
-    return walk(GenomicRegion {contig, 0, 0}, reads, alleles);
-}
-
 namespace {
 
 template <typename BidirIt>
@@ -150,7 +143,8 @@ bool is_optimal_to_extend(const BidirIt first_included, const BidirIt proposed_i
 GenomicRegion
 GenomeWalker::walk(const GenomicRegion& previous_region,
                    const ReadMap& reads,
-                   const AlleleSet& alleles) const
+                   const AlleleSet& alleles,
+                   boost::optional<const TemplateMap&> read_templates) const
 {
     using std::cbegin; using std::cend; using std::next; using std::prev; using std::min;
     using std::distance; using std::advance;
@@ -232,11 +226,7 @@ GenomeWalker::walk(const GenomicRegion& previous_region,
     auto first_excluded_itr = next(included_itr, num_included);
     while (--num_included > 0 && is_optimal_to_extend(first_included_itr, next(included_itr), first_excluded_itr,
                                                       last_allele_itr, reads, num_included + num_excluded_alleles)) {
-        if (extension_policy_ == ExtensionPolicy::includeIfAllSamplesSharedWithFrontier
-            && !all_shared(reads, *included_itr, *next(included_itr))) {
-            break;
-        } else if (extension_policy_ == ExtensionPolicy::includeIfAnySampleSharedWithFrontier
-            && !has_shared(reads, *included_itr, *next(included_itr))) {
+        if (!can_extend(*included_itr, *next(included_itr), reads, read_templates)) {
             break;
         }
         ++included_itr;
@@ -244,6 +234,26 @@ GenomeWalker::walk(const GenomicRegion& previous_region,
     const auto rightmost = rightmost_mappable(first_included_itr, next(included_itr));
     const auto first_exclusive = find_next_mutually_exclusive(rightmost, last_allele_itr);
     return encompassing_region(first_included_itr, first_exclusive);
+}
+
+bool
+GenomeWalker::can_extend(const Allele& active, const Allele& novel,
+                         const ReadMap& reads, boost::optional<const TemplateMap&> read_templates) const
+{
+    if (extension_policy_ == ExtensionPolicy::includeIfAllSamplesSharedWithFrontier) {
+        if (read_templates) {
+            return all_shared(*read_templates, active, novel);
+        } else {
+            return all_shared(reads, active, novel);
+        }
+    } else if (extension_policy_ == ExtensionPolicy::includeIfAnySampleSharedWithFrontier) {
+        if (read_templates) {
+            return has_shared(*read_templates, active, novel);
+        } else {
+            return has_shared(reads, active, novel);
+        }
+    }
+    return extension_policy_ == ExtensionPolicy::noLimit;
 }
 
 } // namespace coretools

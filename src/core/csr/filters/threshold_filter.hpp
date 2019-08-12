@@ -86,6 +86,7 @@ protected:
                             ThresholdIterator first_threshold) const;
     
 private:
+    std::string do_name() const override;
     virtual void annotate(VcfHeader::Builder& header) const override;
     virtual Classification classify(const MeasureVector& measures) const override;
     

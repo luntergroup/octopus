@@ -11,6 +11,7 @@
 #include <boost/optional.hpp>
 #include <boost/filesystem.hpp>
 
+#include "basics/phred.hpp"
 #include "logging/progress_meter.hpp"
 #include "../measures/measure.hpp"
 #include "variant_call_filter_factory.hpp"
@@ -27,9 +28,14 @@ public:
     using Path = RandomForestFilter::Path;
     enum class ForestType { germline, somatic, denovo };
     
+    using Options = RandomForestFilter::Options;
+    
     RandomForestFilterFactory();
-    RandomForestFilterFactory(Path ranger_forest, Path temp_directory, ForestType type = ForestType::germline);
-    RandomForestFilterFactory(Path germline_ranger_forest, Path somatic_ranger_forest, Path temp_directory);
+    
+    RandomForestFilterFactory(std::vector<Path> ranger_forests,
+                              std::vector<ForestType> forest_types,
+                              Path temp_directory,
+                              Options options = Options {});
     
     RandomForestFilterFactory(const RandomForestFilterFactory&)            = default;
     RandomForestFilterFactory& operator=(const RandomForestFilterFactory&) = default;
@@ -39,12 +45,13 @@ public:
     ~RandomForestFilterFactory() = default;
     
     std::vector<MeasureWrapper> measures() const;
-
+    
 private:
     std::vector<MeasureWrapper> measures_;
     std::vector<Path> ranger_forests_;
     std::vector<ForestType> forest_types_;
     Path temp_directory_;
+    Options options_;
     
     std::unique_ptr<VariantCallFilterFactory> do_clone() const override;
     std::unique_ptr<VariantCallFilter> do_make(FacetFactory facet_factory,

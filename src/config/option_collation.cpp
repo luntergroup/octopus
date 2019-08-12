@@ -686,9 +686,28 @@ ReadManager make_read_manager(const OptionMap& options)
     return ReadManager {std::move(read_paths), max_open_files};
 }
 
-bool allow_assembler_generation(const OptionMap& options)
+bool denovo_candidate_variant_discovery_enabled(const OptionMap& options)
 {
-    return options.at("assembly-candidate-generator").as<bool>() && !is_fast_mode(options);
+    return !options.at("disable-denovo-variant-discovery").as<bool>();
+}
+
+bool pileup_candidate_variant_generator_enabled(const OptionMap& options)
+{
+    return denovo_candidate_variant_discovery_enabled(options)
+           && options.at("pileup-candidate-generator").as<bool>();
+}
+
+bool repeat_candidate_variant_generator_enabled(const OptionMap& options)
+{
+    return denovo_candidate_variant_discovery_enabled(options)
+           && options.at("repeat-candidate-generator").as<bool>();
+}
+
+bool assembler_candidate_variant_generator_enabled(const OptionMap& options)
+{
+    return denovo_candidate_variant_discovery_enabled(options)
+        && options.at("assembly-candidate-generator").as<bool>()
+        && !is_fast_mode(options);
 }
 
 AlignedRead::BaseQuality get_max_base_quality(const OptionMap& options)
@@ -722,7 +741,7 @@ auto make_read_transformers(const ReferenceGenome& reference, const OptionMap& o
                 if (is_set("soft-clip-mask-threshold", options)) {
                     const auto threshold = static_cast<AlignedRead::BaseQuality>(as_unsigned("soft-clip-mask-threshold", options));
                     prefilter_transformer.add(MaskLowQualitySoftClippedBoundaryBases {boundary_size, threshold});
-                } else if (allow_assembler_generation(options)) {
+                } else if (assembler_candidate_variant_generator_enabled(options)) {
                     prefilter_transformer.add(MaskLowQualitySoftClippedBoundaryBases {boundary_size, 3});
                     prefilter_transformer.add(MaskLowAverageQualitySoftClippedTails {10, 5});
                     prefilter_transformer.add(MaskClippedDuplicatedBases {});
@@ -733,7 +752,7 @@ auto make_read_transformers(const ReferenceGenome& reference, const OptionMap& o
                 if (is_set("soft-clip-mask-threshold", options)) {
                     const auto threshold = static_cast<AlignedRead::BaseQuality>(as_unsigned("soft-clip-mask-threshold", options));
                     prefilter_transformer.add(MaskLowQualitySoftClippedBases {threshold});
-                } else if (allow_assembler_generation(options)) {
+                } else if (assembler_candidate_variant_generator_enabled(options)) {
                     prefilter_transformer.add(MaskLowQualitySoftClippedBases {3});
                     prefilter_transformer.add(MaskLowAverageQualitySoftClippedTails {10, 5});
                     prefilter_transformer.add(MaskClippedDuplicatedBases {});
@@ -1054,9 +1073,9 @@ auto make_variant_generator_builder(const OptionMap& options, const boost::optio
     logging::ErrorLogger log {};
     
     VariantGeneratorBuilder result {};
-    const bool use_assembler {allow_assembler_generation(options)};
+    const bool use_assembler {assembler_candidate_variant_generator_enabled(options)};
     
-    if (options.at("pileup-candidate-generator").as<bool>()) {
+    if (pileup_candidate_variant_generator_enabled(options)) {
         CigarScanner::Options scanner_options {};
         if (is_set("min-supporting-reads", options)) {
             auto min_support = as_unsigned("min-supporting-reads", options);
@@ -1070,10 +1089,10 @@ auto make_variant_generator_builder(const OptionMap& options, const boost::optio
         }
         scanner_options.match = get_candidate_variant_match_predicate(options);
         scanner_options.use_clipped_coverage_tracking = true;
-        if (options.at("ignore-pileup-candidates-from-misaligned-read").as<bool>()) {
+        if (options.at("ignore-pileup-candidates-from-misaligned-reads").as<bool>()) {
             CigarScanner::Options::MisalignmentParameters misalign_params {};
             misalign_params.max_expected_mutation_rate = get_max_expected_heterozygosity(options);
-            misalign_params.snv_threshold = as_unsigned("min-base-quality", options);
+            misalign_params.snv_threshold = as_unsigned("min-pileup-base-quality", options);
             if (use_assembler) {
                 misalign_params.indel_penalty = 1.5;
                 misalign_params.clip_penalty = 2;
@@ -1085,7 +1104,7 @@ auto make_variant_generator_builder(const OptionMap& options, const boost::optio
         }
         result.set_cigar_scanner(std::move(scanner_options));
     }
-    if (options.at("repeat-candidate-generator").as<bool>()) {
+    if (repeat_candidate_variant_generator_enabled(options)) {
         result.set_repeat_scanner(RepeatScanner::Options {});
     }
     if (use_assembler) {
@@ -1317,10 +1336,11 @@ auto get_extension_policy(const OptionMap& options)
 {
     using ExtensionPolicy = HaplotypeGenerator::Builder::Policies::Extension;
     switch (options.at("extension-level").as<ExtensionLevel>()) {
+        case ExtensionLevel::minimal: return ExtensionPolicy::minimal;
         case ExtensionLevel::conservative: return ExtensionPolicy::conservative;
         case ExtensionLevel::normal: return ExtensionPolicy::normal;
-        case ExtensionLevel::optimistic: return ExtensionPolicy::optimistic;
         case ExtensionLevel::aggressive: return ExtensionPolicy::aggressive;
+        case ExtensionLevel::unlimited: return ExtensionPolicy::unlimited;
         default: return ExtensionPolicy::normal; // to stop GCC warning
     }
 }
@@ -1341,8 +1361,7 @@ auto get_lagging_policy(const OptionMap& options)
     using LaggingPolicy = HaplotypeGenerator::Builder::Policies::Lagging;
     if (is_fast_mode(options)) return LaggingPolicy::none;
     switch (options.at("lagging-level").as<LaggingLevel>()) {
-        case LaggingLevel::conservative: return LaggingPolicy::conservative;
-        case LaggingLevel::moderate: return LaggingPolicy::moderate;
+        case LaggingLevel::none: return LaggingPolicy::none;
         case LaggingLevel::normal: return LaggingPolicy::normal;
         case LaggingLevel::aggressive: return LaggingPolicy::aggressive;
         default: return LaggingPolicy::none;
@@ -1861,7 +1880,7 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
         vc_builder.set_somatic_snv_mutation_rate(options.at("somatic-snv-mutation-rate").as<float>());
         vc_builder.set_somatic_indel_mutation_rate(options.at("somatic-indel-mutation-rate").as<float>());
         vc_builder.set_min_expected_somatic_frequency(options.at("min-expected-somatic-frequency").as<float>());
-        vc_builder.set_credible_mass(options.at("credible-mass").as<float>());
+        vc_builder.set_credible_mass(options.at("somatic-credible-mass").as<float>());
         vc_builder.set_min_credible_somatic_frequency(options.at("min-credible-somatic-frequency").as<float>());
         auto min_somatic_posterior = options.at("min-somatic-posterior").as<Phred<double>>();
         vc_builder.set_min_somatic_posterior(min_somatic_posterior);
@@ -1949,15 +1968,10 @@ std::set<std::string> get_requested_measure_annotations(const OptionMap& options
     return result;
 }
 
-class MissingForestFile : public MissingFileError
+bool is_random_forest_filtering(const OptionMap& options)
 {
-    std::string do_where() const override
-    {
-        return "make_call_filter_factory";
-    }
-public:
-    MissingForestFile(fs::path p, std::string type) : MissingFileError {std::move(p), std::move(type)} {};
-};
+    return is_set("forest-file", options) || is_set("somatic-forest-file", options);
+}
 
 auto get_caller_type(const OptionMap& options, const std::vector<SampleName>& samples)
 {
@@ -1968,51 +1982,34 @@ std::unique_ptr<VariantCallFilterFactory>
 make_call_filter_factory(const ReferenceGenome& reference, ReadPipe& read_pipe, const OptionMap& options,
                          boost::optional<fs::path> temp_directory)
 {
+    if (!temp_directory) temp_directory = "/tmp";
     std::unique_ptr<VariantCallFilterFactory> result {};
     if (is_call_filtering_requested(options)) {
         const auto caller = get_caller_type(options, read_pipe.samples());
-        if (is_set("forest-file", options)) {
-            auto forest_file = resolve_path(options.at("forest-file").as<fs::path>(), options);
-            if (!fs::exists(forest_file)) {
-                throw MissingForestFile {forest_file, "forest-file"};
-            }
-            if (!temp_directory) temp_directory = "/tmp";
+        if (is_random_forest_filtering(options)) {
+            std::vector<RandomForestFilterFactory::Path> forest_files {resolve_path(options.at("forest-file").as<fs::path>(), options)};
+            std::vector<RandomForestFilterFactory::ForestType> forest_types {RandomForestFilterFactory::ForestType::germline};
+            RandomForestFilterFactory::Options forest_options {};
+            if (is_set("min-forest-quality", options)) forest_options.min_forest_quality = options.at("min-forest-quality").as<Phred<double>>();
             if (caller == "cancer") {
                 if (is_set("somatic-forest-file", options)) {
-                    auto somatic_forest_file = resolve_path(options.at("somatic-forest-file").as<fs::path>(), options);
-                    if (!fs::exists(somatic_forest_file)) {
-                        throw MissingForestFile {somatic_forest_file, "somatic-forest-file"};
-                    }
-                    result = std::make_unique<RandomForestFilterFactory>(forest_file, somatic_forest_file, *temp_directory);
+                    forest_files.push_back(resolve_path(options.at("somatic-forest-file").as<fs::path>(), options));
+                    forest_types.push_back(RandomForestFilterFactory::ForestType::somatic);
                 } else if (options.at("somatics-only").as<bool>()) {
-                    result = std::make_unique<RandomForestFilterFactory>(forest_file, *temp_directory,
-                                                                         RandomForestFilterFactory::ForestType::somatic);
+                    forest_types.front() = RandomForestFilterFactory::ForestType::somatic;
                 } else {
                     logging::WarningLogger log {};
                     log << "Both germline and somatic forests must be provided for random forest cancer variant filtering";
                 }
             } else if (caller == "trio") {
                 if (options.at("denovos-only").as<bool>()) {
-                    result = std::make_unique<RandomForestFilterFactory>(forest_file, *temp_directory,
-                                                                         RandomForestFilterFactory::ForestType::denovo);
-                } else {
-                    result = std::make_unique<RandomForestFilterFactory>(forest_file, *temp_directory);
+                    forest_types.front() = RandomForestFilterFactory::ForestType::denovo;
+                } else if (is_set("somatic-forest-file", options)) {
+                    forest_files.push_back(resolve_path(options.at("somatic-forest-file").as<fs::path>(), options));
+                    forest_types.push_back(RandomForestFilterFactory::ForestType::denovo);
                 }
-            } else {
-                result = std::make_unique<RandomForestFilterFactory>(forest_file, *temp_directory);
             }
-        } else if (is_set("somatic-forest-file", options)) {
-            if (options.at("somatics-only").as<bool>()) {
-                auto somatic_forest_file = resolve_path(options.at("somatic-forest-file").as<fs::path>(), options);
-                if (!fs::exists(somatic_forest_file)) {
-                    throw MissingForestFile {somatic_forest_file, "somatic-forest-file"};
-                }
-                result = std::make_unique<RandomForestFilterFactory>(somatic_forest_file, *temp_directory,
-                                                                     RandomForestFilterFactory::ForestType::somatic);
-            } else {
-                logging::WarningLogger log {};
-                log << "Both germline and somatic forests must be provided for random forest cancer variant filtering";
-            }
+            result = std::make_unique<RandomForestFilterFactory>(std::move(forest_files), std::move(forest_types), *temp_directory, forest_options);
         } else {
             if (is_filter_training_mode(options)) {
                 result = std::make_unique<TrainingFilterFactory>(get_requested_measure_annotations(options));
@@ -2245,7 +2242,7 @@ boost::optional<fs::path> bamout_request(const OptionMap& options)
 
 bool full_bamouts_requested(const OptionMap& options)
 {
-    return options.at("full-bamout").as<bool>();
+    return options.at("bamout-type").as<RealignedBAMType>() == RealignedBAMType::full;
 }
 
 unsigned max_open_read_files(const OptionMap& options)

@@ -31,4 +31,18 @@ void log_program_startup()
     log << banner;
 }
 
+void log_command_line_options(const options::OptionMap& options)
+{
+    if (options.count("show-options") == 1) {
+        logging::InfoLogger info_log {};
+        const auto banner = detail::make_banner();
+        info_log << "Program options: " + options::to_string(options, true);
+        info_log << banner;
+    } else {
+        logging::DebugLogger debug_log {};
+        debug_log << "Program options: ";
+        debug_log << options::to_string(options);
+    }
+}
+
 } // namespace octopus

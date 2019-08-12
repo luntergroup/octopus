@@ -6,6 +6,8 @@
 
 #include <string>
 
+#include "config/option_parser.hpp"
+
 #include "logging.hpp"
 
 namespace octopus {
@@ -15,6 +17,8 @@ namespace detail {
 }
 
 void log_program_startup(); // Always uses InfoLogger
+
+void log_command_line_options(const options::OptionMap& options);
 
 template <typename Log>
 void log_program_end(Log& log)

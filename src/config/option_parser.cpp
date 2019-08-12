@@ -41,47 +41,38 @@ void validate(const OptionMap& vm);
 
 po::parsed_options run(po::command_line_parser& parser);
 
-
 OptionMap parse_options(const int argc, const char** argv)
 {
     po::options_description general("General");
     general.add_options()
-    ("help,h", "Produce help message")
+    ("help,h",
+     "Report detailed option information")
     
-    ("version", "Output the version number")
+    ("version",
+     "Report detailed version information")
     
     ("config",
      po::value<fs::path>(),
-     "A config file, used to populate command line options")
+     "Config file to populate command line options")
+     
+    ("show-options",
+    "Display all command line option values in the startup banner")
     
     ("debug",
      po::value<fs::path>()->implicit_value("octopus_debug.log"),
-     "Writes verbose debug information to debug.log in the working directory")
+     "Create log file for debugging")
     
     ("trace",
      po::value<fs::path>()->implicit_value("octopus_trace.log"),
-     "Writes very verbose debug information to trace.log in the working directory")
+     "Create very verbose log file for debugging")
     
-    ("fast",
-     po::bool_switch()->default_value(false),
-     "Turns off some features to improve runtime, at the cost of decreased calling accuracy."
-     " Equivalent to '-a off -l minimal -x 50`")
-    
-    ("very-fast",
-     po::bool_switch()->default_value(false),
-     "The same as fast but also disables inactive flank scoring")
-    ;
-    
-    po::options_description backend("Backend");
-    backend.add_options()
     ("working-directory,w",
      po::value<fs::path>(),
      "Sets the working directory")
     
     ("threads",
      po::value<int>()->implicit_value(0),
-     "Maximum number of threads to be used, enabling this option with no argument lets the application"
-     " decide the number of threads ands enables specific algorithm parallelisation")
+     "Maximum number of threads to be used. If no argument is provided unlimited threads are assumed")
     
     ("max-reference-cache-footprint,X",
      po::value<MemoryFootprint>()->default_value(*parse_footprint("500MB"), "500MB"),
@@ -89,45 +80,35 @@ OptionMap parse_options(const int argc, const char** argv)
     
     ("target-read-buffer-footprint,B",
      po::value<MemoryFootprint>()->default_value(*parse_footprint("6GB"), "6GB"),
-     "None binding request to limit the memory footprint of buffered read data")
+     "None-binding request to limit the memory footprint of buffered read data")
     
     ("max-open-read-files",
      po::value<int>()->default_value(250),
-     "Limits the number of read files that can be open simultaneously")
+     "Limits the number of read files that are open simultaneously")
     
      ("target-working-memory",
      po::value<MemoryFootprint>(),
-     "Target working memory footprint for analysis not including read or reference footprint")
+     "Target working memory footprint for analysis, not including read or reference buffers")
      
      ("temp-directory-prefix",
      po::value<fs::path>()->default_value("octopus-temp"),
      "File name prefix of temporary directory for calling")
-    ;
     
-    po::options_description input("I/O");
-    input.add_options()
     ("reference,R",
      po::value<fs::path>()->required(),
-     "FASTA format reference genome file to be analysed. Target regions"
-     " will be extracted from the reference index if not provded explicitly")
+     "Indexed FASTA format reference genome file to be analysed")
     
     ("reads,I",
      po::value<std::vector<fs::path>>()->multitoken(),
-     "Space-separated list of BAM/CRAM files to be analysed."
-     " May be specified multiple times")
+     "Indexed BAM/CRAM files to be analysed")
     
     ("reads-file,i",
      po::value<std::vector<fs::path>>()->multitoken(),
      "Files containing lists of BAM/CRAM files, one per line, to be analysed")
     
-    ("one-based-indexing",
-     po::bool_switch()->default_value(false),
-     "Notifies that input regions are given using one based indexing rather than zero based")
-    
     ("regions,T",
      po::value<std::vector<std::string>>()->multitoken(),
-     "Space-separated list of regions (chrom:begin-end) to be analysed."
-     " May be specified multiple times")
+     "Space-separated list of regions (chrom:begin-end) to be analysed")
     
     ("regions-file,t",
      po::value<fs::path>(),
@@ -135,21 +116,23 @@ OptionMap parse_options(const int argc, const char** argv)
     
     ("skip-regions,K",
      po::value<std::vector<std::string>>()->multitoken(),
-     "Space-separated list of regions (chrom:begin-end) to skip"
-     " May be specified multiple times")
+     "Space-separated list of regions (chrom:begin-end) to skip")
     
     ("skip-regions-file,k",
      po::value<fs::path>(),
      "File of regions (chrom:begin-end), one per line, to skip")
+
+    ("one-based-indexing",
+     po::bool_switch()->default_value(false),
+     "Assume one based indexing rather than zero based for input region options")
     
     ("samples,S",
      po::value<std::vector<std::string>>()->multitoken(),
-     "Space-separated list of sample names to analyse")
+     "Sub-set of sample names present in input read files to analyse")
     
     ("samples-file,s",
      po::value<fs::path>(),
-     "File of sample names to analyse, one per line, which must be a subset of the samples"
-     " that appear in the read files")
+     "File of sample names to analyse, one per line")
     
     ("ignore-unmapped-contigs",
      po::bool_switch()->default_value(false),
@@ -161,19 +144,19 @@ OptionMap parse_options(const int argc, const char** argv)
     
     ("output,o",
      po::value<fs::path>(),
-     "File to where output is written. If unspecified, calls are written to stdout")
+     "File to where output is written (calls are written to stdout if unspecified)")
     
     ("contig-output-order",
-     po::value<ContigOutputOrder>()->default_value(ContigOutputOrder::asInReferenceIndex),
-     "The order contigs should be written to the output")
+     po::value<ContigOutputOrder>()->default_value(ContigOutputOrder::referenceIndex),
+     "The order that contigs should be written to the output [LEXICOGRAPHICAL_ASCENDING, LEXICOGRAPHICAL_DESCENDING, CONTIG_SIZE_ASCENDING, CONTIG_SIZE_DESCENDING, REFERENCE_INDEX, REFERENCE_INDEX_REVERSED]")
     
     ("sites-only",
      po::bool_switch()->default_value(false),
-     "Only reports call sites (i.e. without sample genotype information)")
+     "Only reports call sites (i.e. drop sample genotype information)")
     
     ("legacy",
      po::bool_switch()->default_value(false),
-     "Outputs a legacy version of the final callset in addition to the native version")
+     "Outputs a legacy version of the final call-set in addition to the native version")
     
     ("regenotype",
      po::value<fs::path>(),
@@ -184,20 +167,29 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<fs::path>(),
      "Output realigned BAM files")
     
-    ("full-bamout",
-     po::bool_switch()->default_value(false),
-     "Output all reads when producing realigned bam outputs rather than just variant read minibams")
+    ("bamout-type",
+     po::value<RealignedBAMType>()->default_value(RealignedBAMType::mini),
+     "Type of realigned evidence BAM to output [MINI, FULL]")
      
     ("data-profile",
      po::value<fs::path>(),
      "Output a profile of polymorphisms and errors found in the data")
+    
+    ("fast",
+     po::bool_switch()->default_value(false),
+     "Turns off some features to improve runtime, at the cost of decreased calling accuracy."
+     " Equivalent to '-a off -l minimal -x 50`")
+    
+    ("very-fast",
+     po::bool_switch()->default_value(false),
+     "Same as --fast but also disables inactive flank scoring")
     ;
     
-    po::options_description transforms("Read transformations");
-    transforms.add_options()
+    po::options_description read_preprocessing("Read pre-processing");
+    read_preprocessing.add_options()
     ("read-transforms",
      po::value<bool>()->default_value(true),
-     "Enable all read transformations")
+     "Enable or disable all read transformations")
     
     ("max-base-quality",
      po::value<int>(),
@@ -242,13 +234,10 @@ OptionMap parse_options(const int argc, const char** argv)
     ("split-long-reads",
      po::value<bool>()->default_value(false),
      "Split reads longer than 'max-read-length' into linked fragments")
-    ;
     
-    po::options_description filters("Read filtering");
-    filters.add_options()
     ("read-filtering",
      po::value<bool>()->default_value(true),
-     "Enable all read filters")
+     "Enable or disable all read filters")
     
     ("consider-unmapped-reads",
      po::bool_switch()->default_value(false),
@@ -320,14 +309,14 @@ OptionMap parse_options(const int argc, const char** argv)
     
     ("downsample-target",
      po::value<int>()->default_value(500),
-     "The target coverage for the downsampler")
+     "Target coverage for the downsampler")
     ;
     
-    po::options_description variant_generation("Candidate variant generation");
-    variant_generation.add_options()
+    po::options_description variant_discovery("Variant discovery");
+    variant_discovery.add_options()
     ("variant-discovery-protocol",
      po::value<CandidateVariantDiscoveryProtocol>()->default_value(CandidateVariantDiscoveryProtocol::illumina),
-     "Protocl to use for candidate variant discovery (options: illumina, pacbio)")
+     "Protocol to use for candidate variant discovery [ILLUMINA, PACBIO]")
      
     ("pileup-candidate-generator,g",
      po::value<bool>()->default_value(true),
@@ -349,6 +338,10 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<std::vector<fs::path>>()->multitoken(),
      "Files containing lists of source candidate variant files")
     
+    ("disable-denovo-variant-discovery",
+     po::bool_switch()->default_value(false),
+     "Disable all de novo candidate variant generators")
+     
     ("min-source-quality",
      po::value<Phred<double>>()->implicit_value(Phred<double> {2.0}),
      "Only variants with quality above this value are considered for candidate generation")
@@ -357,7 +350,7 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<bool>()->default_value(false),
      "Use variants from source VCF records that have been filtered")
     
-    ("min-base-quality",
+    ("min-pileup-base-quality",
      po::value<int>()->default_value(20),
      "Only bases with quality above this value are considered for candidate generation")
     
@@ -366,9 +359,9 @@ OptionMap parse_options(const int argc, const char** argv)
      "Minimum number of reads that must support a variant if it is to be considered a candidate."
      " By default octopus will automatically determine this value")
      
-    ("ignore-pileup-candidates-from-misaligned-read",
+    ("ignore-pileup-candidates-from-misaligned-reads",
      po::value<bool>()->default_value(true),
-     "Ignore pileup candidate variants from reads that are likely to be missmapped/misaligned")
+     "Ignore pileup candidate variants from reads that are considered likely to be misaligned")
     
     ("max-variant-size",
      po::value<int>()->default_value(2000),
@@ -385,7 +378,7 @@ OptionMap parse_options(const int argc, const char** argv)
     
     ("fallback-kmer-gap",
      po::value<int>()->default_value(10),
-     "The gap size used to generate local assembly fallback kmers")
+     "Gap size used to generate local assembly fallback kmers")
     
     ("max-region-to-assemble",
      po::value<int>()->default_value(600),
@@ -393,7 +386,7 @@ OptionMap parse_options(const int argc, const char** argv)
     
     ("max-assemble-region-overlap",
      po::value<int>()->default_value(200),
-     "The maximum number of bases allowed to overlap assembly regions")
+     "Maximum number of bases allowed to overlap assembly regions")
     
     ("assemble-all",
      po::bool_switch()->default_value(false),
@@ -444,15 +437,15 @@ OptionMap parse_options(const int argc, const char** argv)
     
     ("extension-level",
      po::value<ExtensionLevel>()->default_value(ExtensionLevel::normal),
-     "Level of haplotype extension. Possible values are: conservative, normal, optimistic, aggressive")
-        
+     "Level of haplotype extension [MINIMAL, CONSERVATIVE, NORMAL, AGGRESSIVE, UNLIMITED]")
+     
     ("lagging-level",
      po::value<LaggingLevel>()->default_value(LaggingLevel::normal),
-     "Level of haplotype lagging. Possible values are: minimal, conservative, moderate, normal, aggressive")
-
+     "Level of haplotype lagging [NONE, NORMAL, AGGRESSIVE]")
+    
     ("backtrack-level",
      po::value<BacktrackLevel>()->default_value(BacktrackLevel::none),
-     "Level of backtracking. Possible values are: none, normal, aggressive")
+     "Level of backtracking [NONE, NORMAL, AGGRESSIVE]")
     
     ("haplotype-extension-threshold,e",
      po::value<Phred<double>>()->default_value(Phred<double> {100.0}, "100"),
@@ -468,14 +461,14 @@ OptionMap parse_options(const int argc, const char** argv)
     
     ("bad-region-tolerance",
      po::value<BadRegionTolerance>()->default_value(BadRegionTolerance::normal),
-     "Tolerance for 'bad' region skipping - regions that are likely uncallable and will slow down calling [low, normal, high]")
+     "Tolerance for skipping regions that are considered unlikely to be callable [LOW, NORMAL, HIGH]")
     ;
     
-    po::options_description caller("Calling (general)");
-    caller.add_options()
+    po::options_description general_variant_calling("Variant calling (general)");
+    general_variant_calling.add_options()
     ("caller,C",
      po::value<std::string>()->default_value("population"),
-     "Which of the octopus callers to use")
+     "Which of the octopus calling models to use")
     
     ("organism-ploidy,P",
      po::value<int>()->default_value(2),
@@ -501,8 +494,8 @@ OptionMap parse_options(const int argc, const char** argv)
     
     ("refcall",
      po::value<RefCallType>()->implicit_value(RefCallType::blocked),
-     "Caller will report reference confidence calls for each position (positional),"
-     " or in automatically sized blocks (blocked)")
+     "Caller will report reference confidence calls for each position [POSITIONAL],"
+     " or in automatically sized blocks [BLOCKED]")
      
     ("refcall-block-merge-threshold",
      po::value<Phred<double>>()->default_value(Phred<double> {10.0}),
@@ -530,11 +523,11 @@ OptionMap parse_options(const int argc, const char** argv)
     
     ("max-genotypes",
      po::value<int>()->default_value(5000),
-     "The maximum number of genotypes to evaluate")
+     "Maximum number of genotypes that must be evaluated")
     
     ("max-joint-genotypes",
      po::value<int>()->default_value(1000000),
-     "The maximum number of joint genotype vectors to consider when computing joint"
+     "Maximum number of joint genotype vectors that must be considered when computing joint"
      " genotype posterior probabilities")
     
     ("use-independent-genotype-priors",
@@ -547,35 +540,34 @@ OptionMap parse_options(const int argc, const char** argv)
     
     ("inactive-flank-scoring",
      po::value<bool>()->default_value(true),
-     "Disables additional calculation to adjust alignment score when there are inactive"
-     " candidates in haplotype flanking regions")
+     "Enable or disable additional calculation to adjust alignment score to account for inactive candidate variants")
     
     ("model-mapping-quality",
      po::value<bool>()->default_value(true),
-     "Include the read mapping quality in the haplotype likelihood calculation")
+     "Include read mapping quality information in the haplotype likelihood calculation")
     
     ("sequence-error-model",
      po::value<std::string>()->default_value("PCR-free.HiSeq-2500"),
-     "The sequencer error model to use")
+     "Sequencing error model to use by the haplotyoe likelihood model")
     
     ("max-vb-seeds",
      po::value<int>()->default_value(12),
      "Maximum number of seeds to use for Variational Bayes algorithms")
      
-     ("max-indel-errors",
-      po::value<int>()->default_value(16),
-      "Maximum number of indel errors allowed during haplotype likelihood calculation")
+    ("max-indel-errors",
+     po::value<int>()->default_value(16),
+     "Maximum number of indel errors that must be tolerated for haplotype likelihood calculation")
     
     ("read-linkage",
      po::value<ReadLinkage>()->default_value(ReadLinkage::paired),
-     "Read linkage information to use for calling [none, paired, linked]")
-         
+     "Read linkage information to use for calling [NONE, PAIRED, LINKED]")
+     
     ("min-phase-score",
      po::value<Phred<double>>()->default_value(Phred<double> {10.0}),
      "Minimum phase score (phred scale) required to report sites as phased")
     ;
     
-    po::options_description cancer("Calling (cancer)");
+    po::options_description cancer("Cancer calling model");
     cancer.add_options()
     ("normal-sample,N",
      po::value<std::string>(),
@@ -605,9 +597,9 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<float>()->default_value(1.5, "1.5"),
      "Concentration parameter for germline haplotypes in tumour samples")
      
-    ("credible-mass",
+    ("somatic-credible-mass",
      po::value<float>()->default_value(0.9, "0.9"),
-     "Mass of the posterior density to use for evaluating allele frequencies")
+     "Mass of the posterior density to use for evaluating somatic allele frequencies")
     
     ("min-somatic-posterior",
      po::value<Phred<double>>()->default_value(Phred<double> {0.5}),
@@ -615,14 +607,14 @@ OptionMap parse_options(const int argc, const char** argv)
     
     ("normal-contamination-risk",
      po::value<NormalContaminationRisk>()->default_value(NormalContaminationRisk::low),
-     "The risk the normal sample has contamination from the tumour")
+     "Risk that the normal sample is contaminated by the tumour [LOW, HIGH]")
     
     ("somatics-only",
      po::bool_switch()->default_value(false),
      "Only emit SOMATIC mutations")
     ;
     
-    po::options_description trio("Calling (trio)");
+    po::options_description trio("Trio calling model");
     trio.add_options()
     ("maternal-sample,M",
      po::value<std::string>(),
@@ -649,7 +641,7 @@ OptionMap parse_options(const int argc, const char** argv)
      "Only emit DENOVO mutations")
     ;
     
-    po::options_description polyclone("Calling (polyclone)");
+    po::options_description polyclone("Polyclone calling model");
     polyclone.add_options()
     ("max-clones",
      po::value<int>()->default_value(3),
@@ -660,7 +652,7 @@ OptionMap parse_options(const int argc, const char** argv)
      "Minimum expected clone frequency in the sample")
     ;
     
-    po::options_description cell("Calling (cell)");
+    po::options_description cell("Cell calling model");
     cell.add_options()
     ("max-phylogeny-size",
     po::value<int>()->default_value(3),
@@ -668,7 +660,7 @@ OptionMap parse_options(const int argc, const char** argv)
     
     ("dropout-concentration",
     po::value<float>()->default_value(2, "2"),
-    "Allelic dropout concentration paramater")
+    "Allelic dropout concentration parameter")
     ;
     
     po::options_description call_filtering("Variant filtering");
@@ -716,50 +708,54 @@ OptionMap parse_options(const int argc, const char** argv)
     ("somatic-forest-file",
      po::value<fs::path>(),
      "Trained Ranger random forest file for somatic variants")
+    
+    ("min-forest-quality",
+     po::value<Phred<double>>()->default_value(Phred<double> {3}),
+     "Minimum PASSing random forest probability (Phred scale)")
     ;
     
-    po::options_description all("octopus options");
-    all.add(general).add(backend).add(input).add(transforms).add(filters)
-    .add(variant_generation).add(haplotype_generation).add(caller)
+    po::options_description all("Octopus command line options");
+    all.add(general).add(read_preprocessing)
+    .add(variant_discovery).add(haplotype_generation).add(general_variant_calling)
     .add(cancer).add(trio).add(polyclone).add(cell).add(call_filtering);
     
     OptionMap vm_init;
     po::store(run(po::command_line_parser(argc, argv).options(general).allow_unregistered()), vm_init);
     
     if (vm_init.count("help") == 1) {
-        po::store(run(po::command_line_parser(argc, argv).options(caller).allow_unregistered()), vm_init);
-        if (vm_init.count("caller") == 1) {
+        po::store(run(po::command_line_parser(argc, argv).options(general_variant_calling).allow_unregistered()), vm_init);
+        if (vm_init.count("caller") == 1 && !vm_init.at("caller").defaulted()) {
             const auto selected_caller = vm_init.at("caller").as<std::string>();
             validate_caller(vm_init);
             if (selected_caller == "individual") {
-                po::options_description individual_options("octopus individual calling options");
-                individual_options.add(general).add(backend).add(input).add(transforms).add(filters)
-                .add(variant_generation).add(haplotype_generation).add(caller).add(call_filtering);
+                po::options_description individual_options("Octopus command line options (individual)");
+                individual_options.add(general).add(read_preprocessing)
+                .add(variant_discovery).add(haplotype_generation).add(general_variant_calling).add(call_filtering);
                 std::cout << individual_options << std::endl;
             } else if (selected_caller == "trio") {
-                po::options_description trio_options("octopus trio calling options");
-                trio_options.add(general).add(backend).add(input).add(transforms).add(filters)
-                .add(variant_generation).add(haplotype_generation).add(caller).add(trio).add(call_filtering);
+                po::options_description trio_options("Octopus command line options (trio)");
+                trio_options.add(general).add(read_preprocessing)
+                .add(variant_discovery).add(haplotype_generation).add(general_variant_calling).add(trio).add(call_filtering);
                 std::cout << trio_options << std::endl;
             } else if (selected_caller == "population") {
-                po::options_description population_options("octopus population calling options");
-                population_options.add(general).add(backend).add(input).add(transforms).add(filters)
-                .add(variant_generation).add(haplotype_generation).add(caller).add(call_filtering);
+                po::options_description population_options("Octopus command line options (population)");
+                population_options.add(general).add(read_preprocessing)
+                .add(variant_discovery).add(haplotype_generation).add(general_variant_calling).add(call_filtering);
                 std::cout << population_options << std::endl;
             } else if (selected_caller == "cancer") {
-                po::options_description cancer_options("octopus cancer calling options");
-                cancer_options.add(general).add(backend).add(input).add(transforms).add(filters)
-                .add(variant_generation).add(haplotype_generation).add(caller).add(cancer).add(call_filtering);
+                po::options_description cancer_options("Octopus command line options (cancer)");
+                cancer_options.add(general).add(read_preprocessing)
+                .add(variant_discovery).add(haplotype_generation).add(general_variant_calling).add(cancer).add(call_filtering);
                 std::cout << cancer_options << std::endl;
             } else if (selected_caller == "polyclone") {
-                po::options_description polyclone_options("octopus polyclone calling options");
-                polyclone_options.add(general).add(backend).add(input).add(transforms).add(filters)
-                .add(variant_generation).add(haplotype_generation).add(caller).add(polyclone).add(call_filtering);
+                po::options_description polyclone_options("Octopus command line options (polyclone)");
+                polyclone_options.add(general).add(read_preprocessing)
+                .add(variant_discovery).add(haplotype_generation).add(general_variant_calling).add(polyclone).add(call_filtering);
                 std::cout << polyclone_options << std::endl;
             } else if (selected_caller == "cell") {
-                po::options_description polyclone_options("octopus polyclone calling options");
-                polyclone_options.add(general).add(backend).add(input).add(transforms).add(filters)
-                                 .add(variant_generation).add(haplotype_generation).add(caller).add(cell)
+                po::options_description polyclone_options("Octopus command line options (cell)");
+                polyclone_options.add(general).add(read_preprocessing)
+                                 .add(variant_discovery).add(haplotype_generation).add(general_variant_calling).add(cell)
                                  .add(call_filtering);
                 std::cout << polyclone_options << std::endl;
             } else {
@@ -1110,7 +1106,7 @@ void validate(const OptionMap& vm)
     };
     const std::vector<std::string> probability_options {
         "snp-heterozygosity", "snp-heterozygosity-stdev", "indel-heterozygosity",
-        "somatic-mutation-rate", "min-expected-somatic-frequency", "min-credible-somatic-frequency", "credible-mass",
+        "somatic-mutation-rate", "min-expected-somatic-frequency", "min-credible-somatic-frequency", "somatic-credible-mass",
         "denovo-snv-mutation-rate", "denovo-indel-mutation-rate", "min-candidate-credible-vaf-probability"
     };
     conflicting_options(vm, "maternal-sample", "normal-sample");
@@ -1163,9 +1159,9 @@ std::istream& operator>>(std::istream& in, RefCallType& type)
 {
     std::string token;
     in >> token;
-    if (token == "positional")
+    if (token == "POSITIONAL")
         type = RefCallType::positional;
-    else if (token == "blocked")
+    else if (token == "BLOCKED")
         type = RefCallType::blocked;
     else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token, "refcalls"};
     return in;
@@ -1175,10 +1171,10 @@ std::ostream& operator<<(std::ostream& out, const RefCallType& type)
 {
     switch (type) {
         case RefCallType::positional:
-            out << "positional";
+            out << "POSITIONAL";
             break;
         case RefCallType::blocked:
-            out << "blocked";
+            out << "BLOCKED";
             break;
     }
     return out;
@@ -1188,19 +1184,19 @@ std::istream& operator>>(std::istream& in, ContigOutputOrder& order)
 {
     std::string token;
     in >> token;
-    if (token == "lexicographicalAscending")
+    if (token == "LEXICOGRAPHICAL_ASCENDING")
         order = ContigOutputOrder::lexicographicalAscending;
-    else if (token == "lexicographicalDescending")
+    else if (token == "LEXICOGRAPHICAL_DESCENDING")
         order = ContigOutputOrder::lexicographicalDescending;
-    else if (token == "contigSizeAscending")
+    else if (token == "CONTIG_SIZE_ASCENDING")
         order = ContigOutputOrder::contigSizeAscending;
-    else if (token == "contigSizeDescending")
+    else if (token == "CONTIG_SIZE_DESCENDING")
         order = ContigOutputOrder::contigSizeDescending;
-    else if (token == "asInReference")
-        order = ContigOutputOrder::asInReferenceIndex;
-    else if (token == "asInReferenceReversed")
-        order = ContigOutputOrder::asInReferenceIndexReversed;
-    else if (token == "unspecified")
+    else if (token == "REFERENCE_INDEX")
+        order = ContigOutputOrder::referenceIndex;
+    else if (token == "REFERENCE_INDEX_REVERSED")
+        order = ContigOutputOrder::referenceIndexReversed;
+    else if (token == "UNSPECIFIED")
         order = ContigOutputOrder::unspecified;
     else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token, "contig-output-order"};
     return in;
@@ -1210,25 +1206,25 @@ std::ostream& operator<<(std::ostream& out, const ContigOutputOrder& order)
 {
     switch (order) {
         case ContigOutputOrder::lexicographicalAscending:
-            out << "lexicographicalAscending";
+            out << "LEXICOGRAPHICAL_ASCENDING";
             break;
         case ContigOutputOrder::lexicographicalDescending:
-            out << "lexicographicalDescending";
+            out << "LEXICOGRAPHICAL_DESCENDING";
             break;
         case ContigOutputOrder::contigSizeAscending:
-            out << "contigSizeAscending";
+            out << "CONTIG_SIZE_ASCENDING";
             break;
         case ContigOutputOrder::contigSizeDescending:
-            out << "contigSizeDescending";
+            out << "CONTIG_SIZE_DESCENDING";
             break;
-        case ContigOutputOrder::asInReferenceIndex:
-            out << "asInReferenceIndex";
+        case ContigOutputOrder::referenceIndex:
+            out << "REFERENCE_INDEX";
             break;
-        case ContigOutputOrder::asInReferenceIndexReversed:
-            out << "asInReferenceIndexReversed";
+        case ContigOutputOrder::referenceIndexReversed:
+            out << "REFERENCE_INDEX_REVERSED";
             break;
         case ContigOutputOrder::unspecified:
-            out << "unspecified";
+            out << "UNSPECIFIED";
             break;
     }
     return out;
@@ -1238,14 +1234,16 @@ std::istream& operator>>(std::istream& in, ExtensionLevel& level)
 {
     std::string token;
     in >> token;
-    if (token == "conservative")
+    if (token == "MINIMAL")
+        level = ExtensionLevel::minimal;
+    else if (token == "CONSERVATIVE")
         level = ExtensionLevel::conservative;
-    else if (token == "normal")
+    else if (token == "NORMAL")
         level = ExtensionLevel::normal;
-    else if (token == "optimistic")
-        level = ExtensionLevel::optimistic;
-    else if (token == "aggressive")
+    else if (token == "AGGRESSIVE")
         level = ExtensionLevel::aggressive;
+    else if (token == "UNLIMITED")
+        level = ExtensionLevel::unlimited;
     else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token, "extension-level"};
     return in;
 }
@@ -1253,17 +1251,20 @@ std::istream& operator>>(std::istream& in, ExtensionLevel& level)
 std::ostream& operator<<(std::ostream& out, const ExtensionLevel& level)
 {
     switch (level) {
+    case ExtensionLevel::minimal:
+        out << "MINIMAL";
+        break;
     case ExtensionLevel::conservative:
-        out << "conservative";
+        out << "CONSERVATIVE";
         break;
     case ExtensionLevel::normal:
-        out << "normal";
-        break;
-    case ExtensionLevel::optimistic:
-        out << "optimistic";
+        out << "NORMAL";
         break;
     case ExtensionLevel::aggressive:
-        out << "aggressive";
+        out << "AGGRESSIVE";
+        break;
+    case ExtensionLevel::unlimited:
+        out << "UNLIMITED";
         break;
     }
     return out;
@@ -1273,11 +1274,11 @@ std::istream& operator>>(std::istream& in, BacktrackLevel& level)
 {
     std::string token;
     in >> token;
-    if (token == "none")
+    if (token == "NONE")
         level = BacktrackLevel::none;
-    else if (token == "normal")
+    else if (token == "NORMAL")
         level = BacktrackLevel::normal;
-    else if (token == "aggressive")
+    else if (token == "AGGRESSIVE")
         level = BacktrackLevel::aggressive;
     else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token, "backtrack-level"};
     return in;
@@ -1287,13 +1288,13 @@ std::ostream& operator<<(std::ostream& out, const BacktrackLevel& level)
 {
     switch (level) {
     case BacktrackLevel::none:
-        out << "none";
+        out << "NONE";
         break;
     case BacktrackLevel::normal:
-        out << "normal";
+        out << "NORMAL";
         break;
     case BacktrackLevel::aggressive:
-        out << "aggressive";
+        out << "AGGRESSIVE";
         break;
     }
     return out;
@@ -1303,15 +1304,11 @@ std::istream& operator>>(std::istream& in, LaggingLevel& level)
 {
     std::string token;
     in >> token;
-    if (token == "minimal")
-        level = LaggingLevel::minimal;
-    else if (token == "conservative")
-        level = LaggingLevel::conservative;
-    else if (token == "moderate")
-        level = LaggingLevel::moderate;
-    else if (token == "normal")
+    if (token == "NONE")
+        level = LaggingLevel::none;
+    else if (token == "NORMAL")
         level = LaggingLevel::normal;
-    else if (token == "aggressive")
+    else if (token == "AGGRESSIVE")
         level = LaggingLevel::aggressive;
     else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token, "lagging-level"};
     return in;
@@ -1320,20 +1317,14 @@ std::istream& operator>>(std::istream& in, LaggingLevel& level)
 std::ostream& operator<<(std::ostream& out, const LaggingLevel& level)
 {
     switch (level) {
-        case LaggingLevel::minimal:
-            out << "minimal";
-            break;
-        case LaggingLevel::conservative:
-            out << "conservative";
-            break;
-        case LaggingLevel::moderate:
-            out << "moderate";
+        case LaggingLevel::none:
+            out << "NONE";
             break;
         case LaggingLevel::normal:
-            out << "normal";
+            out << "NORMAL";
             break;
         case LaggingLevel::aggressive:
-            out << "aggressive";
+            out << "AGGRESSIVE";
             break;
     }
     return out;
@@ -1343,9 +1334,9 @@ std::istream& operator>>(std::istream& in, NormalContaminationRisk& result)
 {
     std::string token;
     in >> token;
-    if (token == "low")
+    if (token == "LOW")
         result = NormalContaminationRisk::low;
-    else if (token == "high")
+    else if (token == "HIGH")
         result = NormalContaminationRisk::high;
     else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token, "normal-contamination-risk"};
     return in;
@@ -1355,10 +1346,10 @@ std::ostream& operator<<(std::ostream& out, const NormalContaminationRisk& risk)
 {
     switch (risk) {
         case NormalContaminationRisk::low:
-            out << "low";
+            out << "LOW";
             break;
         case NormalContaminationRisk::high:
-            out << "high";
+            out << "HIGH";
             break;
     }
     return out;
@@ -1368,11 +1359,11 @@ std::istream& operator>>(std::istream& in, BadRegionTolerance& result)
 {
     std::string token;
     in >> token;
-    if (token == "low")
+    if (token == "LOW")
         result = BadRegionTolerance::low;
-    else if (token == "normal")
+    else if (token == "NORMAL")
         result = BadRegionTolerance::normal;
-    else if (token == "high")
+    else if (token == "HIGH")
         result = BadRegionTolerance::high;
     else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token, "bad-region-tolerance"};
     return in;
@@ -1382,13 +1373,13 @@ std::ostream& operator<<(std::ostream& out, const BadRegionTolerance& tolerance)
 {
     switch (tolerance) {
         case BadRegionTolerance::low:
-            out << "low";
+            out << "LOW";
             break;
         case BadRegionTolerance::normal:
-            out << "normal";
+            out << "NORMAL";
             break;
         case BadRegionTolerance::high:
-            out << "high";
+            out << "HIGH";
             break;
     }
     return out;
@@ -1398,11 +1389,11 @@ std::istream& operator>>(std::istream& in, ReadLinkage& result)
 {
     std::string token;
     in >> token;
-    if (token == "none")
+    if (token == "NONE")
         result = ReadLinkage::none;
-    else if (token == "paired")
+    else if (token == "PAIRED")
         result = ReadLinkage::paired;
-    else if (token == "linked")
+    else if (token == "LINKED")
         result = ReadLinkage::linked;
     else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token, "read-linkage"};
     return in;
@@ -1412,13 +1403,13 @@ std::ostream& operator<<(std::ostream& out, const ReadLinkage& linkage)
 {
     switch (linkage) {
         case ReadLinkage::none:
-            out << "none";
+            out << "NONE";
             break;
         case ReadLinkage::paired:
-            out << "paired";
+            out << "PAIRED";
             break;
         case ReadLinkage::linked:
-            out << "linked";
+            out << "LINKED";
             break;
     }
     return out;
@@ -1428,9 +1419,9 @@ std::istream& operator>>(std::istream& in, CandidateVariantDiscoveryProtocol& re
 {
     std::string token;
     in >> token;
-    if (token == "illumina")
+    if (token == "ILLUMINA")
         result = CandidateVariantDiscoveryProtocol::illumina;
-    else if (token == "pacbio")
+    else if (token == "PACBIO")
         result = CandidateVariantDiscoveryProtocol::pacbio;
     else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token, "variant-discovery-protocol"};
     return in;
@@ -1440,13 +1431,175 @@ std::ostream& operator<<(std::ostream& out, const CandidateVariantDiscoveryProto
 {
     switch (protocol) {
         case CandidateVariantDiscoveryProtocol::illumina:
-            out << "illumina";
+            out << "ILLUMINA";
             break;
         case CandidateVariantDiscoveryProtocol::pacbio:
-            out << "pacbio";
+            out << "PACBIO";
             break;
     }
     return out;
+}
+
+std::istream& operator>>(std::istream& in, RealignedBAMType& result)
+{
+    std::string token;
+    in >> token;
+    if (token == "FULL")
+        result = RealignedBAMType::full;
+    else if (token == "MINI")
+        result = RealignedBAMType::mini;
+    else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token, "bamout-type"};
+    return in;
+}
+
+std::ostream& operator<<(std::ostream& out, const RealignedBAMType& type)
+{
+    switch (type) {
+        case RealignedBAMType::full:
+            out << "FULL";
+            break;
+        case RealignedBAMType::mini:
+            out << "MINI";
+            break;
+    }
+    return out;
+}
+
+namespace {
+
+template <typename T>
+bool is_type(const OptionMap::mapped_type& value)
+{
+    try {
+        boost::any_cast<T>(value.value());
+        return true;
+    } catch (const boost::bad_any_cast&) {
+        return false;
+    }
+}
+
+template <typename T>
+bool is_vector_type(const OptionMap::mapped_type& value)
+{
+    return is_type<std::vector<T>>(value);
+}
+
+bool is_list_type(const OptionMap::mapped_type& value)
+{
+    return is_vector_type<int>(value) || is_vector_type<float>(value) || is_vector_type<double>(value)
+            || is_vector_type<std::string>(value) || is_vector_type<fs::path>(value) || is_vector_type<ContigPloidy>(value);
+}
+
+template <typename T>
+void write_vector(const OptionMap& options, const OptionMap::key_type& label, std::ostream& os, const char bullet)
+{
+    const auto& values = options[label].as<std::vector<T>>();
+    std::size_t i {0};
+    for (const auto& val : values) {
+        os << bullet << ' ' << label << "[" << i++ << "]=" << val;
+        if (i != values.size()) os << std::endl;
+    }
+}
+
+} // namespace
+
+std::ostream& operator<<(std::ostream& os, const OptionMap& options)
+{
+    std::size_t i {0};
+    for (const auto& p : options) {
+        const auto& label = p.first;
+        const auto& value = p.second;
+        const char bullet {options[label].defaulted() || value.defaulted() ? '>' : '~'};
+        if (!is_list_type(value)) {
+            os << bullet << ' ' << label;
+            if (((boost::any)value.value()).empty()) {
+                os << "(empty)";
+            }
+            os << "=";
+        }
+        if (static_cast<boost::any>(value.value()).type() == typeid(int)) {
+            os << options[label].as<int>();
+        } else if (static_cast<boost::any>(value.value()).type() == typeid(bool)) {
+            os << (options[label].as<bool>() ? "yes" : "no");
+        } else if (static_cast<boost::any>(value.value()).type() == typeid(float)) {
+            os << options[label].as<float>();
+        } else if (static_cast<boost::any>(value.value()).type() == typeid(double)) {
+            os << options[label].as<double>();
+        } else if (is_type<const char*>(value)) {
+            os << options[label].as<const char*>();
+        } else if (is_type<std::string>(value)) {
+            const auto str = options[label].as<std::string>();
+            if (str.size()) {
+                os << '"' << str << '"';
+            } else {
+                os << "true";
+            }
+        } else if (is_type<fs::path>(value)) {
+            os << options[label].as<fs::path>();
+        } else if (is_vector_type<int>(value)) {
+            write_vector<int>(options, label, os, bullet);
+        } else if (is_vector_type<float>(value)) {
+            write_vector<float>(options, label, os, bullet);
+        } else if (is_vector_type<double>(value)) {
+            write_vector<double>(options, label, os, bullet);
+        } else if (is_vector_type<std::string>(value)) {
+            write_vector<std::string>(options, label, os, bullet);
+        } else if (is_vector_type<fs::path>(value)) {
+            write_vector<fs::path>(options, label, os, bullet);
+        } else if (is_type<Phred<double>>(value)) {
+            os << options[label].as<Phred<double>>();
+        } else if (is_type<MemoryFootprint>(value)) {
+            os << options[label].as<MemoryFootprint>();
+        } else if (is_type<ContigOutputOrder>(value)) {
+            os << options[label].as<ContigOutputOrder>();
+        } else if (is_type<ContigPloidy>(value)) {
+            os << options[label].as<ContigPloidy>();
+        } else if (is_vector_type<ContigPloidy>(value)) {
+            write_vector<ContigPloidy>(options, label, os, bullet);
+        } else if (is_type<RefCallType>(value)) {
+            os << options[label].as<RefCallType>();
+        } else if (is_type<ExtensionLevel>(value)) {
+            os << options[label].as<ExtensionLevel>();
+        } else if (is_type<LaggingLevel>(value)) {
+            os << options[label].as<LaggingLevel>();
+        } else if (is_type<BacktrackLevel>(value)) {
+            os << options[label].as<BacktrackLevel>();
+        } else if (is_type<NormalContaminationRisk>(value)) {
+            os << options[label].as<NormalContaminationRisk>();
+        } else if (is_type<BadRegionTolerance>(value)) {
+            os << options[label].as<BadRegionTolerance>();
+        } else if (is_type<ReadLinkage>(value)) {
+            os << options[label].as<ReadLinkage>();
+        } else if (is_type<CandidateVariantDiscoveryProtocol>(value)) {
+            os << options[label].as<CandidateVariantDiscoveryProtocol>();
+        } else if (is_type<RealignedBAMType>(value)) {
+            os << options[label].as<RealignedBAMType>();
+        } else {
+            os << "UnknownType(" << ((boost::any)value.value()).type().name() << ")";
+        }
+        if (++i != options.size()) os << std::endl;
+    }
+    return os;
+}
+
+std::string to_string(const OptionMap& options, const bool one_line)
+{
+    std::ostringstream ss {};
+    ss << options;
+    auto result = ss.str();
+    if (one_line) {
+        auto chunks = utils::split(result, '\n');
+        for (auto& chunk : chunks) {
+            const bool modified {chunk[0] == '~'};
+            chunk[0] = '-';
+            chunk[1] = '-';
+            if (modified) {
+                chunk.insert(0, 1,'*');
+            }
+        }
+        result = utils::join(chunks, ' ');
+    }
+    return result;
 }
 
 } // namespace options

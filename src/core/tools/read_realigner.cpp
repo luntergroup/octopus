@@ -102,6 +102,28 @@ void realign(AlignedRead& read, const Haplotype& haplotype, HaplotypeLikelihoodM
 
 } // namespace
 
+void realign(std::vector<AlignedRead>& reads, const Haplotype& haplotype,
+             HaplotypeLikelihoodModel model,
+             std::vector<HaplotypeLikelihoodModel::LogProbability>& log_likelihoods)
+{
+    if (!reads.empty()) {
+        log_likelihoods.resize(reads.size());
+        const auto read_hashes = compute_read_hashes(reads);
+        static constexpr unsigned char mapperKmerSize {6};
+        auto haplotype_hashes = init_kmer_hash_table<mapperKmerSize>();
+        populate_kmer_hash_table<mapperKmerSize>(haplotype.sequence(), haplotype_hashes);
+        auto haplotype_mapping_counts = init_mapping_counts(haplotype_hashes);
+        model.reset(haplotype);
+        for (std::size_t i {0}; i < reads.size(); ++i) {
+            auto mapping_positions = map_query_to_target(read_hashes[i], haplotype_hashes, haplotype_mapping_counts);
+            reset_mapping_counts(haplotype_mapping_counts);
+            auto alignment = model.align(reads[i], mapping_positions);
+            log_likelihoods[i] = alignment.likelihood;
+            realign(reads[i], haplotype, std::move(alignment));
+        }
+    }
+}
+
 void realign(std::vector<AlignedRead>& reads, const Haplotype& haplotype, HaplotypeLikelihoodModel model)
 {
     if (!reads.empty()) {
@@ -135,6 +157,16 @@ std::vector<AlignedRead> realign(const std::vector<AlignedRead>& reads, const Ha
 std::vector<AlignedRead> realign(const std::vector<AlignedRead>& reads, const Haplotype& haplotype)
 {
     return realign(reads, haplotype, make_default_haplotype_likelihood_model());
+}
+
+std::vector<AlignedRead>
+realign(const std::vector<AlignedRead>& reads, const Haplotype& haplotype,
+        HaplotypeLikelihoodModel model,
+        std::vector<HaplotypeLikelihoodModel::LogProbability>& log_likelihoods)
+{
+    auto result = reads;
+    realign(result, haplotype, model, log_likelihoods);
+    return result;
 }
 
 void safe_realign(std::vector<AlignedRead>& reads, const Haplotype& haplotype, HaplotypeLikelihoodModel model)
