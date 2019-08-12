@@ -96,6 +96,11 @@ inline VcfHeader read_header(const VcfWriter& writer)
     return tmp.fetch_header();
 }
 
+std::string VariantCallFilter::name() const
+{
+    return do_name();
+}
+
 void VariantCallFilter::filter(const VcfReader& source, VcfWriter& dest) const
 {
     if (dest.is_header_written()) {

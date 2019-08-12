@@ -36,6 +36,7 @@ private:
     mutable std::deque<MeasureVector> data_;
     mutable std::vector<Classification> classifications_;
     
+    std::string do_name() const override;
     void annotate(VcfHeader::Builder& header) const override;
     void record(std::size_t call_idx, std::size_t sample_idx, MeasureVector measures) const override;
     void prepare_for_classification(boost::optional<Log>& log) const override;

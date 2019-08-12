@@ -79,6 +79,11 @@ ThresholdVariantCallFilter::ThresholdVariantCallFilter(FacetFactory facet_factor
 , all_unique_filter_keys_ {are_all_unique(vcf_filter_keys_)}
 {}
 
+std::string ThresholdVariantCallFilter::do_name() const
+{
+    return "threshold";
+}
+
 bool ThresholdVariantCallFilter::passes_all_filters(MeasureIterator first_measure, MeasureIterator last_measure,
                                                     ThresholdIterator first_threshold) const
 {

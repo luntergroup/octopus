@@ -13,6 +13,11 @@ PassingVariantCallFilter::PassingVariantCallFilter(FacetFactory facet_factory,
 : SinglePassVariantCallFilter {std::move(facet_factory), std::move(measures), output_config, threading, progress}
 {}
 
+std::string PassingVariantCallFilter::do_name() const
+{
+    return "passing";
+}
+
 void PassingVariantCallFilter::annotate(VcfHeader::Builder& header) const {}
 
 VariantCallFilter::Classification PassingVariantCallFilter::classify(const MeasureVector& measures) const

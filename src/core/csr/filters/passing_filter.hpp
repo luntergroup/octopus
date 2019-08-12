@@ -34,6 +34,7 @@ public:
     virtual ~PassingVariantCallFilter() override = default;
 
 private:
+    std::string do_name() const override;
     void annotate(VcfHeader::Builder& header) const override;
     Classification classify(const MeasureVector& measures) const override;
 };

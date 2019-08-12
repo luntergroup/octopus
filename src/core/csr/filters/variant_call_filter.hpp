@@ -65,6 +65,8 @@ public:
     
     virtual ~VariantCallFilter() = default;
     
+    std::string name() const;
+    
     void filter(const VcfReader& source, VcfWriter& dest) const;
     
 protected:
@@ -114,6 +116,7 @@ private:
     
     mutable ThreadPool workers_;
     
+    virtual std::string do_name() const = 0;
     virtual void annotate(VcfHeader::Builder& header) const = 0;
     virtual void filter(const VcfReader& source, VcfWriter& dest, const VcfHeader& dest_header) const = 0;
     virtual boost::optional<std::string> call_quality_name() const { return boost::none; }

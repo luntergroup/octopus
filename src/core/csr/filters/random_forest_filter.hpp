@@ -91,6 +91,7 @@ private:
     const static std::string genotype_quality_name_;
     const static std::string call_quality_name_;
     
+    std::string do_name() const override;
     virtual boost::optional<std::string> call_quality_name() const override;
     virtual bool is_soft_filtered(const ClassificationList& sample_classifications, boost::optional<Phred<double>> joint_quality,
                                   const MeasureVector& measures, std::vector<std::string>& reasons) const override;

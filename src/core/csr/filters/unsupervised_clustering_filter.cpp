@@ -18,6 +18,11 @@ UnsupervisedClusteringFilter::UnsupervisedClusteringFilter(FacetFactory facet_fa
 : DoublePassVariantCallFilter {std::move(facet_factory), std::move(measures), std::move(output_config), threading, "/tmp", progress}
 {}
 
+std::string UnsupervisedClusteringFilter::do_name() const
+{
+    return "clustering";
+}
+
 void UnsupervisedClusteringFilter::annotate(VcfHeader::Builder& header) const
 {
     // TODO

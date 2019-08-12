@@ -93,6 +93,11 @@ RandomForestFilter::RandomForestFilter(FacetFactory facet_factory,
                     [] () { return std::make_unique<ranger::ForestProbability>(); });
 }
 
+std::string RandomForestFilter::do_name() const
+{
+    return "random forest";
+}
+
 const std::string RandomForestFilter::genotype_quality_name_ = "RFQUAL";
 const std::string RandomForestFilter::call_quality_name_ = "RFQUAL_ALL";
 
