@@ -25,7 +25,7 @@ def main(options):
     if options.regions_file is not None:
         octopus_cmd += ['--regions-file', options.regions_file]
     if options.threads is not None:
-        octopus_cmd += ['--threads', options.threads]
+        octopus_cmd += ['--threads', str(options.threads)]
     if options.forest is not None:
         octopus_cmd += ['--forest', options.forest]
     if options.config is not None:
