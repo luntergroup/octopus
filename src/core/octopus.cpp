@@ -110,7 +110,7 @@ VcfHeader make_vcf_header(const std::vector<SampleName>& samples,
     builder.add_basic_field("reference", reference.name());
     builder.add_basic_field("octopus_version", get_octopus_version());
     builder.add_structured_field("octopus", {{"command", '"' + info.command + '"'}});
-    builder.add_structured_field("octopus", {{"octopus_options", '"' + info.options + '"'}});
+    builder.add_structured_field("octopus", {{"options", '"' + info.options + '"'}});
     VcfHeaderFactory factory {};
     for (const auto& type : call_types) {
         factory.register_call_type(type);
