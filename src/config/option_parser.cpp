@@ -306,7 +306,7 @@ OptionMap parse_options(const int argc, const char** argv)
     
     po::options_description variant_discovery("Variant discovery");
     variant_discovery.add_options()
-    ("variant-discovery-protocol",
+    ("variant-discovery-mode",
      po::value<CandidateVariantDiscoveryProtocol>()->default_value(CandidateVariantDiscoveryProtocol::illumina),
      "Protocol to use for candidate variant discovery [ILLUMINA, PACBIO]")
      

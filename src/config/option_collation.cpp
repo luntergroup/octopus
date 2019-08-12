@@ -931,7 +931,7 @@ coretools::CigarScanner::Options::InclusionPredicate get_candidate_variant_inclu
         return get_default_single_cell_inclusion_predicate(options);
     } else {
         using CVDP = CandidateVariantDiscoveryProtocol;
-        if (options.at("variant-discovery-protocol").as<CVDP>() == CVDP::illumina) {
+        if (options.at("variant-discovery-mode").as<CVDP>() == CVDP::illumina) {
             return get_default_germline_inclusion_predicate(options);
         } else {
             return coretools::PacBioInclusionPredicate {};
@@ -942,7 +942,7 @@ coretools::CigarScanner::Options::InclusionPredicate get_candidate_variant_inclu
 coretools::CigarScanner::Options::MatchPredicate get_candidate_variant_match_predicate(const OptionMap& options)
 {
     using CVDP = CandidateVariantDiscoveryProtocol;
-    if (options.at("variant-discovery-protocol").as<CVDP>() == CVDP::illumina) {
+    if (options.at("variant-discovery-mode").as<CVDP>() == CVDP::illumina) {
         return coretools::TolerantMatchPredicate {};
     } else {
         return std::equal_to<> {};
