@@ -65,7 +65,7 @@ std::istream& operator>>(std::istream& in, RealignedBAMType& type);
 std::ostream& operator<<(std::ostream& os, const RealignedBAMType& type);
 
 std::ostream& operator<<(std::ostream& os, const OptionMap& options);
-std::string to_string(const OptionMap& options, bool one_line = false);
+std::string to_string(const OptionMap& options, bool one_line = false, bool mark_modified = true);
 
 } // namespace options
 } // namespace octopus

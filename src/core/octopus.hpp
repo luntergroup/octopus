@@ -10,7 +10,12 @@
 
 namespace octopus {
 
-void run_octopus(GenomeCallingComponents& components, std::string command);
+struct UserCommandInfo
+{
+    std::string command, options;
+};
+
+void run_octopus(GenomeCallingComponents& components, UserCommandInfo info);
 
 }
 

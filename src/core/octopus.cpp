@@ -101,7 +101,7 @@ VcfHeader make_vcf_header(const std::vector<SampleName>& samples,
                           const std::vector<GenomicRegion::ContigName>& contigs,
                           const ReferenceGenome& reference,
                           const CallTypeSet& call_types,
-                          const std::string& command)
+                          const UserCommandInfo& info)
 {
     auto builder = vcf::make_header_template().set_samples(samples);
     for (const auto& contig : contigs) {
@@ -109,7 +109,8 @@ VcfHeader make_vcf_header(const std::vector<SampleName>& samples,
     }
     builder.add_basic_field("reference", reference.name());
     builder.add_basic_field("octopus_version", get_octopus_version());
-    builder.add_structured_field("octopus", {{"command", '"' + command + '"'}});
+    builder.add_structured_field("octopus", {{"command", '"' + info.command + '"'}});
+    builder.add_structured_field("octopus", {{"octopus_options", '"' + info.options + '"'}});
     VcfHeaderFactory factory {};
     for (const auto& type : call_types) {
         factory.register_call_type(type);
@@ -122,10 +123,10 @@ VcfHeader make_vcf_header(const std::vector<SampleName>& samples,
                           const GenomicRegion::ContigName& contig,
                           const ReferenceGenome& reference,
                           const CallTypeSet& call_types,
-                          const std::string& command)
+                          const UserCommandInfo& info)
 {
     return make_vcf_header(samples, std::vector<GenomicRegion::ContigName> {contig},
-                           reference, call_types, command);
+                           reference, call_types, info);
 }
 
 bool has_reads(const GenomicRegion& region, ContigCallingComponents& components)
@@ -136,25 +137,23 @@ bool has_reads(const GenomicRegion& region, ContigCallingComponents& components)
 auto get_call_types(const GenomeCallingComponents& components, const std::vector<ContigName>& contigs)
 {
     CallTypeSet result {};
-    
     for (const auto& contig : components.contigs()) {
         const auto tmp_caller = components.caller_factory().make(contig);
         auto caller_call_types = tmp_caller->call_types();
         result.insert(std::begin(caller_call_types), std::end(caller_call_types));
     }
-    
     return result;
 }
 
-void write_caller_output_header(GenomeCallingComponents& components, const std::string& command)
+void write_caller_output_header(GenomeCallingComponents& components, const UserCommandInfo& info)
 {
     const auto call_types = get_call_types(components, components.contigs());
     if (components.sites_only() && !apply_csr(components)) {
         components.output() << make_vcf_header({}, components.contigs(), components.reference(),
-                                               call_types, command);
+                                               call_types, info);
     } else {
         components.output() << make_vcf_header(components.samples(), components.contigs(),
-                                               components.reference(), call_types, command);
+                                               components.reference(), call_types, info);
     }
 }
 
@@ -490,12 +489,15 @@ auto create_unique_temp_output_file_path(const GenomicRegion& region,
     return result;
 }
 
+VcfHeader make_temp_vcf_header(const GenomeCallingComponents& components, const GenomicRegion& region)
+{
+    const auto call_types = get_call_types(components, {region.contig_name()});
+    return make_vcf_header(components.samples(), region.contig_name(), components.reference(), call_types, {"octopus-internal", ""});
+}
+
 VcfWriter create_unique_temp_output_file(const GenomicRegion& region, const GenomeCallingComponents& components)
 {
-    auto path = create_unique_temp_output_file_path(region, components);
-    const auto call_types = get_call_types(components, {region.contig_name()});
-    auto header = make_vcf_header(components.samples(), region.contig_name(), components.reference(), call_types, "octopus-internal");
-    return VcfWriter {std::move(path), std::move(header)};
+    return {create_unique_temp_output_file_path(region, components), make_temp_vcf_header(components, region)};
 }
 
 VcfWriter create_unique_temp_output_file(const GenomicRegion::ContigName& contig, const GenomeCallingComponents& components)
@@ -1368,12 +1370,12 @@ void run_csr(GenomeCallingComponents& components)
     }
 }
 
-void log_run_start(const GenomeCallingComponents& components, const std::string& command)
+void log_run_start(const GenomeCallingComponents& components, const UserCommandInfo& info)
 {
     static auto debug_log = get_debug_log();
     log_startup_info(components);
     if (debug_log) {
-        stream(*debug_log) << "Command line: " << command;
+        stream(*debug_log) << "Command line: " << info.command;
         print_input_regions(stream(*debug_log), components.search_regions());
         const auto reads_profile = components.reads_profile();
         if (reads_profile) stream(*debug_log) << "Reads profile:\n" << *reads_profile;
@@ -1400,11 +1402,11 @@ public:
     CallingBug(const std::exception& e) : what_ {e.what()} {}
 };
 
-void run_variant_calling(GenomeCallingComponents& components, std::string command)
+void run_variant_calling(GenomeCallingComponents& components, UserCommandInfo info)
 {
     static auto debug_log = get_debug_log();
-    log_run_start(components, command);
-    write_caller_output_header(components, command);
+    log_run_start(components, info);
+    write_caller_output_header(components, info);
     const auto start = std::chrono::system_clock::now();
     try {
         if (!components.filter_request()) {
@@ -1644,9 +1646,9 @@ void run_post_calling_requests(GenomeCallingComponents& components)
     run_legacy_generation(components);
 }
 
-void run_octopus(GenomeCallingComponents& components, std::string command)
+void run_octopus(GenomeCallingComponents& components, UserCommandInfo info)
 {
-    run_variant_calling(components, std::move(command));
+    run_variant_calling(components, std::move(info));
     run_post_calling_requests(components);
     cleanup(components);
 }

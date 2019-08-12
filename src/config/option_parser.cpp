@@ -1493,6 +1493,17 @@ void write_vector(const OptionMap& options, const OptionMap::key_type& label, st
     }
 }
 
+template <>
+void write_vector<fs::path>(const OptionMap& options, const OptionMap::key_type& label, std::ostream& os, const char bullet)
+{
+    const auto& values = options[label].as<std::vector<fs::path>>();
+    std::size_t i {0};
+    for (const auto& val : values) {
+        os << bullet << ' ' << label << "[" << i++ << "]=" << val.filename().string();
+        if (i != values.size()) os << std::endl;
+    }
+}
+
 } // namespace
 
 std::ostream& operator<<(std::ostream& os, const OptionMap& options)
@@ -1522,12 +1533,12 @@ std::ostream& operator<<(std::ostream& os, const OptionMap& options)
         } else if (is_type<std::string>(value)) {
             const auto str = options[label].as<std::string>();
             if (str.size()) {
-                os << '"' << str << '"';
+                os << str;
             } else {
                 os << "true";
             }
         } else if (is_type<fs::path>(value)) {
-            os << options[label].as<fs::path>();
+            os << options[label].as<fs::path>().filename().string();
         } else if (is_vector_type<int>(value)) {
             write_vector<int>(options, label, os, bullet);
         } else if (is_vector_type<float>(value)) {
@@ -1574,7 +1585,7 @@ std::ostream& operator<<(std::ostream& os, const OptionMap& options)
     return os;
 }
 
-std::string to_string(const OptionMap& options, const bool one_line)
+std::string to_string(const OptionMap& options, const bool one_line, const bool mark_modified)
 {
     std::ostringstream ss {};
     ss << options;
@@ -1585,9 +1596,10 @@ std::string to_string(const OptionMap& options, const bool one_line)
             const bool modified {chunk[0] == '~'};
             chunk[0] = '-';
             chunk[1] = '-';
-            if (modified) {
+            if (modified && mark_modified) {
                 chunk.insert(0, 1,'*');
             }
+            chunk[chunk.find('=')] = ' ';
         }
         result = utils::join(chunks, ' ');
     }
