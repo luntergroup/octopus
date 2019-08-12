@@ -686,9 +686,28 @@ ReadManager make_read_manager(const OptionMap& options)
     return ReadManager {std::move(read_paths), max_open_files};
 }
 
-bool allow_assembler_generation(const OptionMap& options)
+bool denovo_candidate_variant_discovery_enabled(const OptionMap& options)
 {
-    return options.at("assembly-candidate-generator").as<bool>() && !is_fast_mode(options);
+    return !options.at("disable-denovo-variant-discovery").as<bool>();
+}
+
+bool pileup_candidate_variant_generator_enabled(const OptionMap& options)
+{
+    return denovo_candidate_variant_discovery_enabled(options)
+           && options.at("pileup-candidate-generator").as<bool>();
+}
+
+bool repeat_candidate_variant_generator_enabled(const OptionMap& options)
+{
+    return denovo_candidate_variant_discovery_enabled(options)
+           && options.at("repeat-candidate-generator").as<bool>();
+}
+
+bool assembler_candidate_variant_generator_enabled(const OptionMap& options)
+{
+    return denovo_candidate_variant_discovery_enabled(options)
+        && options.at("assembly-candidate-generator").as<bool>()
+        && !is_fast_mode(options);
 }
 
 auto make_read_transformers(const ReferenceGenome& reference, const OptionMap& options)
@@ -712,7 +731,7 @@ auto make_read_transformers(const ReferenceGenome& reference, const OptionMap& o
                 if (is_set("soft-clip-mask-threshold", options)) {
                     const auto threshold = static_cast<AlignedRead::BaseQuality>(as_unsigned("soft-clip-mask-threshold", options));
                     prefilter_transformer.add(MaskLowQualitySoftClippedBoundaryBases {boundary_size, threshold});
-                } else if (allow_assembler_generation(options)) {
+                } else if (assembler_candidate_variant_generator_enabled(options)) {
                     prefilter_transformer.add(MaskLowQualitySoftClippedBoundaryBases {boundary_size, 3});
                     prefilter_transformer.add(MaskLowAverageQualitySoftClippedTails {10, 5});
                     prefilter_transformer.add(MaskClippedDuplicatedBases {});
@@ -723,7 +742,7 @@ auto make_read_transformers(const ReferenceGenome& reference, const OptionMap& o
                 if (is_set("soft-clip-mask-threshold", options)) {
                     const auto threshold = static_cast<AlignedRead::BaseQuality>(as_unsigned("soft-clip-mask-threshold", options));
                     prefilter_transformer.add(MaskLowQualitySoftClippedBases {threshold});
-                } else if (allow_assembler_generation(options)) {
+                } else if (assembler_candidate_variant_generator_enabled(options)) {
                     prefilter_transformer.add(MaskLowQualitySoftClippedBases {3});
                     prefilter_transformer.add(MaskLowAverageQualitySoftClippedTails {10, 5});
                     prefilter_transformer.add(MaskClippedDuplicatedBases {});
@@ -1033,9 +1052,9 @@ auto make_variant_generator_builder(const OptionMap& options, const boost::optio
     logging::ErrorLogger log {};
     
     VariantGeneratorBuilder result {};
-    const bool use_assembler {allow_assembler_generation(options)};
+    const bool use_assembler {assembler_candidate_variant_generator_enabled(options)};
     
-    if (options.at("pileup-candidate-generator").as<bool>()) {
+    if (pileup_candidate_variant_generator_enabled(options)) {
         CigarScanner::Options scanner_options {};
         if (is_set("min-supporting-reads", options)) {
             auto min_support = as_unsigned("min-supporting-reads", options);
@@ -1064,7 +1083,7 @@ auto make_variant_generator_builder(const OptionMap& options, const boost::optio
         }
         result.set_cigar_scanner(std::move(scanner_options));
     }
-    if (options.at("repeat-candidate-generator").as<bool>()) {
+    if (repeat_candidate_variant_generator_enabled(options)) {
         result.set_repeat_scanner(RepeatScanner::Options {});
     }
     if (use_assembler) {

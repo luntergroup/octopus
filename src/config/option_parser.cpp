@@ -330,6 +330,10 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<std::vector<fs::path>>()->multitoken(),
      "Files containing lists of source candidate variant files")
     
+    ("disable-denovo-variant-discovery",
+     po::bool_switch()->default_value(false),
+     "Disable all de novo candidate variant generators")
+     
     ("min-source-quality",
      po::value<Phred<double>>()->implicit_value(Phred<double> {2.0}),
      "Only variants with quality above this value are considered for candidate generation")
