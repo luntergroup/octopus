@@ -37,6 +37,8 @@ extern const SystemInfo System;
 std::ostream& operator<<(std::ostream& os, const VersionNumber& version);
 std::ostream& operator<<(std::ostream& os, SystemInfo::SIMDExtension simd);
 
+std::string to_string(const VersionNumber& version, bool spaces = true);
+
 extern const std::string HelpForum, BugReport;
 
 extern const std::vector<std::string> Authors;

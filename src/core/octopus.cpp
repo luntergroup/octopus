@@ -90,13 +90,6 @@ bool apply_csr(const GenomeCallingComponents& components) noexcept
 
 using CallTypeSet = std::set<std::type_index>;
 
-std::string get_octopus_version()
-{
-    std::ostringstream ss {};
-    ss << config::Version;
-    return ss.str();
-}
-
 VcfHeader make_vcf_header(const std::vector<SampleName>& samples,
                           const std::vector<GenomicRegion::ContigName>& contigs,
                           const ReferenceGenome& reference,
@@ -108,9 +101,11 @@ VcfHeader make_vcf_header(const std::vector<SampleName>& samples,
         builder.add_contig(contig, {{"length", std::to_string(reference.contig_size(contig))}});
     }
     builder.add_basic_field("reference", reference.name());
-    builder.add_basic_field("octopus_version", get_octopus_version());
-    builder.add_structured_field("octopus", {{"command", '"' + info.command + '"'}});
-    builder.add_structured_field("octopus", {{"options", '"' + info.options + '"'}});
+    builder.add_structured_field("octopus", {
+        {"version", to_string(config::Version, false)},
+        {"command", '"' + info.command + '"'},
+        {"options", '"' + info.options + '"'}
+    });
     VcfHeaderFactory factory {};
     for (const auto& type : call_types) {
         factory.register_call_type(type);
