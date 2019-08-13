@@ -4,14 +4,17 @@ import argparse
 import pandas as pd
 from math import log10, ceil
 
+def get_error_rate_norm(row):
+    return max(row.reads, 1) if row.period > 0 else row.reference_footprint
+
 def aggregate_errors(df, aggregators=['period', 'periods']):
     if len(aggregators) == 0:
         return df
     if len(df) == 0:
         return df
-    errors_attributes = ['period', 'periods', 'tract_length', 'motif', 'indel_length', 'errors', 'reads']
+    errors_attributes = ['period', 'periods', 'tract_length', 'motif', 'indel_length', 'errors', 'reads', 'reference_footprint']
     errors_df = df[errors_attributes]
-    aggregation_functions = {'period': 'first', 'periods': 'first', 'errors': 'sum', 'reads': 'sum', 'tract_length': 'first'}
+    aggregation_functions = {'period': 'first', 'periods': 'first', 'errors': 'sum', 'reads': 'sum', 'tract_length': 'first', 'reference_footprint': 'first'}
     if 'indel_length' not in aggregators:
         aggregation_functions['motif'] = 'first'
         aggregation_functions['reads'] = 'first'
@@ -26,16 +29,13 @@ def aggregate_errors(df, aggregators=['period', 'periods']):
         aggregation_functions['motif'] = 'first'
     errors_df.reset_index(drop=True, inplace=True)
     errors_df = errors_df.groupby(aggregators).aggregate(aggregation_functions, axis='columns')
-    errors_df['error_rate'] = errors_df.apply(lambda row: row.errors / max(row.reads, 1), axis=1)
+    errors_df['error_rate'] = errors_df.apply(lambda row: row.errors / get_error_rate_norm(row), axis=1)
     errors_attributes.append('error_rate')
     if 'motif' not in aggregators:
         del(errors_attributes[errors_attributes.index('motif')])
     if 'indel_length' not in aggregators:
         del(errors_attributes[errors_attributes.index('indel_length')])
     return errors_df[errors_attributes]
-
-def get_error_rate_norm(row):
-    return max(row.reads, 1) if row.period > 0 else row.reference_footprint
 
 def read_indel_profile(csv):
     result = pd.read_csv(csv)
@@ -75,7 +75,7 @@ def rate_to_phred(rate):
     return -10 * log10(rate + 1e-100)
 
 def complex_indel_penalty(profile_df):
-    return rate_to_phred(float(list(profile_df['period'].query('period == 0')['error_rate'])[0])) + 2
+    return rate_to_phred(float(list(profile_df['period'].query('period == 0')['error_rate'])[0]))
 
 def get_repeat_error_df(profile_df, pattern, max_periods):
     profile_index = 'period'
