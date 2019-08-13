@@ -96,6 +96,7 @@ private:
     virtual bool is_soft_filtered(const ClassificationList& sample_classifications, boost::optional<Phred<double>> joint_quality,
                                   const MeasureVector& measures, std::vector<std::string>& reasons) const override;
     
+    std::unique_ptr<ranger::Forest> make_forest() const;
     boost::optional<std::string> genotype_quality_name() const override;
     std::int8_t choose_forest(const MeasureVector& measures) const;
     void prepare_for_registration(const SampleList& samples) const override;

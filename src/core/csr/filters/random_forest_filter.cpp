@@ -88,9 +88,6 @@ RandomForestFilter::RandomForestFilter(FacetFactory facet_factory,
 , data_buffer_ {}
 {
     check_all_exists(forest_paths_);
-    forests_.reserve(forest_paths_.size());
-    std::generate_n(std::back_inserter(forests_), forest_paths_.size(),
-                    [] () { return std::make_unique<ranger::ForestProbability>(); });
 }
 
 std::string RandomForestFilter::do_name() const
@@ -100,6 +97,11 @@ std::string RandomForestFilter::do_name() const
 
 const std::string RandomForestFilter::genotype_quality_name_ = "RFQUAL";
 const std::string RandomForestFilter::call_quality_name_ = "RFQUAL_ALL";
+
+std::unique_ptr<ranger::Forest> RandomForestFilter::make_forest() const
+{
+    return std::make_unique<ranger::ForestProbability>();
+}
 
 boost::optional<std::string> RandomForestFilter::genotype_quality_name() const
 {
@@ -317,7 +319,7 @@ void RandomForestFilter::prepare_for_classification(boost::optional<Log>& log) c
             if (forest_choice_itr != std::cend(choices_[sample_idx])) {
                 const auto& file = data_[forest_idx][sample_idx];
                 std::vector<std::string> tmp {}, cat_vars {};
-                auto& forest = forests_[forest_idx];
+                const auto forest = make_forest();
                 try {
                     forest->initCpp("TP", ranger::MemoryMode::MEM_DOUBLE, file.path.string(), 0, ranger_prefix.string(),
                                     1000, nullptr, 12, 1, forest_paths_[forest_idx].string(), ranger::ImportanceMode::IMP_GINI, 1, "",
