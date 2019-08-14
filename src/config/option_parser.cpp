@@ -54,9 +54,6 @@ OptionMap parse_options(const int argc, const char** argv)
     ("config",
      po::value<fs::path>(),
      "Config file to populate command line options")
-     
-    ("show-options",
-    "Display all command line option values in the startup banner")
     
     ("debug",
      po::value<fs::path>()->implicit_value("octopus_debug.log"),
