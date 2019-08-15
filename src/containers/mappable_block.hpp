@@ -152,7 +152,7 @@ public:
     iterator insert(const_iterator pos, const MappableType& value) { return base_.insert(std::move(pos), value); }
     iterator insert(const_iterator pos, MappableType&& value) { return base_.insert(std::move(pos), std::move(value)); }
     template <typename InputIterator>
-    void insert(const_iterator pos, InputIterator first, InputIterator last) { return base_.insert(std::move(pos), std::move(first), std::move(last)); }
+    iterator insert(const_iterator pos, InputIterator first, InputIterator last) { return base_.insert(std::move(pos), std::move(first), std::move(last)); }
     iterator insert(const_iterator pos, std::initializer_list<MappableType> values) { return base_.insert(std::move(pos), values); }
     iterator erase(const_iterator pos) { return base_.erase(pos); }
     iterator erase(const_iterator first, const_iterator last) { return base_.erase(std::move(first), std::move(last)); }

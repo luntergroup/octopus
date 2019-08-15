@@ -21,6 +21,7 @@
 #include "utils/maths.hpp"
 #include "utils/mappable_algorithms.hpp"
 #include "utils/read_stats.hpp"
+#include "utils/append.hpp"
 #include "containers/probability_matrix.hpp"
 #include "core/models/genotype/individual_model.hpp"
 #include "core/models/genotype/uniform_population_prior_model.hpp"
@@ -177,7 +178,7 @@ PopulationCaller::Latents::Latents(const std::vector<SampleName>& samples,
 
 PopulationCaller::Latents::Latents(const std::vector<SampleName>& samples,
                                    const HaplotypeBlock& haplotypes,
-                                   std::unordered_map<unsigned, MappableBlock<Genotype<Haplotype>>>&& genotypes,
+                                   std::map<unsigned, MappableBlock<Genotype<Haplotype>>>&& genotypes,
                                    IndependenceModelInferences&& inferences)
 : genotypes_ {std::move(genotypes)}
 {
@@ -204,7 +205,7 @@ PopulationCaller::Latents::Latents(const std::vector<SampleName>& samples,
 
 PopulationCaller::Latents::Latents(const std::vector<SampleName>& samples,
                                    const HaplotypeBlock& haplotypes,
-                                   std::unordered_map<unsigned, MappableBlock<Genotype<Haplotype>>>&& genotypes,
+                                   std::map<unsigned, MappableBlock<Genotype<Haplotype>>>&& genotypes,
                                    ModelInferences&& inferences)
 : genotypes_ {std::move(genotypes)}
 , model_latents_ {std::move(inferences)}
@@ -226,28 +227,7 @@ PopulationCaller::Latents::genotype_posteriors() const noexcept
 
 using GenotypeBlock = MappableBlock<Genotype<Haplotype>>;
 using GenotypeBlockReference = std::reference_wrapper<const GenotypeBlock>;
-using GenotypesMap = std::unordered_map<unsigned, GenotypeBlock>;
-
-auto generate_unique_genotypes(const MappableBlock<Haplotype>& haplotypes, std::vector<unsigned> ploidies)
-{
-    std::sort(std::begin(ploidies), std::end(ploidies));
-    ploidies.erase(std::unique(std::begin(ploidies), std::end(ploidies)), std::end(ploidies));
-    GenotypesMap result {ploidies.size()};
-    for (auto ploidy : ploidies) {
-        result.emplace(ploidy, generate_all_genotypes(haplotypes, ploidy));
-    }
-    return result;
-}
-
-auto assign_samples_to_genotypes(std::vector<unsigned> ploidies, const GenotypesMap& genotypes)
-{
-    std::vector<GenotypeBlockReference> result {};
-    result.reserve(ploidies.size());
-    for (auto ploidy : ploidies) {
-        result.emplace_back(genotypes.at(ploidy));
-    }
-    return result;
-}
+using GenotypesMap = std::map<unsigned, GenotypeBlock>;
 
 std::unique_ptr<PopulationCaller::Caller::Latents>
 PopulationCaller::infer_latents(const HaplotypeBlock& haplotypes,
@@ -740,14 +720,45 @@ bool PopulationCaller::use_independence_model() const noexcept
     return parameters_.use_independent_genotype_priors || !parameters_.prior_model_params;
 }
 
+auto generate_unique_genotypes(const MappableBlock<Haplotype>& haplotypes, std::vector<unsigned> ploidies)
+{
+    std::sort(std::begin(ploidies), std::end(ploidies));
+    ploidies.erase(std::unique(std::begin(ploidies), std::end(ploidies)), std::end(ploidies));
+    GenotypesMap result {};
+    for (auto ploidy : ploidies) {
+        result.emplace(ploidy, generate_all_genotypes(haplotypes, ploidy));
+    }
+    return result;
+}
+
+auto assign_samples_to_genotypes(std::vector<unsigned> ploidies, const GenotypesMap& genotypes)
+{
+    std::vector<GenotypeBlockReference> result {};
+    result.reserve(ploidies.size());
+    for (auto ploidy : ploidies) {
+        result.emplace_back(genotypes.at(ploidy));
+    }
+    return result;
+}
+
+namespace {
+
+template <typename Container1, typename MappableType, typename Container2>
+auto append(MappableBlock<MappableType, Container1>&& src, MappableBlock<MappableType, Container2>& dst)
+{
+    return utils::append(std::move(static_cast<Container1&>(src)), static_cast<Container2&>(dst));
+}
+
+} // namespace append
+
 std::unique_ptr<Caller::Latents>
 PopulationCaller::infer_latents_with_joint_model(const HaplotypeBlock& haplotypes,
                                                  const HaplotypeLikelihoodArray& haplotype_likelihoods) const
 {
     const auto prior_model = make_joint_prior_model(haplotypes);
-    prior_model->prime(haplotypes);
     const model::PopulationModel model {*prior_model, {parameters_.max_joint_genotypes}, debug_log_};
     if (parameters_.ploidies.size() == 1) {
+        prior_model->prime(haplotypes);
         std::vector<GenotypeIndex> genotype_indices;
         auto genotypes = generate_all_genotypes(haplotypes, parameters_.ploidies.front(), genotype_indices);
         if (debug_log_) stream(*debug_log_) << "There are " << genotypes.size() << " candidate genotypes";
@@ -755,9 +766,10 @@ PopulationCaller::infer_latents_with_joint_model(const HaplotypeBlock& haplotype
         return std::make_unique<Latents>(samples_, haplotypes, std::move(genotypes), std::move(inferences));
     } else {
         auto unique_genotypes = generate_unique_genotypes(haplotypes, parameters_.ploidies);
-        auto sample_genotypes = assign_samples_to_genotypes(parameters_.ploidies, unique_genotypes);
-        auto inferences = model.evaluate(samples_, sample_genotypes, haplotype_likelihoods);
-        return std::make_unique<Latents>(samples_, haplotypes, std::move(unique_genotypes), std::move(inferences));
+        model::PopulationModel::GenotypeVector genotypes {};
+        for (auto& p : unique_genotypes) append(std::move(p.second), genotypes);
+        auto inferences = model.evaluate(samples_, parameters_.ploidies, genotypes, haplotype_likelihoods);
+        return std::make_unique<Latents>(samples_, haplotypes, std::move(genotypes), std::move(inferences));
     }
 }
 
@@ -774,9 +786,10 @@ PopulationCaller::infer_latents_with_independence_model(const HaplotypeBlock& ha
         return std::make_unique<Latents>(samples_, haplotypes, std::move(genotypes), std::move(inferences));
     } else {
         auto unique_genotypes = generate_unique_genotypes(haplotypes, parameters_.ploidies);
-        auto sample_genotypes = assign_samples_to_genotypes(parameters_.ploidies, unique_genotypes);
-        auto inferences = model.evaluate(samples_, sample_genotypes, haplotype_likelihoods);
-        return std::make_unique<Latents>(samples_, haplotypes, std::move(unique_genotypes), std::move(inferences));
+        model::IndependentPopulationModel::GenotypeVector genotypes {};
+        for (auto& p : unique_genotypes) append(std::move(p.second), genotypes);
+        auto inferences = model.evaluate(samples_, parameters_.ploidies, genotypes, haplotype_likelihoods);
+        return std::make_unique<Latents>(samples_, haplotypes, std::move(genotypes), std::move(inferences));
     }
 }
 
