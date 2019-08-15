@@ -8,6 +8,7 @@
 #include <string>
 #include <memory>
 #include <typeindex>
+#include <map>
 
 #include "config/common.hpp"
 #include "basics/ploidy_map.hpp"
@@ -110,7 +111,7 @@ public:
     
     Latents(const std::vector<SampleName>& samples,
             const HaplotypeBlock&,
-            std::unordered_map<unsigned, MappableBlock<Genotype<Haplotype>>>&& genotypes,
+            std::map<unsigned, MappableBlock<Genotype<Haplotype>>>&& genotypes,
             IndependenceModelInferences&&);
     
     Latents(const std::vector<SampleName>& samples,
@@ -120,14 +121,14 @@ public:
     
     Latents(const std::vector<SampleName>& samples,
             const HaplotypeBlock&,
-            std::unordered_map<unsigned, MappableBlock<Genotype<Haplotype>>>&& genotypes,
+            std::map<unsigned, MappableBlock<Genotype<Haplotype>>>&& genotypes,
             ModelInferences&&);
     
     std::shared_ptr<HaplotypeProbabilityMap> haplotype_posteriors() const noexcept override;
     std::shared_ptr<GenotypeProbabilityMap> genotype_posteriors() const noexcept override;
 
 private:
-    std::unordered_map<unsigned, MappableBlock<Genotype<Haplotype>>> genotypes_;
+    std::map<unsigned, MappableBlock<Genotype<Haplotype>>> genotypes_;
     ModelInferences model_latents_;
     std::shared_ptr<GenotypeProbabilityMap> genotype_posteriors_;
     std::shared_ptr<HaplotypeProbabilityMap> haplotype_posteriors_;

@@ -73,7 +73,8 @@ public:
                              const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
     // Samples have different ploidy
     InferredLatents evaluate(const SampleVector& samples,
-                             const std::vector<GenotypeVectorReference>& genotypes,
+                             const std::vector<GenotypeVector>& genotypes,
+                             const std::vector<std::size_t>& sample_genotype_set_ids,
                              const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
     
 private:
