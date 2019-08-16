@@ -13,6 +13,8 @@
 #include "io/variant/vcf_record.hpp"
 #include "utils/repeat_finder.hpp"
 #include "../facets/reference_context.hpp"
+#include "../facets/samples.hpp"
+#include "../facets/alleles.hpp"
 
 namespace octopus { namespace csr {
 
@@ -41,7 +43,7 @@ struct RepeatContextLess
         if (overlap_size(expanded_lhs_region, call_) != overlap_size(expanded_rhs_region, call_)) {
             return overlap_size(expanded_lhs_region, call_) < overlap_size(expanded_rhs_region, call_);
         }
-        return ends_before(lhs, rhs);
+        return ends_equal(lhs, rhs) ? begins_before(rhs, lhs) : ends_before(lhs, rhs);
     }
     RepeatContextLess(const VcfRecord& call) : call_ {call} {};
 private:
@@ -53,7 +55,7 @@ bool could_contain(const TandemRepeat& repeat, const VcfRecord& call)
     return contains(expand(mapped_region(repeat), 1), call);
 }
 
-boost::optional<TandemRepeat> find_repeat_context(const VcfRecord& call, const Haplotype& reference)
+boost::optional<TandemRepeat> find_repeat_context(const VcfRecord& call, const std::vector<Allele>& alleles, const Haplotype& reference)
 {
     const auto repeats = find_exact_tandem_repeats(reference.sequence(), reference.mapped_region(), 1, 20);
     const auto overlapping_repeats = overlap_range(repeats, expand(mapped_region(call), 1));
@@ -71,6 +73,9 @@ boost::optional<TandemRepeat> find_repeat_context(const VcfRecord& call, const H
         if (!result) {
             result = *max_overlapped(repeats, call);
         }
+        if (!has_overlapped(alleles, *result)) {
+            result = boost::none;
+        }
     }
     return result;
 }
@@ -81,7 +86,9 @@ Measure::ResultType STRPeriod::do_evaluate(const VcfRecord& call, const FacetMap
 {
     int result {0};
     const auto& reference = get_value<ReferenceContext>(facets.at("ReferenceContext"));
-    const auto repeat_context = find_repeat_context(call, reference);
+    const auto& samples = get_value<Samples>(facets.at("Samples"));
+    const auto alleles = copy_unique_overlapped(get_value<Alleles>(facets.at("Alleles")), call, samples);
+    const auto repeat_context = find_repeat_context(call, alleles, reference);
     if (repeat_context) result = repeat_context->period();
     return result;
 }
@@ -103,7 +110,7 @@ std::string STRPeriod::do_describe() const
 
 std::vector<std::string> STRPeriod::do_requirements() const
 {
-    return {"ReferenceContext"};
+    return {"ReferenceContext", "Samples", "Alleles"};
 }
 
 } // namespace csr
