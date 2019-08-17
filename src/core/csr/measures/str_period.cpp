@@ -62,7 +62,7 @@ boost::optional<TandemRepeat> find_repeat_context(const VcfRecord& call, const s
     boost::optional<TandemRepeat> result {};
     if (!empty(overlapping_repeats)) {
         for (const auto& repeat : repeats) {
-            if (could_contain(repeat, call)) {
+            if (could_contain(repeat, call) && has_overlapped(alleles, repeat)) {
                 if (result) {
                     result = std::max(repeat, *result, RepeatContextLess {call});
                 } else {
@@ -72,9 +72,9 @@ boost::optional<TandemRepeat> find_repeat_context(const VcfRecord& call, const s
         }
         if (!result) {
             result = *max_overlapped(repeats, call);
-        }
-        if (!has_overlapped(alleles, *result)) {
-            result = boost::none;
+            if (!has_overlapped(alleles, *result)) {
+                result = boost::none;
+            }
         }
     }
     return result;
