@@ -1082,12 +1082,12 @@ void validate(const OptionMap& vm)
     const std::vector<std::string> positive_int_options {
         "threads", "mask-low-quality-tails", "mask-tails", "soft-clip-mask-threshold", "mask-soft-clipped-boundary-bases",
         "min-mapping-quality", "good-base-quality", "min-good-bases", "min-read-length",
-        "max-read-length", "min-base-quality", "min-supporting-reads", "max-variant-size",
+        "max-read-length", "min-base-quality", "max-variant-size",
         "num-fallback-kmers", "max-assemble-region-overlap", "assembler-mask-base-quality",
         "min-kmer-prune", "max-bubbles", "max-holdout-depth"
     };
     const std::vector<std::string> strictly_positive_int_options {
-        "max-open-read-files", "downsample-above", "downsample-target",
+        "max-open-read-files", "downsample-above", "downsample-target", "min-supporting-reads",
         "max-region-to-assemble", "fallback-kmer-gap", "organism-ploidy",
         "max-haplotypes", "haplotype-holdout-threshold", "haplotype-overflow",
         "max-genotypes", "max-joint-genotypes", "max-somatic-haplotypes", "max-clones",

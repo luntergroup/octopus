@@ -1058,10 +1058,6 @@ auto make_variant_generator_builder(const OptionMap& options, const boost::optio
         CigarScanner::Options scanner_options {};
         if (is_set("min-supporting-reads", options)) {
             auto min_support = as_unsigned("min-supporting-reads", options);
-            if (min_support == 0) {
-                warning_log << "The option --min_supporting_reads was set to 0 - assuming this is a typo and setting to 1";
-                ++min_support;
-            }
             scanner_options.include = coretools::SimpleThresholdInclusionPredicate {min_support};
         } else {
             scanner_options.include = get_candidate_variant_inclusion_predicate(options);
@@ -1808,7 +1804,7 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
     
     if (is_experimental_caller(caller)) {
         logging::WarningLogger log {};
-        stream(log) << "The " << caller << " calling model is still in development and may not perform as expected";
+        stream(log) << "The " << caller << " calling model is still in development. Do not use for production work!";
     }
     
     if (is_set("refcall", options)) {
