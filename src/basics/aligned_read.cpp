@@ -4,6 +4,7 @@
 #include "aligned_read.hpp"
 
 #include <ostream>
+#include <limits>
 
 #include <boost/functional/hash.hpp>
 
@@ -551,7 +552,7 @@ static constexpr std::uint16_t BAM_FSUPPLEMENTARY = 2048;
 
 void set_flag(bool set, std::uint16_t mask, std::uint16_t& result) noexcept
 {
-    constexpr std::uint16_t zeros {0}, ones = -1;
+    constexpr std::uint16_t zeros {0}, ones {std::numeric_limits<std::uint16_t>::max()};
     result |= (set ? ones : zeros) & mask;
 }
 

@@ -12,6 +12,7 @@
 #include <unordered_set>
 #include <stdexcept>
 #include <iostream>
+#include <limits>
 
 #include <boost/iterator/zip_iterator.hpp>
 #include <boost/tuple/tuple.hpp>
@@ -1594,7 +1595,7 @@ namespace debug {
 template <typename S>
 void print_genotype_posteriors(S&& stream,
                                const std::unordered_map<Genotype<Haplotype>, double>& genotype_posteriors,
-                               const std::size_t n)
+                               const std::size_t n = std::numeric_limits<std::size_t>::max())
 {
     const auto m = std::min(n, genotype_posteriors.size());
     if (m == genotype_posteriors.size()) {
@@ -1652,7 +1653,7 @@ void CancerCaller::log(const GenotypeVector& germline_genotypes,
         marginal_germline_log << ' ' << map_marginal_germline->second;
     }
     if (trace_log_) {
-        debug::print_genotype_posteriors(stream(*trace_log_), germline_genotype_posteriors, -1);
+        debug::print_genotype_posteriors(stream(*trace_log_), germline_genotype_posteriors);
     }
 }
 

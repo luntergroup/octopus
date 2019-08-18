@@ -4,6 +4,7 @@
 #include "ploidy_map.hpp"
 
 #include <iterator>
+#include <limits>
 
 namespace octopus {
 
@@ -56,7 +57,7 @@ std::vector<unsigned> get_ploidies(const std::vector<SampleName>& samples, const
 
 unsigned get_min_ploidy(const std::vector<SampleName>& samples, const std::vector<ContigName>& contigs, const PloidyMap& ploidies)
 {
-    unsigned result = -1;
+    auto result = std::numeric_limits<unsigned>::max();
     for (const auto& sample : samples) {
         for (const auto& contig : contigs) {
             result = std::min(result, ploidies.of(sample, contig));

@@ -17,8 +17,8 @@ namespace {
 double calculate_gap_open_rate(const double base_rate, unsigned period, unsigned num_periods) noexcept
 {
     if (period == 0 || num_periods == 0) return base_rate;
-    static constexpr auto max_period = static_cast<unsigned>(enrichment_model.size() - 1);
-    static constexpr auto max_periods = static_cast<unsigned>(enrichment_model.front().size() - 1);
+    static const auto max_period = static_cast<unsigned>(enrichment_model.size() - 1);
+    static const auto max_periods = static_cast<unsigned>(enrichment_model.front().size() - 1);
     period = std::min(period, max_period);
     num_periods = std::min(num_periods, max_periods);
     return std::min(base_rate * enrichment_model[period][num_periods], 1.0);
@@ -26,9 +26,9 @@ double calculate_gap_open_rate(const double base_rate, unsigned period, unsigned
 
 double calculate_gap_extend_rate(unsigned period, unsigned num_periods, unsigned current_gap, const double gap_open_rate) noexcept
 {
-    static constexpr auto max_period = static_cast<unsigned>(extension_model.size() - 1);
-    static constexpr auto max_periods = static_cast<unsigned>(extension_model.front().size() - 1);
-    static constexpr auto max_gap = static_cast<unsigned>(extension_model.front().front().size() - 1);
+    static const auto max_period = static_cast<unsigned>(extension_model.size() - 1);
+    static const auto max_periods = static_cast<unsigned>(extension_model.front().size() - 1);
+    static const auto max_gap = static_cast<unsigned>(extension_model.front().front().size() - 1);
     period = std::min(period, max_period);
     num_periods = std::min(num_periods, max_periods);
     current_gap = std::min(current_gap, max_gap);

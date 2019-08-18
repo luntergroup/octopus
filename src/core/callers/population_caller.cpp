@@ -12,6 +12,7 @@
 #include <functional>
 #include <utility>
 #include <iostream>
+#include <limits>
 
 #include "basics/genomic_region.hpp"
 #include "core/types/allele.hpp"
@@ -824,7 +825,7 @@ namespace {
 template <typename S>
 void print_genotype_posteriors(S&& stream,
                                const GenotypeProbabilityMap& genotype_posteriors,
-                               const std::size_t n)
+                               const std::size_t n = std::numeric_limits<std::size_t>::max())
 {
     const auto m = std::min(n, genotype_posteriors.size());
     using GenotypeReference = std::reference_wrapper<const Genotype<Haplotype>>;
@@ -847,7 +848,7 @@ void print_genotype_posteriors(S&& stream,
 template <typename S>
 void print_genotype_posteriors(S&& stream,
                                const PopulationGenotypeProbabilityMap& genotype_posteriors,
-                               const std::size_t n)
+                               const std::size_t n = std::numeric_limits<std::size_t>::max())
 {
     for (const auto& p : genotype_posteriors) {
         stream << "Printing genotype posteriors for sample: " << p.first << '\n';
@@ -856,14 +857,14 @@ void print_genotype_posteriors(S&& stream,
 }
 
 void print_genotype_posteriors(const PopulationGenotypeProbabilityMap& genotype_posteriors,
-                               const std::size_t n)
+                               const std::size_t n = std::numeric_limits<std::size_t>::max())
 {
     print_genotype_posteriors(std::cout, genotype_posteriors, n);
 }
 
 template <typename S>
 void print_candidate_posteriors(S&& stream, const VariantPosteriorVector& candidate_posteriors,
-                                const std::size_t n)
+                                const std::size_t n = std::numeric_limits<std::size_t>::max())
 {
     const auto m = std::min(n, candidate_posteriors.size());
     if (m == candidate_posteriors.size()) {
@@ -891,7 +892,7 @@ void print_candidate_posteriors(S&& stream, const VariantPosteriorVector& candid
 }
 
 void print_candidate_posteriors(const VariantPosteriorVector& candidate_posteriors,
-                                const std::size_t n)
+                                const std::size_t n = std::numeric_limits<std::size_t>::max())
 {
     print_candidate_posteriors(std::cout, candidate_posteriors, n);
 }
@@ -903,7 +904,7 @@ void log(const PopulationGenotypeProbabilityMap& genotype_posteriors,
          boost::optional<logging::TraceLogger>& trace_log)
 {
     if (trace_log) {
-        print_genotype_posteriors(stream(*trace_log), genotype_posteriors, -1);
+        print_genotype_posteriors(stream(*trace_log), genotype_posteriors);
     }
     if (debug_log) {
         print_genotype_posteriors(stream(*debug_log), genotype_posteriors, 5);
@@ -915,7 +916,7 @@ void log(const VariantPosteriorVector& candidate_posteriors,
          boost::optional<logging::TraceLogger>& trace_log)
 {
     if (trace_log) {
-        print_candidate_posteriors(stream(*trace_log), candidate_posteriors, -1);
+        print_candidate_posteriors(stream(*trace_log), candidate_posteriors);
     }
     if (debug_log) {
         print_candidate_posteriors(stream(*debug_log), candidate_posteriors, 5);

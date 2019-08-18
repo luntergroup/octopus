@@ -11,6 +11,7 @@
 #include <functional>
 #include <iostream>
 #include <iomanip>
+#include <limits>
 
 #include <boost/optional.hpp>
 
@@ -172,7 +173,7 @@ void print_read_haplotype_likelihoods(S&& stream,
                                      const MappableBlock<Haplotype>& haplotypes,
                                      const MappableMap<SampleName, Read>& reads,
                                      const HaplotypeLikelihoodArray& haplotype_likelihoods,
-                                     const std::size_t n = 5)
+                                     const std::size_t n = std::numeric_limits<std::size_t>::max())
 {
     if (n == static_cast<std::size_t>(-1)) {
         stream << "Printing all read likelihoods for each haplotype in ";
@@ -229,7 +230,7 @@ template <typename Read>
 void print_read_haplotype_likelihoods(const MappableBlock<Haplotype>& haplotypes,
                                       const MappableMap<SampleName, Read>& reads,
                                       const HaplotypeLikelihoodArray& haplotype_likelihoods,
-                                      std::size_t n = 5)
+                                      std::size_t n = std::numeric_limits<std::size_t>::max())
 {
     print_read_haplotype_likelihoods(std::cout, haplotypes, reads, haplotype_likelihoods, n);
 }

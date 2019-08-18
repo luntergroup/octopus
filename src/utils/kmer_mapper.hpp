@@ -12,6 +12,7 @@
 #include <iterator>
 #include <algorithm>
 #include <numeric>
+#include <limits>
 
 namespace octopus {
 
@@ -129,7 +130,7 @@ inline void reset_mapping_counts(MappedIndexCounts& mapping_counts)
 template <typename OutputIt>
 OutputIt map_query_to_target(const KmerPerfectHashes& query, const KmerHashTable& target,
                              MappedIndexCounts& mapping_counts, OutputIt result,
-                             std::size_t max_mapping_positions = -1)
+                             std::size_t max_mapping_positions = std::numeric_limits<std::size_t>::max())
 {
     unsigned max_hit_count {0};
     std::size_t first_max_hit_index {0};

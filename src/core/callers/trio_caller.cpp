@@ -10,6 +10,7 @@
 #include <numeric>
 #include <map>
 #include <utility>
+#include <limits>
 
 #include <boost/multiprecision/cpp_dec_float.hpp>
 
@@ -1084,7 +1085,7 @@ std::unique_ptr<GenotypePriorModel> TrioCaller::make_single_sample_prior_model(c
 namespace debug {
 
 template <typename S>
-void print(S&& stream, const TrioProbabilityVector& posteriors, const std::size_t n)
+void print(S&& stream, const TrioProbabilityVector& posteriors, const std::size_t n = std::numeric_limits<std::size_t>::max())
 {
     const auto m = std::min(n, posteriors.size());
     if (m == posteriors.size()) {
@@ -1115,7 +1116,7 @@ void log(const TrioProbabilityVector& posteriors,
          boost::optional<logging::TraceLogger>& trace_log)
 {
     if (trace_log) {
-        print(stream(*trace_log), posteriors, -1);
+        print(stream(*trace_log), posteriors);
     }
     if (debug_log) {
         print(stream(*debug_log), posteriors, 10);
@@ -1123,8 +1124,9 @@ void log(const TrioProbabilityVector& posteriors,
 }
 
 template <typename S>
-void print(S&& stream, const AllelePosteriorMap& posteriors, const std::size_t n,
-           const std::string& type = "allele")
+void print(S&& stream, const AllelePosteriorMap& posteriors,
+           const std::string& type = "allele",
+           const std::size_t n = std::numeric_limits<std::size_t>::max())
 {
     const auto m = std::min(n, posteriors.size());
     if (m == posteriors.size()) {
@@ -1152,12 +1154,12 @@ void log(const AllelePosteriorMap& posteriors,
     if (!denovo || !posteriors.empty()) {
         const std::string type {denovo ? "denovo allele" : "allele"};
         if (trace_log) {
-            print(stream(*trace_log), posteriors, -1, type);
+            print(stream(*trace_log), posteriors, type);
         }
         if (debug_log) {
             const auto n = std::count_if(std::cbegin(posteriors), std::cend(posteriors),
                                          [=] (const auto& p) { return p.second >= min_posterior; });
-            print(stream(*debug_log), posteriors, std::max(n, decltype(n) {10}), type);
+            print(stream(*debug_log), posteriors, type, std::max(n, decltype(n) {10}));
         }
     }
 }
