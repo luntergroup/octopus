@@ -76,10 +76,23 @@ public:
         region_ = octopus::mapped_region(this->front());
         this->check();
     }
+    template <typename InputIterator>
+    MappableBlock(InputIterator first, InputIterator last, RegionType region)
+    : base_ {std::move(first), std::move(last)}
+    , region_ {std::move(region)}
+    {
+        this->check();
+    }
     MappableBlock(std::initializer_list<MappableType> values)
     : base_ {values}
     {
         region_ = octopus::mapped_region(this->front());
+        this->check();
+    }
+    MappableBlock(std::initializer_list<MappableType> values, RegionType region)
+    : base_ {values}
+    , region_ {std::move(region)}
+    {
         this->check();
     }
     MappableBlock(const Container& values)
@@ -88,10 +101,22 @@ public:
         region_ = octopus::mapped_region(this->front());
         this->check();
     }
+    MappableBlock(const Container& values, RegionType region)
+    : base_ {values}
+    , region_ {std::move(region)}
+    {
+        this->check();
+    }
     MappableBlock(Container&& values)
     : base_ {std::move(values)}
     {
         region_ = octopus::mapped_region(this->front());
+        this->check();
+    }
+    MappableBlock(Container&& values, RegionType region)
+    : base_ {std::move(values)}
+    , region_ {std::move(region)}
+    {
         this->check();
     }
     
