@@ -723,11 +723,12 @@ bool PopulationCaller::use_independence_model() const noexcept
 
 auto generate_unique_genotypes(const MappableBlock<Haplotype>& haplotypes, std::vector<unsigned> ploidies)
 {
+    const auto region = mapped_region(haplotypes);
     std::sort(std::begin(ploidies), std::end(ploidies));
     ploidies.erase(std::unique(std::begin(ploidies), std::end(ploidies)), std::end(ploidies));
     GenotypesMap result {};
     for (auto ploidy : ploidies) {
-        result.emplace(ploidy, generate_all_genotypes(haplotypes, ploidy));
+        result[ploidy] = {generate_all_genotypes(haplotypes, ploidy), region};
     }
     return result;
 }
