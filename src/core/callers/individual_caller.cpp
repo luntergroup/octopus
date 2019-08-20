@@ -226,10 +226,9 @@ auto marginalise_contained(const GenotypeOrAllele& element, const GenotypeProbab
         }
     }
     if (!buffer.empty()) {
-        auto log_prob_not_contained = maths::log_sum_exp(buffer);
-        return Phred<double> {std::max(log_prob_not_contained / -maths::constants::ln10Div10<>, 0.0)};
+        return log_probability_false_to_phred(std::min(maths::log_sum_exp(buffer), 0.0));
     } else {
-        return probability_false_to_phred(0.0);
+        return Phred<> {std::numeric_limits<double>::infinity()};
     }
 }
 

@@ -80,6 +80,12 @@ private:
 };
 
 template <typename Q>
+auto log_probability_false_to_phred(const Q p)
+{
+    return Phred<Q> {p / -maths::constants::ln10Div10<Q>};
+}
+
+template <typename Q>
 auto probability_false_to_phred(const Q p)
 {
     return Phred<Q> {typename Phred<Q>::Probability {p}};

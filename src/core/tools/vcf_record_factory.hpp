@@ -37,7 +37,7 @@ private:
     const ReadMap& reads_;
     std::vector<SampleName> samples_;
     bool sites_only_;
-    double max_qual = 10000;
+    double max_qual = 100'000;
     
     VcfRecord make(std::unique_ptr<Call> call) const;
     VcfRecord make_segment(std::vector<std::unique_ptr<Call>>&& calls) const;
