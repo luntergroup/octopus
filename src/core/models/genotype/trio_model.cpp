@@ -780,9 +780,12 @@ auto extract_probabilities(const std::vector<JointProbability>& joint_likelihood
 auto normalise_exp(std::vector<JointProbability>& joint_likelihoods)
 {
     auto log_likelihoods = extract_probabilities(joint_likelihoods);
-    const auto norm = maths::normalise_exp(log_likelihoods);
+    const auto norm = maths::normalise_logs(log_likelihoods);
     auto iter = std::cbegin(log_likelihoods);
-    for (auto& p : joint_likelihoods) p.probability = *iter++;
+    for (auto& p : joint_likelihoods) {
+        p.log_probability = *iter++;
+        p.probability = std::exp(p.log_probability);
+    }
     return norm;
 }
 
