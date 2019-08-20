@@ -31,7 +31,7 @@ public:
         {
             using GenotypeReference = std::reference_wrapper<const Genotype<Haplotype>>;
             GenotypeReference maternal, paternal, child;
-            double probability;
+            double log_probability, probability;
         };
         using JointProbabilityVector = std::vector<JointProbability>;
         JointProbabilityVector joint_genotype_probabilities;

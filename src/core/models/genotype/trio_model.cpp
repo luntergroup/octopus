@@ -719,17 +719,17 @@ auto join(const ReducedVectorMap<ParentsProbabilityPair>& parents,
     result.reserve(join_size(parents, child));
     std::for_each(parents.first, parents.last_to_join, [&] (const auto& p) {
         std::for_each(child.first, child.last_to_join, [&] (const auto& c) {
-            result.push_back({p.maternal, p.paternal, c.genotype, joint_probability(p, c, jpdf)});
+            result.push_back({p.maternal, p.paternal, c.genotype, joint_probability(p, c, jpdf), 0.0});
         });
     });
     std::for_each(parents.last_to_join, parents.last, [&] (const auto& p) {
         std::for_each(child.first, child.last_to_partially_join, [&] (const auto& c) {
-            result.push_back({p.maternal, p.paternal, c.genotype, joint_probability(p, c, jpdf)});
+            result.push_back({p.maternal, p.paternal, c.genotype, joint_probability(p, c, jpdf), 0.0});
         });
     });
     std::for_each(child.last_to_join, child.last, [&] (const auto& c) {
         std::for_each(parents.first, parents.last_to_partially_join, [&] (const auto& p) {
-            result.push_back({p.maternal, p.paternal, c.genotype, joint_probability(p, c, jpdf)});
+            result.push_back({p.maternal, p.paternal, c.genotype, joint_probability(p, c, jpdf), 0.0});
         });
     });
     return result;
@@ -773,15 +773,15 @@ auto extract_probabilities(const std::vector<JointProbability>& joint_likelihood
 {
     std::vector<double> result(joint_likelihoods.size());
     std::transform(std::cbegin(joint_likelihoods), std::cend(joint_likelihoods),
-                   std::begin(result), [] (const auto& p) { return p.probability; });
+                   std::begin(result), [] (const auto& p) { return p.log_probability; });
     return result;
 }
 
 auto normalise_exp(std::vector<JointProbability>& joint_likelihoods)
 {
-    auto likelihoods = extract_probabilities(joint_likelihoods);
-    const auto norm = maths::normalise_exp(likelihoods);
-    auto iter = std::cbegin(likelihoods);
+    auto log_likelihoods = extract_probabilities(joint_likelihoods);
+    const auto norm = maths::normalise_exp(log_likelihoods);
+    auto iter = std::cbegin(log_likelihoods);
     for (auto& p : joint_likelihoods) p.probability = *iter++;
     return norm;
 }
@@ -909,17 +909,17 @@ auto join(const ReducedVectorMap<GenotypeRefProbabilityPair>& parent,
     result.reserve(join_size(parent, child));
     std::for_each(parent.first, parent.last_to_join, [&] (const auto& p) {
         std::for_each(child.first, child.last_to_join, [&] (const auto& c) {
-            result.push_back({p.genotype, p.genotype, c.genotype, joint_probability(p, c, mutation_model)});
+            result.push_back({p.genotype, p.genotype, c.genotype, joint_probability(p, c, mutation_model), 0.0});
         });
     });
     std::for_each(parent.last_to_join, parent.last, [&] (const auto& p) {
         std::for_each(child.first, child.last_to_partially_join, [&] (const auto& c) {
-            result.push_back({p.genotype, p.genotype, c.genotype, joint_probability(p, c, mutation_model)});
+            result.push_back({p.genotype, p.genotype, c.genotype, joint_probability(p, c, mutation_model), 0.0});
         });
     });
     std::for_each(child.last_to_join, child.last, [&] (const auto& c) {
         std::for_each(parent.first, parent.last_to_partially_join, [&] (const auto& p) {
-            result.push_back({p.genotype, p.genotype, c.genotype, joint_probability(p, c, mutation_model)});
+            result.push_back({p.genotype, p.genotype, c.genotype, joint_probability(p, c, mutation_model), 0.0});
         });
     });
     return result;
