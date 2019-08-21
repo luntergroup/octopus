@@ -12,10 +12,10 @@
 #include <string>
 #include <iostream>
 
+#include <boost/iterator/transform_iterator.hpp>
+
 #include "utils/maths.hpp"
 #include "constant_mixture_genotype_likelihood_model.hpp"
-
-#include "timers.hpp"
 
 namespace octopus { namespace model {
 
@@ -171,55 +171,56 @@ bool all_equal(const std::vector<T>& v)
     return std::adjacent_find(std::cbegin(v), std::cend(v), std::not_equal_to<> {}) == std::cend(v);
 }
 
-template <typename Iterator>
-auto compute_posteriors(Iterator first, Iterator last)
+struct ProbabilityGetter
 {
-    std::vector<double> result(std::distance(first, last));
-    std::transform(first, last, std::begin(result), [] (const auto& p) { return p.probability; });
-    maths::normalise_exp(result);
-    return result;
-}
+    template <typename T> const auto& operator()(const T& x) const noexcept { return x.probability; }
+};
 
 template <typename Iterator>
-double compute_lost_posterior_mass(Iterator first, Iterator first_removed, Iterator last)
+auto compute_lost_posterior_mass(Iterator first, Iterator first_removed, Iterator last)
 {
-    auto posteriors = compute_posteriors(first, last);
-    const auto num_removed = std::distance(first, first_removed);
-    return std::accumulate(std::next(std::cbegin(posteriors), num_removed), std::cend(posteriors), 0.0);
+    using boost::make_transform_iterator;
+    const auto first_prob = make_transform_iterator(first, ProbabilityGetter {});
+    const auto first_removed_prob = make_transform_iterator(first_removed, ProbabilityGetter {});
+    const auto last_prob = make_transform_iterator(last, ProbabilityGetter {});
+    return maths::log_sum_exp(first_removed_prob, last_prob) - maths::log_sum_exp(first_prob, last_prob);
 }
 
 template <typename T>
-auto compute_min_joint(const std::vector<T>& zipped, const double max_mass_loss)
+auto compute_min_joint(const std::vector<T>& zipped, const double max_log_mass_loss)
 {
     assert(!zipped.empty());
-    auto posteriors = compute_posteriors(std::cbegin(zipped), std::cend(zipped));
-    // Do things in reverse order as floating points have better precision near zero
-    std::partial_sum(std::crbegin(posteriors), std::crend(posteriors), std::rbegin(posteriors));
-    const auto iter = std::upper_bound(std::crbegin(posteriors), std::crend(posteriors), max_mass_loss);
-    const auto num_to_keep = static_cast<std::size_t>(std::distance(iter, std::crend(posteriors)));
+    using boost::make_transform_iterator;
+    std::vector<double> cum_log_probs(make_transform_iterator(std::cbegin(zipped), ProbabilityGetter {}),
+                                      make_transform_iterator(std::cend(zipped), ProbabilityGetter {}));
+    maths::normalise_logs(cum_log_probs);
+    const static auto log_sum_exp = [] (auto sum, auto x) { return maths::log_sum_exp(sum, x); };
+    std::partial_sum(std::crbegin(cum_log_probs), std::crend(cum_log_probs), std::rbegin(cum_log_probs), log_sum_exp);
+    const auto min_itr = std::upper_bound(std::crbegin(cum_log_probs), std::crend(cum_log_probs), max_log_mass_loss);
+    const auto num_to_keep = static_cast<std::size_t>(std::distance(min_itr, std::crend(cum_log_probs)));
     assert(num_to_keep <= zipped.size());
     return std::max(num_to_keep, std::size_t {1});
 }
 
 template <typename T>
 typename std::vector<T>::iterator
-reduce(std::vector<T>& zipped, std::size_t max_joint, const double max_mass_loss, boost::optional<bool&> overflow = boost::none)
+reduce(std::vector<T>& zipped, std::size_t max_joint, const double max_log_probability_loss, boost::optional<bool&> overflow = boost::none)
 {
     max_joint = std::min(max_joint, zipped.size());
     if (all_equal(zipped)) {
         static std::default_random_engine gen {};
         std::shuffle(std::begin(zipped), std::end(zipped), gen);
-        const auto min_joint = static_cast<std::size_t>(std::floor(zipped.size() * (1 - max_mass_loss)));
+        const auto min_joint = static_cast<std::size_t>(std::floor(zipped.size() * (1 - std::exp(max_log_probability_loss))));
         return std::next(std::begin(zipped), std::min(max_joint, min_joint));
     } else {
         auto result = std::next(std::begin(zipped), max_joint);
         std::partial_sort(std::begin(zipped), result, std::end(zipped), std::greater<> {});
         const auto lost_mass = compute_lost_posterior_mass(std::begin(zipped), result, std::end(zipped));
-        if (lost_mass < max_mass_loss) {
-            const auto min_joint = compute_min_joint(zipped, max_mass_loss);
+        if (lost_mass < max_log_probability_loss) {
+            const auto min_joint = compute_min_joint(zipped, max_log_probability_loss);
             assert(min_joint <= max_joint);
             result = std::next(std::begin(zipped), min_joint);
-        } else if (overflow && lost_mass > max_mass_loss) {
+        } else if (overflow && lost_mass > max_log_probability_loss) {
             *overflow = true;
         }
         assert(result <= std::end(zipped));
@@ -255,7 +256,7 @@ template <typename T>
 auto reduce(std::vector<T>& zipped, const TrioModel::Options& options)
 {
     auto last_to_join = reduce(zipped, get_sample_reduction_count(options.max_joint_genotypes),
-                               options.max_individual_mass_loss);
+                               options.max_individual_log_probability_loss);
     return make_reduction_map(zipped, last_to_join, options);
 }
 
@@ -351,14 +352,14 @@ auto find_represented(const Haplotype& haplotype,
 auto reduce(std::vector<ParentsProbabilityPair>& parents, const ChildReductionMap& child, const TrioModel::Options& options)
 {
     const auto reduction_count = get_sample_reduction_count(options.max_joint_genotypes);
-    auto last_to_join = reduce(parents, reduction_count, options.max_joint_mass_loss);
+    auto last_to_join = reduce(parents, reduction_count, options.max_joint_log_probability_loss);
     if (last_to_join != std::cend(parents)) {
         std::vector<UniformPriorJointProbabilityHelper> uniform_parents(parents.size());
         for (std::size_t i {0}; i < parents.size(); ++i) {
             uniform_parents[i].index = i;
             uniform_parents[i].probability = parents[i].maternal_likelihood + parents[i].paternal_likelihood;
         }
-        uniform_parents.erase(reduce(uniform_parents, reduction_count, options.max_joint_mass_loss), std::cend(uniform_parents));
+        uniform_parents.erase(reduce(uniform_parents, reduction_count, options.max_joint_log_probability_loss), std::cend(uniform_parents));
         std::deque<std::size_t> new_indices {};
         const auto num_posterior_joined = static_cast<std::size_t>(std::distance(std::begin(parents), last_to_join));
         for (const auto& p : uniform_parents) {
@@ -409,14 +410,14 @@ auto reduce(std::vector<GenotypeRefProbabilityPair>& likelihoods,
 {
     const auto reduction_count = get_sample_reduction_count(options.max_joint_genotypes);
     bool overflow {false};
-    const auto last_likelihood_join = reduce(likelihoods, reduction_count, options.max_individual_mass_loss, overflow);
+    const auto last_likelihood_join = reduce(likelihoods, reduction_count, options.max_individual_log_probability_loss, overflow);
     if (last_likelihood_join == std::end(likelihoods)) {
         return make_reduction_map(likelihoods, std::cend(likelihoods), options);
     } else if (!overflow) {
         return make_reduction_map(likelihoods, last_likelihood_join, options);
     } else {
         auto posteriors = compute_posteriors(likelihoods, prior_model);
-        const auto last_posterior_join = reduce(posteriors, reduction_count, options.max_individual_mass_loss);
+        const auto last_posterior_join = reduce(posteriors, reduction_count, options.max_individual_log_probability_loss);
         assert(last_posterior_join <= std::end(posteriors));
         if (last_posterior_join != std::end(posteriors)) {
             std::sort(std::begin(likelihoods), std::end(likelihoods), GenotypeRefProbabilityPairGenotypeLess {});

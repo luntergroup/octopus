@@ -46,7 +46,7 @@ public:
     struct Options
     {
         std::size_t max_joint_genotypes;
-        double max_individual_mass_loss = 1e-80, max_joint_mass_loss = 1e-200;
+        double max_individual_log_probability_loss = -1'000, max_joint_log_probability_loss = -10'000;
     };
     
     TrioModel() = delete;
