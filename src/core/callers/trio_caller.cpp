@@ -912,7 +912,8 @@ auto make_genotype_calls(GenotypedTrio&& call, const Trio& trio)
 auto make_calls(std::vector<CalledDenovo>&& alleles,
                 std::vector<GenotypedTrio>&& genotypes,
                 const Trio& trio,
-                const std::vector<Variant>& candidates)
+                const std::vector<Variant>& candidates,
+                const boost::optional<Phred<double>> max_quality = boost::none)
 {
     std::map<Allele, Allele> reference_alleles {};
     for (const auto& denovo : alleles) {
@@ -924,7 +925,8 @@ auto make_calls(std::vector<CalledDenovo>&& alleles,
     result.reserve(alleles.size());
     std::transform(std::make_move_iterator(std::begin(alleles)), std::make_move_iterator(std::end(alleles)),
                    std::make_move_iterator(std::begin(genotypes)), std::back_inserter(result),
-                   [&trio, &reference_alleles] (auto&& denovo, auto&& genotype) -> std::unique_ptr<DenovoCall> {
+                   [&trio, &reference_alleles, max_quality] (auto&& denovo, auto&& genotype) -> std::unique_ptr<DenovoCall> {
+                       if (max_quality) denovo.allele_posterior = std::min(denovo.allele_posterior, *max_quality);
                        if (is_reference_reversion(denovo.allele, reference_alleles)) {
                            return std::make_unique<DenovoReferenceReversionCall>(std::move(denovo.allele),
                                                                                  make_genotype_calls(std::move(genotype), trio),
@@ -940,13 +942,15 @@ auto make_calls(std::vector<CalledDenovo>&& alleles,
 
 auto make_calls(std::vector<CalledGermlineVariant>&& variants,
                 std::vector<GenotypedTrio>&& genotypes,
-                const Trio& trio)
+                const Trio& trio,
+                const boost::optional<Phred<double>> max_quality = boost::none)
 {
     std::vector<std::unique_ptr<VariantCall>> result {};
     result.reserve(variants.size());
     std::transform(std::make_move_iterator(std::begin(variants)), std::make_move_iterator(std::end(variants)),
                    std::make_move_iterator(std::begin(genotypes)), std::back_inserter(result),
-                   [&trio] (auto&& variant, auto&& genotype) {
+                   [&trio, max_quality] (auto&& variant, auto&& genotype) {
+                       if (max_quality) variant.posterior = std::min(variant.posterior, *max_quality);
                        return std::make_unique<GermlineVariantCall>(std::move(variant.variant),
                                                                     make_genotype_calls(std::move(genotype), trio),
                                                                     variant.posterior);
@@ -958,10 +962,12 @@ auto make_calls(std::vector<CalledGermlineVariant>&& variants,
                 std::vector<GenotypedTrio>&& germline_genotypes,
                 std::vector<CalledDenovo>&& alleles,
                 std::vector<GenotypedTrio>&& denovo_genotypes,
-                const Trio& trio, const std::vector<Variant>& candidates)
+                const Trio& trio,
+                const std::vector<Variant>& candidates,
+                const boost::optional<Phred<double>> max_quality = boost::none)
 {
-    auto germline_calls = make_calls(std::move(variants), std::move(germline_genotypes), trio);
-    auto denovo_calls = make_calls(std::move(alleles), std::move(denovo_genotypes), trio, candidates);
+    auto germline_calls = make_calls(std::move(variants), std::move(germline_genotypes), trio, max_quality);
+    auto denovo_calls = make_calls(std::move(alleles), std::move(denovo_genotypes), trio, candidates, max_quality);
     std::vector<std::unique_ptr<VariantCall>> result {};
     result.reserve(germline_calls.size() + denovo_calls.size());
     std::merge(std::make_move_iterator(std::begin(germline_calls)), std::make_move_iterator(std::end(germline_calls)),
@@ -1008,9 +1014,14 @@ TrioCaller::call_variants(const std::vector<Variant>& candidates, const Latents&
     if (parameters_.child_ploidy == 0) called_trio.child = Genotype<Haplotype> {};
     auto denovo_genotypes = call_genotypes(parameters_.trio, called_trio, *latents.genotype_posteriors(), extract_regions(denovos));
     auto germline_genotypes = call_genotypes(parameters_.trio, called_trio, *latents.genotype_posteriors(), extract_regions(germline_variants));
+    boost::optional<Phred<double>> max_quality {};
+    if (latents.model_latents.estimated_lost_log_posterior_mass) {
+        max_quality = log_probability_false_to_phred(*latents.model_latents.estimated_lost_log_posterior_mass);
+    }
     return make_calls(std::move(germline_variants), std::move(germline_genotypes),
                       std::move(denovos), std::move(denovo_genotypes),
-                      parameters_.trio, candidates);
+                      parameters_.trio, candidates,
+                      max_quality);
 }
 
 std::vector<std::unique_ptr<ReferenceCall>>

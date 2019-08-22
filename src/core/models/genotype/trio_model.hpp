@@ -41,6 +41,7 @@ public:
     {
         Latents posteriors;
         double log_evidence;
+        boost::optional<double> estimated_lost_log_posterior_mass = boost::none;
     };
     
     struct Options
