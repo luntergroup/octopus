@@ -59,7 +59,7 @@ IF(CMAKE_SYSTEM_NAME MATCHES "Linux")
     ENDIF (AVX2_TRUE)
 
 ELSEIF(CMAKE_SYSTEM_NAME MATCHES "Darwin")
-    EXEC_PROGRAM("/usr/sbin/sysctl -n machdep.cpu.features" OUTPUT_VARIABLE
+    EXEC_PROGRAM("/usr/sbin/sysctl -n machdep.cpu.features machdep.cpu.leaf7_features" OUTPUT_VARIABLE
         CPUINFO)
 
     STRING(REGEX REPLACE "^.*[^S](SSE2).*$" "\\1" SSE_THERE ${CPUINFO})
