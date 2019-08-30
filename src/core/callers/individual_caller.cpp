@@ -82,10 +82,10 @@ IndividualCaller::Latents::Latents(const SampleName& sample,
 , haplotype_posteriors_ {}
 , model_log_evidence_ {inferences.log_evidence}
 {
-    GenotypeProbabilityMap genotype_posteriors {
-        std::make_move_iterator(std::begin(genotypes)),
-        std::make_move_iterator(std::end(genotypes))
-    };
+    GenotypeProbabilityMap genotype_log_posteriors {std::cbegin(genotypes), std::cend(genotypes)};
+    insert_sample(sample, inferences.posteriors.genotype_log_probabilities, genotype_log_posteriors);
+    genotype_log_posteriors_  = std::make_shared<GenotypeProbabilityMap>(std::move(genotype_log_posteriors));
+    GenotypeProbabilityMap genotype_posteriors {std::make_move_iterator(std::begin(genotypes)), std::make_move_iterator(std::end(genotypes))};
     insert_sample(sample, inferences.posteriors.genotype_probabilities, genotype_posteriors);
     genotype_posteriors_  = std::make_shared<GenotypeProbabilityMap>(std::move(genotype_posteriors));
     haplotype_posteriors_ = std::make_shared<HaplotypeProbabilityMap>(calculate_haplotype_posteriors(haplotypes));
@@ -215,22 +215,30 @@ using GenotypeCalls = std::vector<GenotypeCall>;
 
 // allele posterior calculations
 
-auto compute_posterior(const Allele& allele, const GenotypeProbabilityMap& genotype_posteriors)
+template <typename GenotypeOrAllele>
+auto marginalise_contained(const GenotypeOrAllele& element, const GenotypeProbabilityMap& genotype_log_posteriors)
 {
-    auto p = std::accumulate(std::cbegin(genotype_posteriors), std::cend(genotype_posteriors),
-                             0.0, [&allele] (const auto curr, const auto& p) {
-                                 return curr + (contains(p.first, allele) ? 0.0 : p.second);
-                             });
-    return probability_false_to_phred(p);
+    thread_local std::vector<double> buffer {};
+    buffer.clear();
+    for (const auto& p : genotype_log_posteriors) {
+        if (!contains(p.first, element)) {
+            buffer.push_back(p.second);
+        }
+    }
+    if (!buffer.empty()) {
+        return log_probability_false_to_phred(std::min(maths::log_sum_exp(buffer), 0.0));
+    } else {
+        return Phred<> {std::numeric_limits<double>::infinity()};
+    }
 }
 
 auto compute_candidate_posteriors(const std::vector<Variant>& candidates,
-                                  const GenotypeProbabilityMap& genotype_posteriors)
+                                  const GenotypeProbabilityMap& genotype_log_posteriors)
 {
     VariantPosteriorVector result {};
     result.reserve(candidates.size());
     for (const auto& candidate : candidates) {
-        result.emplace_back(candidate, compute_posterior(candidate.alt_allele(), genotype_posteriors));
+        result.emplace_back(candidate, marginalise_contained(candidate.alt_allele(), genotype_log_posteriors));
     }
     return result;
 }
@@ -275,17 +283,17 @@ bool is_homozygous_reference(const Genotype<T>& g)
     return is_reference(g[0]) && g.is_homozygous();
 }
 
-auto call_genotype(const GenotypeProbabilityMap& genotype_posteriors, const bool ignore_hom_ref = false)
+auto call_genotype(const GenotypeProbabilityMap& genotype_log_posteriors, const bool ignore_hom_ref = false)
 {
-    const auto map_itr = find_map(std::cbegin(genotype_posteriors), std::cend(genotype_posteriors));
-    assert(map_itr != std::cend(genotype_posteriors));
+    const auto map_itr = find_map(std::cbegin(genotype_log_posteriors), std::cend(genotype_log_posteriors));
+    assert(map_itr != std::cend(genotype_log_posteriors));
     if (!ignore_hom_ref || !is_homozygous_reference(map_itr->first)) {
         return map_itr->first;
     } else {
-        const auto lhs_map_itr = find_map(std::cbegin(genotype_posteriors), map_itr);
-        const auto rhs_map_itr = find_map(std::next(map_itr), std::cend(genotype_posteriors));
+        const auto lhs_map_itr = find_map(std::cbegin(genotype_log_posteriors), map_itr);
+        const auto rhs_map_itr = find_map(std::next(map_itr), std::cend(genotype_log_posteriors));
         if (lhs_map_itr != map_itr) {
-            if (rhs_map_itr != std::cend(genotype_posteriors)) {
+            if (rhs_map_itr != std::cend(genotype_log_posteriors)) {
                 return lhs_map_itr->second < rhs_map_itr->second ? rhs_map_itr->first : lhs_map_itr->first;
             } else {
                 return lhs_map_itr->first;
@@ -296,24 +304,15 @@ auto call_genotype(const GenotypeProbabilityMap& genotype_posteriors, const bool
     }
 }
 
-auto compute_posterior(const Genotype<Allele>& genotype, const GenotypeProbabilityMap& genotype_posteriors)
-{
-    auto p = std::accumulate(std::cbegin(genotype_posteriors), std::cend(genotype_posteriors), 0.0,
-                             [&genotype] (const double curr, const auto& p) {
-                                 return curr + (contains(p.first, genotype) ? 0.0 : p.second);
-                             });
-    return probability_false_to_phred(p);
-}
-
 GenotypeCalls call_genotypes(const Genotype<Haplotype>& genotype_call,
-                             const GenotypeProbabilityMap& genotype_posteriors,
+                             const GenotypeProbabilityMap& genotype_log_posteriors,
                              const std::vector<GenomicRegion>& variant_regions)
 {
     GenotypeCalls result {};
     result.reserve(variant_regions.size());
     for (const auto& region : variant_regions) {
         auto genotype_chunk = copy<Allele>(genotype_call, region);
-        const auto posterior = compute_posterior(genotype_chunk, genotype_posteriors);
+        const auto posterior = marginalise_contained(genotype_chunk, genotype_log_posteriors);
         result.emplace_back(std::move(genotype_chunk), posterior);
     }
     return result;
@@ -375,15 +374,15 @@ IndividualCaller::call_variants(const std::vector<Variant>& candidates,
                                 const Latents& latents) const
 {
     if (parameters_.ploidy == 0) return {};
-    const auto& genotype_posteriors = (*latents.genotype_posteriors_)[sample()];
-    debug::log(genotype_posteriors, debug_log_, trace_log_);
-    const auto candidate_posteriors = compute_candidate_posteriors(candidates, genotype_posteriors);
+    const auto& genotype_log_posteriors = (*latents.genotype_log_posteriors_)[sample()];
+    debug::log(genotype_log_posteriors, debug_log_, trace_log_);
+    const auto candidate_posteriors = compute_candidate_posteriors(candidates, genotype_log_posteriors);
     debug::log(candidate_posteriors, debug_log_, trace_log_, parameters_.min_variant_posterior);
     const bool force_call_non_ref {has_callable(candidate_posteriors, parameters_.min_variant_posterior)};
-    const auto genotype_call = octopus::call_genotype(genotype_posteriors, force_call_non_ref);
+    const auto genotype_call = octopus::call_genotype(genotype_log_posteriors, force_call_non_ref);
     auto variant_calls = call_candidates(candidate_posteriors, genotype_call, parameters_.min_variant_posterior);
     const auto called_regions = extract_regions(variant_calls);
-    auto genotype_calls = call_genotypes(genotype_call, genotype_posteriors, called_regions);
+    auto genotype_calls = call_genotypes(genotype_call, genotype_log_posteriors, called_regions);
     return transform_calls(sample(), std::move(variant_calls), std::move(genotype_calls));
 }
 
