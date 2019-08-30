@@ -23,8 +23,9 @@ VcfHeaderFactory::AnnotatorMap VcfHeaderFactory::annotators_ =
         hb.add_info("SOMATIC", "0", "Flag", "Indicates that the record is a somatic mutation, for cancer genomics");
         hb.add_info("PP", "1", "Float", "Posterior probability for assertions made in ALT and FORMAT (Phred scale)");
         hb.add_info("MP", "1", "Float", "Model posterior");
-        hb.add_format("MAP_VAF", "1", "Float", "Maximum a posteriori Variant Allele Frequency");
-        hb.add_format("VAF_CR", "2", "Float", "Credible region for the Variant Allele Frequency");
+        hb.add_format("HPC", ".", "Float", "Posterior pseudo counts for each haplotype");
+        hb.add_format("MAP_HF", ".", "Float", "Maximum a posteriori haplotype frequencies");
+        hb.add_format("HF_CR", ".", "Float", "Haplotype frequency credible regions");
     }},
     {std::type_index(typeid(DenovoCall)), [] (auto& hb) {
         hb.add_info("DENOVO", "0", "Flag", "Indicates that the record is a de novo mutation");
