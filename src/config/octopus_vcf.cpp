@@ -20,6 +20,7 @@ VcfHeader::Builder make_header_template()
     result.add_info("MQ", "1", "Integer", "RMS mapping quality");
     result.add_info("MQ0", "1", "Integer", "Number of MAPQ == 0 reads covering this record");
     result.add_info("NS", "1", "Integer", "Number of samples with data");
+    result.add_info("END", "1", "Integer", "End position on CHROM");
     
     result.add_format("GT", "1", "String", "Genotype");
     result.add_format("DP", "1", "Integer", "Read depth at this position for this sample");

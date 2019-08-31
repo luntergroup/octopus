@@ -626,6 +626,9 @@ VcfRecord VcfRecordFactory::make(std::unique_ptr<Call> call) const
     result.set_ref(call->reference().sequence());
     result.set_alt(std::move(alts));
     result.set_qual(std::min(max_qual, maths::round(call->quality().score(), 2)));
+    if (has_non_ref) {
+        result.set_info("END", mapped_end(region));
+    }
     const auto call_reads = copy_overlapped(reads_, region);
     result.set_info("NS",  count_samples_with_coverage(call_reads));
     result.set_info("DP",  sum_max_coverages(call_reads));
