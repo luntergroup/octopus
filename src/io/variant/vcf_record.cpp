@@ -589,6 +589,12 @@ VcfRecord::Builder& VcfRecord::Builder::add_format(KeyType key)
     return *this;
 }
 
+VcfRecord::Builder& VcfRecord::Builder::add_format(std::initializer_list<KeyType> keys)
+{
+    format_.insert(std::cend(format_), keys);
+    return *this;
+}
+
 VcfRecord::Builder& VcfRecord::Builder::reserve_samples(unsigned n)
 {
     genotypes_.reserve(n);

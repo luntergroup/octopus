@@ -9,6 +9,7 @@
 #include <iterator>
 #include <stdexcept>
 #include <sstream>
+#include <limits>
 #include <cassert>
 
 #include <boost/filesystem/operations.hpp>
@@ -990,7 +991,7 @@ void set_mapping_quality(const AlignedRead& read, bam1_t* result) noexcept
 
 void set_flag(bool set, std::uint16_t mask, std::uint16_t& result) noexcept
 {
-    constexpr std::uint16_t zeros {0}, ones = -1;
+    constexpr std::uint16_t zeros {0}, ones {std::numeric_limits<std::uint16_t>::max()};
     result |= (set ? ones : zeros) & mask;
 }
 

@@ -54,14 +54,17 @@ public:
     ~IndependentPopulationModel() = default;
     
     // All samples have same ploidy
-    InferredLatents evaluate(const SampleVector& samples,
-                             const GenotypeVector& genotypes,
-                             const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
+    InferredLatents
+    evaluate(const SampleVector& samples,
+             const GenotypeVector& genotypes,
+             const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
     
     // Samples have different ploidy
-    InferredLatents evaluate(const SampleVector& samples,
-                             const std::vector<GenotypeVectorReference>& genotypes,
-                             const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
+    InferredLatents
+    evaluate(const SampleVector& samples,
+             const std::vector<unsigned>& sample_ploidies,
+             const GenotypeVector& genotypes,
+             const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
 
 private:
     IndividualModel individual_model_;

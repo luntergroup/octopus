@@ -10,6 +10,7 @@
 #include <stdexcept>
 #include <cassert>
 #include <iostream>
+#include <limits>
 
 #include "concepts/mappable.hpp"
 #include "core/types/calls/call.hpp"
@@ -223,9 +224,9 @@ void print_haplotypes(const Container& haplotypes,
                       Resolution resolution = Resolution::sequenceAndAlleles);
 
 template <typename S, typename Map>
-void print_haplotype_posteriors(S&& stream, const Map& haplotype_posteriors, std::size_t n = 5);
+void print_haplotype_posteriors(S&& stream, const Map& haplotype_posteriors, std::size_t n = std::numeric_limits<std::size_t>::max());
 template <typename Map>
-void print_haplotype_posteriors(const Map& haplotype_posteriors, std::size_t n = 5);
+void print_haplotype_posteriors(const Map& haplotype_posteriors, std::size_t n = std::numeric_limits<std::size_t>::max());
 
 auto find_read(const std::string& region, const std::string& cigar_str,
                const ReadContainer& reads);
@@ -467,9 +468,9 @@ Caller::call_variants(const GenomicRegion& call_region, const MappableFlatSet<Va
         if (haplotypes.empty()) continue;
         const auto caller_latents = infer_latents(haplotypes, haplotype_likelihoods);
         if (trace_log_) {
-            debug::print_haplotype_posteriors(stream(*trace_log_), *caller_latents->haplotype_posteriors(), -1);
+            debug::print_haplotype_posteriors(stream(*trace_log_), *caller_latents->haplotype_posteriors());
         } else if (debug_log_) {
-            debug::print_haplotype_posteriors(stream(*debug_log_), *caller_latents->haplotype_posteriors());
+            debug::print_haplotype_posteriors(stream(*debug_log_), *caller_latents->haplotype_posteriors(), 10);
         }
         if (!is_saturated(haplotypes, *caller_latents)) {
             filter_haplotypes(has_removal_impact, haplotypes, haplotype_generator,
@@ -988,7 +989,7 @@ void print_genotype_posteriors(S&& stream,
 template <typename S>
 void print_genotype_posteriors(S&& stream,
                                const ProbabilityMatrix<Genotype<Haplotype>>& genotype_posteriors,
-                               const std::size_t n = -1)
+                               const std::size_t n = std::numeric_limits<std::size_t>::max())
 {
     for (const auto& p : genotype_posteriors) {
         print_genotype_posteriors(stream, p.first, p.second, n);
@@ -1129,7 +1130,7 @@ bool Caller::compute_haplotype_likelihoods(HaplotypeLikelihoodArray& haplotype_l
     if (trace_log_) {
         boost::apply_visitor([&] (const auto& reads) { 
             debug::print_read_haplotype_likelihoods(stream(*trace_log_), haplotypes, reads,
-                                               haplotype_likelihoods, -1); }, active_reads);
+                                               haplotype_likelihoods); }, active_reads);
     }
     return true;
 }

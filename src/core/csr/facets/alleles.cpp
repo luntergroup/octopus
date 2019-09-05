@@ -4,9 +4,11 @@
 #include "alleles.hpp"
 
 #include <iterator>
+#include <algorithm>
 
 #include "utils/genotype_reader.hpp"
 #include "utils/mappable_algorithms.hpp"
+#include "utils/append.hpp"
 
 namespace octopus { namespace csr {
 
@@ -37,6 +39,18 @@ std::vector<Allele> copy_overlapped(const MappableFlatSet<Allele>& alleles, cons
 {
     const auto overlapped = overlap_range(alleles, call);
     return {std::cbegin(overlapped), std::cend(overlapped)};
+}
+
+std::vector<Allele> copy_unique_overlapped(const Facet::AlleleMap& alleles, const VcfRecord& call, const std::vector<SampleName>& samples)
+{
+    std::vector<Allele> result {};
+    result.reserve(2 * alleles.size());
+    for (const auto& sample : samples) {
+        utils::append(copy_overlapped(alleles.at(sample), call), result);
+    }
+    std::sort(std::begin(result), std::end(result));
+    result.erase(std::unique(std::begin(result), std::end(result)), std::end(result));
+    return result;
 }
 
 } // namespace csr

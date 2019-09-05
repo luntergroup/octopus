@@ -626,6 +626,9 @@ VcfRecord VcfRecordFactory::make(std::unique_ptr<Call> call) const
     result.set_ref(call->reference().sequence());
     result.set_alt(std::move(alts));
     result.set_qual(std::min(max_qual, maths::round(call->quality().score(), 2)));
+    if (has_non_ref) {
+        result.set_info("END", mapped_end(region));
+    }
     const auto call_reads = copy_overlapped(reads_, region);
     result.set_info("NS",  count_samples_with_coverage(call_reads));
     result.set_info("DP",  sum_max_coverages(call_reads));
@@ -645,14 +648,15 @@ VcfRecord VcfRecordFactory::make(std::unique_ptr<Call> call) const
         }
         for (const auto& sample : samples_) {
             const auto& genotype_call = call->get_genotype_call(sample);
-            auto gq = std::min(999, static_cast<int>(std::round(genotype_call.posterior.score())));
+            static const Phred<double> max_genotype_quality {10'000};
+            const auto gq = static_cast<int>(std::round(std::min(max_genotype_quality, genotype_call.posterior).score()));
             set_vcf_genotype(sample, genotype_call, result, has_non_ref);
             result.set_format(sample, "GQ", std::to_string(gq));
             result.set_format(sample, "DP", max_coverage(call_reads.at(sample)));
             result.set_format(sample, "MQ", static_cast<unsigned>(rmq_mapping_quality(call_reads.at(sample))));
             if (call->is_phased(sample)) {
                 const auto& phase = *genotype_call.phase;
-                auto pq = std::min(99, static_cast<int>(std::round(phase.score().score())));
+                auto pq = std::min(100, static_cast<int>(std::round(phase.score().score())));
                 result.set_format(sample, "PS", mapped_begin(phase.region()) + 1);
                 result.set_format(sample, "PQ", std::to_string(pq));
             }
@@ -793,7 +797,8 @@ VcfRecord VcfRecordFactory::make_segment(std::vector<std::unique_ptr<Call>>&& ca
         auto sample_itr = std::begin(resolved_genotypes);
         for (const auto& sample : samples_) {
             const auto posterior = calls.front()->get_genotype_call(sample).posterior;
-            auto gq = std::min(999, static_cast<int>(std::round(posterior.score())));
+            static const Phred<double> max_genotype_quality {10'000};
+            const auto gq = static_cast<int>(std::round(std::min(max_genotype_quality, posterior).score()));
             auto& genotype_call = *sample_itr++;
             if (has_non_ref) {
                 std::replace(std::begin(genotype_call), std::end(genotype_call),
@@ -805,7 +810,7 @@ VcfRecord VcfRecordFactory::make_segment(std::vector<std::unique_ptr<Call>>&& ca
             result.set_format(sample, "MQ", static_cast<unsigned>(rmq_mapping_quality(reads_.at(sample), region)));
             if (calls.front()->is_phased(sample)) {
                 const auto phase = *calls.front()->get_genotype_call(sample).phase;
-                auto pq = std::min(99, static_cast<int>(std::round(phase.score().score())));
+                auto pq = std::min(100, static_cast<int>(std::round(phase.score().score())));
                 result.set_format(sample, "PS", mapped_begin(phase.region()) + 1);
                 result.set_format(sample, "PQ", std::to_string(pq));
             }

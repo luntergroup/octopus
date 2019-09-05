@@ -31,7 +31,7 @@ public:
         {
             using GenotypeReference = std::reference_wrapper<const Genotype<Haplotype>>;
             GenotypeReference maternal, paternal, child;
-            double probability;
+            double log_probability, probability;
         };
         using JointProbabilityVector = std::vector<JointProbability>;
         JointProbabilityVector joint_genotype_probabilities;
@@ -41,12 +41,13 @@ public:
     {
         Latents posteriors;
         double log_evidence;
+        boost::optional<double> estimated_lost_log_posterior_mass = boost::none;
     };
     
     struct Options
     {
         std::size_t max_joint_genotypes;
-        double max_individual_mass_loss = 1e-80, max_joint_mass_loss = 1e-200;
+        double max_individual_log_probability_loss = -1'000, max_joint_log_probability_loss = -10'000;
     };
     
     TrioModel() = delete;

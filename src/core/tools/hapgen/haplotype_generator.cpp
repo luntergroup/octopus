@@ -739,8 +739,8 @@ auto get_leftmost_expanded(const std::vector<GenomicRegion>& blocks, const Mappa
 
 std::vector<GenomicRegion>
 remove_interacting_indicator_tail(std::vector<GenomicRegion>& indicator_blocks,
-                               const std::vector<GenomicRegion>& novel_blocks,
-                               const MappableFlatSet<Allele>& alleles, const HaplotypeTree tree)
+                                  const std::vector<GenomicRegion>& novel_blocks,
+                                  const MappableFlatSet<Allele>& alleles, const HaplotypeTree tree)
 {
     std::vector<GenomicRegion> result {};
     if (!indicator_blocks.empty()) {
@@ -967,6 +967,9 @@ void HaplotypeGenerator::populate_tree()
 {
     if (in_holdout_mode() && can_reintroduce_holdouts()) {
         populate_tree_with_holdouts();
+        if (next_active_region_) {
+            populate_tree_with_novel_alleles();
+        }
     } else {
         if (alleles_.empty()) {
             extend_tree_with_cached_haplotypes();
@@ -1075,6 +1078,7 @@ void HaplotypeGenerator::populate_tree_with_novel_alleles()
 
 void HaplotypeGenerator::populate_tree_with_holdouts()
 {
+    reset_next_active_region();
     reintroduce_holdouts();
     if (tree_.num_haplotypes() > policies_.haplotype_limits.overflow) {
         throw HaplotypeOverflow {active_region_, tree_.num_haplotypes()};
@@ -1083,7 +1087,6 @@ void HaplotypeGenerator::populate_tree_with_holdouts()
     if (!in_holdout_mode() && has_rhs_sandwich_insertion(alleles_, active_region_)) {
         resolve_sandwich_insertion();
     }
-    reset_next_active_region();
 }
 
 bool HaplotypeGenerator::can_populate_tree_with_cached_haplotype(const unsigned max_haplotypes) const
@@ -1099,9 +1102,9 @@ bool HaplotypeGenerator::can_populate_tree_with_cached_haplotype() const
 bool HaplotypeGenerator::should_populate_tree_with_cached_haplotype() const
 {
     return can_populate_tree_with_cached_haplotype()
-        && (alleles_.empty()
-            || ((!next_active_region_ || !overlaps(*next_active_region_, active_region_))
-                && (haplotype_blocks_.size() > 1 && max_cached_haplotypes() >= policies_.haplotype_limits.target / 2)));
+           && (alleles_.empty()
+               || ((!next_active_region_ || !overlaps(*next_active_region_, active_region_))
+                   && (haplotype_blocks_.size() > 1 && max_cached_haplotypes() >= policies_.haplotype_limits.target / 2)));
 }
 
 std::size_t HaplotypeGenerator::max_cached_haplotypes() const
@@ -1139,7 +1142,7 @@ unsigned HaplotypeGenerator::extend_tree_with_cached_haplotypes(const unsigned m
                 auto log = stream(*debug_log_);
                 log << "Populated haplotype tree with " << num_blocks_added << " of " << haplotype_blocks_.size() << " haplotype blocks:\n";
                 std::for_each(std::begin(haplotype_blocks_), itr, [&log] (const auto& block) {
-                     log << mapped_region(block) << " with " << block.size() << " haplotypes\n";
+                    log << mapped_region(block) << " with " << block.size() << " haplotypes\n";
                 });
             }
             active_haplotype_blocks_.insert(std::cend(active_haplotype_blocks_),
@@ -1402,8 +1405,7 @@ void HaplotypeGenerator::reintroduce_holdouts()
     if (debug_log_) debug::print_old_holdouts(stream(*debug_log_), active_holdouts_.top().alleles);
     splice(active_holdouts_.top().alleles, tree_);
     if (ends_before(*holdout_region_, active_region_)) {
-        auto extended_region = right_overhang_region(active_region_, *holdout_region_);
-        extend_tree(contained_range(alleles_, extended_region), tree_);
+        next_active_region_ = encompassing_region(active_region_, *holdout_region_);
     }
     alleles_.insert(std::make_move_iterator(std::begin(active_holdouts_.top().alleles)),
                     std::make_move_iterator(std::end(active_holdouts_.top().alleles)));

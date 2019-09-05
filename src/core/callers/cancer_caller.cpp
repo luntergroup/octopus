@@ -12,6 +12,7 @@
 #include <unordered_set>
 #include <stdexcept>
 #include <iostream>
+#include <limits>
 
 #include <boost/iterator/zip_iterator.hpp>
 #include <boost/tuple/tuple.hpp>
@@ -851,27 +852,37 @@ auto compute_marginal_credible_interval(const model::SomaticSubcloneModel::Prior
     return maths::beta_hdi(alphas[k], a0 - alphas[k], mass);
 }
 
-auto compute_marginal_credible_intervals(const model::SomaticSubcloneModel::Priors::GenotypeMixturesDirichletAlphas& alphas,
-                                         const double mass)
+struct VAFStats
+{
+    using CredibleRegion = std::pair<double, double>;
+    CredibleRegion credible_region;
+    double map, count;
+};
+
+auto compute_vaf_stats(const model::SomaticSubcloneModel::Priors::GenotypeMixturesDirichletAlphas& alphas,
+                       const double credible_mass)
 {
     const auto a0 = std::accumulate(std::cbegin(alphas), std::cend(alphas), 0.0);
-    std::vector<std::pair<double, double>> result {};
+    std::vector<VAFStats> result {};
     result.reserve(alphas.size());
-    for (const auto& alpha : alphas) {
-        result.push_back(maths::beta_hdi(alpha, a0 - alpha, mass));
+    for (std::size_t i {0}; i < alphas.size(); ++i) {
+        auto map_vaf = maths::dirichlet_expectation(i, alphas);
+        auto vaf_cr = maths::beta_hdi(alphas[i], a0 - alphas[i], credible_mass);
+        result.push_back({vaf_cr, map_vaf, alphas[i]});
     }
     return result;
 }
 
-using CredibleRegionMap = std::unordered_map<SampleName, std::vector<std::pair<double, double>>>;
+using VAFStatsVector = std::vector<VAFStats>;
+using VAFStatsMap = std::unordered_map<SampleName, VAFStatsVector>;
 
-auto compute_marginal_credible_intervals(const model::SomaticSubcloneModel::Priors::GenotypeMixturesDirichletAlphaMap& alphas,
-                                         const double mass)
+auto compute_vaf_stats(const model::SomaticSubcloneModel::Priors::GenotypeMixturesDirichletAlphaMap& alphas,
+                       const double credible_mass)
 {
-    CredibleRegionMap result {};
+    VAFStatsMap result {};
     result.reserve(alphas.size());
     for (const auto& p : alphas) {
-        result.emplace(p.first, compute_marginal_credible_intervals(p.second, mass));
+        result.emplace(p.first, compute_vaf_stats(p.second, credible_mass));
     }
     return result;
 }
@@ -902,29 +913,6 @@ auto compute_credible_somatic_mass(const model::SomaticSubcloneModel::Priors::Ge
         }
     }
     return 1.0 - inv_result;
-}
-
-auto compute_map_somatic_vaf(const model::SomaticSubcloneModel::Priors::GenotypeMixturesDirichletAlphas& alphas,
-                             const unsigned somatic_ploidy)
-{
-    double result {0.0};
-    for (unsigned i {1}; i <= somatic_ploidy; ++i) {
-        result = std::max(maths::dirichlet_expectation(alphas.size() - i, alphas), result);
-    }
-    return result;
-}
-
-using SomaticVAFMap = std::unordered_map<SampleName, double>;
-
-auto compute_map_somatic_vafs(const model::SomaticSubcloneModel::Priors::GenotypeMixturesDirichletAlphaMap& alphas,
-                              const unsigned somatic_ploidy)
-{
-    SomaticVAFMap result {};
-    result.reserve(alphas.size());
-    for (const auto& p : alphas) {
-        result.emplace(p.first, compute_map_somatic_vaf(p.second, somatic_ploidy));
-    }
-    return result;
 }
 
 struct GermlineVariantCall : Mappable<GermlineVariantCall>
@@ -992,8 +980,7 @@ struct CancerGenotypeCall
     
     CancerGenotype<Allele> genotype;
     Phred<double> posterior;
-    CredibleRegionMap credible_regions;
-    SomaticVAFMap somatic_map_vafs;
+    VAFStatsMap vaf_stats;
 };
 
 using CancerGenotypeCalls = std::vector<CancerGenotypeCall>;
@@ -1197,8 +1184,7 @@ auto call_somatic_genotypes(const CancerGenotype<Haplotype>& called_genotype,
                             const std::vector<GenomicRegion>& called_somatic_regions,
                             const std::vector<CancerGenotype<Haplotype>>& genotypes,
                             const std::vector<double>& genotype_posteriors,
-                            const CredibleRegionMap& credible_regions,
-                            const SomaticVAFMap& somatic_vafs)
+                            const VAFStatsMap& vaf_stats)
 {
     CancerGenotypeCalls result {};
     result.reserve(called_somatic_regions.size());
@@ -1206,8 +1192,7 @@ auto call_somatic_genotypes(const CancerGenotype<Haplotype>& called_genotype,
         auto genotype_chunk = copy<Allele>(called_genotype, region);
         auto posterior = marginalise(genotype_chunk, genotypes, genotype_posteriors);
         result.emplace_back(std::move(genotype_chunk), posterior);
-        result.back().credible_regions = credible_regions;
-        result.back().somatic_map_vafs = somatic_vafs;
+        result.back().vaf_stats = vaf_stats;
     }
     return result;
 }
@@ -1252,23 +1237,27 @@ auto transform_somatic_calls(SomaticVariantCalls&& somatic_calls, CancerGenotype
     std::transform(std::make_move_iterator(std::begin(somatic_calls)), std::make_move_iterator(std::end(somatic_calls)),
                    std::make_move_iterator(std::begin(genotype_calls)), std::back_inserter(result),
                    [&somatic_samples] (auto&& variant_call, auto&& genotype_call) -> std::unique_ptr<octopus::VariantCall> {
-                       std::unordered_map<SampleName, SomaticCall::GenotypeCredibleRegions> credible_regions {};
-                       const auto germline_ploidy = genotype_call.genotype.germline_ploidy();
-                       for (const auto& p : genotype_call.credible_regions) {
-                           SomaticCall::GenotypeCredibleRegions sample_credible_regions {};
-                           sample_credible_regions.germline.reserve(germline_ploidy);
-                           std::copy(std::cbegin(p.second), std::prev(std::cend(p.second)),
-                                     std::back_inserter(sample_credible_regions.germline));
+                       SomaticCall::GenotypeStatsMap genotype_stats {};
+                       genotype_stats.reserve(genotype_call.vaf_stats.size()); // num samples
+                       for (const auto& p : genotype_call.vaf_stats) {
+                           const VAFStatsVector& stats {p.second};
+                           SomaticCall::GenotypeAlleleStats sample_stats {};
+                           sample_stats.germline.reserve(genotype_call.genotype.germline_ploidy());
+                           const auto convert_stats = [] (const VAFStats& stats) -> SomaticCall::AlleleStats {
+                               return {stats.credible_region, stats.map, stats.count};
+                           };
+                           std::transform(std::cbegin(stats), std::next(std::cbegin(stats), genotype_call.genotype.germline_ploidy()),
+                                          std::back_inserter(sample_stats.germline), convert_stats);
                            if (std::find(std::cbegin(somatic_samples), std::cend(somatic_samples), p.first) != std::cend(somatic_samples)) {
-                               auto somatic_idx = find_index(genotype_call.genotype.somatic(), variant_call.variant.get().alt_allele());
-                               sample_credible_regions.somatic = p.second[germline_ploidy + somatic_idx];
+                               sample_stats.somatic.reserve(genotype_call.genotype.somatic_ploidy());
+                               std::transform(std::next(std::cbegin(stats), genotype_call.genotype.germline_ploidy()), std::cend(stats),
+                                              std::back_inserter(sample_stats.somatic), convert_stats);
                            }
-                           credible_regions.emplace(p.first, std::move(sample_credible_regions));
+                           genotype_stats.emplace(p.first, std::move(sample_stats));
                        }
                        return std::make_unique<SomaticCall>(variant_call.variant.get(), std::move(genotype_call.genotype),
-                                                            genotype_call.posterior, std::move(credible_regions),
-                                                            genotype_call.somatic_map_vafs,
-                                                            variant_call.segregation_quality, variant_call.posterior);
+                                                            variant_call.segregation_quality, genotype_call.posterior,
+                                                            std::move(genotype_stats), variant_call.posterior);
                    });
     return result;
 }
@@ -1356,21 +1345,23 @@ CancerCaller::call_variants(const std::vector<Variant>& candidates, const Latent
             auto somatic_variant_calls = call_somatic_variants(somatic_allele_posteriors, *called_cancer_genotype,
                                                                parameters_.min_somatic_posterior);
             const auto& somatic_alphas = latents.somatic_model_inferences_.max_evidence_params.alphas;
-            const auto credible_regions = compute_marginal_credible_intervals(somatic_alphas, parameters_.credible_mass);
+            const auto vaf_stats = compute_vaf_stats(somatic_alphas, parameters_.credible_mass);
             if (!somatic_variant_calls.empty()) {
-                for (const auto& p : credible_regions) {
+                for (const auto& p : vaf_stats) {
+                    const auto& sample = p.first;
+                    const auto& sample_vaf_stats = p.second;
                     if (debug_log_) {
                         auto ss = stream(*debug_log_);
-                        ss << p.first << " somatic credible regions: ";
-                        for (auto cr : p.second) ss << '(' << cr.first << ' ' << cr.second << ") ";
+                        ss << sample << " somatic credible regions: ";
+                        for (auto stats : sample_vaf_stats) ss << '(' << stats.credible_region.first << ' ' << stats.credible_region.second << ") ";
                     }
-                    if (std::any_of(std::next(std::cbegin(p.second), parameters_.ploidy), std::cend(p.second),
-                        [this] (const auto& credible_region) { return credible_region.first >= parameters_.min_credible_somatic_frequency; })) {
-                        if (has_normal_sample() && p.first == normal_sample()) {
+                    if (std::any_of(std::next(std::cbegin(sample_vaf_stats), parameters_.ploidy), std::cend(sample_vaf_stats),
+                        [this] (const auto& stats) { return stats.credible_region.first >= parameters_.min_credible_somatic_frequency; })) {
+                        if (has_normal_sample() && sample == normal_sample()) {
                             somatic_samples.clear();
                             break;
                         }
-                        somatic_samples.push_back(p.first);
+                        somatic_samples.push_back(sample);
                     }
                 }
                 if (latents.noise_model_inferences_ && latents.normal_germline_inferences_) {
@@ -1400,11 +1391,10 @@ CancerCaller::call_variants(const std::vector<Variant>& candidates, const Latent
                 *debug_log_ << "Called somatic variants:";
                 debug::print_variants(stream(*debug_log_), somatic_variant_calls);
             }
-            const auto somatic_vafs = compute_map_somatic_vafs(somatic_alphas, latents.somatic_ploidy_);
             const auto called_somatic_regions = extract_regions(somatic_variant_calls);
             auto cancer_genotype_calls = call_somatic_genotypes(*called_cancer_genotype, called_somatic_regions,
                                                                 latents.cancer_genotypes_, cancer_genotype_posteriors,
-                                                                credible_regions, somatic_vafs);
+                                                                vaf_stats);
             result = transform_somatic_calls(std::move(somatic_variant_calls), std::move(cancer_genotype_calls), somatic_samples);
         } else if (debug_log_) {
             stream(*debug_log_) << "Conflict between called germline genotype and called cancer genotype. Not calling somatics";
@@ -1594,7 +1584,7 @@ namespace debug {
 template <typename S>
 void print_genotype_posteriors(S&& stream,
                                const std::unordered_map<Genotype<Haplotype>, double>& genotype_posteriors,
-                               const std::size_t n)
+                               const std::size_t n = std::numeric_limits<std::size_t>::max())
 {
     const auto m = std::min(n, genotype_posteriors.size());
     if (m == genotype_posteriors.size()) {
@@ -1652,7 +1642,7 @@ void CancerCaller::log(const GenotypeVector& germline_genotypes,
         marginal_germline_log << ' ' << map_marginal_germline->second;
     }
     if (trace_log_) {
-        debug::print_genotype_posteriors(stream(*trace_log_), germline_genotype_posteriors, -1);
+        debug::print_genotype_posteriors(stream(*trace_log_), germline_genotype_posteriors);
     }
 }
 

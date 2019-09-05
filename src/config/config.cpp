@@ -4,6 +4,11 @@
 #include "config.hpp"
 
 #include <ostream>
+#include <sstream>
+#include <algorithm>
+
+#include <boost/range/algorithm_ext/erase.hpp>
+#include <boost/algorithm/string/classification.hpp>
 
 #include "version.hpp"
 #include "system.hpp"
@@ -92,6 +97,18 @@ std::ostream& operator<<(std::ostream& os, const SystemInfo::SIMDExtension simd)
         case SIMD::avx512: os << "AVX-512"; break;
     }
     return os;
+}
+
+std::string to_string(const VersionNumber& version, const bool spaces)
+{
+    std::ostringstream ss {};
+    ss << config::Version;
+    auto result = ss.str();
+    if (!spaces) {
+        std::replace(result.begin(), result.end(), ' ', '_');
+        boost::remove_erase_if(result, boost::is_any_of("()"));
+    }
+    return result;
 }
 
 const std::string HelpForum {"https://github.com/luntergroup/octopus/issues"};

@@ -771,8 +771,13 @@ void extract_samples(const bcf_hdr_t* header, bcf1_t* record, VcfRecord::Builder
                     const auto num_values_per_sample = num_values_written / num_samples;
                     auto ptr = intformat;
                     for (unsigned sample {0}; sample < num_samples; ++sample, ptr += num_values_per_sample) {
-                        values[sample].reserve(num_values_per_sample);
-                        std::transform(ptr, ptr + num_values_per_sample, std::back_inserter(values[sample]),
+                        const static auto is_pad = [] (auto x) noexcept { return x == bcf_int32_vector_end; };
+                        const auto pad_ritr = std::find_if_not(std::make_reverse_iterator(ptr + num_values_per_sample), std::make_reverse_iterator(ptr), is_pad);
+                        const auto num_pad_values = std::distance(std::make_reverse_iterator(ptr + num_values_per_sample), pad_ritr);
+                        assert(num_pad_values <= num_values_per_sample);
+                        const auto num_sample_values = num_values_per_sample - num_pad_values;
+                        values[sample].reserve(num_sample_values);
+                        std::transform(ptr, ptr + num_sample_values, std::back_inserter(values[sample]),
                                        [] (auto v) {
                                            return v != bcf_int32_missing ? std::to_string(v) : bcf_missing_str;
                                        });
@@ -786,8 +791,13 @@ void extract_samples(const bcf_hdr_t* header, bcf1_t* record, VcfRecord::Builder
                     const auto num_values_per_sample = num_values_written / num_samples;
                     auto ptr = floatformat;
                     for (unsigned sample {0}; sample < num_samples; ++sample, ptr += num_values_per_sample) {
-                        values[sample].reserve(num_values_per_sample);
-                        std::transform(ptr, ptr + num_values_per_sample, std::back_inserter(values[sample]),
+                        const static auto is_pad = [] (auto x) noexcept { return bcf_float_is_vector_end(x); };
+                        const auto pad_ritr = std::find_if_not(std::make_reverse_iterator(ptr + num_values_per_sample), std::make_reverse_iterator(ptr), is_pad);
+                        const auto num_pad_values = std::distance(std::make_reverse_iterator(ptr + num_values_per_sample), pad_ritr);
+                        assert(num_pad_values <= num_values_per_sample);
+                        const auto num_sample_values = num_values_per_sample - num_pad_values;
+                        values[sample].reserve(num_sample_values);
+                        std::transform(ptr, ptr + num_sample_values, std::back_inserter(values[sample]),
                                        [] (auto v) {
                                            return v != bcf_float_missing ? std::to_string(v) : bcf_missing_str;
                                        });

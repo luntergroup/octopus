@@ -15,6 +15,7 @@ class DenovoReferenceReversionCall : public DenovoCall
 public:
     using VariantCall::GenotypeCall;
     using VariantCall::PhaseCall;
+    using DenovoCall::parsimonise;
     
     DenovoReferenceReversionCall() = delete;
     

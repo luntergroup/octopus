@@ -94,9 +94,8 @@ int main(const int argc, const char** argv)
             auto end = std::chrono::system_clock::now();
             using utils::TimeInterval;
             stream(info_log) << "Done initialising calling components in " << TimeInterval {start, end};
-            options.clear();
             if (validate(components)) {
-                run_octopus(components, to_string(argc, argv));
+                run_octopus(components, {to_string(argc, argv), to_string(options, true, false)});
             }
             log_program_end();
         } catch (const Error& e) {

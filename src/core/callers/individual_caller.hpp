@@ -116,7 +116,7 @@ public:
     std::shared_ptr<GenotypeProbabilityMap> genotype_posteriors() const noexcept override;
     
 private:
-    std::shared_ptr<GenotypeProbabilityMap> genotype_posteriors_;
+    std::shared_ptr<GenotypeProbabilityMap> genotype_log_posteriors_, genotype_posteriors_;
     std::shared_ptr<HaplotypeProbabilityMap> haplotype_posteriors_;
     double model_log_evidence_;
     

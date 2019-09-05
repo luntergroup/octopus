@@ -199,6 +199,7 @@ public:
     Builder& set_format(std::vector<KeyType> format);
     Builder& set_format(std::initializer_list<KeyType> format);
     Builder& add_format(KeyType key);
+    Builder& add_format(std::initializer_list<KeyType> keys);
     Builder& set_homozygous_ref_genotype(const SampleName& sample, unsigned ploidy);
     Builder& reserve_samples(unsigned n);
     Builder& set_genotype(const SampleName& sample, std::vector<NucleotideSequence> alleles, Phasing phasing);

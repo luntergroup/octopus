@@ -12,6 +12,7 @@
 #include <utility>
 #include <stdexcept>
 #include <iostream>
+#include <limits>
 
 #include "basics/genomic_region.hpp"
 #include "containers/probability_matrix.hpp"
@@ -508,7 +509,7 @@ namespace debug { namespace {
 template <typename S>
 void print_genotype_posteriors(S&& stream,
                                const GenotypeProbabilityMap& genotype_posteriors,
-                               const std::size_t n)
+                               const std::size_t n = std::numeric_limits<std::size_t>::max())
 {
     const auto m = std::min(n, genotype_posteriors.size());
     if (m == genotype_posteriors.size()) {
@@ -531,14 +532,14 @@ void print_genotype_posteriors(S&& stream,
 }
 
 void print_genotype_posteriors(const GenotypeProbabilityMap& genotype_posteriors,
-                               const std::size_t n)
+                               const std::size_t n = std::numeric_limits<std::size_t>::max())
 {
     print_genotype_posteriors(std::cout, genotype_posteriors, n);
 }
 
 template <typename S>
 void print_candidate_posteriors(S&& stream, const VariantPosteriorVector& candidate_posteriors,
-                                const std::size_t n)
+                                const std::size_t n = std::numeric_limits<std::size_t>::max())
 {
     const auto m = std::min(n, candidate_posteriors.size());
     if (m == candidate_posteriors.size()) {
@@ -559,7 +560,7 @@ void print_candidate_posteriors(S&& stream, const VariantPosteriorVector& candid
 }
 
 void print_candidate_posteriors(const VariantPosteriorVector& candidate_posteriors,
-                                const std::size_t n)
+                                const std::size_t n = std::numeric_limits<std::size_t>::max())
 {
     print_candidate_posteriors(std::cout, candidate_posteriors, n);
 }
@@ -569,7 +570,7 @@ void log(const GenotypeProbabilityMap& genotype_posteriors,
          boost::optional<logging::TraceLogger>& trace_log)
 {
     if (trace_log) {
-        print_genotype_posteriors(stream(*trace_log), genotype_posteriors, -1);
+        print_genotype_posteriors(stream(*trace_log), genotype_posteriors);
     }
     if (debug_log) {
         print_genotype_posteriors(stream(*debug_log), genotype_posteriors, 5);
@@ -582,7 +583,7 @@ void log(const VariantPosteriorVector& candidate_posteriors,
          Phred<double> min_posterior)
 {
     if (trace_log) {
-        print_candidate_posteriors(stream(*trace_log), candidate_posteriors, -1);
+        print_candidate_posteriors(stream(*trace_log), candidate_posteriors);
     }
     if (debug_log) {
         const auto n = std::count_if(std::cbegin(candidate_posteriors), std::cend(candidate_posteriors),

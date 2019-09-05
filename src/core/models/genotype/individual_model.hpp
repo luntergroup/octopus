@@ -20,16 +20,18 @@ namespace octopus { namespace model {
 class IndividualModel
 {
 public:
+    using LogProbability = double;
+    
     struct Latents
     {
-        using ProbabilityVector = std::vector<double>;
-        ProbabilityVector genotype_probabilities;
+        using ProbabilityVector = std::vector<LogProbability>;
+        ProbabilityVector genotype_log_probabilities, genotype_probabilities;
     };
     
     struct InferredLatents
     {
         Latents posteriors;
-        double log_evidence;
+        LogProbability log_evidence;
     };
     
     IndividualModel() = delete;
@@ -51,12 +53,14 @@ public:
     void unprime() noexcept;
     bool is_primed() const noexcept;
     
-    InferredLatents evaluate(const MappableBlock<Genotype<Haplotype>>& genotypes,
-                             const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
+    InferredLatents
+    evaluate(const MappableBlock<Genotype<Haplotype>>& genotypes,
+             const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
     
-    InferredLatents evaluate(const MappableBlock<Genotype<Haplotype>>& genotypes,
-                             const std::vector<GenotypeIndex>& genotype_indices,
-                             const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
+    InferredLatents
+    evaluate(const MappableBlock<Genotype<Haplotype>>& genotypes,
+             const std::vector<GenotypeIndex>& genotype_indices,
+             const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
     
 private:
     const GenotypePriorModel& genotype_prior_model_;

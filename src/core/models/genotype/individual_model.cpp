@@ -45,20 +45,23 @@ bool IndividualModel::is_primed() const noexcept
 
 namespace debug {
 
-template <typename S>
+template <typename S, typename LogProbability>
 void print_genotype_priors(S&& stream, const std::vector<Genotype<Haplotype>>& genotypes,
-                           const std::vector<double>& priors, std::size_t n = 5);
+                           const std::vector<LogProbability>& priors, std::size_t n = 5);
+template <typename LogProbability>
 void print_genotype_priors(const std::vector<Genotype<Haplotype>>& genotypes,
-                           const std::vector<double>& priors, std::size_t n = 5);
+                           const std::vector<LogProbability>& priors, std::size_t n = 5);
+template <typename LogProbability>
 void log_genotype_likelihoods(boost::optional<logging::DebugLogger>& debug_log,
                               boost::optional<logging::TraceLogger>& trace_log,
                               const std::vector<Genotype<Haplotype>>& genotypes,
-                              const std::vector<double>& likelihoods);
-template <typename S>
+                              const std::vector<LogProbability>& likelihoods);
+template <typename S, typename LogProbability>
 void print_genotype_likelihoods(S&& stream, const std::vector<Genotype<Haplotype>>& genotypes,
-                                const std::vector<double>& likelihoods, std::size_t n = 5);
+                                const std::vector<LogProbability>& likelihoods, std::size_t n = 5);
+template <typename LogProbability>
 void print_genotype_likelihoods(const std::vector<Genotype<Haplotype>>& genotypes,
-                                const std::vector<double>& likelihoods, std::size_t n = 5);
+                                const std::vector<LogProbability>& likelihoods, std::size_t n = 5);
 
 } // namespace debug
 
@@ -68,11 +71,12 @@ IndividualModel::evaluate(const MappableBlock<Genotype<Haplotype>>& genotypes,
 {
     assert(!genotypes.empty());
     const ConstantMixtureGenotypeLikelihoodModel likelihood_model {haplotype_likelihoods};
-    auto posteriors = octopus::model::evaluate(genotypes, likelihood_model);
-    debug::log_genotype_likelihoods(debug_log_, trace_log_, genotypes, posteriors);
-    octopus::evaluate(genotypes, genotype_prior_model_, posteriors, false, true);
-    const auto log_evidence = maths::normalise_exp(posteriors);
-    return {{std::move(posteriors)}, log_evidence};
+    auto log_posteriors = octopus::model::evaluate(genotypes, likelihood_model);
+    debug::log_genotype_likelihoods(debug_log_, trace_log_, genotypes, log_posteriors);
+    octopus::evaluate(genotypes, genotype_prior_model_, log_posteriors, false, true);
+    const auto log_evidence = maths::normalise_logs(log_posteriors);
+    auto posteriors = log_posteriors; maths::exp_each(posteriors);
+    return {{std::move(log_posteriors), std::move(posteriors)}, log_evidence};
 }
 
 IndividualModel::InferredLatents
@@ -86,13 +90,15 @@ IndividualModel::evaluate(const MappableBlock<Genotype<Haplotype>>& genotypes,
     InferredLatents result {};
     if (is_primed()) {
         likelihood_model.prime(*haplotypes_);
-        result.posteriors.genotype_probabilities = octopus::model::evaluate(genotype_indices, likelihood_model);
+        result.posteriors.genotype_log_probabilities = octopus::model::evaluate(genotype_indices, likelihood_model);
     } else {
-        result.posteriors.genotype_probabilities = octopus::model::evaluate(genotypes, likelihood_model);
+        result.posteriors.genotype_log_probabilities = octopus::model::evaluate(genotypes, likelihood_model);
     }
-    debug::log_genotype_likelihoods(debug_log_, trace_log_, genotypes, result.posteriors.genotype_probabilities);
-    octopus::evaluate(genotype_indices, genotype_prior_model_, result.posteriors.genotype_probabilities, false, true);
-    result.log_evidence = maths::normalise_exp(result.posteriors.genotype_probabilities);
+    debug::log_genotype_likelihoods(debug_log_, trace_log_, genotypes, result.posteriors.genotype_log_probabilities);
+    octopus::evaluate(genotype_indices, genotype_prior_model_, result.posteriors.genotype_log_probabilities, false, true);
+    result.log_evidence = maths::normalise_logs(result.posteriors.genotype_log_probabilities);
+    result.posteriors.genotype_probabilities = result.posteriors.genotype_log_probabilities;
+    maths::exp_each(result.posteriors.genotype_probabilities);
     return result;
 }
 
@@ -100,9 +106,9 @@ namespace debug {
 
 using octopus::debug::print_variant_alleles;
 
-template <typename S>
+template <typename S, typename LogProbability>
 void print_genotype_priors(S&& stream, const std::vector<Genotype<Haplotype>>& genotypes,
-                           const std::vector<double>& priors, const std::size_t n)
+                           const std::vector<LogProbability>& priors, const std::size_t n)
 {
     assert(genotypes.size() == priors.size());
     const auto m = std::min(n, genotypes.size());
@@ -112,7 +118,7 @@ void print_genotype_priors(S&& stream, const std::vector<Genotype<Haplotype>>& g
         stream << "Printing top " << m << " genotype priors " << '\n';
     }
     using GenotypeReference = std::reference_wrapper<const Genotype<Haplotype>>;
-    std::vector<std::pair<GenotypeReference, double>> v {};
+    std::vector<std::pair<GenotypeReference, LogProbability>> v {};
     v.reserve(genotypes.size());
     std::transform(std::cbegin(genotypes), std::cend(genotypes), std::cbegin(priors),
                    std::back_inserter(v), [] (const auto& g, const auto& p) {
@@ -130,24 +136,26 @@ void print_genotype_priors(S&& stream, const std::vector<Genotype<Haplotype>>& g
                   });
 }
 
+template <typename LogProbability>
 void print_genotype_priors(const std::vector<Genotype<Haplotype>>& genotypes,
-                           const std::vector<double>& priors, const std::size_t n)
+                           const std::vector<LogProbability>& priors, const std::size_t n)
 {
     print_genotype_priors(std::cout, genotypes, priors, n);
 }
 
+template <typename LogProbability>
 void log_genotype_likelihoods(boost::optional<logging::DebugLogger>& debug_log,
                               boost::optional<logging::TraceLogger>& trace_log,
                               const std::vector<Genotype<Haplotype>>& genotypes,
-                              const std::vector<double>& likelihoods)
+                              const std::vector<LogProbability>& likelihoods)
 {
     if (debug_log) debug::print_genotype_likelihoods(stream(*debug_log), genotypes, likelihoods);
     if (trace_log) debug::print_genotype_likelihoods(stream(*trace_log), genotypes, likelihoods, genotypes.size());
 }
 
-template <typename S>
+template <typename S, typename LogProbability>
 void print_genotype_likelihoods(S&& stream, const std::vector<Genotype<Haplotype>>& genotypes,
-                                const std::vector<double>& likelihoods, std::size_t n)
+                                const std::vector<LogProbability>& likelihoods, std::size_t n)
 {
     assert(genotypes.size() == likelihoods.size());
     const auto m = std::min(n, genotypes.size());
@@ -157,7 +165,7 @@ void print_genotype_likelihoods(S&& stream, const std::vector<Genotype<Haplotype
         stream << "Printing top " << m << " genotype likelihoods " << '\n';
     }
     using GenotypeReference = std::reference_wrapper<const Genotype<Haplotype>>;
-    std::vector<std::pair<GenotypeReference, double>> v {};
+    std::vector<std::pair<GenotypeReference, LogProbability>> v {};
     v.reserve(genotypes.size());
     std::transform(std::cbegin(genotypes), std::cend(genotypes), std::cbegin(likelihoods),
                    std::back_inserter(v), [] (const auto& g, const auto& p) {
@@ -175,8 +183,9 @@ void print_genotype_likelihoods(S&& stream, const std::vector<Genotype<Haplotype
                   });
 }
 
+template <typename LogProbability>
 void print_genotype_likelihoods(const std::vector<Genotype<Haplotype>>& genotypes,
-                                const std::vector<double>& likelihoods, std::size_t n)
+                                const std::vector<LogProbability>& likelihoods, std::size_t n)
 {
     print_genotype_likelihoods(std::cout, genotypes, likelihoods, n);
 }
