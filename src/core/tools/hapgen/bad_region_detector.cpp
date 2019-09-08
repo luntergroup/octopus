@@ -378,7 +378,7 @@ double BadRegionDetector::calculate_probability_good(const RegionState& state) c
                 case Parameters::Tolerance::low: tolerance_factor = 4; break;
             }
             auto mu = tolerance_factor * std::max(reads_profile_->sample_median_positive_depth[s], reads_profile_->sample_mean_positive_depth[s]);
-            auto sigma = reads_profile_->sample_depth_stdev[s];
+            auto sigma = std::max(static_cast<double>(reads_profile_->sample_depth_stdev[s]), 1.0);
             result *= maths::normal_sf<double>(state.sample_mean_read_depths.at(reads_profile_->samples[s]), mu, sigma);
         }
     }
