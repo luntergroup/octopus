@@ -532,8 +532,7 @@ void CancerCaller::generate_cancer_genotypes_with_no_normal(Latents& latents, co
 {
     const auto& haplotypes = latents.haplotypes_.get();
     const auto& germline_genotypes = latents.germline_genotypes_;
-    const auto max_allowed_cancer_genotypes = std::max(parameters_.max_genotypes, germline_genotypes.size());
-    
+    const auto max_allowed_cancer_genotypes = parameters_.max_genotypes;
     if (!latents.cancer_genotypes_.empty()) {
         const auto max_old_cancer_genotype_bases = std::max(max_allowed_cancer_genotypes / haplotypes.size(), std::size_t {1});
         const auto& cancer_genotype_posteriors = latents.somatic_model_inferences_.max_evidence_params.genotype_probabilities;
