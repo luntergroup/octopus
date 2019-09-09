@@ -199,7 +199,7 @@ def main(args):
     if args["static"]:
         cmake_options.append("-DBUILD_SHARED_LIBS=OFF")
     if args["verbose"]:
-        cmake_options.append("CMAKE_VERBOSE_MAKEFILE:BOOL=ON")
+        cmake_options.append("-DCMAKE_VERBOSE_MAKEFILE:BOOL=ON")
     if dependencies_dir is not None:
         if args["c_compiler"]:
             cmake_options.append("-DCMAKE_C_COMPILER=" + args["c_compiler"])
