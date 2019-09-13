@@ -210,7 +210,7 @@ ReadMap ReadPipe::fetch_reads(const GenomicRegion& region, boost::optional<Repor
                     stream(*debug_log_) << "In sample " << p.first;
                     if (!p.second.empty()) {
                         for (const auto& c : p.second) {
-                            stream(*debug_log_) << c.second << " failed the " << c.first << " filter";
+                            stream(*debug_log_) << c.second << " reads failed the " << c.first << " filter";
                         }
                     } else {
                         *debug_log_ << "No reads were filtered";
@@ -231,24 +231,26 @@ ReadMap ReadPipe::fetch_reads(const GenomicRegion& region, boost::optional<Repor
             fragment(batch_reads, *fragment_size_, region);
             if (debug_log_) {
                 stream(*debug_log_) << "Fragmented reads from " << region << " into " << count_reads(batch_reads) << " reads";
-            }
-            SampleFilterCountMap<SampleName, decltype(filterer_)> filter_counts {};
-            filter_counts.reserve(samples_.size());
-            for (const auto& sample : samples_) {
-                filter_counts[sample].reserve(filterer_.num_filters());
-            }
-            erase_filtered_reads(batch_reads, filter(batch_reads, filterer_, filter_counts));
-            if (filterer_.num_filters() > 0) {
-                for (const auto& p : filter_counts) {
-                    stream(*debug_log_) << "In sample " << p.first;
-                    if (!p.second.empty()) {
-                        for (const auto& c : p.second) {
-                            stream(*debug_log_) << c.second << " failed the " << c.first << " filter";
+                SampleFilterCountMap<SampleName, decltype(filterer_)> filter_counts {};
+                filter_counts.reserve(samples_.size());
+                for (const auto& sample : samples_) {
+                    filter_counts[sample].reserve(filterer_.num_filters());
+                }
+                erase_filtered_reads(batch_reads, filter(batch_reads, filterer_, filter_counts));
+                if (filterer_.num_filters() > 0) {
+                    for (const auto& p : filter_counts) {
+                        stream(*debug_log_) << "In sample " << p.first;
+                        if (!p.second.empty()) {
+                            for (const auto& c : p.second) {
+                                stream(*debug_log_) << c.second << " read fragments failed the " << c.first << " filter";
+                            }
+                        } else {
+                            *debug_log_ << "No read fragments were filtered";
                         }
-                    } else {
-                        *debug_log_ << "No reads were filtered";
                     }
                 }
+            } else {
+                erase_filtered_reads(batch_reads, filter(batch_reads, filterer_));
             }
         }
         if (downsampler_) {
