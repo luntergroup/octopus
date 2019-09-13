@@ -192,12 +192,6 @@ ReadMap ReadPipe::fetch_reads(const GenomicRegion& region, boost::optional<Repor
         if (debug_log_) {
             stream(*debug_log_) << "Fetched " << count_reads(batch_reads) << " unfiltered reads from " << region;
         }
-        if (fragment_size_) {
-            fragment(batch_reads, *fragment_size_, region);
-            if (debug_log_) {
-                stream(*debug_log_) << "Fragmented raw reads from " << region << " into " << count_reads(batch_reads) << " reads";
-            }
-        }
         if (report) {
             for (const auto& p : batch_reads) {
                 report->raw_depths.emplace(p.first, make_coverage_tracker(p.second));
@@ -232,6 +226,30 @@ ReadMap ReadPipe::fetch_reads(const GenomicRegion& region, boost::optional<Repor
         if (debug_log_) {
             stream(*debug_log_) << "There are " << count_reads(batch_reads) << " reads in " << region
                             << " after filtering";
+        }
+        if (fragment_size_) {
+            fragment(batch_reads, *fragment_size_, region);
+            if (debug_log_) {
+                stream(*debug_log_) << "Fragmented reads from " << region << " into " << count_reads(batch_reads) << " reads";
+            }
+            SampleFilterCountMap<SampleName, decltype(filterer_)> filter_counts {};
+            filter_counts.reserve(samples_.size());
+            for (const auto& sample : samples_) {
+                filter_counts[sample].reserve(filterer_.num_filters());
+            }
+            erase_filtered_reads(batch_reads, filter(batch_reads, filterer_, filter_counts));
+            if (filterer_.num_filters() > 0) {
+                for (const auto& p : filter_counts) {
+                    stream(*debug_log_) << "In sample " << p.first;
+                    if (!p.second.empty()) {
+                        for (const auto& c : p.second) {
+                            stream(*debug_log_) << c.second << " failed the " << c.first << " filter";
+                        }
+                    } else {
+                        *debug_log_ << "No reads were filtered";
+                    }
+                }
+            }
         }
         if (downsampler_) {
             auto reads = make_mappable_map(std::move(batch_reads));

@@ -835,7 +835,7 @@ auto make_read_filterer(const OptionMap& options)
     if (is_set("min-read-length", options)) {
         result.add(make_unique<IsLong>(as_unsigned("min-read-length", options)));
     }
-    if (is_set("max-read-length", options)) {
+    if (is_set("max-read-length", options) && !split_long_reads(options)) {
         result.add(make_unique<IsShort>(as_unsigned("max-read-length", options)));
     }
     if (!options.at("allow-marked-duplicates").as<bool>()) {
