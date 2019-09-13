@@ -53,7 +53,7 @@ auto draw_sample(const SampleName& sample, const InputRegionMap& regions,
     const auto contig_itr = random_select(std::cbegin(regions), std::cend(regions));
     assert(!contig_itr->second.empty());
     const auto region_itr = random_select(std::cbegin(contig_itr->second), std::cend(contig_itr->second));
-    const auto sample_region = choose_sample_region(*region_itr, config.max_sample_size);
+    const auto sample_region = choose_sample_region(*region_itr, 10 * config.max_sample_size);
     auto test_region = source.find_covered_subregion(sample, sample_region, config.max_sample_size);
     if (is_empty(test_region)) {
         test_region = expand_rhs(test_region, 1);
@@ -117,6 +117,30 @@ auto get_read_bytes(const std::vector<ReadSetSamples>& read_sets)
     return result;
 }
 
+auto fragmented_footprint(const AlignedRead& read, const AlignedRead::NucleotideSequence::size_type fragment_size)
+{
+    const auto fragments = split(read, fragment_size);
+    const static auto add_footprint = [] (auto total, const auto& read) { return total + footprint(read); };
+    return std::accumulate(std::cbegin(fragments), std::cend(fragments), MemoryFootprint {0}, add_footprint);
+}
+
+auto compute_fragmented_template_bytes(const std::vector<ReadSetSamples>& read_sets, const AlignedRead::NucleotideSequence::size_type fragment_size)
+{
+    std::deque<std::size_t> result {};
+    for (const auto& set : read_sets) {
+        for (const auto& reads : set) {
+            std::transform(std::cbegin(reads), std::cend(reads), std::back_inserter(result),
+                           [fragment_size] (const auto& read) noexcept { return fragmented_footprint(read, fragment_size).bytes(); });
+        }
+    }
+    return result;
+}
+
+auto calculate_median_fragmented_template_bytes(const std::vector<ReadSetSamples>& read_sets, const AlignedRead::NucleotideSequence::size_type fragment_size)
+{
+    return maths::median(compute_fragmented_template_bytes(read_sets, fragment_size));
+}
+
 template <typename T>
 auto copy_positive(const std::deque<T>& values)
 {
@@ -144,6 +168,11 @@ profile_reads(const std::vector<SampleName>& samples,
     ReadSetProfile result {};
     result.mean_read_bytes = maths::mean(bytes);
     result.read_bytes_stdev = maths::stdev(bytes);
+    if (config.fragment_size) {
+        result.fragmented_template_median_bytes = calculate_median_fragmented_template_bytes(read_sets, *config.fragment_size);
+    } else {
+        result.fragmented_template_median_bytes = boost::none;
+    }
     result.samples = samples;
     result.sample_mean_depth.resize(samples.size());
     result.sample_median_depth.resize(samples.size());
