@@ -396,6 +396,17 @@ boost::optional<fs::path> get_temp_directory(const options::OptionMap& options)
 }
 
 namespace {
+    
+auto profile_reads_helper(const std::vector<SampleName>& samples,
+                          const InputRegionMap& input_regions,
+                          const ReadManager& source,
+                          const options::OptionMap& options)
+{
+    ReadSetProfileConfig config {};
+    config.fragment_size = options::max_read_length(options);
+    return profile_reads(samples, input_regions, source, config);
+}
+
 static const AlignedRead typical_illumina_read {
     "HISEQ1:9:H8962ADXX:2:1108:11915:94551",
     GenomicRegion {"1", 63492953, 63493103},
@@ -415,6 +426,9 @@ auto estimate_read_memory_footprint(const boost::optional<ReadSetProfile>& profi
     MemoryFootprint result;
     if (profile) {
         result = profile->mean_read_bytes + profile->read_bytes_stdev;
+        if (profile->fragmented_template_median_bytes) {
+            result += *profile->fragmented_template_median_bytes;
+        }
     } else {
         result = footprint(typical_illumina_read);
         logging::WarningLogger log {};
@@ -518,7 +532,7 @@ GenomeCallingComponents::Components::Components(ReferenceGenome&& reference, Rea
 , samples {extract_samples(options, this->read_manager)}
 , regions {get_search_regions(options, this->reference, this->read_manager)}
 , contigs {get_contigs(this->regions, this->reference, options::get_contig_output_order(options))}
-, reads_profile {profile_reads(this->samples, this->regions, this->read_manager)}
+, reads_profile {profile_reads_helper(this->samples, this->regions, this->read_manager, options)}
 , read_pipe {options::make_read_pipe(this->read_manager, this->reference, this->samples, options)}
 , haplotype_likelihood_model {options::make_haplotype_likelihood_model(options, this->reads_profile)}
 , caller_factory {options::make_caller_factory(this->reference, this->read_pipe, this->regions, options, this->reads_profile)}

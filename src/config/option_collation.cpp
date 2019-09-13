@@ -785,6 +785,20 @@ bool is_read_filtering_enabled(const OptionMap& options)
     return options.at("read-filtering").as<bool>();
 }
 
+bool split_long_reads(const OptionMap& options)
+{
+    return options.at("split-long-reads").as<bool>();
+}
+
+boost::optional<AlignedRead::NucleotideSequence::size_type> max_read_length(const OptionMap& options)
+{
+    if (split_long_reads(options) && is_set("max-read-length", options)) {
+        return as_unsigned("max-read-length", options);
+    } else {
+        return boost::none;
+    }
+}
+
 auto make_read_filterer(const OptionMap& options)
 {
     using std::make_unique;
@@ -867,11 +881,6 @@ boost::optional<readpipe::Downsampler> make_downsampler(const OptionMap& options
         return Downsampler {max_coverage, target_coverage};
     }
     return boost::none;
-}
-
-bool split_long_reads(const OptionMap& options)
-{
-    return options.at("split-long-reads").as<bool>();
 }
 
 ReadPipe make_read_pipe(ReadManager& read_manager, const ReferenceGenome& reference, std::vector<SampleName> samples, const OptionMap& options)
