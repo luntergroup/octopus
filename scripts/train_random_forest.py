@@ -9,6 +9,7 @@ from pysam import VariantFile
 import random
 import numpy as np
 import shutil
+from sklearn.metrics import log_loss
 
 script_dir = dirname(abspath(__file__))
 default_octopus_bin = join(abspath(join(script_dir, pardir)), 'bin/octopus')
@@ -40,8 +41,10 @@ def call_variants(octopus, ref_path, bam_path, regions_bed, threads, out_dir, co
     legacy_vcf = out_vcf.replace(".vcf.gz", ".legacy.vcf.gz")
     return legacy_vcf
 
-def run_rtg(rtg, rtg_ref_path, truth_vcf_path, confident_bed_path, octopus_vcf_path, out_dir):
-    call([rtg, 'vcfeval', '-b', truth_vcf_path, '-t', rtg_ref_path, '--evaluation-regions', confident_bed_path,
+def run_rtg(rtg, rtg_ref_path, truth_vcf_path, bed_regions, confident_bed_path, octopus_vcf_path, out_dir):
+    call([rtg, 'vcfeval', '-b', truth_vcf_path, '-t', rtg_ref_path,
+         '--bed-regions', bed_regions,
+         '--evaluation-regions', confident_bed_path,
           '--ref-overlap', '-c', octopus_vcf_path, '-o', out_dir])
 
 def eval_octopus(octopus, ref_path, bam_path, regions_bed, threads,
@@ -49,7 +52,7 @@ def eval_octopus(octopus, ref_path, bam_path, regions_bed, threads,
                  config=None):
     octopus_vcf = call_variants(octopus, ref_path, bam_path, regions_bed, threads, out_dir, config=config)
     rtf_eval_dir = join(out_dir, basename(octopus_vcf).replace(".legacy.vcf.gz", ".eval"))
-    run_rtg(rtg, rtg_ref_path, truth_vcf_path, confident_bed_path, octopus_vcf, rtf_eval_dir)
+    run_rtg(rtg, rtg_ref_path, truth_vcf_path, regions_bed, confident_bed_path, octopus_vcf, rtf_eval_dir)
     return rtf_eval_dir
 
 def subset(vcf_in_path, vcf_out_path, bed_regions):
@@ -102,10 +105,69 @@ def add_header(fname, header):
         f.write(header + '\n')
         f.writelines(lines)
 
-def run_ranger_training(ranger, data_path, n_trees, min_node_size, threads, out):
-    call([ranger, '--file', data_path, '--depvarname', 'TP', '--probability',
+def partition_data(data_fname, validation_fraction, training_fname, validation_fname):
+    with open(data_fname) as data_file:
+        header = data_file.readline()
+        with open(training_fname, 'w') as training_file, open(validation_fname, 'w') as validation_file:
+            training_file.write(header)
+            validation_file.write(header)
+            for example in data_file:
+                if random.random() < validation_fraction:
+                    validation_file.write(example)
+                else:
+                    training_file.write(example)
+
+def run_ranger_training(ranger, data_path, n_trees, min_node_size, threads, out, seed=None):
+    cmd = [ranger, '--file', data_path, '--depvarname', 'TP', '--probability',
           '--ntree', str(n_trees), '--targetpartitionsize', str(min_node_size),
-          '--nthreads', str(threads), '--outprefix', out, '--write', '--verbose'])
+          '--nthreads', str(threads), '--outprefix', out, '--write', '--verbose']
+    if seed is not None:
+        cmd += ['--seed', str(seed)]
+    call(cmd)
+
+def run_ranger_prediction(ranger, forest, data_path, threads, out):
+    call([ranger, '--file', data_path, '--predict', forest,
+          '--nthreads', str(threads), '--outprefix', out, '--verbose'])
+
+def read_predictions(prediction_fname):
+    with open(prediction_fname) as prediction_file:
+        next(prediction_file)
+        next(prediction_file)
+        next(prediction_file)
+        return np.array([float(line.strip().split()[0]) for line in prediction_file])
+
+def read_truth_labels(truth_fname):
+    with open(truth_fname) as truth_file:
+        true_label_index = truth_file.readline().strip().split().index('TP')
+        return np.array([int(line.strip().split()[true_label_index]) for line in truth_file])
+
+def select_training_hypterparameters(master_data_fname, options):
+    if type(options.trees) is int and type(options.min_node_size) is int:
+        return options.trees[0], options.min_node_size[0]
+    else:
+        # Use cross-validation to select hypterparameters
+        training_data_fname, validation_data_fname = master_data_fname.replace('.dat', '.train.data'), master_data_fname.replace('.dat', '.validate.data')
+        partition_data(master_data_fname, options.cross_validation_fraction, training_data_fname, validation_data_fname)
+        optimal_params = None, None
+        min_loss = None
+        cross_validation_temp_dir = join(options.out, 'cross_validation')
+        makedirs(cross_validation_temp_dir)
+        cross_validation_prefix = join(cross_validation_temp_dir, options.prefix)
+        prediction_fname = cross_validation_prefix + '.prediction'
+        forest_fname = cross_validation_prefix + '.forest'
+        for trees in ([options.trees] if type(options.trees) is int else options.trees):
+            for min_node_size in ([options.min_node_size] if type(options.min_node_size) is int else options.min_node_size):
+                print('Training cross validation forest with trees =', trees, 'min_node_size =', min_node_size)
+                run_ranger_training(options.ranger, training_data_fname, trees, min_node_size, options.threads, cross_validation_prefix, seed=10)
+                run_ranger_prediction(options.ranger, forest_fname, validation_data_fname, options.threads, cross_validation_prefix)
+                truth_labels, predictions = read_truth_labels(validation_data_fname), read_predictions(prediction_fname)
+                loss = log_loss(truth_labels, predictions)
+                print('Binary cross entropy =', loss)
+                if min_loss is None or loss < min_loss:
+                    min_loss = loss
+                    optimal_params = trees, min_node_size
+        shutil.rmtree(cross_validation_temp_dir)
+        return optimal_params
 
 def main(options):
     if not exists(options.out):
@@ -161,7 +223,8 @@ def main(options):
     ranger_header = ' '.join(default_measures + ['TP'])
     add_header(master_data_file, ranger_header)
     ranger_out_prefix = join(options.out, options.prefix)
-    run_ranger_training(options.ranger, master_data_file, options.trees, options.min_node_size, options.threads, ranger_out_prefix)
+    num_trees, min_node_size = select_training_hypterparameters(master_data_file, options)
+    run_ranger_training(options.ranger, master_data_file, num_trees, min_node_size, options.threads, ranger_out_prefix)
     try:
         remove(ranger_out_prefix + ".confusion")
     except FileNotFoundError:
@@ -225,13 +288,19 @@ if __name__ == '__main__':
                         required=True,
                         help='Ranger binary')
     parser.add_argument('--trees',
+                        nargs='+',
                         type=int,
                         default=300,
                         help='Number of trees to use in the random forest')
     parser.add_argument('--min_node_size',
+                        nargs='+',
                         type=int,
                         default=20,
                         help='Node size to stop growing trees, implicitly limiting tree depth')
+    parser.add_argument('--cross_validation_fraction',
+                        type=float,
+                        default=0.25,
+                        help='Fraction of data points to hold back for cross validation')
     parser.add_argument('-o', '--out',
                         type=str,
                         required=True,
