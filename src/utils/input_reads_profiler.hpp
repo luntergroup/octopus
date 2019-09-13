@@ -42,14 +42,6 @@ profile_reads(const std::vector<SampleName>& samples,
               const ReadManager& source,
               ReadSetProfileConfig config = ReadSetProfileConfig {});
 
-boost::optional<std::size_t>
-estimate_mean_read_size(const std::vector<SampleName>& samples,
-                        const InputRegionMap& input_regions,
-                        ReadManager& read_manager,
-                        unsigned max_sample_size = 1000);
-
-std::size_t default_read_size_estimate() noexcept;
-
 std::ostream& operator<<(std::ostream& os, const ReadSetProfile& profile);
 
 } // namespace octopus
