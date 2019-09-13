@@ -10,6 +10,7 @@
 
 #include "utils/read_stats.hpp"
 #include "utils/mappable_algorithms.hpp"
+#include "utils/append.hpp"
 
 namespace octopus {
 
@@ -27,6 +28,7 @@ ReadPipe::ReadPipe(const ReadManager& source, ReadTransformer transformer, ReadF
 , postfilter_transformer_ {}
 , downsampler_ {std::move(downsampler)}
 , samples_ {std::move(samples)}
+, fragment_size_ {}
 , debug_log_ {}
 {
     if (DEBUG_MODE) debug_log_ = logging::DebugLogger {};
@@ -41,6 +43,22 @@ ReadPipe::ReadPipe(const ReadManager& source, ReadTransformer prefilter_transfor
 , postfilter_transformer_ {std::move(postfilter_transformer)}
 , downsampler_ {std::move(downsampler)}
 , samples_ {std::move(samples)}
+, fragment_size_ {}
+, debug_log_ {}
+{
+    if (DEBUG_MODE) debug_log_ = logging::DebugLogger {};
+}
+
+ReadPipe::ReadPipe(const ReadManager& source, GenomicRegion::Size fragment_size, ReadTransformer prefilter_transformer,
+                   ReadFilterer filterer, ReadTransformer postfilter_transformer,
+                   boost::optional<Downsampler> downsampler, std::vector<SampleName> samples)
+: source_ {source}
+, prefilter_transformer_ {std::move(prefilter_transformer)}
+, filterer_ {std::move(filterer)}
+, postfilter_transformer_ {std::move(postfilter_transformer)}
+, downsampler_ {std::move(downsampler)}
+, samples_ {std::move(samples)}
+, fragment_size_ {fragment_size}
 , debug_log_ {}
 {
     if (DEBUG_MODE) debug_log_ = logging::DebugLogger {};
@@ -126,6 +144,39 @@ void shrink_to_fit(ReadMap& reads)
     }
 }
 
+void fragment(std::vector<AlignedRead>& reads, const unsigned fragment_length)
+{
+    if (reads.empty()) return;
+    std::vector<AlignedRead> fragments {};
+    fragments.reserve((sequence_size(reads.front()) / fragment_length + 1) * reads.size());
+    for (const auto& read : reads) {
+        auto chunks = split(read, fragment_length);
+        if (read.barcode().empty()) {
+            for (auto& chunk : chunks) chunk.set_barcode(read.name());
+        }
+        utils::append(std::move(chunks), fragments);
+    }
+    reads = std::move(fragments);
+}
+
+void erase_non_overlapped(std::vector<AlignedRead>& reads, const GenomicRegion& region)
+{
+    const auto not_overlapped = [&] (const auto& read) { return !overlaps(read, region); };
+    reads.erase(std::remove_if(std::begin(reads), std::end(reads), not_overlapped), std::end(reads));
+}
+
+void fragment(std::vector<AlignedRead>& reads, const unsigned fragment_length, const GenomicRegion& region)
+{
+    fragment(reads, fragment_length);
+    std::sort(std::begin(reads), std::end(reads));
+    erase_non_overlapped(reads, region);
+}
+
+void fragment(ReadManager::SampleReadMap& reads, const unsigned fragment_length, const GenomicRegion& region)
+{
+    for (auto& p : reads) fragment(p.second, fragment_length, region);
+}
+
 } // namespace
 
 ReadMap ReadPipe::fetch_reads(const GenomicRegion& region, boost::optional<Report&> report) const
@@ -175,6 +226,30 @@ ReadMap ReadPipe::fetch_reads(const GenomicRegion& region, boost::optional<Repor
         if (debug_log_) {
             stream(*debug_log_) << "There are " << count_reads(batch_reads) << " reads in " << region
                             << " after filtering";
+        }
+        if (fragment_size_) {
+            fragment(batch_reads, *fragment_size_, region);
+            if (debug_log_) {
+                stream(*debug_log_) << "Fragmented reads from " << region << " into " << count_reads(batch_reads) << " reads";
+            }
+            SampleFilterCountMap<SampleName, decltype(filterer_)> filter_counts {};
+            filter_counts.reserve(samples_.size());
+            for (const auto& sample : samples_) {
+                filter_counts[sample].reserve(filterer_.num_filters());
+            }
+            erase_filtered_reads(batch_reads, filter(batch_reads, filterer_, filter_counts));
+            if (filterer_.num_filters() > 0) {
+                for (const auto& p : filter_counts) {
+                    stream(*debug_log_) << "In sample " << p.first;
+                    if (!p.second.empty()) {
+                        for (const auto& c : p.second) {
+                            stream(*debug_log_) << c.second << " failed the " << c.first << " filter";
+                        }
+                    } else {
+                        *debug_log_ << "No reads were filtered";
+                    }
+                }
+            }
         }
         if (downsampler_) {
             auto reads = make_mappable_map(std::move(batch_reads));

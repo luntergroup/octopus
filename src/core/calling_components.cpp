@@ -395,18 +395,47 @@ boost::optional<fs::path> get_temp_directory(const options::OptionMap& options)
     }
 }
 
-auto estimate_read_size(const boost::optional<ReadSetProfile>& profile) noexcept
+namespace {
+    
+auto profile_reads_helper(const std::vector<SampleName>& samples,
+                          const InputRegionMap& input_regions,
+                          const ReadManager& source,
+                          const options::OptionMap& options)
 {
-    double result;
+    ReadSetProfileConfig config {};
+    config.fragment_size = options::max_read_length(options);
+    return profile_reads(samples, input_regions, source, config);
+}
+
+static const AlignedRead typical_illumina_read {
+    "HISEQ1:9:H8962ADXX:2:1108:11915:94551",
+    GenomicRegion {"1", 63492953, 63493103},
+    "GGCCAGAGAGAGAGTAGGTGAATCTGATCTCAGAATGTAAGCTCCTGACCAGTACAGCAGCCTGCATGCCCCCAGGAGCTGGCAGAGGAGGAGGAGGAGGAGGAGGCGGCAGATGATTCACAGCCACAATAGCATTGGCAACACTGGG",
+    AlignedRead::BaseQualityVector {33,35,35,35,34,32,27,35,35,35,35,35,36,35,35,35,35,35,35,35,35,35,35,35,35,35,35,35,35,36,35,36,36,36,35,35,35,35,35,34,34,32,35,35,34,34,34,34,35,35,35,35,35,34,34,36,36,36,34,36,34,35,37,37,37,39,39,39,38,39,39,41,41,41,41,41,41,41,41,41,41,41,41,40,41,41,41,41,41,41,41,41,40,38,40,40,40,41,40,40,40,40,41,41,41,40,41,41,41,41,40,40,40,41,41,41,41,41,41,41,41,41,41,41,41,40,39,41,41,41,41,41,41,41,41,39,39,39,39,39,37,37,37,37,37,34,34,34},
+    parse_cigar("83M3D65M"),
+    60,
+    AlignedRead::Flags {},
+    "None",
+    ""
+};
+
+} // namespace
+
+auto estimate_read_memory_footprint(const boost::optional<ReadSetProfile>& profile) noexcept
+{
+    MemoryFootprint result;
     if (profile) {
         result = profile->mean_read_bytes + profile->read_bytes_stdev;
+        if (profile->fragmented_template_median_bytes) {
+            result += *profile->fragmented_template_median_bytes;
+        }
     } else {
-        result = default_read_size_estimate();
-        logging::WarningLogger log{};
+        result = footprint(typical_illumina_read);
+        logging::WarningLogger log {};
         log << "Could not estimate read size from data, resorting to default";
     }
     auto debug_log = logging::get_debug_log();
-    if (debug_log) stream(*debug_log) << "Estimated read size is " << result << " bytes";
+    if (debug_log) stream(*debug_log) << "Estimated read memory footprint is " << result;
     return result;
 }
 
@@ -424,7 +453,8 @@ std::size_t calculate_max_num_reads(MemoryFootprint max_buffer_size, const boost
         }
         max_buffer_size = min_buffer_size;
     }
-    return max_buffer_size.bytes() / estimate_read_size(profile);
+    auto estimated_read_footprint = estimate_read_memory_footprint(profile);
+    return max_buffer_size.bytes() / estimated_read_footprint.bytes();
 }
 
 auto add_identifier(const fs::path& base, const std::string& identifier)
@@ -502,7 +532,7 @@ GenomeCallingComponents::Components::Components(ReferenceGenome&& reference, Rea
 , samples {extract_samples(options, this->read_manager)}
 , regions {get_search_regions(options, this->reference, this->read_manager)}
 , contigs {get_contigs(this->regions, this->reference, options::get_contig_output_order(options))}
-, reads_profile {profile_reads(this->samples, this->regions, this->read_manager)}
+, reads_profile {profile_reads_helper(this->samples, this->regions, this->read_manager, options)}
 , read_pipe {options::make_read_pipe(this->read_manager, this->reference, this->samples, options)}
 , haplotype_likelihood_model {options::make_haplotype_likelihood_model(options, this->reads_profile)}
 , caller_factory {options::make_caller_factory(this->reference, this->read_pipe, this->regions, options, this->reads_profile)}

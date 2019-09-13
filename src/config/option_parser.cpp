@@ -188,9 +188,13 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<bool>()->default_value(true),
      "Enable or disable all read transformations")
     
-    ("mask-low-quality-tails",
-     po::value<int>()->implicit_value(3),
-     "Masks read tail bases with base quality less than this")
+    ("max-base-quality",
+     po::value<int>(),
+     "Cap all base qualities to this value")
+     
+     ("mask-low-quality-tails",
+      po::value<int>()->implicit_value(3),
+      "Masks read tail bases with base quality less than this")
      
      ("mask-tails",
      po::value<int>()->implicit_value(1),
@@ -223,6 +227,10 @@ OptionMap parse_options(const int argc, const char** argv)
     ("mask-3prime-shifted-soft-clipped-heads",
     po::value<bool>()->default_value(false),
     "Mask soft clipped read head sequence that is a copy of a proximate 3' sequence")
+
+    ("split-long-reads",
+     po::value<bool>()->default_value(false),
+     "Split reads longer than 'max-read-length' into linked fragments")
     
     ("read-filtering",
      po::value<bool>()->default_value(true),
@@ -257,7 +265,7 @@ OptionMap parse_options(const int argc, const char** argv)
      "Filters reads shorter than this")
     
     ("max-read-length",
-     po::value<int>(),
+     po::value<int>()->default_value(10'000),
      "Filter reads longer than this")
     
     ("allow-marked-duplicates",
@@ -370,8 +378,8 @@ OptionMap parse_options(const int argc, const char** argv)
      "Gap size used to generate local assembly fallback kmers")
     
     ("max-region-to-assemble",
-     po::value<int>()->default_value(400),
-     "Maximum region size that can be used for local assembly")
+     po::value<int>()->default_value(600),
+     "The maximum region size that can be used for local assembly")
     
     ("max-assemble-region-overlap",
      po::value<int>()->default_value(200),
@@ -1091,7 +1099,7 @@ void validate(const OptionMap& vm)
         "max-region-to-assemble", "fallback-kmer-gap", "organism-ploidy",
         "max-haplotypes", "haplotype-holdout-threshold", "haplotype-overflow",
         "max-genotypes", "max-joint-genotypes", "max-somatic-haplotypes", "max-clones",
-        "max-vb-seeds", "max-indel-errors"
+        "max-vb-seeds", "max-indel-errors", "max-base-quality"
     };
     const std::vector<std::string> probability_options {
         "snp-heterozygosity", "snp-heterozygosity-stdev", "indel-heterozygosity",

@@ -20,7 +20,8 @@ namespace octopus {
 struct ReadSetProfileConfig
 {
     unsigned max_samples_per_sample = 10;
-    unsigned max_sample_size = 100'000;
+    unsigned max_sample_size = 10'000;
+    boost::optional<AlignedRead::NucleotideSequence::size_type> fragment_size = boost::none;
 };
 
 struct ReadSetProfile
@@ -32,6 +33,7 @@ struct ReadSetProfile
     std::vector<std::size_t> sample_depth_stdev;
     AlignedRead::NucleotideSequence::size_type max_read_length, median_read_length;
     AlignedRead::MappingQuality max_mapping_quality, median_mapping_quality, rmq_mapping_quality;
+    boost::optional<std::size_t> fragmented_template_median_bytes;
 };
 
 boost::optional<ReadSetProfile>
@@ -39,14 +41,6 @@ profile_reads(const std::vector<SampleName>& samples,
               const InputRegionMap& input_regions,
               const ReadManager& source,
               ReadSetProfileConfig config = ReadSetProfileConfig {});
-
-boost::optional<std::size_t>
-estimate_mean_read_size(const std::vector<SampleName>& samples,
-                        const InputRegionMap& input_regions,
-                        ReadManager& read_manager,
-                        unsigned max_sample_size = 1000);
-
-std::size_t default_read_size_estimate() noexcept;
 
 std::ostream& operator<<(std::ostream& os, const ReadSetProfile& profile);
 

@@ -58,10 +58,10 @@ public:
         ~Segment() = default;
         
         const GenomicRegion::ContigName& contig_name() const;
-        
         GenomicRegion::Position begin() const noexcept;
-        
         GenomicRegion::Size inferred_template_length() const noexcept;
+        
+        Flags flags() const noexcept;
         
         bool is_marked_unmapped() const;
         bool is_marked_reverse_mapped() const;
@@ -119,6 +119,7 @@ public:
     const Segment& next_segment() const;
     Flags flags() const noexcept;
     const NucleotideSequence& barcode() const noexcept;
+    void set_barcode(NucleotideSequence barcode) noexcept;
     
     void realign(GenomicRegion new_region, CigarString new_cigar) noexcept;
     
@@ -262,6 +263,8 @@ CigarString copy_cigar(const AlignedRead& read, const GenomicRegion& region);
 AlignedRead copy(const AlignedRead& read, const GenomicRegion& region);
 AlignedRead::NucleotideSequence copy_sequence(const AlignedRead& read, const GenomicRegion& region);
 AlignedRead::BaseQualityVector copy_base_qualities(const AlignedRead& read, const GenomicRegion& region);
+
+std::vector<AlignedRead> split(const AlignedRead& read, GenomicRegion::Size chunk_length, bool append_index_to_read_name = true);
 
 MemoryFootprint footprint(const AlignedRead& read) noexcept;
 

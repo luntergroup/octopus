@@ -710,12 +710,22 @@ bool assembler_candidate_variant_generator_enabled(const OptionMap& options)
         && !is_fast_mode(options);
 }
 
+AlignedRead::BaseQuality get_max_base_quality(const OptionMap& options)
+{
+    static constexpr AlignedRead::BaseQuality hard_max {125};
+    if (options.count("max-base-quality")) {
+        return std::min(options.at("max-base-quality").as<int>(), static_cast<int>(hard_max));
+    } else {
+        return hard_max;
+    }
+}
+
 auto make_read_transformers(const ReferenceGenome& reference, const OptionMap& options)
 {
     using namespace octopus::readpipe;
     ReadTransformer prefilter_transformer {}, postfilter_transformer {};
     prefilter_transformer.add(CapitaliseBases {});
-    prefilter_transformer.add(CapBaseQualities {125});
+    prefilter_transformer.add(CapBaseQualities {get_max_base_quality(options)});
     if (options.at("read-transforms").as<bool>()) {
         if (is_set("mask-tails", options)) {
             const auto mask_length = static_cast<MaskTail::Length>(options.at("mask-tails").as<int>());
@@ -775,6 +785,20 @@ bool is_read_filtering_enabled(const OptionMap& options)
     return options.at("read-filtering").as<bool>();
 }
 
+bool split_long_reads(const OptionMap& options)
+{
+    return options.at("split-long-reads").as<bool>();
+}
+
+boost::optional<AlignedRead::NucleotideSequence::size_type> max_read_length(const OptionMap& options)
+{
+    if (split_long_reads(options) && is_set("max-read-length", options)) {
+        return as_unsigned("max-read-length", options);
+    } else {
+        return boost::none;
+    }
+}
+
 auto make_read_filterer(const OptionMap& options)
 {
     using std::make_unique;
@@ -809,10 +833,10 @@ auto make_read_filterer(const OptionMap& options)
         result.add(make_unique<HasSufficientGoodBaseFraction>(min_base_quality, min_good_base_fraction));
     }
     if (is_set("min-read-length", options)) {
-        result.add(make_unique<IsShort>(as_unsigned("min-read-length", options)));
+        result.add(make_unique<IsLong>(as_unsigned("min-read-length", options)));
     }
-    if (is_set("max-read-length", options)) {
-        result.add(make_unique<IsLong>(as_unsigned("max-read-length", options)));
+    if (is_set("max-read-length", options) && !split_long_reads(options)) {
+        result.add(make_unique<IsShort>(as_unsigned("max-read-length", options)));
     }
     if (!options.at("allow-marked-duplicates").as<bool>()) {
         result.add(make_unique<IsNotMarkedDuplicate>());
@@ -863,8 +887,14 @@ ReadPipe make_read_pipe(ReadManager& read_manager, const ReferenceGenome& refere
 {
     auto transformers = make_read_transformers(reference, options);
     if (transformers.second.num_transforms() > 0) {
-        return ReadPipe {read_manager, std::move(transformers.first), make_read_filterer(options),
-                         std::move(transformers.second), make_downsampler(options), std::move(samples)};
+        if (split_long_reads(options)) {
+            return ReadPipe {read_manager, as_unsigned("max-read-length", options), std::move(transformers.first),
+                             make_read_filterer(options),std::move(transformers.second), make_downsampler(options),
+                             std::move(samples)};
+        } else {
+            return ReadPipe {read_manager, std::move(transformers.first), make_read_filterer(options),
+                             std::move(transformers.second), make_downsampler(options), std::move(samples)};
+        }
     } else {
         return ReadPipe {read_manager, std::move(transformers.first), make_read_filterer(options),
                          make_downsampler(options), std::move(samples)};

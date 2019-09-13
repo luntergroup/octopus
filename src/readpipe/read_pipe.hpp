@@ -48,14 +48,27 @@ public:
     
     ReadPipe() = delete;
     
-    ReadPipe(const ReadManager& source, std::vector<SampleName> samples);
-    
-    ReadPipe(const ReadManager& source, ReadTransformer transformer,
-             ReadFilterer filterer, boost::optional<Downsampler> downsampler,
+    ReadPipe(const ReadManager& source,
              std::vector<SampleName> samples);
     
-    ReadPipe(const ReadManager& manager, ReadTransformer prefilter_transformer,
-             ReadFilterer filterer, ReadTransformer postfilter_transformer,
+    ReadPipe(const ReadManager& source,
+             ReadTransformer transformer,
+             ReadFilterer filterer,
+             boost::optional<Downsampler> downsampler,
+             std::vector<SampleName> samples);
+    
+    ReadPipe(const ReadManager& manager,
+             ReadTransformer prefilter_transformer,
+             ReadFilterer filterer,
+             ReadTransformer postfilter_transformer,
+             boost::optional<Downsampler> downsampler,
+             std::vector<SampleName> samples);
+    
+    ReadPipe(const ReadManager& manager,
+             GenomicRegion::Size fragment_size,
+             ReadTransformer prefilter_transformer,
+             ReadFilterer filterer,
+             ReadTransformer postfilter_transformer,
              boost::optional<Downsampler> downsampler,
              std::vector<SampleName> samples);
     
@@ -84,6 +97,7 @@ private:
     boost::optional<ReadTransformer> postfilter_transformer_;
     boost::optional<Downsampler> downsampler_;
     std::vector<SampleName> samples_;
+    boost::optional<GenomicRegion::Size> fragment_size_;
     mutable boost::optional<logging::DebugLogger> debug_log_;
 };
 

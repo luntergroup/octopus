@@ -10,9 +10,14 @@ HasWellFormedCigar::HasWellFormedCigar() : BasicReadFilter {"HasWellFormedCigar"
 
 HasWellFormedCigar::HasWellFormedCigar(std::string name) : BasicReadFilter {std::move(name)} {}
 
+bool is_all_clipped(const CigarString& cigar) noexcept
+{
+    return cigar.size() == 1 && is_clipping(cigar.front());
+}
+
 bool HasWellFormedCigar::passes(const AlignedRead& read) const noexcept
 {
-    return is_valid(read.cigar()) && is_minimal(read.cigar());
+    return is_valid(read.cigar()) && is_minimal(read.cigar()) && !is_all_clipped(read.cigar());
 }
 
 HasValidBaseQualities::HasValidBaseQualities() : BasicReadFilter {"HasValidBaseQualities"} {}
