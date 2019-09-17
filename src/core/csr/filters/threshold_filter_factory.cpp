@@ -95,6 +95,7 @@ void init(MeasureToFilterKeyMap& filter_names)
     filter_names[name<DuplicateConcordance>()]        = lowDuplicateConcordance;
     filter_names[name<DuplicateAlleleDepth>()]        = highDuplicateAlleleDepth;
     filter_names[name<DuplicateAlleleFraction>()]     = highDuplicateAlleleFraction;
+    filter_names[name<ErrorRate>()]                   = highErrorRate;
 }
 
 auto get_vcf_filter_name(const MeasureWrapper& measure, const std::string& comparator, const double threshold_target)
