@@ -221,7 +221,7 @@ CigarString minimise(const CigarString& cigar)
 
 auto get_match_type(const CigarOperation::Flag haplotype, const CigarOperation::Flag read) noexcept
 {
-    assert(is_match(haplotype) && is_match(read));
+    assert(is_match_or_substitution(haplotype) && is_match_or_substitution(read));
     using Flag = CigarOperation::Flag;
     if ((haplotype == Flag::substitution && read == Flag::sequenceMatch)
         || (haplotype == Flag::sequenceMatch && read == Flag::substitution)) {
@@ -244,10 +244,10 @@ CigarString rebase(const CigarString& read_to_haplotype, const CigarString& hapl
     result.reserve(haplotypes_ops.size());
     auto hap_flag_itr = std::cbegin(haplotypes_ops);
     for (const auto& read_op : read_to_haplotype) {
-        if (is_match(read_op)) {
+        if (is_match_or_substitution(read_op)) {
             for (unsigned n {0}; n < read_op.size();) {
                 assert(hap_flag_itr != std::cend(haplotypes_ops));
-                if (is_match(*hap_flag_itr)) {
+                if (is_match_or_substitution(*hap_flag_itr)) {
                     result.emplace_back(1, get_match_type(*hap_flag_itr, read_op.flag()));
                     ++n;
                 } else {
@@ -449,7 +449,7 @@ void rebase_not_overlapped(AlignedRead& read, const GenomicRegion& haplotype_reg
             assert(supported_insertion_size <= called_insertion_size);
             if (supported_insertion_size > 0) {
                 padded_haplotype_cigar.front().set_size(supported_insertion_size);
-                if (is_match(padded_haplotype_cigar.back())) {
+                if (is_match_or_substitution(padded_haplotype_cigar.back())) {
                     increment_size(padded_haplotype_cigar.back(), supported_insertion_size);
                 } else {
                     padded_haplotype_cigar.emplace_back(supported_insertion_size, CigarOperation::Flag::sequenceMatch);
@@ -460,7 +460,7 @@ void rebase_not_overlapped(AlignedRead& read, const GenomicRegion& haplotype_reg
         }
         if (reference_size(read.cigar()) > sequence_size(padded_haplotype_cigar)) {
             const auto pad = reference_size(read.cigar()) - sequence_size(padded_haplotype_cigar);
-            if (is_match(padded_haplotype_cigar.back())) {
+            if (is_match_or_substitution(padded_haplotype_cigar.back())) {
                 increment_size(padded_haplotype_cigar.back(), pad);
             } else {
                 padded_haplotype_cigar.emplace_back(pad, CigarOperation::Flag::sequenceMatch);

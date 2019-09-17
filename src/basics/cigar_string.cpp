@@ -100,17 +100,32 @@ bool advances_sequence(const CigarOperation& op) noexcept
 bool is_match(CigarOperation::Flag flag) noexcept
 {
     using Flag = CigarOperation::Flag;
-    switch (flag) {
-        case Flag::alignmentMatch:
-        case Flag::sequenceMatch:
-        case Flag::substitution: return true;
-        default: return false;
-    }
+    return flag == Flag::alignmentMatch || flag == Flag::sequenceMatch;
 }
 
 bool is_match(const CigarOperation& op) noexcept
 {
     return is_match(op.flag());
+}
+
+bool is_substitution(CigarOperation::Flag flag) noexcept
+{
+    return flag == CigarOperation::Flag::substitution;
+}
+
+bool is_substitution(const CigarOperation& op) noexcept
+{
+    return is_substitution(op.flag());
+}
+
+bool is_match_or_substitution(CigarOperation::Flag flag) noexcept
+{
+    return is_match(flag) || is_substitution(flag);
+}
+
+bool is_match_or_substitution(const CigarOperation& op) noexcept
+{
+    return is_match_or_substitution(op.flag());
 }
 
 bool is_insertion(CigarOperation::Flag flag) noexcept
@@ -377,7 +392,7 @@ CigarString collapse_matches(const CigarString& cigar)
     CigarString result {};
     result.reserve(cigar.size());
     for (auto match_end_itr = std::begin(cigar); match_end_itr != std::cend(cigar); ) {
-        const auto f_is_match = [] (const CigarOperation& op) { return is_match(op); };
+        const auto f_is_match = [] (const CigarOperation& op) { return is_match_or_substitution(op); };
         const auto match_begin_itr = std::find_if(match_end_itr, std::end(cigar), f_is_match);
         result.insert(std::cend(result), match_end_itr, match_begin_itr);
         if (match_begin_itr == std::cend(cigar)) break;

@@ -165,7 +165,7 @@ bool has_low_quality_match(const AlignedRead& read, const AlignedRead::BaseQuali
     auto quality_itr = std::cbegin(read.base_qualities());
     return std::any_of(std::cbegin(read.cigar()), std::cend(read.cigar()),
                        [&] (const auto& op) {
-                           if (is_match(op)) {
+                           if (is_match_or_substitution(op)) {
                                auto result = std::any_of(quality_itr, std::next(quality_itr, op.size()),
                                                          [=] (auto q) { return q < good_quality; });
                                std::advance(quality_itr, op.size());
@@ -218,7 +218,7 @@ auto transform_low_quality_matches_to_reference(AlignedRead::NucleotideSequence 
             ++ref_itr;
         }
         const auto op = *cigar_itr++;
-        if (is_match(op)) {
+        if (is_match_or_substitution(op)) {
             const auto ref_base = *ref_itr++; // Don't forget to increment ref_itr!
             if (base_quality >= min_quality) {
                 return read_base;

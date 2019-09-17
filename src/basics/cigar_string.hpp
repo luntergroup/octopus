@@ -69,6 +69,10 @@ bool advances_sequence(const CigarOperation& op) noexcept;
 
 bool is_match(CigarOperation::Flag flag) noexcept;
 bool is_match(const CigarOperation& op) noexcept;
+bool is_substitution(CigarOperation::Flag flag) noexcept;
+bool is_substitution(const CigarOperation& op) noexcept;
+bool is_match_or_substitution(CigarOperation::Flag flag) noexcept;
+bool is_match_or_substitution(const CigarOperation& op) noexcept;
 bool is_insertion(CigarOperation::Flag flag) noexcept;
 bool is_insertion(const CigarOperation& op) noexcept;
 bool is_deletion(CigarOperation::Flag flag) noexcept;
