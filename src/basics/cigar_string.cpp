@@ -211,6 +211,18 @@ bool is_soft_clipped(const CigarString& cigar) noexcept
     return is_front_soft_clipped(cigar) || is_back_soft_clipped(cigar);
 }
 
+int sum_matches(const CigarString& cigar) noexcept
+{
+    const static auto add_match = [] (auto total, const CigarOperation& op) noexcept { return total + (is_match(op) ? op.size() : 0); };
+    return std::accumulate(std::cbegin(cigar), std::cend(cigar), 0, add_match);
+}
+
+int sum_non_matches(const CigarString& cigar) noexcept
+{
+    const static auto add_non_match = [] (auto total, const CigarOperation& op) noexcept { return total + (is_match(op) ? 0 : op.size()); };
+    return std::accumulate(std::cbegin(cigar), std::cend(cigar), 0, add_non_match);
+}
+
 bool has_indel(const CigarString& cigar) noexcept
 {
     return std::find_if(std::cbegin(cigar), std::cend(cigar), [] (const auto& op) { return is_indel(op); }) != std::cend(cigar);
