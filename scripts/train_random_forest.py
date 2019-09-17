@@ -180,7 +180,8 @@ def main(options):
         call_region_beds = len(options.reads) * [call_region_beds[0]]
     for ref in fasta_refs:
         rtg_sdf_ref = basename(ref) + '.tmp.sdf'
-        make_sdf_ref(ref, options.rtg, rtg_sdf_ref)
+        if rtg_sdf_ref not in rtg_sdf_refs:
+            make_sdf_ref(ref, options.rtg, rtg_sdf_ref)
         rtg_sdf_refs.append(rtg_sdf_ref)
         tmp_dirs.append(rtg_sdf_ref)
     if len(options.reference) == 1 and len(options.reads) > 1:
