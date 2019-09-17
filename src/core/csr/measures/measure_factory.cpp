@@ -64,6 +64,7 @@ void init(MeasureMakerMap& measure_makers)
     measure_makers[name<DuplicateConcordance>()]        = [] () { return make_wrapped_measure<DuplicateConcordance>(); };
     measure_makers[name<DuplicateAlleleDepth>()]        = [] () { return make_wrapped_measure<DuplicateAlleleDepth>(); };
     measure_makers[name<DuplicateAlleleFraction>()]     = [] () { return make_wrapped_measure<DuplicateAlleleFraction>(); };
+    measure_makers[name<ErrorRate>()]                   = [] () { return make_wrapped_measure<ErrorRate>(); };
 }
 
 class BadParameterList : public UserError

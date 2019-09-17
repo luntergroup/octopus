@@ -51,5 +51,6 @@
 #include "core/csr/measures/duplicate_concordance.hpp"
 #include "core/csr/measures/duplicate_allele_depth.hpp"
 #include "core/csr/measures/duplicate_allele_fraction.hpp"
+#include "core/csr/measures/error_rate.hpp"
 
 #endif
