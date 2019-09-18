@@ -725,6 +725,21 @@ AlignedRead::BaseQuality get_max_base_quality(const OptionMap& options)
     }
 }
 
+bool soft_clip_masking_enabled(const OptionMap& options)
+{
+    return options.at("mask-soft-clipped-bases").as<bool>();
+}
+
+bool adapter_masking_enabled(const OptionMap& options)
+{
+    return !options.at("disable-adapter-masking").as<bool>();
+}
+
+bool overlap_masking_enabled(const OptionMap& options)
+{
+    return !options.at("disable-overlap-masking").as<bool>();
+}
+
 auto make_read_transformers(const ReferenceGenome& reference, const OptionMap& options)
 {
     using namespace octopus::readpipe;
@@ -740,7 +755,7 @@ auto make_read_transformers(const ReferenceGenome& reference, const OptionMap& o
             const auto threshold = static_cast<AlignedRead::BaseQuality>(as_unsigned("mask-low-quality-tails", options));
             prefilter_transformer.add(MaskLowQualityTails {threshold});
         }
-        if (options.at("soft-clip-masking").as<bool>()) {
+        if (soft_clip_masking_enabled(options)) {
             const auto boundary_size = as_unsigned("mask-soft-clipped-boundary-bases", options);
             if (boundary_size > 0) {
                 if (is_set("soft-clip-mask-threshold", options)) {
@@ -766,11 +781,11 @@ auto make_read_transformers(const ReferenceGenome& reference, const OptionMap& o
                 }
             }
         }
-        if (options.at("adapter-masking").as<bool>()) {
+        if (adapter_masking_enabled(options)) {
             prefilter_transformer.add(MaskAdapters {});
             postfilter_transformer.add(MaskTemplateAdapters {});
         }
-        if (options.at("overlap-masking").as<bool>()) {
+        if (overlap_masking_enabled(options)) {
             postfilter_transformer.add(MaskStrandOfDuplicatedBases {});
         }
         if (options.at("mask-inverted-soft-clipping").as<bool>()) {
@@ -1412,7 +1427,7 @@ auto get_max_indicator_join_distance() noexcept
 
 bool allow_flank_scoring(const OptionMap& options)
 {
-    return options.at("inactive-flank-scoring").as<bool>() && !is_very_fast_mode(options);
+    return !options.at("disable-inactive-flank-scoring").as<bool>() && !is_very_fast_mode(options);
 }
 
 auto make_error_model(const OptionMap& options)
@@ -1453,11 +1468,16 @@ AlignedRead::MappingQuality calculate_mapping_quality_cap_trigger(const OptionMa
     }
 }
 
+bool model_mapping_quality(const OptionMap& options)
+{
+    return !options.at("dont-model-mapping-quality").as<bool>();;
+}
+
 HaplotypeLikelihoodModel make_haplotype_likelihood_model(const OptionMap& options, const boost::optional<ReadSetProfile>& read_profile)
 {
     auto error_model = make_error_model(options);
     HaplotypeLikelihoodModel::Config config {};
-    config.use_mapping_quality = options.at("model-mapping-quality").as<bool>();
+    config.use_mapping_quality = model_mapping_quality(options);
     config.use_flank_state = allow_flank_scoring(options);
     if (config.use_mapping_quality) {
         config.mapping_quality_cap = calculate_mapping_quality_cap(options, read_profile);
@@ -1820,6 +1840,11 @@ bool use_linked_reads(const OptionMap& options)
     return options.at("read-linkage").as<ReadLinkage>() == ReadLinkage::linked;
 }
 
+bool protect_reference_haplotype(const OptionMap& options)
+{
+    return !options.at("dont-protect-reference-haplotype").as<bool>();
+}
+
 CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& read_pipe,
                                   const InputRegionMap& regions, const OptionMap& options,
                                   const boost::optional<ReadSetProfile> read_profile)
@@ -1868,14 +1893,14 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
     vc_builder.set_ploidies(get_ploidy_map(options));
     vc_builder.set_max_haplotypes(get_max_haplotypes(options));
     vc_builder.set_haplotype_extension_threshold(options.at("haplotype-extension-threshold").as<Phred<double>>());
-    vc_builder.set_reference_haplotype_protection(options.at("protect-reference-haplotype").as<bool>());
+    vc_builder.set_reference_haplotype_protection(protect_reference_haplotype(options));
     auto min_phase_score = options.at("min-phase-score").as<Phred<double>>();
     vc_builder.set_min_phase_score(min_phase_score);
     if (!options.at("use-uniform-genotype-priors").as<bool>()) {
         vc_builder.set_snp_heterozygosity(options.at("snp-heterozygosity").as<float>());
         vc_builder.set_indel_heterozygosity(options.at("indel-heterozygosity").as<float>());
     }
-    vc_builder.set_model_based_haplotype_dedup(options.at("dedup-haplotypes-with-prior-model").as<bool>());
+    vc_builder.set_model_based_haplotype_dedup(true);
     vc_builder.set_independent_genotype_prior_flag(options.at("use-independent-genotype-priors").as<bool>());
     if (caller == "cancer") {
         if (is_set("normal-sample", options)) {
@@ -1924,7 +1949,7 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
 
 bool is_call_filtering_requested(const OptionMap& options) noexcept
 {
-    return options.at("call-filtering").as<bool>() || options.count("annotations") > 0;
+    return !options.at("disable-call-filtering").as<bool>() || options.count("annotations") > 0;
 }
 
 std::string get_germline_filter_expression(const OptionMap& options)
@@ -1949,7 +1974,7 @@ std::string get_refcall_filter_expression(const OptionMap& options)
 
 bool is_filter_training_mode(const OptionMap& options)
 {
-    return !options.at("call-filtering").as<bool>() && options.count("annotations") > 0;
+    return options.at("disable-call-filtering").as<bool>() && options.count("annotations") > 0;
 }
 
 bool all_active_measure_annotations_requested(const OptionMap& options)
@@ -2063,7 +2088,7 @@ make_call_filter_factory(const ReferenceGenome& reference, ReadPipe& read_pipe, 
 
 bool use_calling_read_pipe_for_call_filtering(const OptionMap& options) noexcept
 {
-    return options.at("use-calling-reads-for-filtering").as<bool>();
+    return options.at("use-preprocessed-reads-for-filtering").as<bool>();
 }
 
 bool keep_unfiltered_calls(const OptionMap& options) noexcept

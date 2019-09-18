@@ -21,8 +21,8 @@ def make_sdf_ref(fasta_ref, rtg, out):
 
 def run_octopus(octopus, ref_path, bam_path, regions_bed, threads, out_path, config=None):
     octopus_cmd = [octopus, '-R', ref_path, '-I', bam_path, '-t', regions_bed,
-                   '-f', 'off', '--annotations', 'forest',
-                   '--legacy', '--threads', str(threads), '-o', out_path]
+                   '--disable-call-filtering', '--annotations', 'forest',
+                   '--threads', str(threads), '-o', out_path]
     if config is not None:
         octopus_cmd += ['--config', config]
     call(octopus_cmd)
@@ -38,8 +38,7 @@ def call_variants(octopus, ref_path, bam_path, regions_bed, threads, out_dir, co
     bam_id = get_bam_id(bam_path)
     out_vcf = join(out_dir, "octopus." + bam_id + "." + ref_id + ".vcf.gz")
     run_octopus(octopus, ref_path, bam_path, regions_bed, threads, out_vcf, config=config)
-    legacy_vcf = out_vcf.replace(".vcf.gz", ".legacy.vcf.gz")
-    return legacy_vcf
+    return out_vcf
 
 def run_rtg(rtg, rtg_ref_path, truth_vcf_path, bed_regions, confident_bed_path, octopus_vcf_path, out_dir):
     call([rtg, 'vcfeval', '-b', truth_vcf_path, '-t', rtg_ref_path,

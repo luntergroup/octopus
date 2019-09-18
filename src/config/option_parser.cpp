@@ -188,17 +188,17 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<int>(),
      "Cap all base qualities to this value")
      
-     ("mask-low-quality-tails",
-      po::value<int>()->implicit_value(3),
-      "Masks read tail bases with base quality less than this")
+    ("mask-low-quality-tails",
+     po::value<int>()->implicit_value(3),
+     "Masks read tail bases with base quality less than this")
      
-     ("mask-tails",
+    ("mask-tails",
      po::value<int>()->implicit_value(1),
-     "Unconditionally mask this many read tail sbases")
+     "Unconditionally mask this many read tail bases")
      
-    ("soft-clip-masking",
-     po::value<bool>()->default_value(true),
-     "Turn on or off soft clip base recalibration")
+    ("mask-soft-clipped-bases",
+     po::bool_switch()->default_value(false),
+     "Enable masking of soft clipped bases")
     
     ("soft-clip-mask-threshold",
      po::value<int>()->implicit_value(3),
@@ -208,24 +208,24 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<int>()->default_value(2),
      "Masks this number of adjacent non soft clipped bases when soft clipped bases are present")
     
-    ("adapter-masking",
-     po::value<bool>()->default_value(true),
-     "Enable adapter detection and masking")
+    ("disable-adapter-masking",
+     po::bool_switch()->default_value(false),
+     "Disable adapter detection and masking")
     
-    ("overlap-masking",
-     po::value<bool>()->default_value(true),
-     "Enable read segment overlap masking")
+    ("disable-overlap-masking",
+     po::bool_switch()->default_value(false),
+     "Disable read segment overlap masking")
      
     ("mask-inverted-soft-clipping",
-    po::value<bool>()->default_value(false),
+    po::bool_switch()->default_value(false),
     "Mask soft clipped sequence that is an inverted copy of a proximate sequence")
     
     ("mask-3prime-shifted-soft-clipped-heads",
-    po::value<bool>()->default_value(false),
+    po::bool_switch()->default_value(false),
     "Mask soft clipped read head sequence that is a copy of a proximate 3' sequence")
 
     ("split-long-reads",
-     po::value<bool>()->default_value(false),
+     po::bool_switch()->default_value(false),
      "Split reads longer than 'max-read-length' into linked fragments")
     
     ("consider-unmapped-reads",
@@ -336,7 +336,7 @@ OptionMap parse_options(const int argc, const char** argv)
      "Only variants with quality above this value are considered for candidate generation")
     
     ("use-filtered-source-candidates",
-     po::value<bool>()->default_value(false),
+     po::bool_switch()->default_value(false),
      "Use variants from source VCF records that have been filtered")
     
     ("min-pileup-base-quality",
@@ -440,13 +440,9 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<Phred<double>>()->default_value(Phred<double> {100.0}, "100"),
      "Haplotypes with posterior probability less than this can be filtered before extension")
     
-    ("dedup-haplotypes-with-prior-model",
-     po::value<bool>()->default_value(true),
-     "Remove duplicate haplotypes using mutation prior model")
-    
-    ("protect-reference-haplotype",
-     po::value<bool>()->default_value(true),
-     "Protect the reference haplotype from filtering")
+    ("dont-protect-reference-haplotype",
+     po::bool_switch()->default_value(false),
+     "Do not protect the reference haplotype from filtering")
     
     ("bad-region-tolerance",
      po::value<BadRegionTolerance>()->default_value(BadRegionTolerance::normal),
@@ -524,16 +520,16 @@ OptionMap parse_options(const int argc, const char** argv)
      "Use independent genotype priors for joint calling")
     
     ("model-posterior",
-     po::value<bool>(),
+     po::bool_switch()->default_value(false),
      "Calculate model posteriors for every call")
     
-    ("inactive-flank-scoring",
-     po::value<bool>()->default_value(true),
-     "Enable or disable additional calculation to adjust alignment score to account for inactive candidate variants")
+    ("disable-inactive-flank-scoring",
+     po::bool_switch()->default_value(false),
+     "Disable additional calculation to adjust alignment score to account for inactive candidate variants")
     
-    ("model-mapping-quality",
-     po::value<bool>()->default_value(true),
-     "Include read mapping quality information in the haplotype likelihood calculation")
+    ("dont-model-mapping-quality",
+     po::bool_switch()->default_value(false),
+     "Don't use read mapping quality information in the haplotype likelihood calculation")
     
     ("sequence-error-model",
      po::value<std::string>()->default_value("PCR-free.HiSeq-2500"),
@@ -652,11 +648,11 @@ OptionMap parse_options(const int argc, const char** argv)
     "Allelic dropout concentration parameter")
     ;
     
-    po::options_description call_filtering("Variant filtering");
+    po::options_description call_filtering("Call filtering and annotation");
     call_filtering.add_options()
-    ("call-filtering,f",
-     po::value<bool>()->default_value(true),
-     "Turn variant call filtering on or off")
+    ("disable-call-filtering",
+     po::bool_switch()->default_value(false),
+     "Disable call filtering")
     
     ("filter-expression",
      po::value<std::string>()->default_value("QUAL < 10 | MQ < 10 | MP < 10 | AF < 0.05 | SB > 0.98 | BQ < 15 | DP < 1"),
@@ -674,9 +670,9 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<std::string>()->default_value("QUAL < 2 | GQ < 20 | MQ < 10 | DP < 10 | MF > 0.2"),
      "Boolean expression to use to filter homozygous reference calls")
     
-    ("use-calling-reads-for-filtering",
-     po::value<bool>()->default_value(false),
-     "Use the original reads used for variant calling for filtering")
+    ("use-preprocessed-reads-for-filtering",
+     po::bool_switch()->default_value(false),
+     "Use preprocessed reads, as used for calling, for call filtering")
     
     ("keep-unfiltered-calls",
      po::bool_switch()->default_value(false),
