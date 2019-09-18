@@ -449,7 +449,7 @@ void IndelProfiler::evaluate_support(const Genotype<Haplotype>& genotype, ReadCo
     buffer.shrink_to_fit();
     for (auto& p : haplotype_support) {
         safe_realign(p.second, p.first, config_.alignment_model);
-        if (config_.check_read_misalignments) {
+        if (config_.ignore_likely_misaligned_reads) {
             p.second.erase(std::remove_if(std::begin(p.second), std::end(p.second),
                                           [this] (const auto& read) { return is_likely_misaligned(read, config_.alignment_model); }),
                            std::end(p.second));

@@ -40,7 +40,7 @@ public:
         unsigned min_period = 1, max_period = 30;
         unsigned min_periods = 1, max_periods = 50;
         unsigned max_length = 200;
-        bool check_read_misalignments = true;
+        bool ignore_likely_misaligned_reads = true;
         Haplotype::NucleotideSequence complex_motif = "N";
     };
     
