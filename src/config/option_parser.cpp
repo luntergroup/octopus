@@ -178,11 +178,11 @@ OptionMap parse_options(const int argc, const char** argv)
      "Same as --fast but also disables inactive flank scoring")
     ;
     
-    po::options_description read_preprocessing("Read pre-processing");
+    po::options_description read_preprocessing("Read preprocessing");
     read_preprocessing.add_options()
-    ("read-transforms",
-     po::value<bool>()->default_value(true),
-     "Enable or disable all read transformations")
+    ("disable-read-preprocessing",
+     po::bool_switch()->default_value(false),
+     "Disable all read preprocessing")
     
     ("max-base-quality",
      po::value<int>(),
@@ -227,10 +227,6 @@ OptionMap parse_options(const int argc, const char** argv)
     ("split-long-reads",
      po::value<bool>()->default_value(false),
      "Split reads longer than 'max-read-length' into linked fragments")
-    
-    ("read-filtering",
-     po::value<bool>()->default_value(true),
-     "Enable or disable all read filters")
     
     ("consider-unmapped-reads",
      po::bool_switch()->default_value(false),

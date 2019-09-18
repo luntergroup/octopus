@@ -710,6 +710,11 @@ bool assembler_candidate_variant_generator_enabled(const OptionMap& options)
         && !is_fast_mode(options);
 }
 
+bool read_preprocessing_disabled(const OptionMap& options)
+{
+    return options.at("disable-read-preprocessing").as<bool>();
+}
+
 AlignedRead::BaseQuality get_max_base_quality(const OptionMap& options)
 {
     static constexpr AlignedRead::BaseQuality hard_max {125};
@@ -726,7 +731,7 @@ auto make_read_transformers(const ReferenceGenome& reference, const OptionMap& o
     ReadTransformer prefilter_transformer {}, postfilter_transformer {};
     prefilter_transformer.add(CapitaliseBases {});
     prefilter_transformer.add(CapBaseQualities {get_max_base_quality(options)});
-    if (options.at("read-transforms").as<bool>()) {
+    if (!read_preprocessing_disabled(options)) {
         if (is_set("mask-tails", options)) {
             const auto mask_length = static_cast<MaskTail::Length>(options.at("mask-tails").as<int>());
             prefilter_transformer.add(MaskTail {mask_length});
@@ -780,11 +785,6 @@ auto make_read_transformers(const ReferenceGenome& reference, const OptionMap& o
     return std::make_pair(std::move(prefilter_transformer), std::move(postfilter_transformer));
 }
 
-bool is_read_filtering_enabled(const OptionMap& options)
-{
-    return options.at("read-filtering").as<bool>();
-}
-
 bool split_long_reads(const OptionMap& options)
 {
     return options.at("split-long-reads").as<bool>();
@@ -811,7 +811,7 @@ auto make_read_filterer(const OptionMap& options)
     result.add(make_unique<HasValidBaseQualities>());
     result.add(make_unique<HasWellFormedCigar>());
     
-    if (!is_read_filtering_enabled(options)) {
+    if (read_preprocessing_disabled(options)) {
         return result;
     }
     if (!options.at("consider-unmapped-reads").as<bool>()) {
@@ -869,7 +869,7 @@ auto make_read_filterer(const OptionMap& options)
 
 bool is_downsampling_enabled(const OptionMap& options)
 {
-    return is_read_filtering_enabled(options) && !options.at("disable-downsampling").as<bool>();
+    return !read_preprocessing_disabled(options) && !options.at("disable-downsampling").as<bool>();
 }
 
 boost::optional<readpipe::Downsampler> make_downsampler(const OptionMap& options)
