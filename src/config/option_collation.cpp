@@ -694,19 +694,19 @@ bool denovo_candidate_variant_discovery_enabled(const OptionMap& options)
 bool pileup_candidate_variant_generator_enabled(const OptionMap& options)
 {
     return denovo_candidate_variant_discovery_enabled(options)
-           && options.at("pileup-candidate-generator").as<bool>();
+           && !options.at("disable-pileup-candidate-generator").as<bool>();
 }
 
 bool repeat_candidate_variant_generator_enabled(const OptionMap& options)
 {
     return denovo_candidate_variant_discovery_enabled(options)
-           && options.at("repeat-candidate-generator").as<bool>();
+           && !options.at("disable-repeat-candidate-generator").as<bool>();
 }
 
 bool assembler_candidate_variant_generator_enabled(const OptionMap& options)
 {
     return denovo_candidate_variant_discovery_enabled(options)
-        && options.at("assembly-candidate-generator").as<bool>()
+        && !options.at("disable-assembly-candidate-generator").as<bool>()
         && !is_fast_mode(options);
 }
 

@@ -307,16 +307,20 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<CandidateVariantDiscoveryProtocol>()->default_value(CandidateVariantDiscoveryProtocol::illumina),
      "Protocol to use for candidate variant discovery [ILLUMINA, PACBIO]")
      
-    ("pileup-candidate-generator,g",
-     po::value<bool>()->default_value(true),
-     "Enable candidate generation from raw read alignments (CIGAR strings)")
+    ("disable-denovo-variant-discovery",
+     po::bool_switch()->default_value(false),
+     "Disable all candidate variant discovery from input reads")
     
-    ("repeat-candidate-generator",
-     po::value<bool>()->default_value(true),
-     "Enable candidate generation from adjusted read alignments (CIGAR strings) around tandem repeats")
+    ("disable-pileup-candidate-generator",
+     po::bool_switch()->default_value(false),
+     "Disable candidate generation from raw read alignments (CIGAR strings)")
     
-    ("assembly-candidate-generator,a",
-     po::value<bool>()->default_value(true),
+    ("disable-repeat-candidate-generator",
+     po::bool_switch()->default_value(false),
+     "Disable candidate generation from adjusted read alignments (CIGAR strings) around tandem repeats")
+    
+    ("disable-assembly-candidate-generator",
+     po::bool_switch()->default_value(false),
      "Enable candidate generation using local re-assembly")
     
     ("source-candidates,c",
@@ -326,10 +330,6 @@ OptionMap parse_options(const int argc, const char** argv)
     ("source-candidates-file",
      po::value<std::vector<fs::path>>()->multitoken(),
      "Files containing lists of source candidate variant files")
-    
-    ("disable-denovo-variant-discovery",
-     po::bool_switch()->default_value(false),
-     "Disable all de novo candidate variant generators")
      
     ("min-source-quality",
      po::value<Phred<double>>()->implicit_value(Phred<double> {2.0}),
