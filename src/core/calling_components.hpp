@@ -74,7 +74,6 @@ public:
     bool sites_only() const noexcept;
     const PloidyMap& ploidies() const noexcept;
     boost::optional<Pedigree> pedigree() const;
-    boost::optional<Path> legacy() const;
     boost::optional<Path> filter_request() const;
     boost::optional<Path> bamout() const;
     BAMRealigner::Config bamout_config() const noexcept;
@@ -116,7 +115,6 @@ private:
         PloidyMap ploidies;
         boost::optional<Pedigree> pedigree;
         bool sites_only;
-        boost::optional<Path> legacy;
         boost::optional<Path> filter_request;
         boost::optional<Path> bamout;
         BAMRealigner::Config bamout_config;

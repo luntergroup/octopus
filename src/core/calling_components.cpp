@@ -158,11 +158,6 @@ ProgressMeter& GenomeCallingComponents::progress_meter() noexcept
     return components_.progress_meter;
 }
 
-boost::optional<GenomeCallingComponents::Path> GenomeCallingComponents::legacy() const
-{
-    return components_.legacy;
-}
-
 boost::optional<GenomeCallingComponents::Path> GenomeCallingComponents::filter_request() const
 {
     return components_.filter_request;
@@ -480,11 +475,6 @@ auto get_unfiltered_path(const fs::path& native)
     return add_identifier(native, "unfiltered");
 }
 
-auto get_legacy_path(const fs::path& native)
-{
-    return add_identifier(native, "legacy");
-}
-
 auto generate_temp_output_path(const fs::path& temp_directory)
 {
     return temp_directory / "octopus_unfiltered.bcf";
@@ -551,7 +541,6 @@ GenomeCallingComponents::Components::Components(ReferenceGenome&& reference, Rea
 , ploidies {options::get_ploidy_map(options)}
 , pedigree {options::get_pedigree(options, samples)}
 , sites_only {options::call_sites_only(options)}
-, legacy {}
 , filter_request {}
 , bamout {options::bamout_request(options)}
 , bamout_config {}
@@ -627,11 +616,6 @@ void GenomeCallingComponents::Components::setup_writers(const options::OptionMap
             prefilter_path = generate_temp_output_path(*temp_directory);
         }
         output.open(std::move(prefilter_path));
-        if (options::is_legacy_vcf_requested(options) && final_output_path) {
-            legacy = get_legacy_path(*final_output_path);
-        }
-    } else if (options::is_legacy_vcf_requested(options) && output.path()) {
-        legacy = get_legacy_path(*output.path());
     }
 }
 

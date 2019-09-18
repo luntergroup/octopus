@@ -2219,11 +2219,6 @@ fs::path create_temp_file_directory(const OptionMap& options)
     return result;
 }
 
-bool is_legacy_vcf_requested(const OptionMap& options)
-{
-    return options.at("legacy").as<bool>();
-}
-
 boost::optional<fs::path> filter_request(const OptionMap& options)
 {
     if (is_call_filtering_requested(options) && is_set("filter-vcf", options)) {
@@ -2263,7 +2258,6 @@ unsigned estimate_max_open_files(const OptionMap& options)
     result += is_debug_mode(options);
     result += is_trace_mode(options);
     result += is_call_filtering_requested(options);
-    result += is_legacy_vcf_requested(options);
     return result;
 }
 

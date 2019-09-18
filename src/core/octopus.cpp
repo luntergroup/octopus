@@ -1440,27 +1440,6 @@ void run_variant_calling(GenomeCallingComponents& components, UserCommandInfo in
     log_finish_info(components, {start, end});
 }
 
-void convert_to_legacy(const boost::filesystem::path& src, const boost::filesystem::path& dest)
-{
-    const VcfReader in {src};
-    VcfWriter out {dest};
-    convert_to_legacy(in, out);
-}
-
-void run_legacy_generation(GenomeCallingComponents& components)
-{
-    if (components.legacy()) {
-        VcfWriter& final_output {get_final_output(components)};
-        const auto output_path = final_output.path();
-        if (output_path) {
-            logging::InfoLogger log {};
-            destroy(final_output);
-            convert_to_legacy(*output_path, *components.legacy());
-            stream(log) << "Legacy VCF file written to " << *components.legacy();
-        }
-    }
-}
-
 bool is_bam_realignment_requested(const GenomeCallingComponents& components)
 {
     return static_cast<bool>(components.bamout());
@@ -1637,7 +1616,6 @@ void run_post_calling_requests(GenomeCallingComponents& components)
 {
     run_data_profiler(components);
     run_bam_realign(components);
-    run_legacy_generation(components);
 }
 
 void run_octopus(GenomeCallingComponents& components, UserCommandInfo info)
