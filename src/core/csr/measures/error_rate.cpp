@@ -31,12 +31,14 @@ std::unique_ptr<Measure> ErrorRate::do_clone() const
 namespace {
 
 boost::optional<double> 
-compute_error_rate(const Facet::SupportMaps& assignments, const SampleName& sample) noexcept
+compute_error_rate(const Facet::SupportMaps& assignments, const SampleName& sample, const GenomicRegion& region) noexcept
 {
     std::size_t error_bases {0}, total_bases {0};
     if (assignments.support.count(sample) == 1) {
         for (const auto& p : assignments.support.at(sample)) {
-            for (auto read : safe_realign(p.second, p.first)) {
+            auto realigned_reads = copy_overlapped(p.second, region);
+            safe_realign(realigned_reads, p.first);
+            for (const auto& read : realigned_reads) {
                 error_bases += sum_non_matches(read.cigar());
                 total_bases += sequence_size(read);
             }
@@ -45,13 +47,13 @@ compute_error_rate(const Facet::SupportMaps& assignments, const SampleName& samp
     if (assignments.ambiguous.count(sample) == 1) {
         std::map<Haplotype, std::vector<AlignedRead>> assigned {};
         for (const auto& ambiguous_read : assignments.ambiguous.at(sample)) {
-            if (ambiguous_read.haplotypes) {
+            if (ambiguous_read.haplotypes && overlaps(ambiguous_read.read, region)) {
                 assigned[*ambiguous_read.haplotypes->front()].push_back(ambiguous_read.read);
             }
         }
         for (auto& p : assigned) {
             safe_realign(p.second, p.first);
-            for (auto read : p.second) {
+            for (const auto& read : p.second) {
                 error_bases += sum_non_matches(read.cigar());
                 total_bases += sequence_size(read);
             }
@@ -73,7 +75,7 @@ Measure::ResultType ErrorRate::do_evaluate(const VcfRecord& call, const FacetMap
     std::vector<boost::optional<double>> result {};
     result.reserve(samples.size());
     for (const auto& sample : samples) {
-        result.push_back(compute_error_rate(assignments, sample));
+        result.push_back(compute_error_rate(assignments, sample, mapped_region(call)));
     }
     return result;
 }
