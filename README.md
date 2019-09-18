@@ -288,10 +288,10 @@ $ octopus -R H37Rv.fa -I cellA.bam cellB.bam cellC.bam -C cell
 
 #### HLA genotyping
 
-To call phased HLA genotypes, increase the default phase level:
+To call phased HLA genotypes, increase the default lagging level:
 
 ```shell
-$ octopus -R hs37d5.fa -I NA12878.bam -t hla-regions.bed -l aggressive
+$ octopus -R hs37d5.fa -I NA12878.bam -t hla-regions.bed --lagging-level AGGRESSIVE
 ```
 
 #### Multithreaded calling
