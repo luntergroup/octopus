@@ -436,9 +436,9 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<BacktrackLevel>()->default_value(BacktrackLevel::none),
      "Level of backtracking [NONE, NORMAL, AGGRESSIVE]")
     
-    ("haplotype-extension-threshold,e",
+    ("min-protected-haplotype-posterior",
      po::value<Phred<double>>()->default_value(Phred<double> {100.0}, "100"),
-     "Haplotypes with posterior probability less than this can be filtered before extension")
+     "Haplotypes with posterior probability less than this may be pruned from the haplotype tree")
     
     ("dont-protect-reference-haplotype",
      po::bool_switch()->default_value(false),
