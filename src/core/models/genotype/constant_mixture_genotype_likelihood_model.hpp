@@ -51,6 +51,10 @@ private:
     LogProbability evaluate_triploid(const Genotype<Haplotype>& genotype) const;
     LogProbability evaluate_tetraploid(const Genotype<Haplotype>& genotype) const;
     LogProbability evaluate_polyploid(const Genotype<Haplotype>& genotype) const;
+    
+    LogProbability evaluate_haploid(const GenotypeIndex& genotype) const;
+    LogProbability evaluate_diploid(const GenotypeIndex& genotype) const;
+    LogProbability evaluate_polyploid(const GenotypeIndex& genotype) const;
 };
 
 template <typename Container1, typename Container2>
