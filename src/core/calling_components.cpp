@@ -188,6 +188,11 @@ boost::optional<GenomeCallingComponents::Path> GenomeCallingComponents::data_pro
     return components_.data_profile;
 }
 
+IndelProfiler::ProfileConfig GenomeCallingComponents::profiler_config() const
+{
+    return components_.profiler_config;
+}
+
 bool GenomeCallingComponents::sites_only() const noexcept
 {
     return components_.sites_only;
@@ -551,6 +556,7 @@ GenomeCallingComponents::Components::Components(ReferenceGenome&& reference, Rea
 , bamout {options::bamout_request(options)}
 , bamout_config {}
 , data_profile {options::data_profile_request(options)}
+, profiler_config {}
 {
     drop_unused_samples(this->samples, this->read_manager);
     setup_progress_meter(options);
@@ -578,6 +584,10 @@ GenomeCallingComponents::Components::Components(ReferenceGenome&& reference, Rea
     bamout_config.max_threads = num_threads;
     bamout_config.use_paired_reads = options::use_paired_reads(options);
     bamout_config.use_linked_reads = options::use_linked_reads(options);
+    profiler_config.alignment_model = bamout_config.alignment_model;
+    if (reads_profile && reads_profile->median_read_length > 1'000) {
+        profiler_config.ignore_likely_misaligned_reads = false;
+    }
 }
 
 void GenomeCallingComponents::Components::setup_progress_meter(const options::OptionMap& options)

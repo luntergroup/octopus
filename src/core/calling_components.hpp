@@ -25,6 +25,7 @@
 #include "core/callers/caller_factory.hpp"
 #include "core/csr/filters/variant_call_filter_factory.hpp"
 #include "core/tools/bam_realigner.hpp"
+#include "core/tools/indel_profiler.hpp"
 #include "utils/memory_footprint.hpp"
 #include "utils/input_reads_profiler.hpp"
 #include "logging/progress_meter.hpp"
@@ -79,6 +80,7 @@ public:
     BAMRealigner::Config bamout_config() const noexcept;
     boost::optional<ReadSetProfile> reads_profile() const noexcept;
     boost::optional<Path> data_profile() const;
+    IndelProfiler::ProfileConfig profiler_config() const;
     
 private:
     struct Components
@@ -119,6 +121,8 @@ private:
         boost::optional<Path> bamout;
         BAMRealigner::Config bamout_config;
         boost::optional<Path> data_profile;
+        IndelProfiler::ProfileConfig profiler_config;
+        
         // Components that require temporary directory during construction appear last to make
         // exception handling easier.
         boost::optional<Path> temp_directory;
