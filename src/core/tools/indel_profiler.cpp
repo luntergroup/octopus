@@ -410,15 +410,9 @@ double error_expectation(const AlignedRead& read)
     return error_expectation(read.base_qualities());
 }
 
-unsigned count_errors(const CigarString& cigar)
-{
-    return std::accumulate(std::cbegin(cigar), std::cend(cigar), 0u,
-                           [] (auto curr, auto op) { return curr + (is_match(op) ? 0u : op.size()); });
-}
-
 unsigned count_errors(const AlignedRead& read)
 {
-    return count_errors(read.cigar());
+    return sum_non_matches(read.cigar());
 }
 
 bool over_hmm_band_limit(const CigarString& cigar, const HaplotypeLikelihoodModel& model) noexcept
