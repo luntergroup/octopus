@@ -168,6 +168,11 @@ def select_training_hypterparameters(master_data_fname, options):
         shutil.rmtree(cross_validation_temp_dir)
         return optimal_params
 
+def check_exists(paths):
+    for path in paths:
+        if not exists(path):
+            raise ValueError(path + " does not exist")
+
 def main(options):
     if not exists(options.out):
         makedirs(options.out)
@@ -177,6 +182,7 @@ def main(options):
     call_region_beds = options.regions
     if len(call_region_beds) == 1:
         call_region_beds = len(options.reads) * [call_region_beds[0]]
+    check_exists(call_region_beds)
     for ref in fasta_refs:
         rtg_sdf_ref = basename(ref) + '.tmp.sdf'
         if rtg_sdf_ref not in rtg_sdf_refs:
@@ -186,8 +192,10 @@ def main(options):
     if len(options.reference) == 1 and len(options.reads) > 1:
         fasta_refs = len(options.reads) * [fasta_refs[0]]
         rtg_sdf_refs = len(options.reads) * [rtg_sdf_refs[0]]
+    check_exists(fasta_refs + rtg_sdf_refs)
     if len(truth_sets) == 1 and len(options.reads) > 1:
         truth_sets, confident_sets = len(options.reads) * [truth_sets[0]], len(options.reads) * [confident_sets[0]]
+    check_exists(truth_sets + confident_sets)
     configs = options.config
     if configs is None or len(configs) == 1 and len(options.reads) > 1:
         configs = len(options.reads) * [configs]
