@@ -104,6 +104,7 @@ def get_required_dependencies():
         result.append(latest_llvm)
     else:
         result.append(latest_gcc)
+        result.append('binutils')
     result += ['boost', 'htslib', 'gmp']
     return result
 
