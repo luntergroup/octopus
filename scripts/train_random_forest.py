@@ -176,6 +176,7 @@ def check_exists(paths):
 def main(options):
     if not exists(options.out):
         makedirs(options.out)
+    check_exists(options.reads)
     tmp_files, tmp_dirs, rtg_eval_dirs = [], [], []
     truth_sets, confident_sets = options.truth, options.confident
     fasta_refs, rtg_sdf_refs = options.reference, []
