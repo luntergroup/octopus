@@ -198,7 +198,7 @@ def main(options):
     check_exists(truth_sets + confident_sets)
     configs = options.config
     if configs is None or len(configs) == 1 and len(options.reads) > 1:
-        configs = len(options.reads) * [configs]
+        configs = len(options.reads) * [configs[0]]
     for fasta_ref, bam_path, regions_bed, config, rtg_ref, truth, confident in \
             zip(fasta_refs, options.reads, call_region_beds, configs, rtg_sdf_refs, truth_sets, confident_sets):
         rtg_eval_dirs.append(eval_octopus(options.octopus, fasta_ref, bam_path, regions_bed,
