@@ -48,7 +48,12 @@ private:
     PenaltyType get_extension_penalty(const Sequence& motif, unsigned length) const noexcept override;
 };
 
-boost::optional<CustomRepeatBasedIndelErrorModel::MotifPenaltyMap> make_penalty_map(std::string model);
+struct CustomRepeatMotifPenaltyMaps
+{
+    boost::optional<CustomRepeatBasedIndelErrorModel::MotifPenaltyMap> open, extend;
+};
+
+CustomRepeatMotifPenaltyMaps make_penalty_map(std::string model);
 
 } // namespace octopus
 

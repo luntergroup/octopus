@@ -37,7 +37,7 @@ std::unique_ptr<SnvErrorModel> make_snv_error_model(ModelConfig config = default
 std::unique_ptr<IndelErrorModel> make_indel_error_model(ModelConfig config = default_model_config);
 
 ErrorModel make_error_model(const std::string& label);
-ErrorModel make_error_model(const boost::filesystem::path& model_file_name);
+ErrorModel make_error_model(const boost::filesystem::path& model_filename);
 
 } // namespace octopus
 

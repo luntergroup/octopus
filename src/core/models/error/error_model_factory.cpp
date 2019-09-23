@@ -467,16 +467,21 @@ ErrorModel make_error_model(const std::string& label)
     return {make_indel_error_model(config), make_snv_error_model(config)};
 }
 
-ErrorModel make_error_model(const boost::filesystem::path& model_file_name)
+ErrorModel make_error_model(const boost::filesystem::path& model_filename)
 {
-    std::ifstream model_file {model_file_name.string()};
+    std::ifstream model_file {model_filename.string()};
     std::string model_str {static_cast<std::stringstream const&>(std::stringstream() << model_file.rdbuf()).str()};
-    auto open_model = make_penalty_map(std::move(model_str));
-    if (!open_model) {
-        throw MalformedErrorModelFile {model_file_name};
+    auto params = make_penalty_map(std::move(model_str));
+    if (!params.open) {
+        throw MalformedErrorModelFile {model_filename};
     }
     ErrorModel result {};
-    result.indel = std::make_unique<CustomRepeatBasedIndelErrorModel>(std::move(*open_model));
+    if (params.extend) {
+        result.indel = std::make_unique<CustomRepeatBasedIndelErrorModel>(std::move(*params.open), std::move(*params.extend));
+    } else {
+        result.indel = std::make_unique<CustomRepeatBasedIndelErrorModel>(std::move(*params.open));
+    }
+    std::cout << "result" << std::endl;
     result.snv = make_snv_error_model(default_model_config);
     return result;
 }
