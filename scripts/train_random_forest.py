@@ -50,7 +50,7 @@ def eval_octopus(octopus, ref_path, bam_path, regions_bed, threads,
                  rtg, rtg_ref_path, truth_vcf_path, confident_bed_path, out_dir,
                  config=None):
     octopus_vcf = call_variants(octopus, ref_path, bam_path, regions_bed, threads, out_dir, config=config)
-    rtf_eval_dir = join(out_dir, basename(octopus_vcf).replace(".legacy.vcf.gz", ".eval"))
+    rtf_eval_dir = join(out_dir, basename(octopus_vcf).replace(".vcf.gz", ".eval"))
     run_rtg(rtg, rtg_ref_path, truth_vcf_path, regions_bed, confident_bed_path, octopus_vcf, rtf_eval_dir)
     return rtf_eval_dir
 
