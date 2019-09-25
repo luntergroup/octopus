@@ -113,7 +113,7 @@ def init_homebrew(brew_bin):
             raise Exception('Could not find git version >= ' + required_git_version_str)
         else:
             os.environ["HOMEBREW_GIT_PATH"] = env_git
-            os.environ["HOMEBREW_GIT_PATH"] = "1"
+            os.environ["HOMEBREW_NO_ENV_FILTERING"] = "1"
             call([brew_bin, 'update'])
     else:
         call([brew_bin, 'update'])
