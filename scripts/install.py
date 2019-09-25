@@ -3,7 +3,7 @@
 import os
 import os.path
 import sys
-from subprocess import call
+from subprocess import call, check_output
 import platform
 import argparse
 from shutil import move, rmtree
@@ -16,6 +16,8 @@ forests = ['germline', 'somatic']
 
 latest_llvm = 'llvm'
 latest_gcc = 'gcc@9'
+
+required_git_version = 1, 8, 0
 
 class Version(object):
     def __init__(self):
@@ -89,13 +91,40 @@ def get_homebrew_name():
 def download_homebrew():
     git_clone('https://github.com/Homebrew/brew')
 
+def is_old_brew_config_git(brew_bin):
+    brew_config = check_output([brew_bin, 'config']).decode("utf-8").split()
+    if 'Git:' in brew_config:
+        brew_git_version = tuple([int(v) for v in brew_config[brew_config.index('Git:') + 1].split('.')])
+        return brew_git_version < required_git_version
+    else:
+        return False
+
+def which_git():
+    return check_output(['which', 'git']).decode("utf-8").strip()
+
+def git_version(git_bin):
+    return tuple([int(v) for v in check_output([git_bin, '--version']).decode("utf-8").strip().split()[-1].split('.')])
+
+def init_homebrew(brew_bin):
+    if is_old_brew_config_git(brew_bin):
+        env_git = which_git()
+        if git_version(env_git) < required_git_version:
+            required_git_version_str = '.'.join([str(v) for v in required_git_version])
+            raise Exception('Could not find git version >= ' + required_git_version_str)
+        else:
+            os.environ["HOMEBREW_GIT_PATH"] = env_git
+            os.environ["HOMEBREW_GIT_PATH"] = "1"
+            call([brew_bin, 'update'])
+    else:
+        call([brew_bin, 'update'])
+
 def install_homebrew():
     homebrew = get_homebrew_name()
     if not os.path.exists(homebrew):
         download_homebrew()
-    os.environ['PATH']= os.path.abspath(homebrew+'/bin') + os.pathsep + os.path.abspath(homebrew+'/sbin') + os.pathsep + os.environ['PATH']
+    os.environ['PATH']= os.path.abspath(homebrew + '/bin') + os.pathsep + os.path.abspath(homebrew + '/sbin') + os.pathsep + os.environ['PATH']
     brew_bin = homebrew + '/bin/brew'
-    call([brew_bin, 'update'])
+    init_homebrew(brew_bin)
     return brew_bin
 
 def get_required_dependencies():
