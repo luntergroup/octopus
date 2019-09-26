@@ -79,6 +79,23 @@ def is_unix():
 def is_osx():
     return platform.system() == "Darwin"
 
+def is_centos(version=None):
+    if platform.system() == "Linux":
+        dist, dist_version, _ = platform.linux_distribution()
+        if dist != "CentOS":
+            return False
+        if version is None:
+            return True
+        else:
+            dist_version = tuple(int(v) for v in dist_version.split('.'))
+            if len(version) < len(dist_version):
+                dist_version = dist_version[:len(version)]
+            if len(dist_version) < len(version):
+                dist_version = tuple(list(dist_version) + (len(version) - len(dist_version)) * [0])
+            return dist_version == version
+    else:
+        return False
+
 def download_file(url, file_name):
     urllib.request.urlretrieve(url, file_name)
 
@@ -94,38 +111,56 @@ def download_homebrew():
 def is_old_brew_config_git(brew_bin):
     brew_config = check_output([brew_bin, 'config']).decode("utf-8").split()
     if 'Git:' in brew_config:
-        brew_git_version = tuple([int(v) for v in brew_config[brew_config.index('Git:') + 1].split('.')])
+        brew_git_version = tuple(int(v) for v in brew_config[brew_config.index('Git:') + 1].split('.'))
         return brew_git_version < required_git_version
     else:
         return False
 
-def which_git():
-    return check_output(['which', 'git']).decode("utf-8").strip()
+def which(program):
+    return check_output(['which', program]).decode("utf-8").strip()
 
 def git_version(git_bin):
     return tuple([int(v) for v in check_output([git_bin, '--version']).decode("utf-8").strip().split()[-1].split('.')])
 
-def init_homebrew(brew_bin):
-    if is_old_brew_config_git(brew_bin):
-        env_git = which_git()
-        if git_version(env_git) < required_git_version:
-            required_git_version_str = '.'.join([str(v) for v in required_git_version])
-            raise Exception('Could not find git version >= ' + required_git_version_str)
-        else:
-            os.environ["HOMEBREW_GIT_PATH"] = env_git
-            os.environ["HOMEBREW_NO_ENV_FILTERING"] = "1"
-            call([brew_bin, 'update'])
+def hack_old_brewed_git():
+    env_git = which('git')
+    if git_version(env_git) < required_git_version:
+        required_git_version_str = '.'.join([str(v) for v in required_git_version])
+        raise Exception('Could not find git version >= ' + required_git_version_str)
     else:
-        call([brew_bin, 'update'])
+        os.environ["HOMEBREW_GIT_PATH"] = env_git
+        os.environ["HOMEBREW_NO_ENV_FILTERING"] = "1"
 
-def install_homebrew():
-    homebrew = get_homebrew_name()
-    if not os.path.exists(homebrew):
+def gcc_version(gcc_bin):
+    return tuple(int(v) for v in check_output([gcc_bin, '-dumpversion']).decode("utf-8").strip().split('.'))
+
+def hack_centos6_brewed_gcc(brew_bin_dir):
+    # See https://github.com/Homebrew/linuxbrew-core/issues/4803
+    # and https://github.com/Homebrew/linuxbrew-core/issues/4077
+    # and https://github.com/Linuxbrew/brew/wiki/Symlink-GCC
+    try:
+        os.symlink(which('gcc'), os.path.join(brew_bin_dir, 'gcc-' + '.'.join(str(v) for v in gcc_version(which('gcc'))[:2])))
+        os.symlink(which('g++'), os.path.join(brew_bin_dir, 'g++-' + '.'.join(str(v) for v in gcc_version(which('g++'))[:2])))
+        os.symlink(which('gfortran'), os.path.join(brew_bin_dir, 'gfortran-' + '.'.join(str(v) for v in gcc_version(which('gfortran'))[:2])))
+    except FileExistsError:
+        return
+
+def init_homebrew(brew_bin_dir):
+    brew_bin = os.path.join(brew_bin_dir, 'brew')
+    if is_old_brew_config_git(brew_bin):
+        hack_old_brewed_git()
+    if is_centos((6,)):
+        hack_centos6_brewed_gcc(brew_bin_dir)
+    call([brew_bin, 'update'])
+
+def install_homebrew(build_dir):
+    brew_dir = os.path.join(build_dir, get_homebrew_name())
+    if not os.path.exists(brew_dir):
         download_homebrew()
-    os.environ['PATH']= os.path.abspath(homebrew + '/bin') + os.pathsep + os.path.abspath(homebrew + '/sbin') + os.pathsep + os.environ['PATH']
-    brew_bin = homebrew + '/bin/brew'
-    init_homebrew(brew_bin)
-    return brew_bin
+    brew_bin_dir = os.path.join(brew_dir, 'bin')
+    os.environ['PATH']= brew_bin_dir + os.pathsep + os.path.join(brew_dir, 'sbin') + os.pathsep + os.environ['PATH']
+    init_homebrew(brew_bin_dir)
+    return os.path.join(brew_bin_dir, 'brew') # brew binary
 
 def get_required_dependencies():
     result = ['cmake']
@@ -153,7 +188,7 @@ def get_brewed_compiler_binaries(homebrew_dir):
         return os.path.join(gcc_bin_dir, gcc_bin_name), os.path.join(gcc_bin_dir, gxx_bin_name)
 
 def install_dependencies(build_dir):
-    brew_bin = install_homebrew()
+    brew_bin = install_homebrew(build_dir)
     dependencies = get_required_dependencies()
     brew_command = [brew_bin, 'install'] + dependencies
     if call(brew_command) == 0:
