@@ -14,7 +14,7 @@ from sklearn.metrics import log_loss
 script_dir = dirname(abspath(__file__))
 default_octopus_bin = join(abspath(join(script_dir, pardir)), 'bin/octopus')
 
-default_measures = "AC AD ADP AF ARF BQ CC CRF DP FRF GC GQ GQD NC MC MF MP MRC MQ MQ0 MQD PP PPD QD QUAL REFCALL REB RSB RTB SB SD SF SHC SMQ SOMATIC STR_LENGTH STR_PERIOD VL".split()
+default_measures = "AC AD ADP AF ARF BQ CC CRF DP ER FRF GC GQ GQD NC MC MF MP MQ MQ0 MQD PP PPD QD QUAL REFCALL REB RSB RTB SB SD SF SHC SMQ SOMATIC STR_LENGTH STR_PERIOD VL".split()
 
 def make_sdf_ref(fasta_ref, rtg, out):
     call([rtg, 'format', '-o', out, fasta_ref])
