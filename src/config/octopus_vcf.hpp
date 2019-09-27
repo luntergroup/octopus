@@ -66,6 +66,7 @@ VCF_SPEC_CONSTANT lowDuplicateConcordance {"LDC"};
 VCF_SPEC_CONSTANT highDuplicateAlleleDepth {"DAD"};
 VCF_SPEC_CONSTANT highDuplicateAlleleFraction {"DAF"};
 VCF_SPEC_CONSTANT highErrorRate {"ER"};
+VCF_SPEC_CONSTANT highErrorRateStdev {"ERS"};
 
 } // namespace filter
 
