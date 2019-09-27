@@ -10,7 +10,7 @@ from pysam import VariantFile
 import random
 import numpy as np
 
-default_measures = "AC AD ADP AF ARF BQ CC CRF DP ER FRF GC GQ GQD NC MC MF MP MQ MQ0 MQD PP PPD QD QUAL REFCALL REB RSB RTB SB SD SF SHC SMQ SOMATIC STR_LENGTH STR_PERIOD VL".split()
+default_measures = "AC AD ADP AF ARF BQ CC CRF DP ER ERS FRF GC GQ GQD NC MC MF MP MRC MQ MQ0 MQD PP PPD QD QUAL REFCALL REB RSB RTB SB SD SF SHC SMQ SOMATIC STR_LENGTH STR_PERIOD VL".split()
 
 def get_sample_names(truth_vcf_name):
     truth_vcf = VariantFile(truth_vcf_name)
