@@ -399,6 +399,8 @@ set(CORE_SOURCES
     core/csr/measures/duplicate_allele_fraction.cpp
     core/csr/measures/error_rate.hpp
     core/csr/measures/error_rate.cpp
+    core/csr/measures/error_rate_stdev.hpp
+    core/csr/measures/error_rate_stdev.cpp
 
     core/models/haplotype_likelihood_array.hpp
     core/models/haplotype_likelihood_array.cpp
