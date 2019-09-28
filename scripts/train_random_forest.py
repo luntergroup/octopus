@@ -100,14 +100,14 @@ def check_exists_or_none(paths):
 class TrainingData:
     def __init__(self, data):
         self.reference = data["reference"] if "reference" in data else None
-        self.sdf = data["sdf"] if "sdf" in data else None
+        self.sdf = data["reference_sdf"] if "reference_sdf" in data else None
         self.reads = data["reads"] if "reads" in data else None
-        self.regions = data["regions"] if "regions" in data else None
+        self.regions = data["calling_regions"] if "calling_regions" in data else None
         self.truth = data["truth"] if "truth" in data else None
-        self.confident = data["confident"] if "confident" in data else None
-        self.tp = data["tp"] if "tp" in data else 1
-        self.fp = data["fp"] if "tp" in data else 1
-        self.config = data["config"] if "config" in data else None
+        self.confident = data["confident_regions"] if "confident_regions" in data else None
+        self.tp = data["tp_fraction"] if "tp_fraction" in data else 1
+        self.fp = data["fp_fraction"] if "fp_fraction" in data else 1
+        self.config = data["octopus_config"] if "octopus_config" in data else None
 
 def read_training_data(training_json_filename):
     with open(training_json_filename) as training_json:
