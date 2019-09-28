@@ -10,18 +10,165 @@ import random
 import numpy as np
 import shutil
 from sklearn.metrics import log_loss
+import json
+import urllib.request
 
 script_dir = dirname(abspath(__file__))
 default_octopus_bin = join(abspath(join(script_dir, pardir)), 'bin/octopus')
 
 default_measures = "AC AD ADP AF ARF BQ CC CRF DP ER ERS FRF GC GQ GQD NC MC MF MP MRC MQ MQ0 MQD PP PPD QD QUAL REFCALL REB RSB RTB SB SD SF SHC SMQ SOMATIC STR_LENGTH STR_PERIOD VL".split()
 
+known_truth_set_urls = {
+    "GIAB": {
+        "GRCh37": {
+            "NA12878": {
+                'vcf': "ftp://ftp-trace.ncbi.nlm.nih.gov//giab/ftp/release/NA12878_HG001/NISTv3.3.2/GRCh37/HG001_GRCh37_GIAB_highconf_CG-IllFB-IllGATKHC-Ion-10X-SOLID_CHROM1-X_v.3.3.2_highconf_PGandRTGphasetransfer.vcf.gz",
+                'vcf_idx': "ftp://ftp-trace.ncbi.nlm.nih.gov//giab/ftp/release/NA12878_HG001/NISTv3.3.2/GRCh37/HG001_GRCh37_GIAB_highconf_CG-IllFB-IllGATKHC-Ion-10X-SOLID_CHROM1-X_v.3.3.2_highconf_PGandRTGphasetransfer.vcf.gz.tbi",
+                'bed': "ftp://ftp-trace.ncbi.nlm.nih.gov//giab/ftp/release/NA12878_HG001/NISTv3.3.2/GRCh37/HG001_GRCh37_GIAB_highconf_CG-IllFB-IllGATKHC-Ion-10X-SOLID_CHROM1-X_v.3.3.2_highconf_nosomaticdel.bed"
+            },
+            "HG001": {
+                'vcf': "ftp://ftp-trace.ncbi.nlm.nih.gov//giab/ftp/release/NA12878_HG001/NISTv3.3.2/GRCh37/HG001_GRCh37_GIAB_highconf_CG-IllFB-IllGATKHC-Ion-10X-SOLID_CHROM1-X_v.3.3.2_highconf_PGandRTGphasetransfer.vcf.gz",
+                'vcf_idx': "ftp://ftp-trace.ncbi.nlm.nih.gov//giab/ftp/release/NA12878_HG001/NISTv3.3.2/GRCh37/HG001_GRCh37_GIAB_highconf_CG-IllFB-IllGATKHC-Ion-10X-SOLID_CHROM1-X_v.3.3.2_highconf_PGandRTGphasetransfer.vcf.gz.tbi",
+                'bed': "ftp://ftp-trace.ncbi.nlm.nih.gov//giab/ftp/release/NA12878_HG001/NISTv3.3.2/GRCh37/HG001_GRCh37_GIAB_highconf_CG-IllFB-IllGATKHC-Ion-10X-SOLID_CHROM1-X_v.3.3.2_highconf_nosomaticdel.bed"
+            },
+            "NA24385": {
+                'vcf': "ftp://ftp-trace.ncbi.nlm.nih.gov//giab/ftp/release/AshkenazimTrio/HG002_NA24385_son/NISTv3.3.2/GRCh37/HG002_GRCh37_GIAB_highconf_CG-IllFB-IllGATKHC-Ion-10X-SOLID_CHROM1-22_v.3.3.2_highconf_triophased.vcf.gz",
+                'vcf_idx': "ftp://ftp-trace.ncbi.nlm.nih.gov//giab/ftp/release/AshkenazimTrio/HG002_NA24385_son/NISTv3.3.2/GRCh37/HG002_GRCh37_GIAB_highconf_CG-IllFB-IllGATKHC-Ion-10X-SOLID_CHROM1-22_v.3.3.2_highconf_triophased.vcf.gz.tbi",
+                'bed': "ftp://ftp-trace.ncbi.nlm.nih.gov//giab/ftp/release/AshkenazimTrio/HG002_NA24385_son/NISTv3.3.2/GRCh37/HG002_GRCh37_GIAB_highconf_CG-IllFB-IllGATKHC-Ion-10X-SOLID_CHROM1-22_v.3.3.2_highconf_noinconsistent.bed"
+            },
+            "HG002": {
+                'vcf': "ftp://ftp-trace.ncbi.nlm.nih.gov//giab/ftp/release/AshkenazimTrio/HG002_NA24385_son/NISTv3.3.2/GRCh37/HG002_GRCh37_GIAB_highconf_CG-IllFB-IllGATKHC-Ion-10X-SOLID_CHROM1-22_v.3.3.2_highconf_triophased.vcf.gz",
+                'vcf_idx': "ftp://ftp-trace.ncbi.nlm.nih.gov//giab/ftp/release/AshkenazimTrio/HG002_NA24385_son/NISTv3.3.2/GRCh37/HG002_GRCh37_GIAB_highconf_CG-IllFB-IllGATKHC-Ion-10X-SOLID_CHROM1-22_v.3.3.2_highconf_triophased.vcf.gz.tbi",
+                'bed': "ftp://ftp-trace.ncbi.nlm.nih.gov//giab/ftp/release/AshkenazimTrio/HG002_NA24385_son/NISTv3.3.2/GRCh37/HG002_GRCh37_GIAB_highconf_CG-IllFB-IllGATKHC-Ion-10X-SOLID_CHROM1-22_v.3.3.2_highconf_noinconsistent.bed"
+            },
+            "NA24631": {
+                'vcf': "ftp://ftp-trace.ncbi.nlm.nih.gov//giab/ftp/release/ChineseTrio/HG005_NA24631_son/NISTv3.3.2/GRCh37/HG005_GRCh37_highconf_CG-IllFB-IllGATKHC-Ion-SOLID_CHROM1-22_v.3.3.2_highconf.vcf.gz",
+                'vcf_idx': "ftp://ftp-trace.ncbi.nlm.nih.gov//giab/ftp/release/ChineseTrio/HG005_NA24631_son/NISTv3.3.2/GRCh37/HG005_GRCh37_highconf_CG-IllFB-IllGATKHC-Ion-SOLID_CHROM1-22_v.3.3.2_highconf.vcf.gz.tbi",
+                'bed': "ftp://ftp-trace.ncbi.nlm.nih.gov//giab/ftp/release/ChineseTrio/HG005_NA24631_son/NISTv3.3.2/GRCh37/HG005_GRCh37_highconf_CG-IllFB-IllGATKHC-Ion-SOLID_CHROM1-22_v.3.3.2_highconf_noMetaSV.bed"
+            },
+            "HG005": {
+                'vcf': "ftp://ftp-trace.ncbi.nlm.nih.gov//giab/ftp/release/ChineseTrio/HG005_NA24631_son/NISTv3.3.2/GRCh37/HG005_GRCh37_highconf_CG-IllFB-IllGATKHC-Ion-SOLID_CHROM1-22_v.3.3.2_highconf.vcf.gz",
+                'vcf_idx': "ftp://ftp-trace.ncbi.nlm.nih.gov//giab/ftp/release/ChineseTrio/HG005_NA24631_son/NISTv3.3.2/GRCh37/HG005_GRCh37_highconf_CG-IllFB-IllGATKHC-Ion-SOLID_CHROM1-22_v.3.3.2_highconf.vcf.gz.tbi",
+                'bed': "ftp://ftp-trace.ncbi.nlm.nih.gov//giab/ftp/release/ChineseTrio/HG005_NA24631_son/NISTv3.3.2/GRCh37/HG005_GRCh37_highconf_CG-IllFB-IllGATKHC-Ion-SOLID_CHROM1-22_v.3.3.2_highconf_noMetaSV.bed"
+            }
+        },
+        "GRCh38": {
+            "NA12878": {
+                'vcf': "ftp://ftp-trace.ncbi.nlm.nih.gov//giab/ftp/release/NA12878_HG001/NISTv3.3.2/GRCh38/HG001_GRCh38_GIAB_highconf_CG-IllFB-IllGATKHC-Ion-10X-SOLID_CHROM1-X_v.3.3.2_highconf_PGandRTGphasetransfer.vcf.gz",
+                'vcf_idx': "ftp://ftp-trace.ncbi.nlm.nih.gov//giab/ftp/release/NA12878_HG001/NISTv3.3.2/GRCh38/HG001_GRCh38_GIAB_highconf_CG-IllFB-IllGATKHC-Ion-10X-SOLID_CHROM1-X_v.3.3.2_highconf_PGandRTGphasetransfer.vcf.gz.tbi",
+                'bed': "ftp://ftp-trace.ncbi.nlm.nih.gov//giab/ftp/release/NA12878_HG001/NISTv3.3.2/GRCh38/HG001_GRCh38_GIAB_highconf_CG-IllFB-IllGATKHC-Ion-10X-SOLID_CHROM1-X_v.3.3.2_highconf_nosomaticdel_noCENorHET7.bed"
+            },
+            "HG001": {
+                'vcf': "ftp://ftp-trace.ncbi.nlm.nih.gov//giab/ftp/release/NA12878_HG001/NISTv3.3.2/GRCh38/HG001_GRCh38_GIAB_highconf_CG-IllFB-IllGATKHC-Ion-10X-SOLID_CHROM1-X_v.3.3.2_highconf_PGandRTGphasetransfer.vcf.gz",
+                'vcf_idx': "ftp://ftp-trace.ncbi.nlm.nih.gov//giab/ftp/release/NA12878_HG001/NISTv3.3.2/GRCh38/HG001_GRCh38_GIAB_highconf_CG-IllFB-IllGATKHC-Ion-10X-SOLID_CHROM1-X_v.3.3.2_highconf_PGandRTGphasetransfer.vcf.gz.tbi",
+                'bed': "ftp://ftp-trace.ncbi.nlm.nih.gov//giab/ftp/release/NA12878_HG001/NISTv3.3.2/GRCh38/HG001_GRCh38_GIAB_highconf_CG-IllFB-IllGATKHC-Ion-10X-SOLID_CHROM1-X_v.3.3.2_highconf_nosomaticdel_noCENorHET7.bed"
+            },
+            "NA24385": {
+                'vcf': "ftp://ftp-trace.ncbi.nlm.nih.gov//giab/ftp/release/AshkenazimTrio/HG002_NA24385_son/NISTv3.3.2/GRCh38/HG002_GRCh38_GIAB_highconf_CG-Illfb-IllsentieonHC-Ion-10XsentieonHC-SOLIDgatkHC_CHROM1-22_v.3.3.2_highconf_triophased.vcf.gz",
+                'vcf_idx': "ftp://ftp-trace.ncbi.nlm.nih.gov//giab/ftp/release/AshkenazimTrio/HG002_NA24385_son/NISTv3.3.2/GRCh38/HG002_GRCh38_GIAB_highconf_CG-Illfb-IllsentieonHC-Ion-10XsentieonHC-SOLIDgatkHC_CHROM1-22_v.3.3.2_highconf_triophased.vcf.gz.tbi",
+                'bed': "ftp://ftp-trace.ncbi.nlm.nih.gov//giab/ftp/release/AshkenazimTrio/HG002_NA24385_son/NISTv3.3.2/GRCh38/HG002_GRCh38_GIAB_highconf_CG-Illfb-IllsentieonHC-Ion-10XsentieonHC-SOLIDgatkHC_CHROM1-22_v.3.3.2_highconf_noinconsistent.bed"
+            },
+            "HG002": {
+                'vcf': "ftp://ftp-trace.ncbi.nlm.nih.gov//giab/ftp/release/AshkenazimTrio/HG002_NA24385_son/NISTv3.3.2/GRCh38/HG002_GRCh38_GIAB_highconf_CG-Illfb-IllsentieonHC-Ion-10XsentieonHC-SOLIDgatkHC_CHROM1-22_v.3.3.2_highconf_triophased.vcf.gz",
+                'vcf_idx': "ftp://ftp-trace.ncbi.nlm.nih.gov//giab/ftp/release/AshkenazimTrio/HG002_NA24385_son/NISTv3.3.2/GRCh38/HG002_GRCh38_GIAB_highconf_CG-Illfb-IllsentieonHC-Ion-10XsentieonHC-SOLIDgatkHC_CHROM1-22_v.3.3.2_highconf_triophased.vcf.gz.tbi",
+                'bed': "ftp://ftp-trace.ncbi.nlm.nih.gov//giab/ftp/release/AshkenazimTrio/HG002_NA24385_son/NISTv3.3.2/GRCh38/HG002_GRCh38_GIAB_highconf_CG-Illfb-IllsentieonHC-Ion-10XsentieonHC-SOLIDgatkHC_CHROM1-22_v.3.3.2_highconf_noinconsistent.bed"
+            },
+            "NA24631": {
+                'vcf': "ftp://ftp-trace.ncbi.nlm.nih.gov//giab/ftp/release/ChineseTrio/HG005_NA24631_son/NISTv3.3.2/GRCh38/HG005_GRCh38_GIAB_highconf_CG-Illfb-IllsentieonHC-Ion-10XsentieonHC-SOLIDgatkHC_CHROM1-22_v.3.3.2_highconf.vcf.gz",
+                'vcf_idx': "ftp://ftp-trace.ncbi.nlm.nih.gov//giab/ftp/release/ChineseTrio/HG005_NA24631_son/NISTv3.3.2/GRCh38/HG005_GRCh38_GIAB_highconf_CG-Illfb-IllsentieonHC-Ion-10XsentieonHC-SOLIDgatkHC_CHROM1-22_v.3.3.2_highconf.vcf.gz.tbi",
+                'bed': "ftp://ftp-trace.ncbi.nlm.nih.gov//giab/ftp/release/ChineseTrio/HG005_NA24631_son/NISTv3.3.2/GRCh38/HG005_GRCh38_GIAB_highconf_CG-Illfb-IllsentieonHC-Ion-10XsentieonHC-SOLIDgatkHC_CHROM1-22_v.3.3.2_highconf.bed"
+            },
+            "HG005": {
+                'vcf': "ftp://ftp-trace.ncbi.nlm.nih.gov//giab/ftp/release/ChineseTrio/HG005_NA24631_son/NISTv3.3.2/GRCh38/HG005_GRCh38_GIAB_highconf_CG-Illfb-IllsentieonHC-Ion-10XsentieonHC-SOLIDgatkHC_CHROM1-22_v.3.3.2_highconf.vcf.gz",
+                'vcf_idx': "ftp://ftp-trace.ncbi.nlm.nih.gov//giab/ftp/release/ChineseTrio/HG005_NA24631_son/NISTv3.3.2/GRCh38/HG005_GRCh38_GIAB_highconf_CG-Illfb-IllsentieonHC-Ion-10XsentieonHC-SOLIDgatkHC_CHROM1-22_v.3.3.2_highconf.vcf.gz.tbi",
+                'bed': "ftp://ftp-trace.ncbi.nlm.nih.gov//giab/ftp/release/ChineseTrio/HG005_NA24631_son/NISTv3.3.2/GRCh38/HG005_GRCh38_GIAB_highconf_CG-Illfb-IllsentieonHC-Ion-10XsentieonHC-SOLIDgatkHC_CHROM1-22_v.3.3.2_highconf.bed"
+            }
+        }
+    }
+}
+
+def check_exists(paths):
+    for path in paths:
+        if not exists(path):
+            raise ValueError(path + " does not exist")
+
+def check_exists_or_none(paths):
+    for path in paths:
+        if path is not None and not exists(path):
+            raise ValueError(path + " does not exist")
+
+class TrainingData:
+    def __init__(self, data):
+        self.reference = data["reference"] if "reference" in data else None
+        self.sdf = data["sdf"] if "sdf" in data else None
+        self.reads = data["reads"] if "reads" in data else None
+        self.regions = data["regions"] if "regions" in data else None
+        self.truth = data["truth"] if "truth" in data else None
+        self.confident = data["confident"] if "confident" in data else None
+        self.tp = data["tp"] if "tp" in data else 1
+        self.fp = data["fp"] if "tp" in data else 1
+        self.config = data["config"] if "config" in data else None
+
+def read_training_data(training_json_filename):
+    with open(training_json_filename) as training_json:
+        return [TrainingData(data) for data in json.load(training_json)]
+
 def make_sdf_ref(fasta_ref, rtg, out):
     call([rtg, 'format', '-o', out, fasta_ref])
 
+def download_truth_set(name, reference, sample, out):
+    ftp_vcf = known_truth_set_urls[name][reference][sample]['vcf']
+    local_vcf = join(out, basename(ftp_vcf))
+    urllib.request.urlretrieve(ftp_vcf, local_vcf)
+    ftp_vcf_idx = known_truth_set_urls[name][reference][sample]['vcf_idx']
+    local_vcf_idx = join(out, basename(ftp_vcf_idx))
+    urllib.request.urlretrieve(ftp_vcf_idx, local_vcf_idx)
+    ftp_bed = known_truth_set_urls[name][reference][sample]['bed']
+    local_bed = join(out, basename(ftp_bed))
+    urllib.request.urlretrieve(ftp_bed, local_bed)
+    return local_vcf, local_vcf_idx, local_bed
+
+def setup(training_configs, rtg, out):
+    check_exists([config.reference for config in training_configs])
+    check_exists([config.reads for config in training_configs])
+    check_exists([config.regions for config in training_configs])
+    check_exists_or_none([config.config for config in training_configs])
+    result = []
+    sdf_references, known_truths = {}, {}
+    for data in training_configs:
+        if data.sdf is None:
+            if data.reference in sdf_references:
+                data.sdf = sdf_references[data.reference]
+            else:
+                data.sdf = join(out, basename(data.reference).replace('fa', '').replace('fasta', '') + 'sdf')
+                make_sdf_ref(data.reference, rtg, data.sdf)
+            sdf_references[data.reference] = data.sdf
+        else:
+            if not exists(data.sdf):
+                raise ValueError(data.sdf + " does not exist")
+        if not exists(data.truth):
+            if data.truth in known_truths:
+                data.truth, data.confident = known_truths[data.truth]
+            else:
+                try:
+                    name, reference_version, sample = data.truth.split('.')
+                    vcf, idx, bed = download_truth_set(name, reference_version, sample, out)
+                    known_truths[data.truth] = vcf, bed
+                    data.truth, data.confident = vcf, bed
+                except:
+                    print('Invalid truth set format')
+        else:
+            if not exists(data.confident):
+                raise ValueError(data.confident + " does not exist")
+        result.append(data)
+    return result
+
+def load_training_data(options):
+    return setup(read_training_data(options.config), options.rtg, options.out)
+
 def run_octopus(octopus, ref_path, bam_path, regions_bed, threads, out_path, config=None):
     octopus_cmd = [octopus, '-R', ref_path, '-I', bam_path, '-t', regions_bed,
-                   '--disable-call-filtering', '--annotations', 'forest',
+                   '--ignore-unmapped-contigs', '--disable-call-filtering', '--annotations', 'forest',
                    '--threads', str(threads), '-o', out_path]
     if config is not None:
         octopus_cmd += ['--config', config]
@@ -46,12 +193,10 @@ def run_rtg(rtg, rtg_ref_path, truth_vcf_path, bed_regions, confident_bed_path, 
          '--evaluation-regions', confident_bed_path,
           '--ref-overlap', '-c', octopus_vcf_path, '-o', out_dir])
 
-def eval_octopus(octopus, ref_path, bam_path, regions_bed, threads,
-                 rtg, rtg_ref_path, truth_vcf_path, confident_bed_path, out_dir,
-                 config=None):
-    octopus_vcf = call_variants(octopus, ref_path, bam_path, regions_bed, threads, out_dir, config=config)
+def eval_octopus(octopus, rtg, training_data, out_dir, threads):
+    octopus_vcf = call_variants(octopus, training_data.reference, training_data.reads, training_data.regions, threads, out_dir, config=training_data.config)
     rtf_eval_dir = join(out_dir, basename(octopus_vcf).replace(".vcf.gz", ".eval"))
-    run_rtg(rtg, rtg_ref_path, truth_vcf_path, regions_bed, confident_bed_path, octopus_vcf, rtf_eval_dir)
+    run_rtg(rtg, training_data.sdf, training_data.truth, training_data.regions, training_data.confident, octopus_vcf, rtf_eval_dir)
     return rtf_eval_dir
 
 def subset(vcf_in_path, vcf_out_path, bed_regions):
@@ -77,14 +222,15 @@ def is_missing(x):
 def annotation_to_string(x, missing_value):
     return str(missing_value) if is_missing(x) else str(x)
 
-def make_ranger_data(octopus_vcf_path, out_path, classifcation, measures, missing_value=-1):
+def make_ranger_data(octopus_vcf_path, out_path, classifcation, measures, missing_value=-1, fraction=1):
     vcf = VariantFile(octopus_vcf_path)
     with open(out_path, 'w') as ranger_data:
         datawriter = csv.writer(ranger_data, delimiter=' ')
         for rec in vcf:
-            row = [annotation_to_string(get_annotation(measure, rec), missing_value) for measure in measures]
-            row.append(str(int(classifcation)))
-            datawriter.writerow(row)
+            if fraction >= 1 or random.random() <= fraction:
+                row = [annotation_to_string(get_annotation(measure, rec), missing_value) for measure in measures]
+                row.append(str(int(classifcation)))
+                datawriter.writerow(row)
 
 def concat(filenames, outpath):
     with open(outpath, 'w') as outfile:
@@ -142,7 +288,7 @@ def read_truth_labels(truth_fname):
 
 def select_training_hypterparameters(master_data_fname, options):
     if type(options.trees) is int and type(options.min_node_size) is int:
-        return options.trees[0], options.min_node_size[0]
+        return options.trees, options.min_node_size
     else:
         # Use cross-validation to select hypterparameters
         training_data_fname, validation_data_fname = master_data_fname.replace('.dat', '.train.data'), master_data_fname.replace('.dat', '.validate.data')
@@ -168,66 +314,29 @@ def select_training_hypterparameters(master_data_fname, options):
         shutil.rmtree(cross_validation_temp_dir)
         return optimal_params
 
-def check_exists(paths):
-    for path in paths:
-        if not exists(path):
-            raise ValueError(path + " does not exist")
-
 def main(options):
     if not exists(options.out):
         makedirs(options.out)
-    check_exists(options.reads)
-    tmp_files, tmp_dirs, rtg_eval_dirs = [], [], []
-    truth_sets, confident_sets = options.truth, options.confident
-    fasta_refs, rtg_sdf_refs = options.reference, []
-    call_region_beds = options.regions
-    if len(call_region_beds) == 1:
-        call_region_beds = len(options.reads) * [call_region_beds[0]]
-    check_exists(call_region_beds)
-    for ref in fasta_refs:
-        rtg_sdf_ref = basename(ref) + '.tmp.sdf'
-        if rtg_sdf_ref not in rtg_sdf_refs:
-            make_sdf_ref(ref, options.rtg, rtg_sdf_ref)
-        rtg_sdf_refs.append(rtg_sdf_ref)
-        tmp_dirs.append(rtg_sdf_ref)
-    if len(options.reference) == 1 and len(options.reads) > 1:
-        fasta_refs = len(options.reads) * [fasta_refs[0]]
-        rtg_sdf_refs = len(options.reads) * [rtg_sdf_refs[0]]
-    check_exists(fasta_refs + rtg_sdf_refs)
-    if len(truth_sets) == 1 and len(options.reads) > 1:
-        truth_sets, confident_sets = len(options.reads) * [truth_sets[0]], len(options.reads) * [confident_sets[0]]
-    check_exists(truth_sets + confident_sets)
-    configs = options.config
-    if configs is None or len(configs) == 1 and len(options.reads) > 1:
-        configs = len(options.reads) * [configs[0]]
-    for fasta_ref, bam_path, regions_bed, config, rtg_ref, truth, confident in \
-            zip(fasta_refs, options.reads, call_region_beds, configs, rtg_sdf_refs, truth_sets, confident_sets):
-        rtg_eval_dirs.append(eval_octopus(options.octopus, fasta_ref, bam_path, regions_bed,
-                                          options.threads, options.rtg, rtg_ref, truth, confident,
-                                          options.out, config=config))
-    data_files = []
-    for rtg_eval, regions_bed in zip(rtg_eval_dirs, call_region_beds):
+    data_files, tmp_files = [], []
+    for config in load_training_data(options):
+        rtg_eval = eval_octopus(options.octopus, options.rtg, config, options.out, options.threads)
         tp_vcf_path = join(rtg_eval, "tp.vcf.gz")
         tp_train_vcf_path = tp_vcf_path.replace("tp.vcf", "tp.train.vcf")
-        subset(tp_vcf_path, tp_train_vcf_path, regions_bed)
+        subset(tp_vcf_path, tp_train_vcf_path, config.regions)
         tp_data_path = tp_train_vcf_path.replace(".vcf.gz", ".dat")
-        make_ranger_data(tp_train_vcf_path, tp_data_path, True, default_measures, options.missing_value)
+        make_ranger_data(tp_train_vcf_path, tp_data_path, True, default_measures, options.missing_value, fraction=config.tp)
         data_files.append(tp_data_path)
         fp_vcf_path = join(rtg_eval, "fp.vcf.gz")
         fp_train_vcf_path = fp_vcf_path.replace("fp.vcf", "fp.train.vcf")
-        subset(fp_vcf_path, fp_train_vcf_path, regions_bed)
+        subset(fp_vcf_path, fp_train_vcf_path, config.regions)
         fp_data_path = fp_train_vcf_path.replace(".vcf.gz", ".dat")
-        make_ranger_data(fp_train_vcf_path, fp_data_path, False, default_measures, options.missing_value)
+        make_ranger_data(fp_train_vcf_path, fp_data_path, False, default_measures, options.missing_value, fraction=config.fp)
         data_files.append(fp_data_path)
         tmp_files += [tp_train_vcf_path, fp_train_vcf_path]
     master_data_file = join(options.out, options.prefix + ".dat")
     concat(data_files, master_data_file)
-    for path in data_files:
-        remove(path)
-    for file in tmp_files:
+    for file in tmp_files + data_files:
         remove(file)
-    for dir in tmp_dirs:
-        shutil.rmtree(dir)
     shuffle(master_data_file)
     ranger_header = ' '.join(default_measures + ['TP'])
     add_header(master_data_file, ranger_header)
@@ -239,51 +348,12 @@ def main(options):
     except FileNotFoundError:
         print('Ranger did not complete, perhaps it was killed due to insufficient memory')
 
-def check_options(options):
-    if len(options.truth) > 1:
-        if len(options.truth) != len(options.reads):
-            print("Must specify a --truth set for each --read set if using different truth sets")
-            return False
-        if len(options.confident) != len(options.truth):
-            print("Must specify a --confident set for each --truth set")
-            return False
-    if options.config is not None and len(options.config) > 1:
-        if len(options.config) != len(options.reads):
-            print("Must specify a --config file for each --read set if using different configs")
-            return False
-    return True
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('-R', '--reference',
-                        nargs='+',
-                        type=str,
-                        required=True,
-                        help='Reference to use for calling')
-    parser.add_argument('-I', '--reads',
-                        nargs='+',
-                        type=str,
-                        required=True,
-                        help='Input BAM files')
-    parser.add_argument('-T', '--regions',
-                        nargs='+',
-                        type=str,
-                        required=True,
-                        help='BED files containing regions to call')
     parser.add_argument('--config',
-                        nargs='+',
-                        type=str,
-                        help='Octopus config files for each read set, or one for all')
-    parser.add_argument('--truth',
-                        nargs='+',
-                        type=str,
                         required=True,
-                        help='Truth VCF file')
-    parser.add_argument('--confident',
-                        nargs='+',
                         type=str,
-                        required=True,
-                        help='BED files containing high confidence truth regions')
+                        help='Training data config in json format')
     parser.add_argument('--octopus',
                         type=str,
                         default=default_octopus_bin,
@@ -316,7 +386,7 @@ if __name__ == '__main__':
                         help='Output directory')
     parser.add_argument('--prefix',
                         type=str,
-                        default='ranger_octopus',
+                        default='octopus_germline',
                         help='Output files prefix')
     parser.add_argument('-t', '--threads',
                         type=int,
@@ -327,6 +397,4 @@ if __name__ == '__main__':
                         default=-1,
                         help='Value for missing measures')
     parsed, unparsed = parser.parse_known_args()
-    if not check_options(parsed):
-        exit(1)
     main(parsed)
