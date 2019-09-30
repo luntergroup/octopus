@@ -111,9 +111,10 @@ class TrainingData:
         self.fp = data["fp_fraction"] if "fp_fraction" in data else 1
         self.config = data["octopus_config"] if "octopus_config" in data else None
 
-def read_training_data(training_json_filename):
-    with open(training_json_filename) as training_json:
-        return [TrainingData(data) for data in json.load(training_json)]
+class TrainingOptions:
+    def __init__(self, d):
+        self.cross_validation_fraction = d["cross_validation_fraction"] if "cross_validation_fraction" in d else 0.25
+        self.hyperparameters = d["hyperparameters"] if "hyperparameters" in d else None
 
 def make_sdf_ref(fasta_ref, rtg, out):
     call([rtg, 'format', '-o', out, fasta_ref])
@@ -130,11 +131,7 @@ def download_truth_set(name, reference, sample, out):
     urllib.request.urlretrieve(ftp_bed, local_bed)
     return local_vcf, local_vcf_idx, local_bed
 
-def setup(training_configs, rtg, out):
-    check_exists([config.reference for config in training_configs])
-    check_exists([reads for config in training_configs for reads in config.reads])
-    check_exists([config.regions for config in training_configs])
-    check_exists_or_none([config.config for config in training_configs])
+def setup(examples, truth_sets, rtg, out):
     result = []
     sdf_references, known_truths = {}, {}
     for data in training_configs:
@@ -165,8 +162,69 @@ def setup(training_configs, rtg, out):
         result.append(data)
     return result
 
-def load_training_data(options):
-    return setup(read_training_data(options.config), options.rtg, options.out)
+def load_training_config(options):
+    with open(options.config) as config:
+        config = json.load(config)
+        
+        examples = config['examples'] if "examples" in config else config
+        if type(examples) is not list:
+            examples = [examples]
+        examples = [TrainingData(example) for example in examples]
+                
+        check_exists([example.reference for example in examples])
+        check_exists([reads for example in examples for reads in example.reads])
+        check_exists([example.regions for example in examples])
+        check_exists_or_none([example.config for example in examples])
+        
+        sdf_references, known_truths, given_truths = {}, {}, config["truths"] if "truths" in config else {}
+        
+        for label, details in given_truths.items():
+            if not exists(details["vcf"]):
+                raise ValueError(details["vcf"] + " does not exist")
+            if not exists(details["bed"]):
+                raise ValueError(details["bed"] + " does not exist")
+        
+        for example in examples:
+            if example.sdf is None:
+                if example.reference in sdf_references:
+                    example.sdf = sdf_references[example.reference]
+                else:
+                    example.sdf = join(options.out, basename(example.reference).replace('fa', '').replace('fasta', '') + 'sdf')
+                    make_sdf_ref(example.reference, options.rtg, example.sdf)
+                sdf_references[example.reference] = example.sdf
+            else:
+                if not exists(example.sdf):
+                    raise ValueError(example.sdf + " does not exist")
+            
+            if type(example.truth) is dict:
+                if example.confident is None:
+                    example.confident = {}
+                for sample, truth_name in example.truth.items():
+                    if truth_name in given_truths:
+                        example.truth[sample], example.confident[sample] = given_truths[truth_name]['vcf'], given_truths[truth_name]['bed']
+                    elif truth_name in known_truths:
+                        example.truth[sample], example.confident[sample] = known_truths[example.truth]
+                    else:
+                        library, reference_version, truth_sample = truth_name.split('//')
+                        vcf, _, bed = download_truth_set(library, reference_version, truth_sample, options.out)
+                        known_truths[truth_name] = vcf, bed
+                        example.truth[sample], example.confident[sample] = vcf, bed
+            else:
+                if not exists(example.truth):
+                    if example.truth in given_truths:
+                        example.truth, example.confident = given_truths[truth_name]['vcf'], given_truths[truth_name]['bed']
+                    elif example.truth in known_truths:
+                        example.truth, example.confident = known_truths[example.truth]
+                    else:
+                        name, reference_version, sample = example.truth.split('//')
+                        vcf, _, bed = download_truth_set(name, reference_version, sample, options.out)
+                        known_truths[example.truth] = vcf, bed
+                        example.truth, example.confident = vcf, bed
+                else:
+                    if not exists(example.confident):
+                        raise ValueError(example.confident + " does not exist")
+                
+        return examples, TrainingOptions(config['training']) if "training" in config else None
 
 def get_reference_id(reference_filename):
     return basename(reference_filename).replace(".fasta", "")
@@ -174,25 +232,25 @@ def get_reference_id(reference_filename):
 def get_bam_id(bam_filenames):
     return "_".join(basename(fname).replace(".bam", "") for fname in bam_filenames)
 
-def get_octopus_output_filename(reference_filename, bam_filenames, somatic=False):
-    result = get_bam_id(bam_filenames) + "." + get_reference_id(reference_filename) + ".Octopus"
-    if somatic:
-        result += ".somatic"
-    result += ".vcf.gz"
-    return result
+def get_octopus_output_filename(reference_filename, bam_filenames, kind="germline"):
+    return get_bam_id(bam_filenames) + "." + get_reference_id(reference_filename) + ".Octopus." + kind + ".vcf.gz"
 
-def run_octopus(octopus, reference, reads, regions, threads, output, config=None, somatic=False):
+def run_octopus(octopus, reference, reads, regions, threads, output, config=None, kind="germline"):
     octopus_cmd = [octopus, '-R', reference, '-I'] + reads + ['-t', regions,
                    '--ignore-unmapped-contigs', '--disable-call-filtering', '--annotations', 'forest',
                    '--threads', str(threads), '-o', output]
     if config is not None:
         octopus_cmd += ['--config', config]
-    if somatic:
+    if kind == "somatic":
         octopus_cmd += ['--caller', 'cancer', '--somatics-only']
     call(octopus_cmd)
 
+def get_vcf_samples(vcf_filename):
+    vcf = ps.VariantFile(vcf_filename)
+    return vcf.header.samples
+
 def run_rtg(rtg, rtg_ref_path, truth_vcf_path, confident_bed_path, octopus_vcf_path, out_dir,
-            bed_regions=None, sample=None, somatic=False):
+            bed_regions=None, sample=None, kind="germline"):
     cmd = [rtg, 'vcfeval', \
            '-t', rtg_ref_path, \
            '-b', truth_vcf_path, \
@@ -201,10 +259,16 @@ def run_rtg(rtg, rtg_ref_path, truth_vcf_path, confident_bed_path, octopus_vcf_p
            '-o', out_dir]
     if bed_regions is not None:
         cmd += ['--bed-regions', bed_regions]
-    if somatic:
+    if kind == "somatic":
         cmd += ['--squash-ploidy', '--sample', 'ALT']
     elif sample is not None:
-        cmd += ['--sample', sample]
+        truth_samples = get_vcf_samples(truth_vcf_path)
+        if len(truth_samples) > 1:
+            raise Exception("More than one sample in truth " + truth_vcf_path)
+        if sample == truth_samples[0]:
+            cmd += ['--sample', sample]
+        else:
+            cmd += ['--sample', truth_samples[0] + "," + sample]
     call(cmd)
 
 def read_vcf_samples(vcf_fname):
@@ -248,7 +312,8 @@ def filter_somatic(vcf_filename):
                 out_vcf.write(rec)
             except OSError:
                 num_skipped_records += 1
-    print("Skipped " + str(num_skipped_records) + " bad records")
+    if num_skipped_records > 0:
+        print("Skipped " + str(num_skipped_records) + " bad records")
     in_vcf.close()
     out_vcf.close()
     shutil.move(tmp_vcf_filename, vcf_filename)
@@ -274,19 +339,30 @@ def read_normal_samples(vcf_filename):
 def is_normal_sample(sample, vcf_filename):
     return sample in read_normal_samples(vcf_filename)
 
-def eval_octopus(octopus, rtg, training_config, out_dir, threads, somatic=False):
-    octopus_vcf = join(out_dir, get_octopus_output_filename(training_config.reference, training_config.reads, somatic=somatic))
-    run_octopus(octopus, training_config.reference, training_config.reads, training_config.regions, threads, octopus_vcf, config=training_config.config, somatic=somatic)
-    if somatic:
+def eval_octopus(octopus, rtg, example, out_dir, threads, kind="germline"):
+    octopus_vcf = join(out_dir, get_octopus_output_filename(example.reference, example.reads, kind=kind))
+    run_octopus(octopus, example.reference, example.reads, example.regions, threads, octopus_vcf, config=example.config, kind=kind)
+    if kind == "somatic":
         # Hack as '--somatics-only' option is currently ignored when in training mode
         filter_somatic(octopus_vcf)
     samples = read_vcf_samples(octopus_vcf)
     result = []
-    for sample in samples:
-        if not somatic or not is_normal_sample(sample, octopus_vcf):
-            rtf_eval_dir = join(out_dir, basename(octopus_vcf).replace(".vcf.gz", ".") + sample + '.eval')
-            run_rtg(rtg, training_config.sdf, training_config.truth, training_config.confident, octopus_vcf, rtf_eval_dir, bed_regions=training_config.regions, sample=sample, somatic=somatic)
-            result.append(rtf_eval_dir)
+    if len(samples) == 1:
+        rtf_eval_dir = join(out_dir, basename(octopus_vcf).replace(".vcf.gz", ".") + '.eval')
+        run_rtg(rtg, example.sdf, example.truth, example.confident, octopus_vcf, rtf_eval_dir, bed_regions=example.regions, kind=kind)
+        result.append(rtf_eval_dir)
+    elif kind == "somatic":
+        for sample in samples:
+            if not is_normal_sample(sample, octopus_vcf):
+                rtf_eval_dir = join(out_dir, basename(octopus_vcf).replace(".vcf.gz", ".") + sample + '.eval')
+                run_rtg(rtg, example.sdf, example.truth, example.confident, octopus_vcf, rtf_eval_dir, bed_regions=example.regions, sample=sample, kind=kind)
+                result.append(rtf_eval_dir)
+    else:
+        for sample in samples:
+            if sample in example.truth:
+                rtf_eval_dir = join(out_dir, basename(octopus_vcf).replace(".vcf.gz", ".") + sample + '.eval')
+                run_rtg(rtg, example.sdf, example.truth[sample], example.confident[sample], octopus_vcf, rtf_eval_dir, bed_regions=example.regions, sample=sample, kind=kind)
+                result.append(rtf_eval_dir)
     return result
 
 def subset(vcf_in_path, vcf_out_path, bed_regions):
@@ -338,17 +414,18 @@ def partition_data(data_fname, validation_fraction, training_fname, validation_f
                 else:
                     training_file.write(example)
 
-def run_ranger_training(ranger, data_path, n_trees, min_node_size, threads, out, seed=None):
+def run_ranger_training(ranger, data_path, hyperparameters, threads, out, seed=None):
     cmd = [ranger, '--file', data_path, '--depvarname', 'TP', '--probability',
-          '--ntree', str(n_trees), '--targetpartitionsize', str(min_node_size),
+          '--ntree', str(hyperparameters["trees"]), '--targetpartitionsize', str(hyperparameters["min_node_size"]),
           '--nthreads', str(threads), '--outprefix', out, '--write', '--verbose']
     if seed is not None:
         cmd += ['--seed', str(seed)]
     call(cmd)
 
 def run_ranger_prediction(ranger, forest, data_path, threads, out):
-    call([ranger, '--file', data_path, '--predict', forest,
-          '--nthreads', str(threads), '--outprefix', out, '--verbose'])
+    cmd = [ranger, '--file', data_path, '--predict', forest,
+          '--nthreads', str(threads), '--outprefix', out, '--verbose']
+    call(cmd)
 
 def read_predictions(prediction_fname):
     with open(prediction_fname) as prediction_file:
@@ -363,51 +440,52 @@ def read_truth_labels(truth_fname):
         return np.array([int(line.strip().split()[true_label_index]) for line in truth_file])
 
 def select_training_hypterparameters(master_data_fname, options):
-    if type(options.trees) is int and type(options.min_node_size) is int:
-        return options.trees, options.min_node_size
+    if options is None or options.hyperparameters is None:
+        return {"trees": 500, "min_node_size": 10}
+    elif len(options.hyperparameters) == 1:
+        return options.hyperparameters[0]
     else:
         # Use cross-validation to select hypterparameters
         training_data_fname, validation_data_fname = master_data_fname.replace('.dat', '.train.data'), master_data_fname.replace('.dat', '.validate.data')
         partition_data(master_data_fname, options.cross_validation_fraction, training_data_fname, validation_data_fname)
-        optimal_params = None, None
-        min_loss = None
+        optimal_params, min_loss = None, None
         cross_validation_temp_dir = join(options.out, 'cross_validation')
         makedirs(cross_validation_temp_dir)
         cross_validation_prefix = join(cross_validation_temp_dir, options.prefix)
         prediction_fname = cross_validation_prefix + '.prediction'
         forest_fname = cross_validation_prefix + '.forest'
-        for trees in ([options.trees] if type(options.trees) is int else options.trees):
-            for min_node_size in ([options.min_node_size] if type(options.min_node_size) is int else options.min_node_size):
-                print('Training cross validation forest with trees =', trees, 'min_node_size =', min_node_size)
-                run_ranger_training(options.ranger, training_data_fname, trees, min_node_size, options.threads, cross_validation_prefix, seed=10)
-                run_ranger_prediction(options.ranger, forest_fname, validation_data_fname, options.threads, cross_validation_prefix)
-                truth_labels, predictions = read_truth_labels(validation_data_fname), read_predictions(prediction_fname)
-                loss = log_loss(truth_labels, predictions)
-                print('Binary cross entropy =', loss)
-                if min_loss is None or loss < min_loss:
-                    min_loss = loss
-                    optimal_params = trees, min_node_size
+        for params in options.hyperparameters:
+            trees, min_node_size = params["trees"], params["min_node_size"]
+            print('Training cross validation forest with trees =', trees, 'min_node_size =', min_node_size)
+            run_ranger_training(options.ranger, training_data_fname, trees, min_node_size, options.threads, cross_validation_prefix, seed=10)
+            run_ranger_prediction(options.ranger, forest_fname, validation_data_fname, options.threads, cross_validation_prefix)
+            truth_labels, predictions = read_truth_labels(validation_data_fname), read_predictions(prediction_fname)
+            loss = log_loss(truth_labels, predictions)
+            print('Binary cross entropy =', loss)
+            if min_loss is None or loss < min_loss:
+                min_loss, optimal_params = loss, params
         shutil.rmtree(cross_validation_temp_dir)
         return optimal_params
 
 def main(options):
+    examples, training_params = load_training_config(options)
     if not exists(options.out):
         makedirs(options.out)
     data_files, tmp_files = [], []
-    for config in load_training_data(options):
-        rtg_eval_dirs = eval_octopus(options.octopus, options.rtg, config, options.out, options.threads, somatic=options.somatic)
+    for example in examples:
+        rtg_eval_dirs = eval_octopus(options.octopus, options.rtg, example, options.out, options.threads, kind=options.kind)
         for rtg_eval in rtg_eval_dirs:
             tp_vcf_path = join(rtg_eval, "tp.vcf.gz")
             tp_train_vcf_path = tp_vcf_path.replace("tp.vcf", "tp.train.vcf")
-            subset(tp_vcf_path, tp_train_vcf_path, config.regions)
+            subset(tp_vcf_path, tp_train_vcf_path, example.regions)
             tp_data_path = tp_train_vcf_path.replace(".vcf.gz", ".dat")
-            make_ranger_data(tp_train_vcf_path, tp_data_path, True, default_measures, options.missing_value, fraction=config.tp)
+            make_ranger_data(tp_train_vcf_path, tp_data_path, True, default_measures, options.missing_value, fraction=example.tp)
             data_files.append(tp_data_path)
             fp_vcf_path = join(rtg_eval, "fp.vcf.gz")
             fp_train_vcf_path = fp_vcf_path.replace("fp.vcf", "fp.train.vcf")
-            subset(fp_vcf_path, fp_train_vcf_path, config.regions)
+            subset(fp_vcf_path, fp_train_vcf_path, example.regions)
             fp_data_path = fp_train_vcf_path.replace(".vcf.gz", ".dat")
-            make_ranger_data(fp_train_vcf_path, fp_data_path, False, default_measures, options.missing_value, fraction=config.fp)
+            make_ranger_data(fp_train_vcf_path, fp_data_path, False, default_measures, options.missing_value, fraction=example.fp)
             data_files.append(fp_data_path)
             tmp_files += [tp_train_vcf_path, fp_train_vcf_path]
     master_data_file = join(options.out, options.prefix + ".dat")
@@ -418,8 +496,8 @@ def main(options):
     ranger_header = ' '.join(default_measures + ['TP'])
     add_header(master_data_file, ranger_header)
     ranger_out_prefix = join(options.out, options.prefix)
-    num_trees, min_node_size = select_training_hypterparameters(master_data_file, options)
-    run_ranger_training(options.ranger, master_data_file, num_trees, min_node_size, options.threads, ranger_out_prefix)
+    hyperparameters = select_training_hypterparameters(master_data_file, training_params)
+    run_ranger_training(options.ranger, master_data_file, hyperparameters, options.threads, ranger_out_prefix)
     try:
         remove(ranger_out_prefix + ".confusion")
     except FileNotFoundError:
@@ -437,26 +515,12 @@ if __name__ == '__main__':
                         help='Octopus binary')
     parser.add_argument('--rtg', 
                         type=str,
-                        required=True,
+                        default='rtg',
                         help='RTG Tools binary')
     parser.add_argument('--ranger', 
                         type=str,
-                        required=True,
+                        default='ranger',
                         help='Ranger binary')
-    parser.add_argument('--trees',
-                        nargs='+',
-                        type=int,
-                        default=300,
-                        help='Number of trees to use in the random forest')
-    parser.add_argument('--min_node_size',
-                        nargs='+',
-                        type=int,
-                        default=20,
-                        help='Node size to stop growing trees, implicitly limiting tree depth')
-    parser.add_argument('--cross_validation_fraction',
-                        type=float,
-                        default=0.25,
-                        help='Fraction of data points to hold back for cross validation')
     parser.add_argument('-o', '--out',
                         type=str,
                         required=True,
@@ -473,9 +537,9 @@ if __name__ == '__main__':
                         type=float,
                         default=-1,
                         help='Value for missing measures')
-    parser.add_argument('--somatic',
-                        default=-False,
-                        action='store_true',
-                        help='Train a random forest for somatic variants')
+    parser.add_argument('--kind',
+                        type=str,
+                        default='germline',
+                        help='Kind of random forest to train [germline, somatic]')
     parsed, unparsed = parser.parse_known_args()
     main(parsed)
