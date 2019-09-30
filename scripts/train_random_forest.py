@@ -5,7 +5,7 @@ from os import makedirs, remove, pardir
 from os.path import join, basename, exists, dirname, abspath
 from subprocess import call
 import csv
-from pysam import VariantFile
+import pysam as ps
 import random
 import numpy as np
 import shutil
@@ -102,6 +102,8 @@ class TrainingData:
         self.reference = data["reference"] if "reference" in data else None
         self.sdf = data["reference_sdf"] if "reference_sdf" in data else None
         self.reads = data["reads"] if "reads" in data else None
+        if type(self.reads) is not list:
+            self.reads = [self.reads]
         self.regions = data["calling_regions"] if "calling_regions" in data else None
         self.truth = data["truth"] if "truth" in data else None
         self.confident = data["confident_regions"] if "confident_regions" in data else None
@@ -130,7 +132,7 @@ def download_truth_set(name, reference, sample, out):
 
 def setup(training_configs, rtg, out):
     check_exists([config.reference for config in training_configs])
-    check_exists([config.reads for config in training_configs])
+    check_exists([reads for config in training_configs for reads in config.reads])
     check_exists([config.regions for config in training_configs])
     check_exists_or_none([config.config for config in training_configs])
     result = []
@@ -166,47 +168,57 @@ def setup(training_configs, rtg, out):
 def load_training_data(options):
     return setup(read_training_data(options.config), options.rtg, options.out)
 
-def run_octopus(octopus, ref_path, bam_path, regions_bed, threads, out_path, config=None):
-    octopus_cmd = [octopus, '-R', ref_path, '-I', bam_path, '-t', regions_bed,
+def get_reference_id(reference_filename):
+    return basename(reference_filename).replace(".fasta", "")
+
+def get_bam_id(bam_filenames):
+    return "_".join(basename(fname).replace(".bam", "") for fname in bam_filenames)
+
+def get_octopus_output_filename(reference_filename, bam_filenames, somatic=False):
+    result = get_bam_id(bam_filenames) + "." + get_reference_id(reference_filename) + ".Octopus"
+    if somatic:
+        result += ".somatic"
+    result += ".vcf.gz"
+    return result
+
+def run_octopus(octopus, reference, reads, regions, threads, output, config=None, somatic=False):
+    octopus_cmd = [octopus, '-R', reference, '-I'] + reads + ['-t', regions,
                    '--ignore-unmapped-contigs', '--disable-call-filtering', '--annotations', 'forest',
-                   '--threads', str(threads), '-o', out_path]
+                   '--threads', str(threads), '-o', output]
     if config is not None:
         octopus_cmd += ['--config', config]
+    if somatic:
+        octopus_cmd += ['--caller', 'cancer', '--somatics-only']
     call(octopus_cmd)
 
-def get_reference_id(ref_path):
-    return basename(ref_path).replace(".fasta", "")
+def run_rtg(rtg, rtg_ref_path, truth_vcf_path, confident_bed_path, octopus_vcf_path, out_dir,
+            bed_regions=None, sample=None, somatic=False):
+    cmd = [rtg, 'vcfeval', \
+           '-t', rtg_ref_path, \
+           '-b', truth_vcf_path, \
+           '--evaluation-regions', confident_bed_path, \
+           '-c', octopus_vcf_path, \
+           '-o', out_dir]
+    if bed_regions is not None:
+        cmd += ['--bed-regions', bed_regions]
+    if somatic:
+        cmd += ['--squash-ploidy', '--sample', 'ALT']
+    elif sample is not None:
+        cmd += ['--sample', sample]
+    call(cmd)
 
-def get_bam_id(bam_path):
-    return basename(bam_path).replace(".bam", "")
+def read_vcf_samples(vcf_fname):
+    vcf = ps. VariantFile(vcf_fname)
+    return vcf.header.samples
 
-def call_variants(octopus, ref_path, bam_path, regions_bed, threads, out_dir, config=None):
-    ref_id = get_reference_id(ref_path)
-    bam_id = get_bam_id(bam_path)
-    out_vcf = join(out_dir, "octopus." + bam_id + "." + ref_id + ".vcf.gz")
-    run_octopus(octopus, ref_path, bam_path, regions_bed, threads, out_vcf, config=config)
-    return out_vcf
-
-def run_rtg(rtg, rtg_ref_path, truth_vcf_path, bed_regions, confident_bed_path, octopus_vcf_path, out_dir):
-    call([rtg, 'vcfeval', '-b', truth_vcf_path, '-t', rtg_ref_path,
-         '--bed-regions', bed_regions,
-         '--evaluation-regions', confident_bed_path,
-          '--ref-overlap', '-c', octopus_vcf_path, '-o', out_dir])
-
-def eval_octopus(octopus, rtg, training_data, out_dir, threads):
-    octopus_vcf = call_variants(octopus, training_data.reference, training_data.reads, training_data.regions, threads, out_dir, config=training_data.config)
-    rtf_eval_dir = join(out_dir, basename(octopus_vcf).replace(".vcf.gz", ".eval"))
-    run_rtg(rtg, training_data.sdf, training_data.truth, training_data.regions, training_data.confident, octopus_vcf, rtf_eval_dir)
-    return rtf_eval_dir
-
-def subset(vcf_in_path, vcf_out_path, bed_regions):
-    call(['bcftools', 'view', '-R', bed_regions, '-O', 'z', '-o', vcf_out_path, vcf_in_path])
-
-def get_annotation(field, rec):
+def get_annotation(field, rec, sample=None):
     if field == 'QUAL':
         return rec.qual
     elif field in rec.format:
-        res = rec.samples[list(rec.samples)[0]][field]
+        if sample is None:
+            res = rec.samples[list(rec.samples)[0]][field]
+        else:
+            res = rec.samples[sample][field]
         if type(res) == tuple:
             res = res[0]
         return res
@@ -216,6 +228,70 @@ def get_annotation(field, rec):
             res = res[0]
         return res
 
+def is_somatic_sample(rec, sample):
+    return bool(int(get_annotation('SOMATIC', rec, sample)))
+
+def is_somatic_record(rec):
+    return any(is_somatic_sample(rec, sample) for sample in list(rec.samples))
+
+def index_vcf(vcf_filename):
+    call(['tabix', '-f', vcf_filename])
+
+def filter_somatic(vcf_filename):
+    in_vcf = ps. VariantFile(vcf_filename)
+    tmp_vcf_filename = vcf_filename.replace('.vcf', '.tmp.vcf')
+    out_vcf = ps.VariantFile(tmp_vcf_filename, 'wz', header=in_vcf.header)
+    num_skipped_records = 0
+    for rec in in_vcf:
+        if is_somatic_record(rec):
+            try:
+                out_vcf.write(rec)
+            except OSError:
+                num_skipped_records += 1
+    print("Skipped " + str(num_skipped_records) + " bad records")
+    in_vcf.close()
+    out_vcf.close()
+    shutil.move(tmp_vcf_filename, vcf_filename)
+    index_vcf(vcf_filename)
+
+def read_octopus_header_info(vcf_filename):
+    vcf = ps.VariantFile(vcf_filename)
+    for record in vcf.header.records:
+        if record.key == "octopus":
+            return dict(record)
+    return None
+
+def read_normal_samples(vcf_filename):
+    options = read_octopus_header_info(vcf_filename)['options'].split(' ')
+    result = []
+    for token in options[options.index('--normal-sample') + 1:]:
+        if token.startswith('--'):
+            break
+        else:
+            result.append(token)
+    return result
+
+def is_normal_sample(sample, vcf_filename):
+    return sample in read_normal_samples(vcf_filename)
+
+def eval_octopus(octopus, rtg, training_config, out_dir, threads, somatic=False):
+    octopus_vcf = join(out_dir, get_octopus_output_filename(training_config.reference, training_config.reads, somatic=somatic))
+    run_octopus(octopus, training_config.reference, training_config.reads, training_config.regions, threads, octopus_vcf, config=training_config.config, somatic=somatic)
+    if somatic:
+        # Hack as '--somatics-only' option is currently ignored when in training mode
+        filter_somatic(octopus_vcf)
+    samples = read_vcf_samples(octopus_vcf)
+    result = []
+    for sample in samples:
+        if not somatic or not is_normal_sample(sample, octopus_vcf):
+            rtf_eval_dir = join(out_dir, basename(octopus_vcf).replace(".vcf.gz", ".") + sample + '.eval')
+            run_rtg(rtg, training_config.sdf, training_config.truth, training_config.confident, octopus_vcf, rtf_eval_dir, bed_regions=training_config.regions, sample=sample, somatic=somatic)
+            result.append(rtf_eval_dir)
+    return result
+
+def subset(vcf_in_path, vcf_out_path, bed_regions):
+    call(['bcftools', 'view', '-R', bed_regions, '-O', 'z', '-o', vcf_out_path, vcf_in_path])
+
 def is_missing(x):
     return x == '.' or np.isnan(float(x))
 
@@ -223,7 +299,7 @@ def annotation_to_string(x, missing_value):
     return str(missing_value) if is_missing(x) else str(x)
 
 def make_ranger_data(octopus_vcf_path, out_path, classifcation, measures, missing_value=-1, fraction=1):
-    vcf = VariantFile(octopus_vcf_path)
+    vcf = ps. VariantFile(octopus_vcf_path)
     with open(out_path, 'w') as ranger_data:
         datawriter = csv.writer(ranger_data, delimiter=' ')
         for rec in vcf:
@@ -319,20 +395,21 @@ def main(options):
         makedirs(options.out)
     data_files, tmp_files = [], []
     for config in load_training_data(options):
-        rtg_eval = eval_octopus(options.octopus, options.rtg, config, options.out, options.threads)
-        tp_vcf_path = join(rtg_eval, "tp.vcf.gz")
-        tp_train_vcf_path = tp_vcf_path.replace("tp.vcf", "tp.train.vcf")
-        subset(tp_vcf_path, tp_train_vcf_path, config.regions)
-        tp_data_path = tp_train_vcf_path.replace(".vcf.gz", ".dat")
-        make_ranger_data(tp_train_vcf_path, tp_data_path, True, default_measures, options.missing_value, fraction=config.tp)
-        data_files.append(tp_data_path)
-        fp_vcf_path = join(rtg_eval, "fp.vcf.gz")
-        fp_train_vcf_path = fp_vcf_path.replace("fp.vcf", "fp.train.vcf")
-        subset(fp_vcf_path, fp_train_vcf_path, config.regions)
-        fp_data_path = fp_train_vcf_path.replace(".vcf.gz", ".dat")
-        make_ranger_data(fp_train_vcf_path, fp_data_path, False, default_measures, options.missing_value, fraction=config.fp)
-        data_files.append(fp_data_path)
-        tmp_files += [tp_train_vcf_path, fp_train_vcf_path]
+        rtg_eval_dirs = eval_octopus(options.octopus, options.rtg, config, options.out, options.threads, somatic=options.somatic)
+        for rtg_eval in rtg_eval_dirs:
+            tp_vcf_path = join(rtg_eval, "tp.vcf.gz")
+            tp_train_vcf_path = tp_vcf_path.replace("tp.vcf", "tp.train.vcf")
+            subset(tp_vcf_path, tp_train_vcf_path, config.regions)
+            tp_data_path = tp_train_vcf_path.replace(".vcf.gz", ".dat")
+            make_ranger_data(tp_train_vcf_path, tp_data_path, True, default_measures, options.missing_value, fraction=config.tp)
+            data_files.append(tp_data_path)
+            fp_vcf_path = join(rtg_eval, "fp.vcf.gz")
+            fp_train_vcf_path = fp_vcf_path.replace("fp.vcf", "fp.train.vcf")
+            subset(fp_vcf_path, fp_train_vcf_path, config.regions)
+            fp_data_path = fp_train_vcf_path.replace(".vcf.gz", ".dat")
+            make_ranger_data(fp_train_vcf_path, fp_data_path, False, default_measures, options.missing_value, fraction=config.fp)
+            data_files.append(fp_data_path)
+            tmp_files += [tp_train_vcf_path, fp_train_vcf_path]
     master_data_file = join(options.out, options.prefix + ".dat")
     concat(data_files, master_data_file)
     for file in tmp_files + data_files:
@@ -386,7 +463,7 @@ if __name__ == '__main__':
                         help='Output directory')
     parser.add_argument('--prefix',
                         type=str,
-                        default='octopus_germline',
+                        default='octopus',
                         help='Output files prefix')
     parser.add_argument('-t', '--threads',
                         type=int,
@@ -396,5 +473,9 @@ if __name__ == '__main__':
                         type=float,
                         default=-1,
                         help='Value for missing measures')
+    parser.add_argument('--somatic',
+                        default=-False,
+                        action='store_true',
+                        help='Train a random forest for somatic variants')
     parsed, unparsed = parser.parse_known_args()
     main(parsed)
