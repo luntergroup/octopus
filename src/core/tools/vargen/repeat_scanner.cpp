@@ -270,6 +270,11 @@ T repeat(T str, const std::size_t n)
     return str;
 }
 
+auto abs_diff(std::size_t lhs, std::size_t rhs) noexcept
+{
+    return lhs < rhs ? rhs - lhs : lhs - rhs;
+}
+
 } // namespace
 
 void RepeatScanner::generate(const GenomicRegion& region, std::vector<Variant>& result) const
@@ -290,18 +295,50 @@ void RepeatScanner::generate(const GenomicRegion& region, std::vector<Variant>& 
                         auto deleted_region = head_region(repeat_pair.rhs, repeat_pair.rhs.period() * num_deleted_periods);
                         auto deleted_sequence = reference_.get().fetch_sequence(deleted_region);
                         const auto num_inserted_periods = count_whole_repeats(region_size(deleted_region), repeat_pair.lhs.period());
+                        auto insertion_region = head_region(repeat_pair.lhs);
                         auto inserted_sequence = repeat(repeat_pair.lhs.motif(), num_inserted_periods);
+                        if (deleted_sequence.size() != inserted_sequence.size()) {
+                            const auto inbalance = abs_diff(inserted_sequence.size(), deleted_sequence.size());
+                            if (repeat_pair.rhs.period() < repeat_pair.lhs.period()) {
+                                if (inbalance % repeat_pair.rhs.period() == 0) {
+                                    auto balanced_deletion_region = expand_rhs(deleted_region, inbalance);
+                                    auto balanced_deleted_sequence = reference_.get().fetch_sequence(balanced_deletion_region);;
+                                    result.emplace_back(std::move(balanced_deletion_region), balanced_deleted_sequence, "");
+                                }
+                            } else {
+                                if (inbalance % repeat_pair.lhs.period() == 0) {
+                                    auto balanced_insertion_sequence = repeat(repeat_pair.lhs.motif(), num_inserted_periods + inbalance / repeat_pair.lhs.period());
+                                    result.emplace_back(insertion_region, "", std::move(balanced_insertion_sequence));
+                                }
+                            }
+                        }
                         result.emplace_back(std::move(deleted_region), std::move(deleted_sequence), "");
-                        result.emplace_back(head_region(repeat_pair.lhs), "", std::move(inserted_sequence));
+                        result.emplace_back(std::move(insertion_region), "", std::move(inserted_sequence));
                     } else if (are_adjacent(mnv, repeat_pair.rhs) && contains(repeat_pair.lhs, mnv)) {
                         // insertion of rhs repeat, deletion of lhs repeat
                         const auto num_deleted_periods = count_whole_repeats(region_size(mnv), repeat_pair.lhs.period());
                         auto deleted_region = head_region(repeat_pair.lhs, repeat_pair.lhs.period() * num_deleted_periods);
                         auto deleted_sequence = reference_.get().fetch_sequence(deleted_region);
                         const auto num_inserted_periods = count_whole_repeats(region_size(deleted_region), repeat_pair.rhs.period());
+                        auto insertion_region = head_region(repeat_pair.rhs);
                         auto inserted_sequence = repeat(repeat_pair.rhs.motif(), num_inserted_periods);
+                        if (deleted_sequence.size() != inserted_sequence.size()) {
+                            const auto inbalance = abs_diff(inserted_sequence.size(), deleted_sequence.size());
+                            if (repeat_pair.rhs.period() < repeat_pair.lhs.period()) {
+                                if (inbalance % repeat_pair.rhs.period() == 0) {
+                                    auto balanced_deletion_region = expand_rhs(deleted_region, inbalance);
+                                    auto balanced_deleted_sequence = reference_.get().fetch_sequence(balanced_deletion_region);;
+                                    result.emplace_back(std::move(balanced_deletion_region), balanced_deleted_sequence, "");
+                                }
+                            } else {
+                                if (inbalance % repeat_pair.lhs.period() == 0) {
+                                    auto balanced_insertion_sequence = repeat(repeat_pair.lhs.motif(), num_inserted_periods + inbalance / repeat_pair.lhs.period());
+                                    result.emplace_back(insertion_region, "", std::move(balanced_insertion_sequence));
+                                }
+                            }
+                        }
                         result.emplace_back(std::move(deleted_region), std::move(deleted_sequence), "");
-                        result.emplace_back(head_region(repeat_pair.rhs), "", std::move(inserted_sequence));
+                        result.emplace_back(std::move(insertion_region), "", std::move(inserted_sequence));
                     }
                 }
             }
