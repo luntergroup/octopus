@@ -481,7 +481,6 @@ ErrorModel make_error_model(const boost::filesystem::path& model_filename)
     } else {
         result.indel = std::make_unique<CustomRepeatBasedIndelErrorModel>(std::move(*params.open));
     }
-    std::cout << "result" << std::endl;
     result.snv = make_snv_error_model(default_model_config);
     return result;
 }
