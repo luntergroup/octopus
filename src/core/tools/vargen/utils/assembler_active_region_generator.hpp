@@ -27,11 +27,12 @@ class AssemblerActiveRegionGenerator
 public:
     struct Options
     {
-        enum class TriggerType { snv, indel, structual };
+        enum class TriggerType { snv, indel, structual, clustered };
         // TriggerType::snv looks for reads containing SNVs
         // TriggerType::indel looks for reads containing indels and soft clipping
         // TriggerType::structual looks for deletion hotspots
-        std::vector<TriggerType> trigger_types = {TriggerType::indel};
+		// TriggerType::clustered looks for reads containing clustered variation (SNVs and indels)
+        std::vector<TriggerType> trigger_types = {TriggerType::indel, TriggerType::clustered};
         AlignedRead::BaseQuality trigger_quality = 10;
         AlignedRead::MappingDomain::Size trigger_clip_size = 2;
         double min_expected_mutation_frequency = 0.1;
@@ -63,7 +64,7 @@ private:
     using CoverageTrackerMap = std::unordered_map<SampleName, CoverageTracker<GenomicRegion>>;
     
     std::reference_wrapper<const ReferenceGenome> reference_;
-    bool snvs_interesting_ = false, indels_interesting_ = true, structual_interesting_ = false;
+    bool snvs_interesting_ = false, indels_interesting_ = true, structual_interesting_ = false, clustered_interesting_ = true;
     AlignedRead::BaseQuality trigger_quality_ = 10;
     AlignedRead::MappingDomain::Size trigger_clip_size_ = 2;
     double min_expected_mutation_frequency_;
