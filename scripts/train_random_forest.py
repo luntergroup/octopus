@@ -212,7 +212,7 @@ def load_training_config(options):
             else:
                 if not exists(example.truth):
                     if example.truth in given_truths:
-                        example.truth, example.confident = given_truths[truth_name]['vcf'], given_truths[truth_name]['bed']
+                        example.truth, example.confident = given_truths[example.truth]['vcf'], given_truths[example.truth]['bed']
                     elif example.truth in known_truths:
                         example.truth, example.confident = known_truths[example.truth]
                     else:
