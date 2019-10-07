@@ -565,7 +565,8 @@ bool is_missing(const Allele& a) noexcept
 
 bool is_delete_masked(const Allele& a) noexcept
 {
-    return a.sequence() == deleted_sequence;
+    auto itr = std::search(std::cbegin(a.sequence()), std::cend(a.sequence()), std::cbegin(deleted_sequence), std::cend(deleted_sequence));
+    return itr != std::cend(a.sequence());
 }
 
 auto get_allele_counts(const Call& call, const std::vector<SampleName>& samples)
