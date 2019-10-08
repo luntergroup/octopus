@@ -150,6 +150,21 @@ auto copy_positive(const std::deque<T>& values)
     return result;
 }
 
+template <typename Range>
+auto make_depth_distribution(const Range& depths)
+{
+    std::vector<unsigned> counts {};
+    if (!depths.empty()) {
+        auto max_depth = *std::max_element(std::cbegin(depths), std::cend(depths));
+        counts.resize(max_depth + 1);
+    }
+    for (const auto& depth : depths) ++counts[depth];
+    std::vector<double> result(counts.size());
+    const auto calculate_frequency = [&] (auto count) noexcept { return static_cast<double>(count) / depths.size(); };
+    std::transform(std::cbegin(counts), std::cend(counts), std::begin(result), calculate_frequency);
+    return result;
+}
+
 } // namespace
 
 boost::optional<ReadSetProfile>
@@ -174,9 +189,11 @@ profile_reads(const std::vector<SampleName>& samples,
         result.fragmented_template_median_bytes = boost::none;
     }
     result.samples = samples;
+    result.sample_depth_distribution.resize(samples.size());
     result.sample_mean_depth.resize(samples.size());
     result.sample_median_depth.resize(samples.size());
     result.sample_depth_stdev.resize(samples.size());
+    result.sample_positive_depth_stdev.resize(samples.size());
     result.sample_median_positive_depth.resize(samples.size());
     result.sample_mean_positive_depth.resize(samples.size());
     std::deque<unsigned> depths {};
@@ -195,6 +212,7 @@ profile_reads(const std::vector<SampleName>& samples,
             }
         }
         if (!sample_depths.empty()) {
+            result.sample_depth_distribution[s] = make_depth_distribution(sample_depths);
             result.sample_mean_depth[s] = maths::mean(sample_depths);
             result.sample_median_depth[s] = maths::median(sample_depths);
             result.sample_depth_stdev[s] = maths::stdev(sample_depths);
@@ -202,9 +220,11 @@ profile_reads(const std::vector<SampleName>& samples,
             if (!sample_positive_depths.empty()) {
                 result.sample_median_positive_depth[s] = maths::median(sample_positive_depths);
                 result.sample_mean_positive_depth[s] = maths::mean(sample_positive_depths);
+                result.sample_positive_depth_stdev[s] = maths::stdev(sample_positive_depths);
             } else {
                 result.sample_median_positive_depth[s] = 0;
                 result.sample_mean_positive_depth[s] = 0;
+                result.sample_positive_depth_stdev[s] = 0;
             }
         } else {
             result.sample_mean_depth[s] = 0;
@@ -215,6 +235,7 @@ profile_reads(const std::vector<SampleName>& samples,
         utils::append(std::move(sample_depths), depths);
     }
     assert(!depths.empty());
+    result.depth_distribution = make_depth_distribution(depths);
     result.mean_depth = maths::mean(depths);
     result.median_depth = maths::median(depths);
     result.depth_stdev = maths::stdev(depths);
@@ -222,9 +243,11 @@ profile_reads(const std::vector<SampleName>& samples,
     if (!positive_depths.empty()) {
         result.median_positive_depth = maths::median(positive_depths);
         result.mean_positive_depth = maths::mean(positive_depths);
+        result.positive_depth_stdev = maths::stdev(positive_depths);
     } else {
         result.median_positive_depth = 0;
         result.mean_positive_depth = 0;
+        result.positive_depth_stdev = 0;
     }
     result.max_read_length = *std::max_element(std::cbegin(read_lengths), std::cend(read_lengths));
     result.median_read_length = maths::median(read_lengths);
@@ -248,19 +271,23 @@ std::ostream& operator<<(std::ostream& os, const ReadSetProfile& profile)
     
     for (std::size_t s {0}; s < profile.sample_mean_depth.size(); ++s) {
         os << "Sample " << s << " depth:\n";
+        os << "\tdistribution = "; for (auto p : profile.sample_depth_distribution[s]) os << p << ' '; os << '\n';
         os << "\tmean = " << profile.sample_mean_depth[s] << '\n';
         os << "\tmean positive = " << profile.sample_mean_positive_depth[s] << '\n';
         os << "\tmedian = " << profile.sample_median_depth[s] << '\n';
         os << "\tmedian positive = " << profile.sample_median_positive_depth[s] << '\n';
         os << "\tstdev = " << profile.sample_depth_stdev[s] << '\n';
+        os << "\tpositive stdev = " << profile.sample_positive_depth_stdev[s] << '\n';
     }
     
     os << "Total depth:\n";
+    os << "\tdistribution = "; for (auto p : profile.depth_distribution) os << p << ' '; os << '\n';
     os << "\tmean = " << profile.mean_depth << '\n';
     os << "\tmean positive = " << profile.mean_positive_depth << '\n';
     os << "\tmedian = " << profile.median_depth << '\n';
     os << "\tmedian positive = " << profile.median_positive_depth << '\n';
     os << "\tstdev = " << profile.depth_stdev << '\n';
+    os << "\tpositive stdev = " << profile.positive_depth_stdev << '\n';
     
     os << "Read length:\n";
     os << "\tmax = " << profile.max_read_length << '\n';

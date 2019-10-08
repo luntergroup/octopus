@@ -26,11 +26,14 @@ struct ReadSetProfileConfig
 
 struct ReadSetProfile
 {
+    using DiscreteDistribution = std::vector<double>;
     std::size_t mean_read_bytes, read_bytes_stdev;
-    std::size_t mean_depth, median_depth, depth_stdev, median_positive_depth, mean_positive_depth;
+    DiscreteDistribution depth_distribution;
+    std::size_t mean_depth, median_depth, depth_stdev, positive_depth_stdev, median_positive_depth, mean_positive_depth;
     std::vector<SampleName> samples;
+    std::vector<DiscreteDistribution> sample_depth_distribution;
     std::vector<std::size_t> sample_mean_depth, sample_median_depth, sample_median_positive_depth, sample_mean_positive_depth;
-    std::vector<std::size_t> sample_depth_stdev;
+    std::vector<std::size_t> sample_depth_stdev, sample_positive_depth_stdev;
     AlignedRead::NucleotideSequence::size_type max_read_length, median_read_length;
     AlignedRead::MappingQuality max_mapping_quality, median_mapping_quality, rmq_mapping_quality;
     boost::optional<std::size_t> fragmented_template_median_bytes;
