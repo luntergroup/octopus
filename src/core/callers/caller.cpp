@@ -410,6 +410,15 @@ Caller::call_variants(const GenomicRegion& call_region, const MappableFlatSet<Va
     const auto read_templates = make_read_templates(reads);
     auto haplotype_likelihoods = make_haplotype_likelihood_cache();
     auto haplotype_generator = make_haplotype_generator(candidates, reads, read_templates, read_report);
+    if (haplotype_generator.done()) {
+        logging::WarningLogger warn_log {};
+        stream(warn_log) << "No variants were considered in " << call_region << " as the region was considered uncallable";
+        if (refcalls_requested()) {
+            utils::append(call_reference(call_region, reads), result);
+        }
+        progress_meter.log_completed(call_region);
+        return result;
+    }
     GeneratorStatus status;
     HaplotypeBlock haplotypes {call_region}, next_haplotypes {call_region};
     GenomicRegion active_region;

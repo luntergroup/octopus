@@ -79,7 +79,7 @@ public:
     HaplotypeGenerator& operator=(HaplotypeGenerator&&)      = default;
     
     ~HaplotypeGenerator() = default;
-            
+    
     // Generates the next HaplotypePacket, this will always move the generated
     // active region forward. The next generated region is automatically calculated
     // (i.e the region given by peek_next_active_region) unless jump has
@@ -117,6 +117,8 @@ public:
     // Discards any equivilant haplotypes that are not in the given set of
     // haplotypes.
     void collapse(const HaplotypeBlock& haplotypes);
+    
+    bool done() const noexcept;
     
 private:
     struct HoldoutSet

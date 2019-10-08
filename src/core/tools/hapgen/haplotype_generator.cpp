@@ -191,14 +191,16 @@ get_walker_policy(policies.extension)
             log << "Found lagging exclusion zones: ";
             for (const auto& zone : lagging_exclusion_zones_) log << zone << " ";
         }
-        if (alleles_.empty()) {
-            alleles_.insert(candidates.back().ref_allele());
-        }
     }
-    rightmost_allele_ = alleles_.rightmost();
-    active_region_ = head_region(alleles_.leftmost());
-    if (active_region_.begin() != 0) {
-        active_region_ = shift(active_region_, -1);
+    if (alleles_.empty()) {
+        rightmost_allele_ = candidates.back().ref_allele();
+        active_region_ = tail_region(rightmost_allele_);
+    } else {
+        rightmost_allele_ = alleles_.rightmost();
+        active_region_ = head_region(alleles_.leftmost());
+        if (active_region_.begin() != 0) {
+            active_region_ = shift(active_region_, -1);
+        }
     }
 }
 
@@ -250,7 +252,7 @@ bool has_rhs_sandwich_insertion(const MappableFlatSet<Allele>& alleles, const Ge
 
 HaplotypeGenerator::HaplotypePacket HaplotypeGenerator::generate()
 {
-    if (is_finished()) return {{active_region_}, boost::none, boost::none};
+    if (done()) return {{active_region_}, boost::none, boost::none};
     populate_tree();
     auto haplotypes = tree_.extract_haplotypes(calculate_haplotype_region());
     cleanup_tree();
@@ -329,6 +331,11 @@ void HaplotypeGenerator::collapse(const HaplotypeBlock& haplotypes)
             stream(*debug_log_) << "There are " << tree_.num_haplotypes() << " left in the tree after collapsing "
                                 << haplotypes.size() << " haplotypes";
     }
+}
+
+bool HaplotypeGenerator::done() const noexcept
+{
+    return alleles_.empty() && haplotype_blocks_.empty();
 }
 
 // private methods
@@ -1476,11 +1483,6 @@ GenomicRegion HaplotypeGenerator::calculate_haplotype_region() const
         return expand(active_region_, lhs_expansion, rhs_expansion);
     }
     return expand(active_region_, 1);
-}
-
-bool HaplotypeGenerator::is_finished() const noexcept
-{
-    return alleles_.empty() && haplotype_blocks_.empty();
 }
 
 void HaplotypeGenerator::cleanup_tree()
