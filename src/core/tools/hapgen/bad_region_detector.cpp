@@ -332,8 +332,15 @@ BadRegionDetector::compute_state(const GenomicRegion& region, const MappableFlat
 {
     RegionState result {};
     result.region = region;
-    result.median_mapping_quality = median_mapping_quality(reads, region);
-    result.sample_mean_read_depths.reserve(reads.size());
+    if (has_coverage(reads, region)) {
+        result.median_mapping_quality = median_mapping_quality(reads, region);
+    } else {
+        if (reads_profile_) {
+            result.median_mapping_quality = reads_profile_->max_mapping_quality;
+        } else {
+            result.median_mapping_quality = 40;
+        }
+    }
     result.sample_mean_read_depths.reserve(reads.size());
     if (reads_report) {
         for (const auto& p : reads_report->raw_depths) {
@@ -362,24 +369,35 @@ BadRegionDetector::compute_states(const std::vector<GenomicRegion>& regions, con
     return result;
 }
 
+template <typename Range>
+auto discrete_cdf(const Range& probabilities, const std::size_t x)
+{
+    using ProbabilityType = typename Range::value_type;
+    if (x >= probabilities.size()) return ProbabilityType {1};
+    return std::accumulate(std::cbegin(probabilities), std::next(std::cbegin(probabilities), x), ProbabilityType {0});
+}
+
+template <typename Range>
+auto discrete_sf(const Range& probabilities, std::size_t x)
+{
+    return 1 - discrete_cdf(probabilities, x);
+}
+
 double BadRegionDetector::calculate_probability_good(const RegionState& state) const
 {
     // Basic idea
-    // lower mapping quality -> higher probability
-    // higher variant density -> higher probability
-    // higher depth -> higher probability
+    // lower mapping quality -> lower probability
+    // higher variant density -> lower probability
+    // higher depth -> lower probability
     double result {1};
     if (reads_profile_) {
         for (std::size_t s {0}; s < reads_profile_->samples.size(); ++s) {
-            double tolerance_factor;
-            switch (params_.tolerance) {
-                case Parameters::Tolerance::high: tolerance_factor = 6; break;
-                case Parameters::Tolerance::normal: tolerance_factor = 5; break;
-                case Parameters::Tolerance::low: tolerance_factor = 4; break;
+            const auto low_depth = reads_profile_->sample_mean_positive_depth[s] + 2 * reads_profile_->sample_positive_depth_stdev[s];
+            const auto target_depth = state.sample_mean_read_depths.at(reads_profile_->samples[s]);
+            if (low_depth < target_depth) {
+                result *= discrete_sf(reads_profile_->sample_depth_distribution[s], target_depth);
+                result /= discrete_sf(reads_profile_->sample_depth_distribution[s], low_depth);
             }
-            auto mu = tolerance_factor * std::max(reads_profile_->sample_median_positive_depth[s], reads_profile_->sample_mean_positive_depth[s]);
-            auto sigma = std::max(static_cast<double>(reads_profile_->sample_depth_stdev[s]), 1.0);
-            result *= maths::normal_sf<double>(state.sample_mean_read_depths.at(reads_profile_->samples[s]), mu, sigma);
         }
     }
     {
@@ -394,8 +412,7 @@ double BadRegionDetector::calculate_probability_good(const RegionState& state) c
     }
     if (state.median_mapping_quality < 40) {
         result /= 2;
-    }
-    return result;
+    }return result;
 }
 
 bool BadRegionDetector::is_bad(const RegionState& state) const
