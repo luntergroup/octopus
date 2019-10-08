@@ -37,10 +37,12 @@ def aggregate_errors(df, aggregators=['library', 'period', 'periods']):
     if len(df) == 0:
         return df
     errors_attributes = ['period', 'periods', 'tract_length', 'motif', 'indel_length', 'errors', 'reads', 'reference_footprint']
+    aggregation_functions = {'library': 'first', 'period': 'first', 'periods': 'first', 'errors': 'sum', 'reads': 'sum', 'tract_length': 'first', 'reference_footprint': 'first'}
     if 'library' in df:
         errors_attributes = ['library'] + errors_attributes
+        if 'library' not in aggregators:
+            aggregation_functions['reference_footprint'] = 'sum'
     errors_df = df[errors_attributes]
-    aggregation_functions = {'library': 'first', 'period': 'first', 'periods': 'first', 'errors': 'sum', 'reads': 'sum', 'tract_length': 'first', 'reference_footprint': 'first'}
     if 'indel_length' not in aggregators:
         aggregation_functions['motif'] = 'first'
         aggregation_functions['reads'] = 'first'
@@ -198,10 +200,7 @@ def main(options):
         profile_csvs = dict((file.name, file) for file in options.profiles)
     else:
         profile_csvs = dict(zip(options.labels, options.profiles))
-    if len(profile_csvs) == 1:
-        profiles_df = read_indel_error_profile_and_summary(options.profiles[0])
-    else:
-        profiles_df = read_indel_error_profiles_and_summaries(profile_csvs, merge_libraries=True)
+    profiles_df = read_indel_error_profiles_and_summaries(profile_csvs, merge_libraries=True)
     error_model = make_octopus_indel_error_model(profiles_df)
     write_error_model(error_model, options.output)
     if options.plot:
