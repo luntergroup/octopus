@@ -1397,7 +1397,8 @@ auto get_max_haplotypes(const OptionMap& options)
     }
 }
 
-auto get_dense_variation_detector(const OptionMap& options, const boost::optional<ReadSetProfile>& input_reads_profile)
+boost::optional<coretools::BadRegionDetector>
+make_bad_region_detector(const OptionMap& options, const boost::optional<ReadSetProfile>& input_reads_profile)
 {
     auto snp_heterozygosity = options.at("snp-heterozygosity").as<float>();
     auto indel_heterozygosity = options.at("indel-heterozygosity").as<float>();
@@ -1413,6 +1414,7 @@ auto get_dense_variation_detector(const OptionMap& options, const boost::optiona
     coretools::BadRegionDetector::Parameters params {heterozygosity, heterozygosity_stdev};
     using Tolerance = coretools::BadRegionDetector::Parameters::Tolerance;
     switch (options.at("bad-region-tolerance").as<BadRegionTolerance>()) {
+        case BadRegionTolerance::unlimited: return boost::none;
         case BadRegionTolerance::high: params.tolerance = Tolerance::high; break;
         case BadRegionTolerance::normal: params.tolerance = Tolerance::normal; break;
         case BadRegionTolerance::low: params.tolerance = Tolerance::low; break;
@@ -1500,12 +1502,16 @@ auto make_haplotype_generator_builder(const OptionMap& options, const boost::opt
     const auto holdout_limit     = as_unsigned("haplotype-holdout-threshold", options);
     const auto overflow_limit    = as_unsigned("haplotype-overflow", options);
     const auto max_holdout_depth = as_unsigned("max-holdout-depth", options);
-    return HaplotypeGenerator::Builder().set_extension_policy(get_extension_policy(options)).set_backtrack_policy(get_backtrack_policy(options))
+    auto result = HaplotypeGenerator::Builder().set_extension_policy(get_extension_policy(options)).set_backtrack_policy(get_backtrack_policy(options))
     .set_target_limit(max_haplotypes).set_holdout_limit(holdout_limit).set_overflow_limit(overflow_limit)
     .set_lagging_policy(lagging_policy).set_max_holdout_depth(max_holdout_depth)
     .set_max_indicator_join_distance(get_max_indicator_join_distance())
-    .set_dense_variation_detector(get_dense_variation_detector(options, input_reads_profile))
     .set_min_flank_pad(get_min_haplotype_flank_pad(options, input_reads_profile));
+    auto bad_region_detector = make_bad_region_detector(options, input_reads_profile);
+    if (bad_region_detector) {
+        result.set_bad_region_detector(std::move(*bad_region_detector));
+    }
+    return result;
 }
 
 boost::optional<Pedigree> read_ped_file(const OptionMap& options)

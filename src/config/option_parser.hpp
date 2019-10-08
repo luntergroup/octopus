@@ -36,7 +36,7 @@ enum class ExtensionLevel { minimal, conservative, normal, aggressive, unlimited
 enum class LaggingLevel { none, normal, aggressive };
 enum class BacktrackLevel { none, normal, aggressive };
 enum class NormalContaminationRisk { low, high };
-enum class BadRegionTolerance { low, normal, high };
+enum class BadRegionTolerance { low, normal, high, unlimited };
 enum class ReadLinkage { none, paired, linked };
 enum class CandidateVariantDiscoveryProtocol { illumina, pacbio };
 enum class RealignedBAMType { full, mini };

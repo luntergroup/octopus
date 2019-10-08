@@ -71,7 +71,7 @@ public:
                        boost::optional<const TemplateMap&> read_templates,
                        boost::optional<const ReadPipe::Report&> reads_report,
                        Policies policies,
-                       BadRegionDetector dense_variation_detector);
+                       boost::optional<BadRegionDetector> bad_region_detector);
     
     HaplotypeGenerator(const HaplotypeGenerator&)            = default;
     HaplotypeGenerator& operator=(const HaplotypeGenerator&) = default;
@@ -252,7 +252,7 @@ public:
     Builder& set_min_flank_pad(Haplotype::MappingDomain::Size n) noexcept;
     Builder& set_max_indicator_join_distance(Haplotype::NucleotideSequence::size_type n) noexcept;
     Builder& set_max_expected_log_allele_count_per_base(double v) noexcept;
-    Builder& set_dense_variation_detector(BadRegionDetector detector) noexcept;
+    Builder& set_bad_region_detector(BadRegionDetector detector) noexcept;
     
     HaplotypeGenerator
     build(const ReferenceGenome& reference,
@@ -263,7 +263,7 @@ public:
     
 private:
     Policies policies_;
-    BadRegionDetector dense_variation_detector_;
+    boost::optional<BadRegionDetector> bad_region_detector_;
 };
 
 } // namespace coretools

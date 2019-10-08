@@ -446,7 +446,7 @@ OptionMap parse_options(const int argc, const char** argv)
     
     ("bad-region-tolerance",
      po::value<BadRegionTolerance>()->default_value(BadRegionTolerance::normal),
-     "Tolerance for skipping regions that are considered unlikely to be callable [LOW, NORMAL, HIGH]")
+     "Tolerance for skipping regions that are considered unlikely to be callable [LOW, NORMAL, HIGH, UNLIMITED]")
     ;
     
     po::options_description general_variant_calling("Variant calling (general)");
@@ -1350,6 +1350,8 @@ std::istream& operator>>(std::istream& in, BadRegionTolerance& result)
         result = BadRegionTolerance::normal;
     else if (token == "HIGH")
         result = BadRegionTolerance::high;
+    else if (token == "UNLIMITED")
+        result = BadRegionTolerance::unlimited;
     else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token, "bad-region-tolerance"};
     return in;
 }
@@ -1365,6 +1367,9 @@ std::ostream& operator<<(std::ostream& out, const BadRegionTolerance& tolerance)
             break;
         case BadRegionTolerance::high:
             out << "HIGH";
+            break;
+        case BadRegionTolerance::unlimited:
+            out << "UNLIMITED";
             break;
     }
     return out;

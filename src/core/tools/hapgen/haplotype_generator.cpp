@@ -142,7 +142,7 @@ HaplotypeGenerator::HaplotypeGenerator(const ReferenceGenome& reference,
                                        boost::optional<const TemplateMap&> read_templates,
                                        boost::optional<const ReadPipe::Report&> reads_report,
                                        Policies policies,
-                                       BadRegionDetector dense_variation_detector)
+                                       boost::optional<BadRegionDetector> bad_region_detector)
 : policies_ {std::move(policies)}
 , tree_ {get_contig(candidates), reference}
 , default_walker_ {
@@ -173,17 +173,17 @@ get_walker_policy(policies.extension)
     if (policies.lagging != Policies::Lagging::none) {
         lagged_walker_ = make_lagged_walker(policies);
     }
-    if (!all_empty(reads_)) {
-        const auto dense_regions = dense_variation_detector.detect(candidates, reads, reads_report);
-        for (const auto& dense : dense_regions) {
-            if (dense.action == BadRegionDetector::BadRegion::RecommendedAction::skip) {
+    if (bad_region_detector && !all_empty(reads_)) {
+        const auto bad_regions = bad_region_detector->detect(candidates, reads, reads_report);
+        for (const auto& bad_region : bad_regions) {
+            if (bad_region.action == BadRegionDetector::BadRegion::RecommendedAction::skip) {
                 if (debug_log_) {
-                    stream(*debug_log_) << "Erasing " << count_contained(alleles_, dense.region)
-                                        << " alleles in dense region " << dense.region;
+                    stream(*debug_log_) << "Erasing " << count_contained(alleles_, bad_region.region)
+                                        << " alleles in dense region " << bad_region.region;
                 }
-                alleles_.erase_contained(dense.region);
+                alleles_.erase_contained(bad_region.region);
             } else if (is_lagging_enabled()) {
-                lagging_exclusion_zones_.insert(dense.region);
+                lagging_exclusion_zones_.insert(bad_region.region);
             }
         }
         if (!lagging_exclusion_zones_.empty() && debug_log_) {
@@ -1623,9 +1623,9 @@ HaplotypeGenerator::Builder& HaplotypeGenerator::Builder::set_max_expected_log_a
     return *this;
 }
 
-HaplotypeGenerator::Builder& HaplotypeGenerator::Builder::set_dense_variation_detector(BadRegionDetector detector) noexcept
+HaplotypeGenerator::Builder& HaplotypeGenerator::Builder::set_bad_region_detector(BadRegionDetector detector) noexcept
 {
-    dense_variation_detector_ = std::move(detector);
+    bad_region_detector_ = std::move(detector);
     return *this;
 }
 
@@ -1636,7 +1636,7 @@ HaplotypeGenerator::Builder::build(const ReferenceGenome& reference,
                                    boost::optional<const TemplateMap&> read_templates,
                                    boost::optional<const ReadPipe::Report&> reads_report) const
 {
-    return HaplotypeGenerator {reference, candidates, reads, read_templates, std::move(reads_report), policies_, dense_variation_detector_};
+    return HaplotypeGenerator {reference, candidates, reads, read_templates, std::move(reads_report), policies_, bad_region_detector_};
 }
 
 } // namespace coretools
