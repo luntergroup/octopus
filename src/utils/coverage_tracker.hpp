@@ -242,7 +242,7 @@ template <typename Region, typename T>
 template <typename OutputIt>
 OutputIt CoverageTracker<Region, T>::get(const Region& region, OutputIt result) const
 {
-    if (coverage_.empty()) {
+    if (coverage_.empty() || !overlaps(region, encompassing_region_)) {
         return std::fill_n(result, size(region), 0);
     }
     const auto p = range(region);
