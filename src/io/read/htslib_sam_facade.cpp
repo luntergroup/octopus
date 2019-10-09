@@ -13,6 +13,8 @@
 #include <cassert>
 
 #include <boost/filesystem/operations.hpp>
+#include <boost/lexical_cast.hpp>
+#include <boost/numeric/conversion/cast.hpp>
 #include <htslib/sam.h>
 
 #include "basics/cigar_string.hpp"
@@ -22,7 +24,10 @@
 #include "exceptions/missing_index_error.hpp"
 #include "exceptions/malformed_file_error.hpp"
 #include "exceptions/unwritable_file_error.hpp"
+#include "utils/string_utils.hpp"
 #include "annotated_aligned_read.hpp"
+
+#include <iostream>
 
 namespace octopus { namespace io {
 
@@ -30,6 +35,7 @@ static const std::string readGroupTag       {"RG"};
 static const std::string readGroupIdTag     {"ID"};
 static const std::string sampleIdTag        {"SM"};
 static const std::string barcodeSequenceTag {"BX"};
+static const std::string SupplementaryAlignmentTag {"SA"};
 
 class MissingBAM : public MissingFileError
 {
@@ -882,6 +888,22 @@ AlignedRead::NucleotideSequence extract_barcode(const bam1_t* record) noexcept
     return ptr ? bam_aux2Z(ptr) : "";
 }
 
+void add_supplementary_alignments(const bam1_t* record, AlignedRead& read)
+{
+    const auto ptr = bam_aux_get(record, SupplementaryAlignmentTag.c_str());
+    if (ptr) {
+        for (auto tuple : utils::split(bam_aux2Z(ptr), ';')) {
+            auto fields = utils::split(tuple, ',');
+            auto cigar = parse_cigar(fields[3]);
+            auto begin_pos = boost::lexical_cast<GenomicRegion::Position>(fields[1]) - 1;
+            GenomicRegion region {std::move(fields[0]), begin_pos, begin_pos + reference_size(cigar)};
+            auto strand = fields[2] == "+" ? AlignedRead::Direction::forward : AlignedRead::Direction::reverse;
+            auto mapping_quality = boost::numeric_cast<AlignedRead::MappingQuality>(boost::lexical_cast<int>(fields[4]));
+            read.add_supplementary_alignment({std::move(region), std::move(cigar), strand, mapping_quality});
+        }
+    }
+}
+
 AlignedRead HtslibSamFacade::HtslibIterator::operator*() const
 {
     using std::begin; using std::end; using std::next; using std::move;
@@ -909,8 +931,9 @@ AlignedRead HtslibSamFacade::HtslibIterator::operator*() const
     }
     const auto read_begin = static_cast<AlignedRead::MappingDomain::Position>(read_begin_tmp);
     const auto& contig_name = hts_facade_.get_contig_name(info.tid);
+    AlignedRead result;
     if (has_multiple_segments(info)) {
-        return AlignedRead {
+        result = {
             extract_read_name(hts_bam1_.get()),
             GenomicRegion {contig_name, read_begin, read_begin + octopus::reference_size<AlignedRead::MappingDomain::Position>(cigar)},
             move(sequence),
@@ -926,7 +949,7 @@ AlignedRead HtslibSamFacade::HtslibIterator::operator*() const
             extract_next_segment_flags(info)
         };
     } else {
-        return AlignedRead {
+        result = {
             extract_read_name(hts_bam1_.get()),
             GenomicRegion {contig_name, read_begin, read_begin + octopus::reference_size<AlignedRead::MappingDomain::Size>(cigar)},
             move(sequence),
@@ -938,6 +961,8 @@ AlignedRead HtslibSamFacade::HtslibIterator::operator*() const
             extract_barcode(hts_bam1_.get()),
         };
     }
+    add_supplementary_alignments(hts_bam1_.get(), result);
+    return result;
 }
 
 HtslibSamFacade::ReadGroupIdType HtslibSamFacade::HtslibIterator::read_group() const
