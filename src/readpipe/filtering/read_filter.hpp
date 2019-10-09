@@ -221,11 +221,35 @@ struct IsProperTemplate : BasicReadFilter
     
     bool passes(const AlignedRead& read) const noexcept override;
 };
-    
+
 struct IsLocalTemplate : BasicReadFilter
 {
     IsLocalTemplate();
     IsLocalTemplate(std::string name);
+    
+    bool passes(const AlignedRead& read) const noexcept override;
+};
+
+struct NoUnlocalizedSupplementaryAlignments : BasicReadFilter
+{
+    NoUnlocalizedSupplementaryAlignments();
+    NoUnlocalizedSupplementaryAlignments(std::string name);
+    
+    bool passes(const AlignedRead& read) const noexcept override;
+};
+
+struct NoUnplacedSupplementaryAlignments : BasicReadFilter
+{
+    NoUnplacedSupplementaryAlignments();
+    NoUnplacedSupplementaryAlignments(std::string name);
+    
+    bool passes(const AlignedRead& read) const noexcept override;
+};
+
+struct NoDecoySupplementaryAlignments : BasicReadFilter
+{
+    NoDecoySupplementaryAlignments();
+    NoDecoySupplementaryAlignments(std::string name);
     
     bool passes(const AlignedRead& read) const noexcept override;
 };

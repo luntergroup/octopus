@@ -205,5 +205,29 @@ bool IsLocalTemplate::passes(const AlignedRead& read) const noexcept
     return !read.has_other_segment() || read.next_segment().contig_name() == contig_name(read);
 }
 
+NoUnlocalizedSupplementaryAlignments::NoUnlocalizedSupplementaryAlignments() : BasicReadFilter {"NoUnlocalizedSupplementaryAlignments"} {}
+NoUnlocalizedSupplementaryAlignments::NoUnlocalizedSupplementaryAlignments(std::string name) :  BasicReadFilter {std::move(name)} {}
+
+bool NoUnlocalizedSupplementaryAlignments::passes(const AlignedRead& read) const noexcept
+{
+    return std::none_of(std::cbegin(read.supplementary_alignments()), std::cend(read.supplementary_alignments()), is_unlocalized);
+}
+
+NoUnplacedSupplementaryAlignments::NoUnplacedSupplementaryAlignments() : BasicReadFilter {"NoUnplacedSupplementaryAlignments"} {}
+NoUnplacedSupplementaryAlignments::NoUnplacedSupplementaryAlignments(std::string name) :  BasicReadFilter {std::move(name)} {}
+
+bool NoUnplacedSupplementaryAlignments::passes(const AlignedRead& read) const noexcept
+{
+    return std::none_of(std::cbegin(read.supplementary_alignments()), std::cend(read.supplementary_alignments()), is_unplaced);
+}
+
+NoDecoySupplementaryAlignments::NoDecoySupplementaryAlignments() : BasicReadFilter {"NoDecoySupplementaryAlignments"} {}
+NoDecoySupplementaryAlignments::NoDecoySupplementaryAlignments(std::string name) :  BasicReadFilter {std::move(name)} {}
+
+bool NoDecoySupplementaryAlignments::passes(const AlignedRead& read) const noexcept
+{
+    return std::none_of(std::cbegin(read.supplementary_alignments()), std::cend(read.supplementary_alignments()), is_decoy);
+}
+
 } // namespace readpipe
 } // namespace octopus
