@@ -11,6 +11,8 @@
 #include <memory>
 #include <vector>
 
+#include <boost/optional.hpp>
+
 #include "basics/cigar_string.hpp"
 #include "basics/aligned_read.hpp"
 #include "basics/mappable_reference_wrapper.hpp"
@@ -232,26 +234,41 @@ struct IsLocalTemplate : BasicReadFilter
 
 struct NoUnlocalizedSupplementaryAlignments : BasicReadFilter
 {
-    NoUnlocalizedSupplementaryAlignments();
-    NoUnlocalizedSupplementaryAlignments(std::string name);
+    using MappingQuality = AlignedRead::MappingQuality;
+    
+    NoUnlocalizedSupplementaryAlignments(boost::optional<MappingQuality> min_mapping_quality = boost::none);
+    NoUnlocalizedSupplementaryAlignments(std::string name, boost::optional<MappingQuality> min_mapping_quality = boost::none);
     
     bool passes(const AlignedRead& read) const noexcept override;
+
+private:
+    boost::optional<MappingQuality> min_mapping_quality_;
 };
 
 struct NoUnplacedSupplementaryAlignments : BasicReadFilter
 {
-    NoUnplacedSupplementaryAlignments();
-    NoUnplacedSupplementaryAlignments(std::string name);
+    using MappingQuality = AlignedRead::MappingQuality;
+    
+    NoUnplacedSupplementaryAlignments(boost::optional<MappingQuality> min_mapping_quality = boost::none);
+    NoUnplacedSupplementaryAlignments(std::string name, boost::optional<MappingQuality> min_mapping_quality = boost::none);
     
     bool passes(const AlignedRead& read) const noexcept override;
+
+private:
+    boost::optional<MappingQuality> min_mapping_quality_;
 };
 
 struct NoDecoySupplementaryAlignments : BasicReadFilter
 {
-    NoDecoySupplementaryAlignments();
-    NoDecoySupplementaryAlignments(std::string name);
+    using MappingQuality = AlignedRead::MappingQuality;
+    
+    NoDecoySupplementaryAlignments(boost::optional<MappingQuality> min_mapping_quality = boost::none);
+    NoDecoySupplementaryAlignments(std::string name, boost::optional<MappingQuality> min_mapping_quality = boost::none);
     
     bool passes(const AlignedRead& read) const noexcept override;
+
+private:
+    boost::optional<MappingQuality> min_mapping_quality_;
 };
 
 // Context filters
