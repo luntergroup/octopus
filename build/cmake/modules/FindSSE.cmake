@@ -57,6 +57,22 @@ IF(CMAKE_SYSTEM_NAME MATCHES "Linux")
     ELSE (AVX2_TRUE)
         set(AVX2_FOUND false CACHE BOOL "AVX2 available on host")
     ENDIF (AVX2_TRUE)
+    
+    STRING(REGEX REPLACE "^.*(avx512f).*$" "\\1" SSE_THERE ${CPUINFO})
+    STRING(COMPARE EQUAL "avx512f" "${SSE_THERE}" AVX512F_TRUE)
+    IF (AVX512F_TRUE)
+        set(AVX512F_FOUND true CACHE BOOL "AVX512F available on host")
+    ELSE (AVX512F_TRUE)
+        set(AVX512F_FOUND false CACHE BOOL "AVX512F available on host")
+    ENDIF (AVX512F_TRUE)
+
+    STRING(REGEX REPLACE "^.*(avx512bw).*$" "\\1" SSE_THERE ${CPUINFO})
+    STRING(COMPARE EQUAL "avx512bw" "${SSE_THERE}" AVX512BW_TRUE)
+    IF (AVX512BW_TRUE)
+        set(AVX512BW_FOUND true CACHE BOOL "AVX512BW available on host")
+    ELSE (AVX512BW_TRUE)
+        set(AVX512BW_FOUND false CACHE BOOL "AVX512BW available on host")
+    ENDIF (AVX512BW_TRUE)
 
 ELSEIF(CMAKE_SYSTEM_NAME MATCHES "Darwin")
     EXEC_PROGRAM("/usr/sbin/sysctl -n machdep.cpu.features machdep.cpu.leaf7_features" OUTPUT_VARIABLE
