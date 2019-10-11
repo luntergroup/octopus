@@ -11,6 +11,8 @@
 #include <memory>
 #include <vector>
 
+#include <boost/optional.hpp>
+
 #include "basics/cigar_string.hpp"
 #include "basics/aligned_read.hpp"
 #include "basics/mappable_reference_wrapper.hpp"
@@ -221,13 +223,52 @@ struct IsProperTemplate : BasicReadFilter
     
     bool passes(const AlignedRead& read) const noexcept override;
 };
-    
+
 struct IsLocalTemplate : BasicReadFilter
 {
     IsLocalTemplate();
     IsLocalTemplate(std::string name);
     
     bool passes(const AlignedRead& read) const noexcept override;
+};
+
+struct NoUnlocalizedSupplementaryAlignments : BasicReadFilter
+{
+    using MappingQuality = AlignedRead::MappingQuality;
+    
+    NoUnlocalizedSupplementaryAlignments(boost::optional<MappingQuality> min_mapping_quality = boost::none);
+    NoUnlocalizedSupplementaryAlignments(std::string name, boost::optional<MappingQuality> min_mapping_quality = boost::none);
+    
+    bool passes(const AlignedRead& read) const noexcept override;
+
+private:
+    boost::optional<MappingQuality> min_mapping_quality_;
+};
+
+struct NoUnplacedSupplementaryAlignments : BasicReadFilter
+{
+    using MappingQuality = AlignedRead::MappingQuality;
+    
+    NoUnplacedSupplementaryAlignments(boost::optional<MappingQuality> min_mapping_quality = boost::none);
+    NoUnplacedSupplementaryAlignments(std::string name, boost::optional<MappingQuality> min_mapping_quality = boost::none);
+    
+    bool passes(const AlignedRead& read) const noexcept override;
+
+private:
+    boost::optional<MappingQuality> min_mapping_quality_;
+};
+
+struct NoDecoySupplementaryAlignments : BasicReadFilter
+{
+    using MappingQuality = AlignedRead::MappingQuality;
+    
+    NoDecoySupplementaryAlignments(boost::optional<MappingQuality> min_mapping_quality = boost::none);
+    NoDecoySupplementaryAlignments(std::string name, boost::optional<MappingQuality> min_mapping_quality = boost::none);
+    
+    bool passes(const AlignedRead& read) const noexcept override;
+
+private:
+    boost::optional<MappingQuality> min_mapping_quality_;
 };
 
 // Context filters

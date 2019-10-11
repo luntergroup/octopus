@@ -9,6 +9,7 @@
 #include <boost/functional/hash.hpp>
 
 #include "utils/sequence_utils.hpp"
+#include "utils/string_utils.hpp"
 
 namespace octopus {
 
@@ -125,6 +126,16 @@ void AlignedRead::set_barcode(NucleotideSequence barcode) noexcept
     barcode_sequence_ = std::move(barcode);
 }
 
+const std::vector<AlignedRead::SupplementaryAlignment>& AlignedRead::supplementary_alignments() const noexcept
+{
+    return supplementary_alignments_;
+}
+
+void AlignedRead::add_supplementary_alignment(SupplementaryAlignment alignment)
+{
+    supplementary_alignments_.push_back(std::move(alignment));
+}
+
 void AlignedRead::realign(GenomicRegion new_region, CigarString new_cigar) noexcept
 {
     assert(sequence_size(new_cigar) == sequence_.size());
@@ -233,6 +244,30 @@ std::size_t ReadHash::operator()(const octopus::AlignedRead &read) const
     hash_combine(result, boost::hash_range(std::cbegin(read.base_qualities()), std::cend(read.base_qualities())));
     hash_combine(result, read.mapping_quality());
     return result;
+}
+
+AlignedRead::SupplementaryAlignment::SupplementaryAlignment(GenomicRegion region, CigarString cigar, AlignedRead::Direction strand, AlignedRead::MappingQuality mapping_quality)
+: region_ {std::move(region)}
+, cigar_ {std::move(cigar)}
+, strand_ {strand}
+, mapping_quality_ {mapping_quality}
+{}
+
+const GenomicRegion& AlignedRead::SupplementaryAlignment::mapped_region() const noexcept
+{
+    return region_;
+}
+const CigarString& AlignedRead::SupplementaryAlignment::cigar() const noexcept
+{
+    return cigar_;
+}
+AlignedRead::Direction AlignedRead::SupplementaryAlignment::strand() const noexcept
+{
+    return strand_;
+}
+AlignedRead::MappingQuality AlignedRead::SupplementaryAlignment::mapping_quality() const noexcept
+{
+    return mapping_quality_;
 }
 
 // Non-member methods
@@ -425,6 +460,21 @@ AlignedRead::BaseQualityVector copy_base_qualities(const AlignedRead& read, cons
     return copy_helper(read.base_qualities(), read.cigar(), read.mapped_region(), region);
 }
 
+bool is_unlocalized(const AlignedRead::SupplementaryAlignment& alignment) noexcept
+{
+    return utils::is_suffix("_random", contig_name(alignment));
+}
+
+bool is_unplaced(const AlignedRead::SupplementaryAlignment& alignment) noexcept
+{
+    return utils::is_prefix("chrU_", contig_name(alignment));
+}
+
+bool is_decoy(const AlignedRead::SupplementaryAlignment& alignment) noexcept
+{
+    return utils::is_suffix("_decoy", contig_name(alignment));
+}
+
 namespace {
 
 template <typename Range>
@@ -476,6 +526,22 @@ std::vector<AlignedRead> split(const AlignedRead& read, const GenomicRegion::Siz
 
 namespace {
 
+auto calculate_dynamic_bytes(const AlignedRead::Segment& segment)
+{
+    return segment.contig_name().size() * sizeof(char);
+}
+
+auto calculate_dynamic_bytes(const AlignedRead::SupplementaryAlignment& alignment)
+{
+    return contig_name(alignment).size() * sizeof(char) + alignment.cigar().size() * sizeof(CigarOperation);
+}
+
+auto calculate_dynamic_bytes(const std::vector<AlignedRead::SupplementaryAlignment>& alignments)
+{
+    const static auto add_bytes = [] (auto total, const auto& alignment) { return total + calculate_dynamic_bytes(alignment); };
+    return std::accumulate(std::cbegin(alignments), std::cend(alignments), std::size_t {0}, add_bytes);
+}
+
 auto calculate_dynamic_bytes(const AlignedRead& read) noexcept
 {
     return read.name().size() * sizeof(char)
@@ -485,7 +551,8 @@ auto calculate_dynamic_bytes(const AlignedRead& read) noexcept
            + read.cigar().size() * sizeof(CigarOperation)
            + contig_name(read).size() * sizeof(char)
            + read.barcode().size() * sizeof(char)
-           + (read.has_other_segment() ? sizeof(AlignedRead::Segment) : 0);
+           + (read.has_other_segment() ? sizeof(AlignedRead::Segment) + calculate_dynamic_bytes(read.next_segment()) : 0)
+           + calculate_dynamic_bytes(read.supplementary_alignments());
 }
 
 } // namespace

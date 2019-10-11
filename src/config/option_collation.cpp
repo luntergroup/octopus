@@ -878,6 +878,18 @@ auto make_read_filterer(const OptionMap& options)
     if (options.at("no-adapter-contaminated-reads").as<bool>()) {
         result.add(make_unique<IsNotContaminated>());
     }
+    if (options.at("no-reads-with-decoy-supplementary-alignments").as<bool>()) {
+        result.add(make_unique<NoDecoySupplementaryAlignments>());
+    } else if (!options.at("allow-reads-with-good-decoy-supplementary-alignments").as<bool>()) {
+        result.add(make_unique<NoDecoySupplementaryAlignments>(min_mapping_quality));
+    }
+    if (options.at("no-reads-with-unplaced-or-unlocalized-supplementary-alignments").as<bool>()) {
+        result.add(make_unique<NoUnlocalizedSupplementaryAlignments>());
+        result.add(make_unique<NoUnplacedSupplementaryAlignments>());
+    } else if (!options.at("allow-reads-with-good-unplaced-or-unlocalized-supplementary-alignments").as<bool>()) {
+        result.add(make_unique<NoUnlocalizedSupplementaryAlignments>(min_mapping_quality));
+        result.add(make_unique<NoUnplacedSupplementaryAlignments>(min_mapping_quality));
+    }
     result.shrink_to_fit();
     return result;
 }

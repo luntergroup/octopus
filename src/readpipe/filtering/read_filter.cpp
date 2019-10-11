@@ -205,5 +205,59 @@ bool IsLocalTemplate::passes(const AlignedRead& read) const noexcept
     return !read.has_other_segment() || read.next_segment().contig_name() == contig_name(read);
 }
 
+NoUnlocalizedSupplementaryAlignments::NoUnlocalizedSupplementaryAlignments(boost::optional<MappingQuality> min_mapping_quality)
+: NoUnlocalizedSupplementaryAlignments {"NoUnlocalizedSupplementaryAlignments", min_mapping_quality} {}
+NoUnlocalizedSupplementaryAlignments::NoUnlocalizedSupplementaryAlignments(std::string name, boost::optional<MappingQuality> min_mapping_quality)
+:  BasicReadFilter {std::move(name)}
+, min_mapping_quality_ {min_mapping_quality}
+{}
+
+bool NoUnlocalizedSupplementaryAlignments::passes(const AlignedRead& read) const noexcept
+{
+    if (min_mapping_quality_) {
+        const auto is_good_unlocalized = [mq = *min_mapping_quality_] (const auto& alignment) noexcept {
+            return alignment.mapping_quality() >= mq && is_unlocalized(alignment);};
+        return std::none_of(std::cbegin(read.supplementary_alignments()), std::cend(read.supplementary_alignments()), is_good_unlocalized);
+    } else {
+        return std::none_of(std::cbegin(read.supplementary_alignments()), std::cend(read.supplementary_alignments()), is_unlocalized);
+    }
+}
+
+NoUnplacedSupplementaryAlignments::NoUnplacedSupplementaryAlignments(boost::optional<MappingQuality> min_mapping_quality)
+: NoUnplacedSupplementaryAlignments {"NoUnplacedSupplementaryAlignments", min_mapping_quality} {}
+NoUnplacedSupplementaryAlignments::NoUnplacedSupplementaryAlignments(std::string name, boost::optional<MappingQuality> min_mapping_quality)
+:  BasicReadFilter {std::move(name)}
+, min_mapping_quality_ {min_mapping_quality}
+{}
+
+bool NoUnplacedSupplementaryAlignments::passes(const AlignedRead& read) const noexcept
+{
+    if (min_mapping_quality_) {
+        const auto is_good_unplaced = [mq = *min_mapping_quality_] (const auto& alignment) noexcept {
+            return alignment.mapping_quality() >= mq && is_unplaced(alignment);};
+        return std::none_of(std::cbegin(read.supplementary_alignments()), std::cend(read.supplementary_alignments()), is_good_unplaced);
+    } else {
+        return std::none_of(std::cbegin(read.supplementary_alignments()), std::cend(read.supplementary_alignments()), is_unplaced);
+    }
+}
+
+NoDecoySupplementaryAlignments::NoDecoySupplementaryAlignments(boost::optional<MappingQuality> min_mapping_quality)
+: NoDecoySupplementaryAlignments {"NoDecoySupplementaryAlignments", min_mapping_quality} {}
+NoDecoySupplementaryAlignments::NoDecoySupplementaryAlignments(std::string name, boost::optional<MappingQuality> min_mapping_quality)
+:  BasicReadFilter {std::move(name)}
+, min_mapping_quality_ {min_mapping_quality}
+{}
+
+bool NoDecoySupplementaryAlignments::passes(const AlignedRead& read) const noexcept
+{
+    if (min_mapping_quality_) {
+        const auto is_good_decoy = [mq = *min_mapping_quality_] (const auto& alignment) noexcept {
+            return alignment.mapping_quality() >= mq && is_decoy(alignment);};
+        return std::none_of(std::cbegin(read.supplementary_alignments()), std::cend(read.supplementary_alignments()), is_good_decoy);
+    } else {
+        return std::none_of(std::cbegin(read.supplementary_alignments()), std::cend(read.supplementary_alignments()), is_decoy);
+    }
+}
+
 } // namespace readpipe
 } // namespace octopus
