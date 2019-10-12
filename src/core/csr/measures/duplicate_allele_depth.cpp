@@ -55,7 +55,7 @@ bool is_evaluable(const VcfRecord& call, const VcfRecord::SampleName& sample)
 auto find_duplicate_overlapped_reads(const ReadContainer& reads, const GenomicRegion& region)
 {
     const auto overlapped_reads = overlap_range(reads, region);
-    const auto duplicate_itrs = find_duplicates(std::cbegin(overlapped_reads), std::cend(overlapped_reads));
+    const auto duplicate_itrs = find_duplicate_reads(std::cbegin(overlapped_reads), std::cend(overlapped_reads));
     std::vector<std::vector<AlignedRead>> result {};
     result.reserve(duplicate_itrs.size());
     for (const auto& itrs : duplicate_itrs) {

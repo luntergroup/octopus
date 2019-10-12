@@ -308,7 +308,7 @@ struct IsNotDuplicate : ContextReadFilter<ForwardIt>
     
     ForwardIt do_remove(ForwardIt first, ForwardIt last) const override
     {
-        return remove_duplicates(first, last);
+        return remove_duplicate_reads(first, last);
     }
     
     ForwardIt do_partition(ForwardIt first, ForwardIt last) const override
