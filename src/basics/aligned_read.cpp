@@ -277,6 +277,11 @@ void capitalise_bases(AlignedRead& read) noexcept
     utils::capitalise(read.sequence());
 }
 
+unsigned sum_base_qualities(const AlignedRead& read) noexcept
+{
+	return std::accumulate(std::cbegin(read.base_qualities()), std::cend(read.base_qualities()), 0u);
+}
+
 void cap_qualities(AlignedRead& read, const AlignedRead::BaseQuality max) noexcept
 {
     auto& qualities = read.base_qualities();
