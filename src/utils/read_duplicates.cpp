@@ -11,7 +11,6 @@ bool primary_segments_are_duplicates(const AlignedRead& lhs, const AlignedRead& 
 {
     return lhs.mapped_region() == rhs.mapped_region()
            && lhs.direction() == rhs.direction()
-           && lhs.mapping_quality() == rhs.mapping_quality()
            && lhs.cigar() == rhs.cigar();
 }
 
