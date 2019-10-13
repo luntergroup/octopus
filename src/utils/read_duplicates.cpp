@@ -9,9 +9,9 @@ namespace octopus {
 
 bool primary_segments_are_duplicates(const AlignedRead& lhs, const AlignedRead& rhs) noexcept
 {
-    return lhs.mapped_region() == rhs.mapped_region()
-           && lhs.direction() == rhs.direction()
-           && lhs.cigar() == rhs.cigar();
+    return are_same_strand(lhs, rhs)
+		&& is_same_contig(lhs, rhs)
+		&& five_prime_mapping_position(lhs) == five_prime_mapping_position(rhs);
 }
 
 bool are_duplicates(const AlignedRead::Segment& lhs, const AlignedRead::Segment& rhs) noexcept
