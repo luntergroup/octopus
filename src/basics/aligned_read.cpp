@@ -272,6 +272,16 @@ AlignedRead::MappingQuality AlignedRead::SupplementaryAlignment::mapping_quality
 
 // Non-member methods
 
+GenomicRegion::Position five_prime_mapping_position(const AlignedRead& read) noexcept
+{
+	return is_forward_strand(read) ? mapped_begin(read) : mapped_end(read);
+}
+
+GenomicRegion::Position three_prime_mapping_position(const AlignedRead& read) noexcept
+{
+	return is_reverse_strand(read) ? mapped_begin(read) : mapped_end(read);
+}
+
 void capitalise_bases(AlignedRead& read) noexcept
 {
     utils::capitalise(read.sequence());
@@ -339,6 +349,11 @@ bool is_forward_strand(const AlignedRead& read) noexcept
 bool is_reverse_strand(const AlignedRead& read) noexcept
 {
     return read.direction() == AlignedRead::Direction::reverse;
+}
+
+bool are_same_strand(const AlignedRead& lhs, const AlignedRead& rhs) noexcept
+{
+	return lhs.direction() == rhs.direction();
 }
 
 bool is_primary_alignment(const AlignedRead& read) noexcept

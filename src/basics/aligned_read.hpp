@@ -259,6 +259,9 @@ AlignedRead::Segment::Segment(String_&& contig_name, GenomicRegion::Position beg
 {}
 
 // Non-member methods
+	
+GenomicRegion::Position five_prime_mapping_position(const AlignedRead& read) noexcept;
+GenomicRegion::Position three_prime_mapping_position(const AlignedRead& read) noexcept;
 
 void capitalise_bases(AlignedRead& read) noexcept;
 
@@ -277,6 +280,7 @@ AlignedRead::NucleotideSequence::size_type sequence_size(const AlignedRead& read
 
 bool is_forward_strand(const AlignedRead& read) noexcept;
 bool is_reverse_strand(const AlignedRead& read) noexcept;
+bool are_same_strand(const AlignedRead& lhs, const AlignedRead& rhs) noexcept;
 
 bool is_primary_alignment(const AlignedRead& read) noexcept;
 
