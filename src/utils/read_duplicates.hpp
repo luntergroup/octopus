@@ -113,7 +113,8 @@ ForwardIt
 remove_duplicate_reads(ForwardIt first, ForwardIt last)
 {
 	const auto static has_better_base_qualities = [] (const AlignedRead& prev, const AlignedRead& next) noexcept {
-		return sum_base_qualities(prev) < sum_base_qualities(next); 
+		return prev.mapping_quality() < next.mapping_quality()
+			 || (prev.mapping_quality() == next.mapping_quality() && sum_base_qualities(prev) < sum_base_qualities(next)); 
 	};
 	return remove_duplicate_reads(first, last, has_better_base_qualities);
 }
