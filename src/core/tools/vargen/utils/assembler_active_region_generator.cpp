@@ -184,8 +184,8 @@ auto get_deletion_hotspots(const GenomicRegion& region, const CoverageTracker<Ge
                            const boost::optional<ReadSetProfile>& read_profile = boost::none)
 {
     const auto coverages = tracker.get(region);
-    const auto mean_coverage = read_profile ? read_profile->mean_positive_depth : tracker.mean(region);
-    const auto stdev_coverage = read_profile ? read_profile->depth_stdev : tracker.stdev(region);
+    const auto mean_coverage = read_profile ? read_profile->depth_stats.combined.genome.mean : tracker.mean(region);
+    const auto stdev_coverage = read_profile ? read_profile->depth_stats.combined.genome.stdev : tracker.stdev(region);
     const auto deletion_base_probs = compute_base_deletion_probabilities(coverages, mean_coverage, stdev_coverage);
     std::vector<bool> deletion_bases(deletion_base_probs.size());
     std::transform(std::cbegin(deletion_base_probs), std::cend(deletion_base_probs), std::begin(deletion_bases),

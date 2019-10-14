@@ -61,24 +61,23 @@ BadRegionDetector::detect(const MappableFlatSet<Variant>& candidate_variants, co
 
 namespace {
 
-template <typename Range, typename T>
-std::size_t find_index(const Range& values, const T& value)
-{
-    return std::distance(std::cbegin(values), std::find(std::cbegin(values), std::cend(values), value));
-}
-
 auto find_high_depth_regions(const GenomicRegion& target_region, const ReadPipe::Report::DepthMap& read_depths, const ReadSetProfile& profile)
 {
     std::vector<GenomicRegion> sample_high_depth_regions {};
     const auto num_samples = read_depths.size();
-    assert(read_depths.size() <= profile.samples.size());
     sample_high_depth_regions.reserve(num_samples);
     for (const auto& p : read_depths) {
         const auto sample_depths = p.second.get(target_region);
-        const auto sample_idx = find_index(profile.samples, p.first);
-        assert(sample_idx < profile.sample_median_positive_depth.size());
-        const auto depth_threshold = static_cast<unsigned>(5 * profile.sample_median_positive_depth[sample_idx]);
-        utils::append(find_high_coverage_regions(sample_depths, target_region, depth_threshold), sample_high_depth_regions);
+        auto depth_threshold = profile.depth_stats.combined.genome.positive_median;
+        if (profile.depth_stats.combined.contig.count(target_region.contig_name()) == 1) {
+            depth_threshold = std::max(depth_threshold, profile.depth_stats.combined.contig.at(target_region.contig_name()).positive_median);
+        }
+        depth_threshold = std::max(depth_threshold, profile.depth_stats.sample.at(p.first).genome.positive_median);
+        if (profile.depth_stats.sample.at(p.first).contig.count(target_region.contig_name()) == 1) {
+            depth_threshold = std::max(depth_threshold, profile.depth_stats.sample.at(p.first).contig.at(target_region.contig_name()).positive_median);
+        }
+        depth_threshold *= 5;
+        utils::append(find_high_coverage_regions(sample_depths, target_region, static_cast<unsigned>(depth_threshold)), sample_high_depth_regions);
     }
     if (num_samples == 1) {
         return sample_high_depth_regions;
@@ -113,7 +112,6 @@ void merge(std::vector<GenomicRegion> src, std::vector<GenomicRegion>& dst)
     std::inplace_merge(std::begin(dst), itr, std::end(dst));
 }
 
-
 } // namespace
 
 std::vector<GenomicRegion>
@@ -122,8 +120,14 @@ BadRegionDetector::get_candidate_bad_regions(const MappableFlatSet<Variant>& can
 {
     auto result = get_candidate_dense_regions(candidate_variants, reads, reads_report);
     if (reads_profile_) {
-        merge(find_high_depth_regions(reads, *reads_profile_, reads_report), result);
-        result = extract_covered_regions(result);
+        auto high_depth_regions = find_high_depth_regions(reads, *reads_profile_, reads_report);
+        if (!high_depth_regions.empty() && !contains(high_depth_regions.front(), encompassing_region(candidate_variants))) {
+            // Only add high depth regions that don't cover all the variant candidates to avoid flagging
+            // contigs that have expected higher coverage than the average (e.g, MT). In other words,
+            // we want to see some variation in coverage across the candidates to be sure the high coverage is unexpected.
+            merge(std::move(high_depth_regions), result);
+            result = extract_covered_regions(result);
+        }
     }
     return result;
 }
@@ -336,7 +340,7 @@ BadRegionDetector::compute_state(const GenomicRegion& region, const MappableFlat
         result.median_mapping_quality = median_mapping_quality(reads, region);
     } else {
         if (reads_profile_) {
-            result.median_mapping_quality = reads_profile_->max_mapping_quality;
+            result.median_mapping_quality = reads_profile_->mapping_quality_stats.max;
         } else {
             result.median_mapping_quality = 40;
         }
@@ -391,12 +395,13 @@ double BadRegionDetector::calculate_probability_good(const RegionState& state) c
     // higher depth -> lower probability
     double result {1};
     if (reads_profile_) {
-        for (std::size_t s {0}; s < reads_profile_->samples.size(); ++s) {
-            const auto low_depth = reads_profile_->sample_mean_positive_depth[s] + 2 * reads_profile_->sample_positive_depth_stdev[s];
-            const auto target_depth = state.sample_mean_read_depths.at(reads_profile_->samples[s]);
+        for (const auto& p : reads_profile_->depth_stats.sample) {
+            const auto& genome_stats = p.second.genome;
+            const auto low_depth = genome_stats.positive_mean + 2 * genome_stats.positive_stdev;
+            const auto target_depth = state.sample_mean_read_depths.at(p.first);
             if (low_depth < target_depth) {
-                result *= discrete_sf(reads_profile_->sample_depth_distribution[s], target_depth);
-                result /= discrete_sf(reads_profile_->sample_depth_distribution[s], low_depth);
+                result *= discrete_sf(genome_stats.distribution, target_depth);
+                result /= discrete_sf(genome_stats.distribution, low_depth);
             }
         }
     }
