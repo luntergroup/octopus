@@ -3,7 +3,7 @@
 import argparse
 from os import makedirs, remove, pardir
 from os.path import join, basename, exists, dirname, abspath
-from subprocess import call
+import subprocess as sp
 import csv
 import pysam as ps
 import random
@@ -87,15 +87,15 @@ known_truth_set_urls = {
     }
 }
 
+def get_octopus_version(octopus_bin):
+    version_line = sp.check_output([octopus_bin, '--version']).decode("utf-8").split('\n')[0].split()
+    return version_line[2], version_line[-1][:-1] if len(version_line) > 3 else None
+
 def check_exists(paths):
-    for path in paths:
-        if not exists(path):
-            raise ValueError(path + " does not exist")
+    for path in paths: assert exists(path)
 
 def check_exists_or_none(paths):
-    for path in paths:
-        if path is not None and not exists(path):
-            raise ValueError(path + " does not exist")
+    for path in paths: assert path is None or exists(path)
 
 class TrainingData:
     def __init__(self, data):
@@ -104,6 +104,7 @@ class TrainingData:
         self.reads = data["reads"] if "reads" in data else None
         if type(self.reads) is not list:
             self.reads = [self.reads]
+        self.octopus_vcf = data["octopus_vcf"] if "octopus_vcf" in data else None
         self.regions = data["calling_regions"] if "calling_regions" in data else None
         self.truth = data["truth"] if "truth" in data else None
         self.confident = data["confident_regions"] if "confident_regions" in data else None
@@ -117,7 +118,7 @@ class TrainingOptions:
         self.hyperparameters = d["hyperparameters"] if "hyperparameters" in d else None
 
 def make_sdf_ref(fasta_ref, rtg, out):
-    call([rtg, 'format', '-o', out, fasta_ref])
+    sp.call([rtg, 'format', '-o', out, fasta_ref])
 
 def download_truth_set(name, reference, sample, out):
     ftp_vcf = known_truth_set_urls[name][reference][sample]['vcf']
@@ -131,37 +132,6 @@ def download_truth_set(name, reference, sample, out):
     urllib.request.urlretrieve(ftp_bed, local_bed)
     return local_vcf, local_vcf_idx, local_bed
 
-def setup(examples, truth_sets, rtg, out):
-    result = []
-    sdf_references, known_truths = {}, {}
-    for data in training_configs:
-        if data.sdf is None:
-            if data.reference in sdf_references:
-                data.sdf = sdf_references[data.reference]
-            else:
-                data.sdf = join(out, basename(data.reference).replace('fa', '').replace('fasta', '') + 'sdf')
-                make_sdf_ref(data.reference, rtg, data.sdf)
-            sdf_references[data.reference] = data.sdf
-        else:
-            if not exists(data.sdf):
-                raise ValueError(data.sdf + " does not exist")
-        if not exists(data.truth):
-            if data.truth in known_truths:
-                data.truth, data.confident = known_truths[data.truth]
-            else:
-                try:
-                    name, reference_version, sample = data.truth.split('.')
-                    vcf, idx, bed = download_truth_set(name, reference_version, sample, out)
-                    known_truths[data.truth] = vcf, bed
-                    data.truth, data.confident = vcf, bed
-                except:
-                    print('Invalid truth set format')
-        else:
-            if not exists(data.confident):
-                raise ValueError(data.confident + " does not exist")
-        result.append(data)
-    return result
-
 def load_training_config(options):
     with open(options.config) as config:
         config = json.load(config)
@@ -170,10 +140,12 @@ def load_training_config(options):
         if type(examples) is not list:
             examples = [examples]
         examples = [TrainingData(example) for example in examples]
-                
+
+        assert all(example.reads is not None or example.octopus_vcf is not None for example in examples)
         check_exists([example.reference for example in examples])
-        check_exists([reads for example in examples for reads in example.reads])
         check_exists([example.regions for example in examples])
+        check_exists_or_none([reads for example in examples for reads in example.reads])
+        check_exists_or_none([example.octopus_vcf for example in examples])
         check_exists_or_none([example.config for example in examples])
         
         sdf_references, known_truths, given_truths = {}, {}, config["truths"] if "truths" in config else {}
@@ -235,15 +207,18 @@ def get_bam_id(bam_filenames):
 def get_octopus_output_filename(reference_filename, bam_filenames, kind="germline"):
     return get_bam_id(bam_filenames) + "." + get_reference_id(reference_filename) + ".Octopus." + kind + ".vcf.gz"
 
-def run_octopus(octopus, reference, reads, regions, threads, output, config=None, kind="germline"):
+def run_octopus(octopus, reference, reads, regions, threads, output,
+                config=None, octopus_vcf=None, kind="germline"):
     octopus_cmd = [octopus, '-R', reference, '-I'] + reads + ['-t', regions,
                    '--ignore-unmapped-contigs', '--disable-call-filtering', '--annotations', 'forest',
                    '--threads', str(threads), '-o', output]
     if config is not None:
         octopus_cmd += ['--config', config]
+    if octopus_vcf is not None:
+        octopus_vcf += ['--filter-vcf', octopus_vcf]
     if kind == "somatic":
         octopus_cmd += ['--caller', 'cancer', '--somatics-only']
-    call(octopus_cmd)
+    sp.call(octopus_cmd)
 
 def get_vcf_samples(vcf_filename):
     vcf = ps.VariantFile(vcf_filename)
@@ -269,7 +244,7 @@ def run_rtg(rtg, rtg_ref_path, truth_vcf_path, confident_bed_path, octopus_vcf_p
             cmd += ['--sample', sample]
         else:
             cmd += ['--sample', truth_samples[0] + "," + sample]
-    call(cmd)
+    sp.call(cmd)
 
 def read_vcf_samples(vcf_fname):
     vcf = ps. VariantFile(vcf_fname)
@@ -299,7 +274,7 @@ def is_somatic_record(rec):
     return any(is_somatic_sample(rec, sample) for sample in list(rec.samples))
 
 def index_vcf(vcf_filename):
-    call(['tabix', '-f', vcf_filename])
+    sp.call(['tabix', '-f', vcf_filename])
 
 def filter_somatic(vcf_filename):
     in_vcf = ps. VariantFile(vcf_filename)
@@ -340,8 +315,13 @@ def is_normal_sample(sample, vcf_filename):
     return sample in read_normal_samples(vcf_filename)
 
 def eval_octopus(octopus, rtg, example, out_dir, threads, kind="germline"):
-    octopus_vcf = join(out_dir, get_octopus_output_filename(example.reference, example.reads, kind=kind))
-    run_octopus(octopus, example.reference, example.reads, example.regions, threads, octopus_vcf, config=example.config, kind=kind)
+    if example.reads is not None:
+        octopus_vcf = join(out_dir, get_octopus_output_filename(example.reference, example.reads, kind=kind))
+        run_octopus(octopus, example.reference, example.reads, example.regions, threads, octopus_vcf,
+                    config=example.config, octopus_vcf=example.octopus_vcf, kind=kind)
+    else:
+        assert example.octopus_vcf is not None
+        octopus_vcf = example.octopus_vcf
     if kind == "somatic":
         # Hack as '--somatics-only' option is currently ignored when in training mode
         filter_somatic(octopus_vcf)
@@ -366,7 +346,7 @@ def eval_octopus(octopus, rtg, example, out_dir, threads, kind="germline"):
     return result
 
 def subset(vcf_in_path, vcf_out_path, bed_regions):
-    call(['bcftools', 'view', '-R', bed_regions, '-O', 'z', '-o', vcf_out_path, vcf_in_path])
+    sp.call(['bcftools', 'view', '-R', bed_regions, '-O', 'z', '-o', vcf_out_path, vcf_in_path])
 
 def is_missing(x):
     return x == '.' or np.isnan(float(x))
@@ -420,12 +400,12 @@ def run_ranger_training(ranger, data_path, hyperparameters, threads, out, seed=N
           '--nthreads', str(threads), '--outprefix', out, '--write', '--verbose']
     if seed is not None:
         cmd += ['--seed', str(seed)]
-    call(cmd)
+    sp.call(cmd)
 
 def run_ranger_prediction(ranger, forest, data_path, threads, out):
     cmd = [ranger, '--file', data_path, '--predict', forest,
           '--nthreads', str(threads), '--outprefix', out, '--verbose']
-    call(cmd)
+    sp.call(cmd)
 
 def read_predictions(prediction_fname):
     with open(prediction_fname) as prediction_file:
