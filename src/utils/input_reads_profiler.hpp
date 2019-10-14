@@ -19,8 +19,8 @@ namespace octopus {
 
 struct ReadSetProfileConfig
 {
-    unsigned max_samples_per_sample = 10;
-    unsigned max_sample_size = 10'000;
+    unsigned max_draws_per_sample = 500;
+    unsigned max_reads_per_draw = 10'000;
     boost::optional<AlignedRead::NucleotideSequence::size_type> fragment_size = boost::none;
 };
 

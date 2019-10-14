@@ -53,15 +53,32 @@ auto choose_sample_region(const GenomicRegion& from, GenomicRegion::Size max_siz
     return GenomicRegion {from.contig_name(), dist(generator), from.end()};
 }
 
+template <typename Range>
+auto draw_sample(const SampleName& sample, const Range& regions,
+                 const ReadManager& source, const ReadSetProfileConfig& config)
+{
+    const auto region_itr = random_select(std::cbegin(regions), std::cend(regions));
+    const auto sample_region = choose_sample_region(*region_itr, 10 * config.max_reads_per_draw);
+    auto test_region = source.find_covered_subregion(sample, sample_region, config.max_reads_per_draw);
+    if (is_empty(test_region)) {
+        test_region = expand_rhs(test_region, 1);
+    }
+    return source.fetch_reads(sample, test_region);
+}
+
 auto draw_sample(const SampleName& sample, const InputRegionMap& regions,
                  const ReadManager& source, const ReadSetProfileConfig& config,
                  std::discrete_distribution<>& contig_sampling_distribution)
 {
-    const auto contig_itr = draw_sample(regions, contig_sampling_distribution);
-    assert(!contig_itr->second.empty());
-    const auto region_itr = random_select(std::cbegin(contig_itr->second), std::cend(contig_itr->second));
-    const auto sample_region = choose_sample_region(*region_itr, 10 * config.max_sample_size);
-    auto test_region = source.find_covered_subregion(sample, sample_region, config.max_sample_size);
+    return draw_sample(sample, draw_sample(regions, contig_sampling_distribution)->second, source, config);
+}
+
+template <typename Range>
+auto draw_sample_from_begin(const SampleName& sample, const Range& regions,
+                            const ReadManager& source, const ReadSetProfileConfig& config)
+{
+    const auto region_itr = random_select(std::cbegin(regions), std::cend(regions));
+    auto test_region = source.find_covered_subregion(sample, *region_itr, config.max_reads_per_draw);
     if (is_empty(test_region)) {
         test_region = expand_rhs(test_region, 1);
     }
@@ -72,14 +89,7 @@ auto draw_sample_from_begin(const SampleName& sample, const InputRegionMap& regi
                             const ReadManager& source, const ReadSetProfileConfig& config,
                             std::discrete_distribution<>& contig_sampling_distribution)
 {
-    const auto contig_itr = draw_sample(regions, contig_sampling_distribution);
-    assert(!contig_itr->second.empty());
-    const auto region_itr = random_select(std::cbegin(contig_itr->second), std::cend(contig_itr->second));
-    auto test_region = source.find_covered_subregion(sample, *region_itr, config.max_sample_size);
-    if (is_empty(test_region)) {
-        test_region = expand_rhs(test_region, 1);
-    }
-    return source.fetch_reads(sample, test_region);
+    return draw_sample_from_begin(sample, draw_sample(regions, contig_sampling_distribution)->second, source, config);
 }
 
 using ReadSetSamples = std::vector<ReadManager::ReadContainer>;
@@ -94,8 +104,15 @@ auto draw_samples(const SampleName& sample, const InputRegionMap& regions,
                   std::discrete_distribution<>& contig_sampling_distribution)
 {
     ReadSetSamples result {};
-    result.reserve(config.max_samples_per_sample);
-    std::generate_n(std::back_inserter(result), config.max_samples_per_sample,
+    result.reserve(config.max_draws_per_sample);
+    auto remaining_draws = config.max_draws_per_sample;
+    // Draw once from each contig first to ensure all contigs get sampled
+    for (const auto& p : regions) {
+        result.push_back(draw_sample(sample, p.second, source, config));
+        if (remaining_draws > 0) --remaining_draws;
+    }
+    // Then sample contigs randomly
+    std::generate_n(std::back_inserter(result), remaining_draws,
                     [&] () { return draw_sample(sample, regions, source, config, contig_sampling_distribution); });
     if (all_empty(result)) {
         result.back() = draw_sample_from_begin(sample, regions, source, config, contig_sampling_distribution);
@@ -178,7 +195,7 @@ void fill_memory_stats(const Range& bytes, ReadSetProfile::ReadMemoryStats& resu
 {
     result.max = *std::max_element(std::cbegin(bytes), std::cend(bytes));
     result.mean = maths::mean(bytes);
-    result.mean = maths::median(bytes);
+    result.median = maths::median(bytes);
     result.stdev = maths::stdev(bytes);
 }
 
@@ -311,7 +328,7 @@ std::ostream& operator<<(std::ostream& os, const ReadSetProfile::DepthStats& sta
     return os << " mean: " << stats.mean
               << " median: " << stats.median
               << " stdev: " << stats.stdev
-              << " positive mean " << stats.positive_mean
+              << " positive mean: " << stats.positive_mean
               << " positive median: " << stats.median
               << " positive stdev: " << stats.stdev
               << " distribution: " << stats.distribution;
