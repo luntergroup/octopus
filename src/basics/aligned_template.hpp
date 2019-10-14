@@ -90,6 +90,9 @@ bool operator<(const AlignedTemplate& lhs, const AlignedTemplate& rhs) noexcept;
 
 bool is_rightmost_segment(const AlignedRead& read) noexcept;
 
+unsigned sum_mapping_qualities(const AlignedTemplate& reads) noexcept;
+unsigned sum_base_qualities(const AlignedTemplate& reads) noexcept;
+
 template <typename ForwardIterator, typename OutputIterator>
 OutputIterator
 make_paired_read_templates(ForwardIterator first_read_itr, ForwardIterator last_read_itr,

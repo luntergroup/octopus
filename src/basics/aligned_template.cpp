@@ -50,4 +50,16 @@ bool is_rightmost_segment(const AlignedRead& read) noexcept
     return !read.is_marked_multiple_segment_template() || (is_reverse_strand(read) && read.is_marked_last_template_segment());
 }
 
+unsigned sum_mapping_qualities(const AlignedTemplate& reads) noexcept
+{
+	const static auto add_mapping_quality = [] (auto total, const auto& read) noexcept { return total + read.mapping_quality(); };
+	return std::accumulate(std::cbegin(reads), std::cend(reads), 0u, add_mapping_quality);
+}
+
+unsigned sum_base_qualities(const AlignedTemplate& reads) noexcept
+{
+	const static auto add_base_quality_sum = [] (auto total, const auto& read) noexcept { return total + sum_base_qualities(read); };
+	return std::accumulate(std::cbegin(reads), std::cend(reads), 0u, add_base_quality_sum);
+}
+
 } // namespace octopus
