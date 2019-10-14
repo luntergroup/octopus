@@ -38,6 +38,12 @@ auto get_covered_sample_regions(const std::vector<SampleName>& samples, const In
     return result;
 }
 
+auto draw_sample(const InputRegionMap& regions, std::discrete_distribution<>& contig_sampling_distribution)
+{
+    static std::mt19937 generator {42};
+    return std::next(std::cbegin(regions), contig_sampling_distribution(generator));
+}
+
 auto choose_sample_region(const GenomicRegion& from, GenomicRegion::Size max_size)
 {
     if (size(from) <= max_size) return from;
@@ -47,14 +53,32 @@ auto choose_sample_region(const GenomicRegion& from, GenomicRegion::Size max_siz
     return GenomicRegion {from.contig_name(), dist(generator), from.end()};
 }
 
-auto draw_sample(const SampleName& sample, const InputRegionMap& regions,
+template <typename Range>
+auto draw_sample(const SampleName& sample, const Range& regions,
                  const ReadManager& source, const ReadSetProfileConfig& config)
 {
-    const auto contig_itr = random_select(std::cbegin(regions), std::cend(regions));
-    assert(!contig_itr->second.empty());
-    const auto region_itr = random_select(std::cbegin(contig_itr->second), std::cend(contig_itr->second));
-    const auto sample_region = choose_sample_region(*region_itr, 10 * config.max_sample_size);
-    auto test_region = source.find_covered_subregion(sample, sample_region, config.max_sample_size);
+    const auto region_itr = random_select(std::cbegin(regions), std::cend(regions));
+    const auto sample_region = choose_sample_region(*region_itr, 10 * config.max_reads_per_draw);
+    auto test_region = source.find_covered_subregion(sample, sample_region, config.max_reads_per_draw);
+    if (is_empty(test_region)) {
+        test_region = expand_rhs(test_region, 1);
+    }
+    return source.fetch_reads(sample, test_region);
+}
+
+auto draw_sample(const SampleName& sample, const InputRegionMap& regions,
+                 const ReadManager& source, const ReadSetProfileConfig& config,
+                 std::discrete_distribution<>& contig_sampling_distribution)
+{
+    return draw_sample(sample, draw_sample(regions, contig_sampling_distribution)->second, source, config);
+}
+
+template <typename Range>
+auto draw_sample_from_begin(const SampleName& sample, const Range& regions,
+                            const ReadManager& source, const ReadSetProfileConfig& config)
+{
+    const auto region_itr = random_select(std::cbegin(regions), std::cend(regions));
+    auto test_region = source.find_covered_subregion(sample, *region_itr, config.max_reads_per_draw);
     if (is_empty(test_region)) {
         test_region = expand_rhs(test_region, 1);
     }
@@ -62,16 +86,10 @@ auto draw_sample(const SampleName& sample, const InputRegionMap& regions,
 }
 
 auto draw_sample_from_begin(const SampleName& sample, const InputRegionMap& regions,
-                            const ReadManager& source, const ReadSetProfileConfig& config)
+                            const ReadManager& source, const ReadSetProfileConfig& config,
+                            std::discrete_distribution<>& contig_sampling_distribution)
 {
-    const auto contig_itr = random_select(std::cbegin(regions), std::cend(regions));
-    assert(!contig_itr->second.empty());
-    const auto region_itr = random_select(std::cbegin(contig_itr->second), std::cend(contig_itr->second));
-    auto test_region = source.find_covered_subregion(sample, *region_itr, config.max_sample_size);
-    if (is_empty(test_region)) {
-        test_region = expand_rhs(test_region, 1);
-    }
-    return source.fetch_reads(sample, test_region);
+    return draw_sample_from_begin(sample, draw_sample(regions, contig_sampling_distribution)->second, source, config);
 }
 
 using ReadSetSamples = std::vector<ReadManager::ReadContainer>;
@@ -82,14 +100,22 @@ bool all_empty(const ReadSetSamples& samples)
 }
 
 auto draw_samples(const SampleName& sample, const InputRegionMap& regions,
-                  const ReadManager& source, const ReadSetProfileConfig& config)
+                  const ReadManager& source, const ReadSetProfileConfig& config,
+                  std::discrete_distribution<>& contig_sampling_distribution)
 {
     ReadSetSamples result {};
-    result.reserve(config.max_samples_per_sample);
-    std::generate_n(std::back_inserter(result), config.max_samples_per_sample,
-                    [&] () { return draw_sample(sample, regions, source, config); });
+    result.reserve(config.max_draws_per_sample);
+    auto remaining_draws = config.max_draws_per_sample;
+    // Draw once from each contig first to ensure all contigs get sampled
+    for (const auto& p : regions) {
+        result.push_back(draw_sample(sample, p.second, source, config));
+        if (remaining_draws > 0) --remaining_draws;
+    }
+    // Then sample contigs randomly
+    std::generate_n(std::back_inserter(result), remaining_draws,
+                    [&] () { return draw_sample(sample, regions, source, config, contig_sampling_distribution); });
     if (all_empty(result)) {
-        result.back() = draw_sample_from_begin(sample, regions, source, config);
+        result.back() = draw_sample_from_begin(sample, regions, source, config, contig_sampling_distribution);
     }
     return result;
 }
@@ -97,10 +123,14 @@ auto draw_samples(const SampleName& sample, const InputRegionMap& regions,
 auto draw_samples(const std::vector<SampleName>& samples, const InputRegionMap& regions,
                   const ReadManager& source, const ReadSetProfileConfig& config)
 {
+    std::vector<unsigned> contig_weights(regions.size());
+    std::transform(std::cbegin(regions), std::cend(regions), std::begin(contig_weights),
+                   [] (const auto& p) { return sum_region_sizes(p.second); });
+    std::discrete_distribution<> contig_sampling_distribution(std::cbegin(contig_weights), std::cend(contig_weights));
     std::vector<ReadSetSamples> result {};
     result.reserve(samples.size());
     for (const auto& sample : samples) {
-        result.push_back(draw_samples(sample, regions, source, config));
+        result.push_back(draw_samples(sample, regions, source, config, contig_sampling_distribution));
     }
     return result;
 }
@@ -136,11 +166,6 @@ auto compute_fragmented_template_bytes(const std::vector<ReadSetSamples>& read_s
     return result;
 }
 
-auto calculate_median_fragmented_template_bytes(const std::vector<ReadSetSamples>& read_sets, const AlignedRead::NucleotideSequence::size_type fragment_size)
-{
-    return maths::median(compute_fragmented_template_bytes(read_sets, fragment_size));
-}
-
 template <typename T>
 auto copy_positive(const std::deque<T>& values)
 {
@@ -165,6 +190,38 @@ auto make_depth_distribution(const Range& depths)
     return result;
 }
 
+template <typename Range>
+void fill_memory_stats(const Range& bytes, ReadSetProfile::ReadMemoryStats& result)
+{
+    result.max = *std::max_element(std::cbegin(bytes), std::cend(bytes));
+    result.mean = maths::mean(bytes);
+    result.median = maths::median(bytes);
+    result.stdev = maths::stdev(bytes);
+}
+
+template <typename Range>
+void fill_depth_stats(const Range& depths, ReadSetProfile::DepthStats& result)
+{
+    result.distribution = make_depth_distribution(depths);
+    result.mean = maths::mean(depths);
+    result.median = maths::median(depths);
+    result.stdev = maths::stdev(depths);
+    const auto positive_depths = copy_positive(depths);
+    if (!positive_depths.empty()) {
+        result.positive_mean = maths::mean(positive_depths);
+        result.positive_median = maths::median(positive_depths);
+        result.positive_stdev = maths::stdev(positive_depths);
+    }
+}
+
+template <typename Range>
+auto make_depth_stats(const Range& depths)
+{
+    ReadSetProfile::DepthStats result {};
+    fill_depth_stats(depths, result);
+    return result;
+}
+
 } // namespace
 
 boost::optional<ReadSetProfile>
@@ -181,29 +238,24 @@ profile_reads(const std::vector<SampleName>& samples,
     const auto bytes = get_read_bytes(read_sets);
     if (bytes.empty()) return boost::none;
     ReadSetProfile result {};
-    result.mean_read_bytes = maths::mean(bytes);
-    result.read_bytes_stdev = maths::stdev(bytes);
+    fill_memory_stats(bytes, result.memory_stats);
     if (config.fragment_size) {
-        result.fragmented_template_median_bytes = calculate_median_fragmented_template_bytes(read_sets, *config.fragment_size);
-    } else {
-        result.fragmented_template_median_bytes = boost::none;
+        const auto fragmented_bytes = compute_fragmented_template_bytes(read_sets, *config.fragment_size);
+        result.fragmented_memory_stats = ReadSetProfile::ReadMemoryStats {};
+        fill_memory_stats(fragmented_bytes, *result.fragmented_memory_stats);
     }
-    result.samples = samples;
-    result.sample_depth_distribution.resize(samples.size());
-    result.sample_mean_depth.resize(samples.size());
-    result.sample_median_depth.resize(samples.size());
-    result.sample_depth_stdev.resize(samples.size());
-    result.sample_positive_depth_stdev.resize(samples.size());
-    result.sample_median_positive_depth.resize(samples.size());
-    result.sample_mean_positive_depth.resize(samples.size());
     std::deque<unsigned> depths {};
+    std::unordered_map<GenomicRegion::ContigName, std::deque<unsigned>> contig_depths {};
     std::vector<unsigned> read_lengths {};
     std::vector<AlignedRead::MappingQuality> mapping_qualities {};
     for (std::size_t s {0}; s < samples.size(); ++s) {
         std::deque<unsigned> sample_depths {};
+        std::unordered_map<GenomicRegion::ContigName, std::deque<unsigned>> sample_contig_depths {};
         for (const auto& reads : read_sets[s]) {
             if (!reads.empty()) {
-                utils::append(calculate_positional_coverage(reads), sample_depths);
+                auto read_depths = calculate_positional_coverage(reads);
+                utils::append(read_depths, sample_contig_depths[contig_name(reads.front())]);
+                utils::append(std::move(read_depths), sample_depths);
                 read_lengths.reserve(read_lengths.size() + reads.size());
                 std::transform(std::cbegin(reads), std::cend(reads), std::back_inserter(read_lengths),
                                [] (const auto& read) { return sequence_size(read); });
@@ -211,93 +263,106 @@ profile_reads(const std::vector<SampleName>& samples,
                                [] (const auto& read) { return read.mapping_quality(); });
             }
         }
+        ReadSetProfile::GenomeContigDepthStatsPair sample_depth_stats {};
         if (!sample_depths.empty()) {
-            result.sample_depth_distribution[s] = make_depth_distribution(sample_depths);
-            result.sample_mean_depth[s] = maths::mean(sample_depths);
-            result.sample_median_depth[s] = maths::median(sample_depths);
-            result.sample_depth_stdev[s] = maths::stdev(sample_depths);
-            const auto sample_positive_depths = copy_positive(sample_depths);
-            if (!sample_positive_depths.empty()) {
-                result.sample_median_positive_depth[s] = maths::median(sample_positive_depths);
-                result.sample_mean_positive_depth[s] = maths::mean(sample_positive_depths);
-                result.sample_positive_depth_stdev[s] = maths::stdev(sample_positive_depths);
-            } else {
-                result.sample_median_positive_depth[s] = 0;
-                result.sample_mean_positive_depth[s] = 0;
-                result.sample_positive_depth_stdev[s] = 0;
+            fill_depth_stats(sample_depths, sample_depth_stats.genome);
+            for (const auto& p : sample_contig_depths) {
+                sample_depth_stats.contig.emplace(p.first, make_depth_stats(p.second));
             }
-        } else {
-            result.sample_mean_depth[s] = 0;
-            result.sample_median_depth[s] = 0;
-            result.sample_depth_stdev[s] = 0;
-            result.sample_median_positive_depth[s] = 0;
         }
+        result.depth_stats.sample.emplace(samples[s], std::move(sample_depth_stats));
         utils::append(std::move(sample_depths), depths);
+        for (auto& p : sample_contig_depths) {
+            utils::append(std::move(p.second), contig_depths[p.first]);
+        }
     }
-    assert(!depths.empty());
-    result.depth_distribution = make_depth_distribution(depths);
-    result.mean_depth = maths::mean(depths);
-    result.median_depth = maths::median(depths);
-    result.depth_stdev = maths::stdev(depths);
-    const auto positive_depths = copy_positive(depths);
-    if (!positive_depths.empty()) {
-        result.median_positive_depth = maths::median(positive_depths);
-        result.mean_positive_depth = maths::mean(positive_depths);
-        result.positive_depth_stdev = maths::stdev(positive_depths);
-    } else {
-        result.median_positive_depth = 0;
-        result.mean_positive_depth = 0;
-        result.positive_depth_stdev = 0;
+    if (!depths.empty()) {
+        fill_depth_stats(depths, result.depth_stats.combined.genome);
+        for (const auto& p : contig_depths) {
+            result.depth_stats.combined.contig.emplace(p.first, make_depth_stats(p.second));
+        }
     }
-    result.max_read_length = *std::max_element(std::cbegin(read_lengths), std::cend(read_lengths));
-    result.median_read_length = maths::median(read_lengths);
+    if (!read_lengths.empty()) {
+        result.length_stats.max = *std::max_element(std::cbegin(read_lengths), std::cend(read_lengths));
+        result.length_stats.mean = maths::mean(read_lengths);
+        result.length_stats.median = maths::median(read_lengths);
+        result.length_stats.stdev = maths::stdev(read_lengths);
+    }
     if (!mapping_qualities.empty()) {
-        result.max_mapping_quality = *std::max_element(std::cbegin(mapping_qualities), std::cend(mapping_qualities));
-        result.median_mapping_quality = maths::median(mapping_qualities);
-        result.rmq_mapping_quality = maths::rmq(mapping_qualities);
-    } else {
-        result.max_mapping_quality = 0;
-        result.median_mapping_quality = 0;
-        result.rmq_mapping_quality = 0;
+        result.mapping_quality_stats.max = *std::max_element(std::cbegin(mapping_qualities), std::cend(mapping_qualities));
+        result.mapping_quality_stats.mean = maths::median(mapping_qualities);
+        result.mapping_quality_stats.median = maths::median(mapping_qualities);
+        result.mapping_quality_stats.rmq = maths::rmq(mapping_qualities);
+        result.mapping_quality_stats.stdev = maths::stdev(mapping_qualities);
     }
     return result;
 }
 
+std::ostream& operator<<(std::ostream& os, const ReadSetProfile::ReadMemoryStats& stats)
+{
+    return os << "max: " << stats.max << " mean: " << stats.mean << " median: " << stats.median << " stdev: " << stats.stdev;
+}
+
+std::ostream& operator<<(std::ostream& os, const ReadSetProfile::MappingQualityStats& stats)
+{
+    return os << "max: " << static_cast<unsigned>(stats.max + 33)
+              << " mean: " << static_cast<unsigned>(stats.mean + 33)
+              << " median: " << static_cast<unsigned>(stats.median + 33)
+              << " rmq: " << static_cast<unsigned>(stats.rmq + 33)
+              << " stdev: " << static_cast<unsigned>(stats.max + 33);
+}
+
+std::ostream& operator<<(std::ostream& os, const ReadSetProfile::ReadLengthStats& stats)
+{
+    return os << "max: " << stats.max << " mean: " << stats.mean << " median: " << stats.median << " stdev: " << stats.stdev;
+}
+
+std::ostream& operator<<(std::ostream& os, const ReadSetProfile::DepthStats::DiscreteDistribution& dist)
+{
+    for (auto depth : dist) os << depth << ' ';
+    return os;
+}
+
+std::ostream& operator<<(std::ostream& os, const ReadSetProfile::DepthStats& stats)
+{
+    return os << " mean: " << stats.mean
+              << " median: " << stats.median
+              << " stdev: " << stats.stdev
+              << " positive mean: " << stats.positive_mean
+              << " positive median: " << stats.median
+              << " positive stdev: " << stats.stdev
+              << " distribution: " << stats.distribution;
+}
+
+std::ostream& operator<<(std::ostream& os, const ReadSetProfile::GenomeContigDepthStatsPair& stats)
+{
+    os << "Genome: " << stats.genome << '\n';
+    os << "Contigs:" << '\n';
+    for (const auto& p : stats.contig) {
+        os << '\t' << p.first << ": " << p.second << '\n';
+    }
+    return os;
+}
+
+std::ostream& operator<<(std::ostream& os, const ReadSetProfile::SampleCombinedDepthStatsPair& stats)
+{
+    os << "Combined: " << stats.combined << '\n';
+    os << "Sample:" << '\n';
+    for (const auto& p : stats.sample) {
+        os << '\t' << p.first << ": " << p.second << '\n';
+    }
+    return os;
+}
+
 std::ostream& operator<<(std::ostream& os, const ReadSetProfile& profile)
 {
-    os << "Bytes:\n";
-    os << "\tmean = " << profile.mean_read_bytes << '\n';
-    os << "\tstdev = " << profile.read_bytes_stdev << '\n';
-    
-    for (std::size_t s {0}; s < profile.sample_mean_depth.size(); ++s) {
-        os << "Sample " << s << " depth:\n";
-        os << "\tdistribution = "; for (auto p : profile.sample_depth_distribution[s]) os << p << ' '; os << '\n';
-        os << "\tmean = " << profile.sample_mean_depth[s] << '\n';
-        os << "\tmean positive = " << profile.sample_mean_positive_depth[s] << '\n';
-        os << "\tmedian = " << profile.sample_median_depth[s] << '\n';
-        os << "\tmedian positive = " << profile.sample_median_positive_depth[s] << '\n';
-        os << "\tstdev = " << profile.sample_depth_stdev[s] << '\n';
-        os << "\tpositive stdev = " << profile.sample_positive_depth_stdev[s] << '\n';
+    os << "Read memory stats: " << profile.memory_stats << '\n';
+    if (profile.fragmented_memory_stats) {
+        os << "Fragmented read memory stats: " << *profile.fragmented_memory_stats << '\n';
     }
-    
-    os << "Total depth:\n";
-    os << "\tdistribution = "; for (auto p : profile.depth_distribution) os << p << ' '; os << '\n';
-    os << "\tmean = " << profile.mean_depth << '\n';
-    os << "\tmean positive = " << profile.mean_positive_depth << '\n';
-    os << "\tmedian = " << profile.median_depth << '\n';
-    os << "\tmedian positive = " << profile.median_positive_depth << '\n';
-    os << "\tstdev = " << profile.depth_stdev << '\n';
-    os << "\tpositive stdev = " << profile.positive_depth_stdev << '\n';
-    
-    os << "Read length:\n";
-    os << "\tmax = " << profile.max_read_length << '\n';
-    os << "\tmedian = " << profile.median_read_length << '\n';
-    
-    os << "Mapping quality:\n";
-    os << "\tmax = " << static_cast<unsigned>(profile.max_mapping_quality + 33) << '\n';
-    os << "\tmedian = " << static_cast<unsigned>(profile.median_mapping_quality + 33) << '\n';
-    os << "\trmq = " << static_cast<unsigned>(profile.rmq_mapping_quality + 33) << '\n';
-    
+    os << "Depth stats: " << profile.depth_stats << '\n';
+    os << "Mapping quality stats: " << profile.mapping_quality_stats << '\n';
+    os << "Read length stats: " << profile.length_stats << std::endl;
     return os;
 }
 

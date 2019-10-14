@@ -425,9 +425,9 @@ auto estimate_read_memory_footprint(const boost::optional<ReadSetProfile>& profi
 {
     MemoryFootprint result;
     if (profile) {
-        result = profile->mean_read_bytes + profile->read_bytes_stdev;
-        if (profile->fragmented_template_median_bytes) {
-            result += *profile->fragmented_template_median_bytes;
+        result = std::min(profile->memory_stats.mean + profile->memory_stats.stdev, profile->memory_stats.max);
+        if (profile->fragmented_memory_stats) {
+            result += profile->fragmented_memory_stats->median;
         }
     } else {
         result = footprint(typical_illumina_read);
@@ -574,7 +574,7 @@ GenomeCallingComponents::Components::Components(ReferenceGenome&& reference, Rea
     bamout_config.use_paired_reads = options::use_paired_reads(options);
     bamout_config.use_linked_reads = options::use_linked_reads(options);
     profiler_config.alignment_model = bamout_config.alignment_model;
-    if (reads_profile && reads_profile->median_read_length > 1'000) {
+    if (reads_profile && reads_profile->length_stats.median > 1'000) {
         profiler_config.ignore_likely_misaligned_reads = false;
     }
 }

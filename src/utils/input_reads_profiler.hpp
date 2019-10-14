@@ -19,24 +19,49 @@ namespace octopus {
 
 struct ReadSetProfileConfig
 {
-    unsigned max_samples_per_sample = 10;
-    unsigned max_sample_size = 10'000;
+    unsigned max_draws_per_sample = 500;
+    unsigned max_reads_per_draw = 10'000;
     boost::optional<AlignedRead::NucleotideSequence::size_type> fragment_size = boost::none;
 };
 
 struct ReadSetProfile
 {
-    using DiscreteDistribution = std::vector<double>;
-    std::size_t mean_read_bytes, read_bytes_stdev;
-    DiscreteDistribution depth_distribution;
-    std::size_t mean_depth, median_depth, depth_stdev, positive_depth_stdev, median_positive_depth, mean_positive_depth;
-    std::vector<SampleName> samples;
-    std::vector<DiscreteDistribution> sample_depth_distribution;
-    std::vector<std::size_t> sample_mean_depth, sample_median_depth, sample_median_positive_depth, sample_mean_positive_depth;
-    std::vector<std::size_t> sample_depth_stdev, sample_positive_depth_stdev;
-    AlignedRead::NucleotideSequence::size_type max_read_length, median_read_length;
-    AlignedRead::MappingQuality max_mapping_quality, median_mapping_quality, rmq_mapping_quality;
-    boost::optional<std::size_t> fragmented_template_median_bytes;
+    struct DepthStats
+    {
+        using DiscreteDistribution = std::vector<double>;
+        DiscreteDistribution distribution;
+        std::size_t mean, median, stdev;
+        std::size_t positive_mean, positive_median, positive_stdev;
+    };
+    struct GenomeContigDepthStatsPair
+    {
+        using ContigDepthStatsMap = std::unordered_map<GenomicRegion::ContigName, DepthStats>;
+        ContigDepthStatsMap contig;
+        DepthStats genome;
+    };
+    struct SampleCombinedDepthStatsPair
+    {
+        std::unordered_map<SampleName, GenomeContigDepthStatsPair> sample;
+        GenomeContigDepthStatsPair combined;
+    };
+    struct MappingQualityStats
+    {
+        AlignedRead::MappingQuality max, mean, median, rmq, stdev;
+    };
+    struct ReadLengthStats
+    {
+        AlignedRead::NucleotideSequence::size_type max, median, mean, stdev;
+    };
+    struct ReadMemoryStats
+    {
+        MemoryFootprint max, mean, median, stdev;
+    };
+    
+    SampleCombinedDepthStatsPair depth_stats;
+    ReadMemoryStats memory_stats;
+    boost::optional<ReadMemoryStats> fragmented_memory_stats;
+    ReadLengthStats length_stats;
+    MappingQualityStats mapping_quality_stats;
 };
 
 boost::optional<ReadSetProfile>
