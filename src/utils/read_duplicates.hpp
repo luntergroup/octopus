@@ -7,8 +7,11 @@
 #include <iterator>
 #include <algorithm>
 #include <vector>
+#include <map>
 
 #include "basics/aligned_read.hpp"
+#include "basics/aligned_template.hpp"
+#include "utils/append.hpp"
 
 namespace octopus {
 
@@ -78,45 +81,128 @@ find_duplicate_reads(ForwardIt first, const ForwardIt last)
     return result;
 }
 
-template <typename ForwardIt, typename BinaryPredicate>
+namespace detail {
+
+template <typename AlignedReadIterator>
+struct AlignedReadIteratorNameLess
+{
+	using is_transparent = void;
+	bool operator()(const AlignedReadIterator& lhs, const AlignedReadIterator& rhs) const noexcept { return lhs->name() < rhs->name(); }
+	bool operator()(const AlignedReadIterator& lhs, const AlignedRead& rhs) const noexcept { return lhs->name() < rhs.name(); }
+	bool operator()(const AlignedRead& lhs, const AlignedReadIterator& rhs) const noexcept { return lhs.name() < rhs->name(); }
+	bool operator()(const AlignedRead& lhs, const AlignedRead& rhs) const noexcept { return lhs.name() < rhs.name(); }
+};
+
+} // namespace detail
+
+template <typename ForwardIt,
+          typename BinaryPredicate>
 ForwardIt 
 remove_duplicate_reads(ForwardIt first, ForwardIt last,
-                       const BinaryPredicate swap_duplicates)
+                       const BinaryPredicate duplicate_compare)
 {
     // See comment in 'find_duplicates'
     first = std::adjacent_find(first, last, [] (const auto& lhs, const auto& rhs) { return primary_segments_are_duplicates(lhs, rhs); });
     if (first != last) {
-        std::vector<ForwardIt> buffer {first++};
-        buffer.reserve(100);
-        for (auto itr = first; itr != last; ++itr) {
-            if (primary_segments_are_duplicates(*itr, *buffer.front())) { // can check any read in buffer
-				const auto duplicate_itr = detail::find_duplicate(*itr, buffer);
-                if (duplicate_itr == std::end(buffer)) { // *itr may not be a duplicate
-                    if (itr != first) *first = std::move(*itr);
-                    buffer.emplace_back(first++);
-                } else { // *itr is a duplicate
-					if (swap_duplicates(**duplicate_itr, *itr)) {
-						std::iter_swap(*duplicate_itr, itr);
+        std::vector<ForwardIt> candidate_duplicates {first++};
+		using DuplicatePairedReadMap = std::map<ForwardIt, std::vector<AlignedRead>, detail::AlignedReadIteratorNameLess<ForwardIt>>;
+		DuplicatePairedReadMap paired_duplicates {}, working_paired_duplicates {};
+        candidate_duplicates.reserve(100);
+        for (auto read_itr = first; read_itr != last; ++read_itr) {
+			AlignedRead& read {*read_itr};
+            if (primary_segments_are_duplicates(read, *candidate_duplicates.front())) { // can check any candidate
+				const auto duplicate_itr = detail::find_duplicate(read, candidate_duplicates);
+                if (duplicate_itr == std::end(candidate_duplicates)) { // read may not be a duplicate
+                    if (read_itr != first) *first = std::move(read);
+                    candidate_duplicates.emplace_back(first++);
+                } else { // read is a duplicate
+					const ForwardIt curr_best_duplicate_itr {*duplicate_itr};					
+					if (candidate_duplicates.size() == 1) {
+						working_paired_duplicates[candidate_duplicates.front()] = {};
+					}
+					if (duplicate_compare(*curr_best_duplicate_itr, read)) {
+						// swap duplicates
+						if (read.has_other_segment()) {							
+							assert(curr_best_duplicate_itr->has_other_segment());
+							const auto replace_itr = working_paired_duplicates.find(curr_best_duplicate_itr);							
+							assert(replace_itr != std::cend(working_paired_duplicates));
+							auto worse_duplicates = std::move(replace_itr->second);							
+							worse_duplicates.push_back(std::move(*replace_itr->first));
+							working_paired_duplicates.erase(replace_itr);
+							*curr_best_duplicate_itr = std::move(read);
+							working_paired_duplicates[curr_best_duplicate_itr] = std::move(worse_duplicates);
+						} else {
+							std::iter_swap(*duplicate_itr, read_itr);
+						}
+					} else if (read.has_other_segment()) {
+						working_paired_duplicates[curr_best_duplicate_itr].push_back(std::move(read));
 					}
                 }
             } else {
-                if (itr != first) *first = std::move(*itr);
-                buffer.assign({first++});
+                if (read_itr != first) *first = std::move(read);
+                candidate_duplicates.assign({first++});
+				for (auto& p : working_paired_duplicates) {
+					auto mate_itr = paired_duplicates.find(*p.first);
+					if (mate_itr != std::cend(paired_duplicates)) {
+						// read's mate was the best duplicate segment and so it read - all is good
+						paired_duplicates.erase(mate_itr);
+					} else {
+						// Either read's mate (and its duplicates) were not considered, or one
+						// of read's mate duplicates was 'better'. To find out we need to check
+						// all of read's duplicate segments.
+						for (auto& duplicate : p.second) {
+							mate_itr = paired_duplicates.find(duplicate);
+							if (mate_itr != std::cend(paired_duplicates)) break;
+						}
+						if (mate_itr == std::cend(paired_duplicates)) {
+							paired_duplicates.emplace(p.first, std::move(p.second));
+						} else {
+							// Unpaired duplicate segments were chosen, we need to pick the best pair
+							std::vector<AlignedRead> buffer {};
+							buffer.reserve(mate_itr->second.size() + p.second.size() + 2);
+							buffer.push_back(std::move(*mate_itr->first));
+							utils::append(std::move(mate_itr->second), buffer);
+							buffer.push_back(std::move(*p.first));
+							utils::append(std::move(p.second), buffer);
+							std::vector<AlignedTemplate> duplicate_pairs {};
+							duplicate_pairs.reserve(buffer.size() / 2);
+							make_paired_read_templates(std::cbegin(buffer), std::cend(buffer), std::back_inserter(duplicate_pairs));
+							const auto& best_pair = *std::max_element(std::cbegin(duplicate_pairs), std::cend(duplicate_pairs), duplicate_compare);
+							assert(best_pair.size() == 2);
+							*mate_itr->first = best_pair[0];
+							*p.first = best_pair[1];
+							paired_duplicates.erase(mate_itr);
+						}
+					}
+				}
+				working_paired_duplicates.clear();
             }
         }
     }
     return first;
 }
 
+struct DuplicateReadLess
+{
+	bool operator()(const AlignedRead& lhs, const AlignedRead& rhs) const noexcept
+	{
+		return lhs.mapping_quality() < rhs.mapping_quality()
+			 || (lhs.mapping_quality() == rhs.mapping_quality() && sum_base_qualities(lhs) < sum_base_qualities(rhs)); 
+	}
+	bool operator()(const AlignedTemplate& lhs, const AlignedTemplate& rhs) const noexcept
+	{
+		const auto lhs_total_mq = sum_mapping_qualities(lhs);
+		const auto rhs_total_mq = sum_mapping_qualities(rhs);
+		return lhs_total_mq < rhs_total_mq
+			 || (lhs_total_mq == rhs_total_mq && sum_base_qualities(lhs) < sum_base_qualities(rhs)); 
+	}
+};
+
 template <typename ForwardIt>
 ForwardIt 
 remove_duplicate_reads(ForwardIt first, ForwardIt last)
 {
-	const auto static has_better_base_qualities = [] (const AlignedRead& prev, const AlignedRead& next) noexcept {
-		return prev.mapping_quality() < next.mapping_quality()
-			 || (prev.mapping_quality() == next.mapping_quality() && sum_base_qualities(prev) < sum_base_qualities(next)); 
-	};
-	return remove_duplicate_reads(first, last, has_better_base_qualities);
+	return remove_duplicate_reads(first, last, DuplicateReadLess {});
 }
 
 } // namespace
