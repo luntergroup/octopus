@@ -634,7 +634,6 @@ VcfRecord VcfRecordFactory::make(std::unique_ptr<Call> call) const
     result.set_info("NS",  count_samples_with_coverage(call_reads));
     result.set_info("DP",  sum_max_coverages(call_reads));
     result.set_info("MQ",  static_cast<unsigned>(rmq_mapping_quality(call_reads)));
-    result.set_info("MQ0", count_mapq_zero(call_reads));
     set_allele_counts(*call, samples_, result);
     
     if (call->model_posterior()) {
@@ -782,8 +781,7 @@ VcfRecord VcfRecordFactory::make_segment(std::vector<std::unique_ptr<Call>>&& ca
     result.set_info("NS",  count_samples_with_coverage(reads_, region));
     result.set_info("DP",  sum_max_coverages(reads_, region));
     result.set_info("MQ",  static_cast<unsigned>(rmq_mapping_quality(reads_, region)));
-    result.set_info("MQ0", count_mapq_zero(reads_, region));
-    
+	
     const auto mp = get_model_posterior(calls);
     if (mp) {
         result.set_info("MP", maths::round(*mp, 2));

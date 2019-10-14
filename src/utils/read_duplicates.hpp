@@ -22,6 +22,12 @@ struct IsDuplicate
 };
 
 namespace detail {
+	
+template <typename Range>
+auto find_duplicate(const AlignedRead& read, const Range& reads) noexcept
+{
+	return std::find_if(std::begin(reads), std::end(reads), [&read] (auto other_itr) { return IsDuplicate{}(read, *other_itr); });
+}
 
 template <typename Range>
 bool no_duplicates(const AlignedRead& read, const Range& reads) noexcept
@@ -38,7 +44,7 @@ struct NextSegmentLess
 
 template <typename ForwardIt>
 std::vector<std::vector<ForwardIt>>
-find_duplicates(ForwardIt first, const ForwardIt last)
+find_duplicate_reads(ForwardIt first, const ForwardIt last)
 {
     std::vector<std::vector<ForwardIt>> result {};
     std::vector<ForwardIt> buffer {};
@@ -72,8 +78,10 @@ find_duplicates(ForwardIt first, const ForwardIt last)
     return result;
 }
 
-template <typename ForwardIt>
-ForwardIt remove_duplicates(ForwardIt first, ForwardIt last)
+template <typename ForwardIt, typename BinaryPredicate>
+ForwardIt 
+remove_duplicate_reads(ForwardIt first, ForwardIt last,
+                       const BinaryPredicate swap_duplicates)
 {
     // See comment in 'find_duplicates'
     first = std::adjacent_find(first, last, [] (const auto& lhs, const auto& rhs) { return primary_segments_are_duplicates(lhs, rhs); });
@@ -82,9 +90,14 @@ ForwardIt remove_duplicates(ForwardIt first, ForwardIt last)
         buffer.reserve(100);
         for (auto itr = first; itr != last; ++itr) {
             if (primary_segments_are_duplicates(*itr, *buffer.front())) { // can check any read in buffer
-                if (detail::no_duplicates(*itr, buffer)) {
+				const auto duplicate_itr = detail::find_duplicate(*itr, buffer);
+                if (duplicate_itr == std::end(buffer)) { // *itr may not be a duplicate
                     if (itr != first) *first = std::move(*itr);
                     buffer.emplace_back(first++);
+                } else { // *itr is a duplicate
+					if (swap_duplicates(**duplicate_itr, *itr)) {
+						std::iter_swap(*duplicate_itr, itr);
+					}
                 }
             } else {
                 if (itr != first) *first = std::move(*itr);
@@ -93,6 +106,17 @@ ForwardIt remove_duplicates(ForwardIt first, ForwardIt last)
         }
     }
     return first;
+}
+
+template <typename ForwardIt>
+ForwardIt 
+remove_duplicate_reads(ForwardIt first, ForwardIt last)
+{
+	const auto static has_better_base_qualities = [] (const AlignedRead& prev, const AlignedRead& next) noexcept {
+		return prev.mapping_quality() < next.mapping_quality()
+			 || (prev.mapping_quality() == next.mapping_quality() && sum_base_qualities(prev) < sum_base_qualities(next)); 
+	};
+	return remove_duplicate_reads(first, last, has_better_base_qualities);
 }
 
 } // namespace

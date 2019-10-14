@@ -262,8 +262,9 @@ AlignedRead::Segment::Segment(String_&& contig_name, GenomicRegion::Position beg
 
 void capitalise_bases(AlignedRead& read) noexcept;
 
-void cap_qualities(AlignedRead& read, AlignedRead::BaseQuality max = 0) noexcept;
+unsigned sum_base_qualities(const AlignedRead& read) noexcept;
 
+void cap_qualities(AlignedRead& read, AlignedRead::BaseQuality max = 0) noexcept;
 void set_front_qualities(AlignedRead& read, std::size_t num_bases, AlignedRead::BaseQuality value) noexcept;
 void zero_front_qualities(AlignedRead& read, std::size_t num_bases) noexcept;
 void set_back_qualities(AlignedRead& read, std::size_t num_bases, AlignedRead::BaseQuality value) noexcept;
