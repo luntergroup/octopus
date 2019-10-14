@@ -117,20 +117,21 @@ remove_duplicate_reads(ForwardIt first, ForwardIt last,
                     candidate_duplicates.emplace_back(first++);
                 } else { // read is a duplicate
 					const ForwardIt curr_best_duplicate_itr {*duplicate_itr};					
-					if (candidate_duplicates.size() == 1) {
-						working_paired_duplicates[candidate_duplicates.front()] = {};
-					}
 					if (duplicate_compare(*curr_best_duplicate_itr, read)) {
 						// swap duplicates
 						if (read.has_other_segment()) {							
 							assert(curr_best_duplicate_itr->has_other_segment());
-							const auto replace_itr = working_paired_duplicates.find(curr_best_duplicate_itr);							
-							assert(replace_itr != std::cend(working_paired_duplicates));
-							auto worse_duplicates = std::move(replace_itr->second);							
-							worse_duplicates.push_back(std::move(*replace_itr->first));
-							working_paired_duplicates.erase(replace_itr);
-							*curr_best_duplicate_itr = std::move(read);
-							working_paired_duplicates[curr_best_duplicate_itr] = std::move(worse_duplicates);
+							const auto replace_itr = working_paired_duplicates.find(curr_best_duplicate_itr);
+							if (replace_itr != std::cend(working_paired_duplicates)) {
+								auto worse_duplicates = std::move(replace_itr->second);							
+								worse_duplicates.push_back(std::move(*replace_itr->first));
+								working_paired_duplicates.erase(replace_itr);
+								*curr_best_duplicate_itr = std::move(read);
+								working_paired_duplicates[curr_best_duplicate_itr] = std::move(worse_duplicates);
+							} else {
+								std::swap(*curr_best_duplicate_itr, read);
+								working_paired_duplicates[curr_best_duplicate_itr] = {std::move(read)};
+							}								
 						} else {
 							std::iter_swap(*duplicate_itr, read_itr);
 						}
