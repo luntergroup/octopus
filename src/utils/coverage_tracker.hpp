@@ -15,6 +15,7 @@
 #include <cassert>
 
 #include <boost/optional.hpp>
+#include <boost/iterator/filter_iterator.hpp>
 
 #include "concepts/mappable.hpp"
 #include "maths.hpp"
@@ -92,9 +93,10 @@ template <typename InputIterator, typename T = unsigned>
 CoverageTracker<RegionType<typename std::iterator_traits<InputIterator>::value_type>, T>
 make_coverage_tracker(InputIterator first, InputIterator last)
 {
-    using RegionTp = RegionType<typename std::iterator_traits<InputIterator>::value_type>;
+    using MappableType = typename std::iterator_traits<InputIterator>::value_type;
+    using RegionTp = RegionType<MappableType>;
     CoverageTracker<RegionTp, T> result {};
-    std::for_each(first, last, [&result] (const auto& mappable) { result.add(mappable); });
+    std::for_each(first, last, [&result] (const MappableType& mappable) { result.add(mappable); });
     return result;
 }
 
@@ -102,6 +104,15 @@ template <typename Range, typename T = unsigned>
 auto make_coverage_tracker(const Range& mappables)
 {
     return make_coverage_tracker<typename Range::const_iterator, T>(std::cbegin(mappables), std::cend(mappables));
+}
+
+template <typename Range, typename UnaryPredicate, typename T = unsigned>
+auto make_coverage_tracker(const Range& mappables, const UnaryPredicate condition)
+{
+    using boost::make_filter_iterator;
+    const auto begin = make_filter_iterator<UnaryPredicate>(std::cbegin(mappables), std::cend(mappables));
+    const auto end = make_filter_iterator<UnaryPredicate>(std::cend(mappables), std::cend(mappables));
+    return make_coverage_tracker<decltype(begin), T>(begin, end);
 }
 
 template <typename Region>
