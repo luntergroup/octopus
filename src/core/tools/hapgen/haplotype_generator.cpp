@@ -179,7 +179,7 @@ get_walker_policy(policies.extension)
             if (bad_region.action == BadRegionDetector::BadRegion::RecommendedAction::skip) {
                 if (debug_log_) {
                     stream(*debug_log_) << "Erasing " << count_contained(alleles_, bad_region.region)
-                                        << " alleles in dense region " << bad_region.region;
+                                        << " alleles in bad region " << bad_region.region;
                 }
                 alleles_.erase_contained(bad_region.region);
             } else if (is_lagging_enabled()) {
