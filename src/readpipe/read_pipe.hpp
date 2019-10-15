@@ -42,7 +42,7 @@ public:
     struct Report
     {
         using DepthMap = std::unordered_map<SampleName, CoverageTracker<GenomicRegion>>;
-        DepthMap raw_depths;
+        DepthMap raw_depths, mapping_quality_zero_depths;
         readpipe::DownsamplerReportMap downsample_report;
     };
     

@@ -177,6 +177,11 @@ void fragment(ReadManager::SampleReadMap& reads, const unsigned fragment_length,
     for (auto& p : reads) fragment(p.second, fragment_length, region);
 }
 
+struct IsMappingQualityZero
+{
+    bool operator()(const AlignedRead& read) const noexcept { return read.mapping_quality() == 0; }
+};
+
 } // namespace
 
 ReadMap ReadPipe::fetch_reads(const GenomicRegion& region, boost::optional<Report&> report) const
@@ -195,6 +200,7 @@ ReadMap ReadPipe::fetch_reads(const GenomicRegion& region, boost::optional<Repor
         if (report) {
             for (const auto& p : batch_reads) {
                 report->raw_depths.emplace(p.first, make_coverage_tracker(p.second));
+                report->mapping_quality_zero_depths.emplace(p.first, make_coverage_tracker(p.second, IsMappingQualityZero {}));
             }
         }
         transform_reads(batch_reads, prefilter_transformer_);
