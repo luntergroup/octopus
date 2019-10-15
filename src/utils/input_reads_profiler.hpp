@@ -21,6 +21,7 @@ struct ReadSetProfileConfig
 {
     unsigned max_draws_per_sample = 500;
     unsigned max_reads_per_draw = 10'000;
+	unsigned min_draws_per_contig = 10;
     boost::optional<AlignedRead::NucleotideSequence::size_type> fragment_size = boost::none;
 };
 
