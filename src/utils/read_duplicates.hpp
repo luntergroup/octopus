@@ -131,7 +131,7 @@ remove_duplicate_reads(ForwardIt first, ForwardIt last,
 							} else {
 								std::swap(*curr_best_duplicate_itr, read);
 								working_paired_duplicates[curr_best_duplicate_itr] = {std::move(read)};
-							}								
+							}
 						} else {
 							std::iter_swap(*duplicate_itr, read_itr);
 						}
@@ -145,12 +145,12 @@ remove_duplicate_reads(ForwardIt first, ForwardIt last,
 				for (auto& p : working_paired_duplicates) {
 					auto mate_itr = paired_duplicates.find(*p.first);
 					if (mate_itr != std::cend(paired_duplicates)) {
-						// read's mate was the best duplicate segment and so it read - all is good
+						// read's mate was the best duplicate segment and so is read - all is good
 						paired_duplicates.erase(mate_itr);
 					} else {
-						// Either read's mate (and its duplicates) were not considered, or one
-						// of read's mate duplicates was 'better'. To find out we need to check
-						// all of read's duplicate segments.
+						// Either read's mate (and its duplicates) were not considered (maybe it was already filrered),
+						// or one of read's mate duplicates was 'better'.
+						// To find out we need to check all of read's duplicate segments.
 						for (auto& duplicate : p.second) {
 							mate_itr = paired_duplicates.find(duplicate);
 							if (mate_itr != std::cend(paired_duplicates)) break;
@@ -167,7 +167,8 @@ remove_duplicate_reads(ForwardIt first, ForwardIt last,
 							utils::append(std::move(p.second), buffer);
 							std::vector<AlignedTemplate> duplicate_pairs {};
 							duplicate_pairs.reserve(buffer.size() / 2);
-							make_paired_read_templates(std::cbegin(buffer), std::cend(buffer), std::back_inserter(duplicate_pairs));
+							make_paired_read_templates(std::cbegin(buffer), std::cend(buffer), std::back_inserter(duplicate_pairs), true);
+							assert(duplicate_pairs.size() > 0);
 							const auto& best_pair = *std::max_element(std::cbegin(duplicate_pairs), std::cend(duplicate_pairs), duplicate_compare);
 							assert(best_pair.size() == 2);
 							*mate_itr->first = best_pair[0];
