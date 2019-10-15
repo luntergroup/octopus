@@ -109,7 +109,7 @@ auto draw_samples(const SampleName& sample, const InputRegionMap& regions,
     // Draw from each contig first to ensure all contigs get sampled
     for (const auto& p : regions) {
 	    std::generate_n(std::back_inserter(result), config.min_draws_per_contig,
-	                    [&] () { return draw_sample(sample, p.second, source, config, contig_sampling_distribution); });
+	                    [&] () { return draw_sample(sample, p.second, source, config); });
         if (remaining_draws > 0) --remaining_draws;
     }
     // Then sample contigs randomly
