@@ -33,6 +33,8 @@ public:
         RecommendedAction action;
     };
     
+    using OptionalReadsReport = boost::optional<const ReadPipe::Report&>;
+    
     BadRegionDetector() = default;
     
     BadRegionDetector(Parameters params, boost::optional<ReadSetProfile> = boost::none);
@@ -46,7 +48,7 @@ public:
     
     std::vector<BadRegion>
     detect(const MappableFlatSet<Variant>& candidate_variants, const ReadMap& reads,
-           boost::optional<const ReadPipe::Report&> reads_report = boost::none) const;
+           OptionalReadsReport reads_report = boost::none) const;
 
 private:
     struct RegionState
@@ -75,8 +77,8 @@ private:
     std::vector<RegionState>
     compute_states(const std::vector<GenomicRegion>& region, const MappableFlatSet<Variant>& candidate_variants,
                    const ReadMap& reads, boost::optional<const ReadPipe::Report&> reads_report) const;
-    double calculate_probability_good(const RegionState& state) const;
-    bool is_bad(const RegionState& state) const;
+    double calculate_probability_good(const RegionState& state, OptionalReadsReport reads_report) const;
+    bool is_bad(const RegionState& state, OptionalReadsReport reads_report) const;
 };
 
 } // namespace coretools

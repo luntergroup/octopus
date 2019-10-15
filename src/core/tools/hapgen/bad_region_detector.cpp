@@ -39,7 +39,7 @@ BadRegionDetector::detect(const MappableFlatSet<Variant>& candidate_variants, co
     auto candidate_bad_regions = get_candidate_bad_regions(candidate_variants, reads, reads_report);
     if (candidate_bad_regions.empty()) return {};
     const auto candidate_bad_regions_states = compute_states(candidate_bad_regions, candidate_variants, reads, reads_report);
-    const auto is_bad_state = [this] (const auto& state) { return is_bad(state); };
+    const auto is_bad_state = [&] (const auto& state) { return is_bad(state, reads_report); };
     auto bad_state_itr = std::find_if(std::cbegin(candidate_bad_regions_states), std::cend(candidate_bad_regions_states), is_bad_state);
     std::vector<BadRegion> result {};
     result.reserve(result.size());
@@ -49,7 +49,7 @@ BadRegionDetector::detect(const MappableFlatSet<Variant>& candidate_variants, co
         if (next_bad_state_itr != std::cend(candidate_bad_regions_states) && next_bad_state_itr == std::next(bad_state_itr)) {
             auto connecting_region = *intervening_region(candidate_bad_regions[state_idx], candidate_bad_regions[state_idx + 1]);
             auto connecting_state = compute_state(connecting_region, candidate_variants, reads, reads_report);
-            if (is_bad(connecting_state)) {
+            if (is_bad(connecting_state, reads_report)) {
                 result.push_back({std::move(connecting_region), BadRegion::RecommendedAction::restrict_lagging});
             }
         }
@@ -395,13 +395,12 @@ auto calculate_conditional_depth_probability(const unsigned target_depth, const 
         result *= discrete_sf(stats.distribution, target_depth);
         result /= discrete_sf(stats.distribution, low_depth);
     }
-    std::cout << "target_depth = " << target_depth << " low_depth = " << low_depth << " result = " << result << std::endl;
     return result;
 }
 
 } // namespace
 
-double BadRegionDetector::calculate_probability_good(const RegionState& state) const
+double BadRegionDetector::calculate_probability_good(const RegionState& state, OptionalReadsReport reads_report) const
 {
     // Basic idea
     // lower mapping quality -> lower probability
@@ -424,10 +423,19 @@ double BadRegionDetector::calculate_probability_good(const RegionState& state) c
             }
         }
         if (state.median_mapping_quality < reads_profile_->mapping_quality_stats.median) {
-            result /= (reads_profile_->mapping_quality_stats.median - state.median_mapping_quality);
+            result /= std::min(reads_profile_->mapping_quality_stats.median - state.median_mapping_quality, 4);
         }
     } else if (state.median_mapping_quality < 40) {
         result /= 2;
+    }
+    if (reads_report) {
+        unsigned mapping_quality_zero_depth {0}, total_depth {0};
+        for (const auto& p : reads_report->mapping_quality_zero_depths) {
+            mapping_quality_zero_depth += p.second.sum(state.region);
+            total_depth += reads_report->raw_depths.at(p.first).sum(state.region);
+        }
+        const auto average_mapping_quality_zero_fraction = static_cast<double>(mapping_quality_zero_depth) / total_depth;
+        result *= std::max(1 - average_mapping_quality_zero_fraction, 0.5);
     }
     {
         double tolerance_factor;
@@ -442,7 +450,7 @@ double BadRegionDetector::calculate_probability_good(const RegionState& state) c
     return result;
 }
 
-bool BadRegionDetector::is_bad(const RegionState& state) const
+bool BadRegionDetector::is_bad(const RegionState& state, OptionalReadsReport reads_report) const
 {
     GenomicRegion::Size min_region_size {100};
     unsigned min_alleles {0};
@@ -468,7 +476,7 @@ bool BadRegionDetector::is_bad(const RegionState& state) const
     auto min_good_prob = tolerance_factor * std::pow(0.9, state.sample_mean_read_depths.size() - 1);
     return state.variant_count > min_alleles
         && size(state.region) > min_region_size
-        && calculate_probability_good(state) < min_good_prob;
+        && calculate_probability_good(state, reads_report) < min_good_prob;
 }
 
 } // namespace coretools
