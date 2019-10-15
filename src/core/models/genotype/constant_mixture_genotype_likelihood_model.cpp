@@ -243,7 +243,7 @@ ConstantMixtureGenotypeLikelihoodModel::evaluate_polyploid(const Genotype<Haplot
 ConstantMixtureGenotypeLikelihoodModel::LogProbability
 ConstantMixtureGenotypeLikelihoodModel::evaluate_haploid(const GenotypeIndex& genotype) const
 {
-    const auto& log_likelihoods = indexed_likelihoods_[0].get();
+    const auto& log_likelihoods = indexed_likelihoods_[genotype[0]].get();
     return std::accumulate(std::cbegin(log_likelihoods), std::cend(log_likelihoods), LogProbability {0});
 }
 
