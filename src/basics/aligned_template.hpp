@@ -96,7 +96,8 @@ unsigned sum_base_qualities(const AlignedTemplate& reads) noexcept;
 template <typename ForwardIterator, typename OutputIterator>
 OutputIterator
 make_paired_read_templates(ForwardIterator first_read_itr, ForwardIterator last_read_itr,
-                           OutputIterator result_itr)
+                           OutputIterator result_itr,
+						   const bool pairs_only = false)
 {
     std::unordered_map<std::string, MappableReferenceWrapper<const AlignedRead>> buffer {};
     buffer.reserve(std::distance(first_read_itr, last_read_itr) / 2);
@@ -117,13 +118,15 @@ make_paired_read_templates(ForwardIterator first_read_itr, ForwardIterator last_
                 }
                 buffer.erase(template_itr);
             }
-        } else {
+        } else if (!pairs_only) {
             *result_itr++ = {read};
         }
     });
-    for (const auto& p : buffer) {
-        *result_itr++ = {p.second};
-    }
+	if (!pairs_only) {
+	    for (const auto& p : buffer) {
+	        *result_itr++ = {p.second};
+	    }
+	}
     return result_itr;
 }
 
