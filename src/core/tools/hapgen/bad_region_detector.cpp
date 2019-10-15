@@ -34,7 +34,7 @@ BadRegionDetector::BadRegionDetector(Parameters params, boost::optional<ReadSetP
 
 std::vector<BadRegionDetector::BadRegion>
 BadRegionDetector::detect(const MappableFlatSet<Variant>& candidate_variants, const ReadMap& reads,
-                               boost::optional<const ReadPipe::Report&> reads_report) const
+                          boost::optional<const ReadPipe::Report&> reads_report) const
 {
     auto candidate_bad_regions = get_candidate_bad_regions(candidate_variants, reads, reads_report);
     if (candidate_bad_regions.empty()) return {};
@@ -80,7 +80,7 @@ auto find_high_depth_regions(const GenomicRegion& target_region, const ReadPipe:
         } else if (profile.depth_stats.combined.contig.count(target_region.contig_name()) == 1) {
             depth_threshold = std::max(depth_threshold, profile.depth_stats.combined.contig.at(target_region.contig_name()).positive.median);
         }
-        depth_threshold += 3 * profile.depth_stats.combined.genome.all.stdev;
+		depth_threshold *= 4;
         utils::append(find_high_coverage_regions(sample_depths, target_region, static_cast<unsigned>(depth_threshold)), sample_high_depth_regions);
     }
     if (num_samples == 1) {
@@ -373,6 +373,12 @@ BadRegionDetector::compute_states(const std::vector<GenomicRegion>& regions, con
 
 namespace {
 
+bool are_similar(const ReadSetProfile::DepthSummaryStats& lhs, const ReadSetProfile::DepthSummaryStats& rhs)
+{
+	const auto diff = lhs.median < rhs.median ? (rhs.median - rhs.median) : (lhs.median < rhs.median);
+	return diff <= std::min(lhs.stdev, rhs.stdev);
+}
+
 template <typename Range>
 auto discrete_cdf(const Range& probabilities, const std::size_t x)
 {
@@ -389,7 +395,7 @@ auto discrete_sf(const Range& probabilities, std::size_t x)
 
 auto calculate_conditional_depth_probability(const unsigned target_depth, const ReadSetProfile::DepthStats& stats)
 {
-    const auto low_depth = stats.positive.mean + 2 * stats.positive.stdev;
+    const auto low_depth = stats.positive.mean + std::min(stats.positive.median, stats.positive.stdev);
     double result {1};
     if (low_depth < target_depth) {
         result *= discrete_sf(stats.distribution, target_depth);
@@ -411,10 +417,16 @@ double BadRegionDetector::calculate_probability_good(const RegionState& state, O
         const auto& depth_stats = reads_profile_->depth_stats;
         for (const auto& p : state.sample_mean_read_depths) {
             if (depth_stats.sample.count(p.first) == 1) {
+				const auto& genome_stats = depth_stats.sample.at(p.first).genome;
                 if (depth_stats.sample.at(p.first).contig.count(state.region.contig_name()) == 1) {
-                    result *= calculate_conditional_depth_probability(p.second, depth_stats.sample.at(p.first).contig.at(state.region.contig_name()));
+					const auto& contig_stats = depth_stats.sample.at(p.first).contig.at(state.region.contig_name());
+					if (are_similar(contig_stats.all, genome_stats.all)) {
+						result *= calculate_conditional_depth_probability(p.second, genome_stats);
+					} else {
+						result *= calculate_conditional_depth_probability(p.second, contig_stats);
+					}
                 } else {
-                    result *= calculate_conditional_depth_probability(p.second, depth_stats.sample.at(p.first).genome);
+                    result *= calculate_conditional_depth_probability(p.second, genome_stats);
                 }
             } else if (depth_stats.combined.contig.count(state.region.contig_name()) == 1) {
                 result *= calculate_conditional_depth_probability(p.second, depth_stats.combined.contig.at(state.region.contig_name()));
@@ -435,14 +447,14 @@ double BadRegionDetector::calculate_probability_good(const RegionState& state, O
             total_depth += reads_report->raw_depths.at(p.first).sum(state.region);
         }
         const auto average_mapping_quality_zero_fraction = static_cast<double>(mapping_quality_zero_depth) / total_depth;
-        result *= std::max(1 - average_mapping_quality_zero_fraction, 0.5);
+        result *= std::max(1 - average_mapping_quality_zero_fraction, 0.25);
     }
     {
         double tolerance_factor;
         switch (params_.tolerance) {
-            case Parameters::Tolerance::high: tolerance_factor = 60; break;
-            case Parameters::Tolerance::normal: tolerance_factor = 50; break;
-            case Parameters::Tolerance::low: tolerance_factor = 40; break;
+            case Parameters::Tolerance::high: tolerance_factor = 50; break;
+            case Parameters::Tolerance::normal: tolerance_factor = 40; break;
+            case Parameters::Tolerance::low: tolerance_factor = 30; break;
         }
         const auto density_mean = size(state.region) * (params_.heterozygosity + tolerance_factor * params_.heterozygosity_stdev);
         result *= maths::poisson_sf(state.variant_count, density_mean);
