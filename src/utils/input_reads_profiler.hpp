@@ -26,12 +26,18 @@ struct ReadSetProfileConfig
 
 struct ReadSetProfile
 {
+    template <typename T>
+    struct SummaryStats
+    {
+        T max, min, mean, median, stdev;
+    };
+    
+    using DepthSummaryStats = SummaryStats<std::size_t>;
     struct DepthStats
     {
         using DiscreteDistribution = std::vector<double>;
         DiscreteDistribution distribution;
-        std::size_t mean, median, stdev;
-        std::size_t positive_mean, positive_median, positive_stdev;
+        DepthSummaryStats all, positive;
     };
     struct GenomeContigDepthStatsPair
     {
@@ -44,18 +50,9 @@ struct ReadSetProfile
         std::unordered_map<SampleName, GenomeContigDepthStatsPair> sample;
         GenomeContigDepthStatsPair combined;
     };
-    struct MappingQualityStats
-    {
-        AlignedRead::MappingQuality max, mean, median, rmq, stdev;
-    };
-    struct ReadLengthStats
-    {
-        AlignedRead::NucleotideSequence::size_type max, median, mean, stdev;
-    };
-    struct ReadMemoryStats
-    {
-        MemoryFootprint max, mean, median, stdev;
-    };
+    using MappingQualityStats = SummaryStats<AlignedRead::MappingQuality>;
+    using ReadLengthStats = SummaryStats<AlignedRead::NucleotideSequence::size_type>;
+    using ReadMemoryStats = SummaryStats<MemoryFootprint>;
     
     SampleCombinedDepthStatsPair depth_stats;
     ReadMemoryStats memory_stats;

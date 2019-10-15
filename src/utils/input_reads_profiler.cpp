@@ -190,28 +190,23 @@ auto make_depth_distribution(const Range& depths)
     return result;
 }
 
-template <typename Range>
-void fill_memory_stats(const Range& bytes, ReadSetProfile::ReadMemoryStats& result)
+template <typename Range, typename T>
+void fill_summary_stats(const Range& values, ReadSetProfile::SummaryStats<T>& result)
 {
-    result.max = *std::max_element(std::cbegin(bytes), std::cend(bytes));
-    result.mean = maths::mean(bytes);
-    result.median = maths::median(bytes);
-    result.stdev = maths::stdev(bytes);
+    assert(!values.empty());
+    result.min = *std::min_element(std::cbegin(values), std::cend(values));
+    result.max = *std::max_element(std::cbegin(values), std::cend(values));
+    result.mean = maths::mean(values);
+    result.median = maths::median(values);
+    result.stdev = maths::stdev(values);
 }
 
 template <typename Range>
 void fill_depth_stats(const Range& depths, ReadSetProfile::DepthStats& result)
 {
     result.distribution = make_depth_distribution(depths);
-    result.mean = maths::mean(depths);
-    result.median = maths::median(depths);
-    result.stdev = maths::stdev(depths);
-    const auto positive_depths = copy_positive(depths);
-    if (!positive_depths.empty()) {
-        result.positive_mean = maths::mean(positive_depths);
-        result.positive_median = maths::median(positive_depths);
-        result.positive_stdev = maths::stdev(positive_depths);
-    }
+    fill_summary_stats(depths, result.all);
+    fill_summary_stats(copy_positive(depths), result.positive);
 }
 
 template <typename Range>
@@ -238,11 +233,11 @@ profile_reads(const std::vector<SampleName>& samples,
     const auto bytes = get_read_bytes(read_sets);
     if (bytes.empty()) return boost::none;
     ReadSetProfile result {};
-    fill_memory_stats(bytes, result.memory_stats);
+    fill_summary_stats(bytes, result.memory_stats);
     if (config.fragment_size) {
         const auto fragmented_bytes = compute_fragmented_template_bytes(read_sets, *config.fragment_size);
         result.fragmented_memory_stats = ReadSetProfile::ReadMemoryStats {};
-        fill_memory_stats(fragmented_bytes, *result.fragmented_memory_stats);
+        fill_summary_stats(fragmented_bytes, *result.fragmented_memory_stats);
     }
     std::deque<unsigned> depths {};
     std::unordered_map<GenomicRegion::ContigName, std::deque<unsigned>> contig_depths {};
@@ -283,38 +278,18 @@ profile_reads(const std::vector<SampleName>& samples,
         }
     }
     if (!read_lengths.empty()) {
-        result.length_stats.max = *std::max_element(std::cbegin(read_lengths), std::cend(read_lengths));
-        result.length_stats.mean = maths::mean(read_lengths);
-        result.length_stats.median = maths::median(read_lengths);
-        result.length_stats.stdev = maths::stdev(read_lengths);
+        fill_summary_stats(read_lengths, result.length_stats);
     }
     if (!mapping_qualities.empty()) {
-        result.mapping_quality_stats.max = *std::max_element(std::cbegin(mapping_qualities), std::cend(mapping_qualities));
-        result.mapping_quality_stats.mean = maths::median(mapping_qualities);
-        result.mapping_quality_stats.median = maths::median(mapping_qualities);
-        result.mapping_quality_stats.rmq = maths::rmq(mapping_qualities);
-        result.mapping_quality_stats.stdev = maths::stdev(mapping_qualities);
+        fill_summary_stats(mapping_qualities, result.mapping_quality_stats);
     }
     return result;
 }
 
-std::ostream& operator<<(std::ostream& os, const ReadSetProfile::ReadMemoryStats& stats)
+template <typename T>
+std::ostream& operator<<(std::ostream& os, const ReadSetProfile::SummaryStats<T>& stats)
 {
-    return os << "max: " << stats.max << " mean: " << stats.mean << " median: " << stats.median << " stdev: " << stats.stdev;
-}
-
-std::ostream& operator<<(std::ostream& os, const ReadSetProfile::MappingQualityStats& stats)
-{
-    return os << "max: " << static_cast<unsigned>(stats.max + 33)
-              << " mean: " << static_cast<unsigned>(stats.mean + 33)
-              << " median: " << static_cast<unsigned>(stats.median + 33)
-              << " rmq: " << static_cast<unsigned>(stats.rmq + 33)
-              << " stdev: " << static_cast<unsigned>(stats.max + 33);
-}
-
-std::ostream& operator<<(std::ostream& os, const ReadSetProfile::ReadLengthStats& stats)
-{
-    return os << "max: " << stats.max << " mean: " << stats.mean << " median: " << stats.median << " stdev: " << stats.stdev;
+    return os << "min: " << stats.min << "mmax: " << stats.max << " mean: " << stats.mean << " median: " << stats.median << " stdev: " << stats.stdev;
 }
 
 std::ostream& operator<<(std::ostream& os, const ReadSetProfile::DepthStats::DiscreteDistribution& dist)
@@ -325,12 +300,7 @@ std::ostream& operator<<(std::ostream& os, const ReadSetProfile::DepthStats::Dis
 
 std::ostream& operator<<(std::ostream& os, const ReadSetProfile::DepthStats& stats)
 {
-    return os << " mean: " << stats.mean
-              << " median: " << stats.median
-              << " stdev: " << stats.stdev
-              << " positive mean: " << stats.positive_mean
-              << " positive median: " << stats.median
-              << " positive stdev: " << stats.stdev
+    return os << " summary: all [" << stats.all << "] positive [" << stats.positive << ']'
               << " distribution: " << stats.distribution;
 }
 
