@@ -23,7 +23,7 @@
 #include "logging/logging.hpp"
 #include "genome_walker.hpp"
 #include "haplotype_tree.hpp"
-#include "bad_region_detector.hpp"
+#include "core/tools/bad_region_detector.hpp"
 
 namespace octopus {
 

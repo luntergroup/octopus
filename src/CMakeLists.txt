@@ -487,6 +487,8 @@ set(CORE_SOURCES
     core/tools/bam_realigner.cpp
     core/tools/indel_profiler.hpp
     core/tools/indel_profiler.cpp
+    core/tools/bad_region_detector.hpp
+    core/tools/bad_region_detector.cpp
 
     core/tools/hapgen/genome_walker.hpp
     core/tools/hapgen/genome_walker.cpp
@@ -494,8 +496,6 @@ set(CORE_SOURCES
     core/tools/hapgen/haplotype_generator.cpp
     core/tools/hapgen/haplotype_tree.hpp
     core/tools/hapgen/haplotype_tree.cpp
-    core/tools/hapgen/bad_region_detector.hpp
-    core/tools/hapgen/bad_region_detector.cpp
     
     core/tools/phaser/phaser.hpp
     core/tools/phaser/phaser.cpp
