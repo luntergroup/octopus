@@ -44,108 +44,59 @@ auto draw_sample(const InputRegionMap& regions, std::discrete_distribution<>& co
     return std::next(std::cbegin(regions), contig_sampling_distribution(generator));
 }
 
-auto choose_sample_region(const GenomicRegion& from, GenomicRegion::Size max_size)
+auto choose_sample_window(const GenomicRegion& target, const GenomicRegion::Size window_size)
 {
-    if (size(from) <= max_size) return from;
-    const auto max_begin = from.end() - max_size;
+    if (size(target) <= window_size) return target;
+    const auto max_begin = target.end() - window_size;
     static std::mt19937 generator {42};
-    std::uniform_int_distribution<GenomicRegion::Position> dist {from.begin(), max_begin};
-    return GenomicRegion {from.contig_name(), dist(generator), from.end()};
+    std::uniform_int_distribution<GenomicRegion::Position> dist {target.begin(), max_begin};
+    return GenomicRegion {target.contig_name(), dist(generator), target.end()};
 }
 
-template <typename Range>
-auto draw_sample(const SampleName& sample, const Range& regions,
-                 const ReadManager& source, const ReadSetProfileConfig& config)
+auto choose_sample_region(const SampleName& sample, const InputRegionMap::mapped_type& regions,
+                          const ReadManager& source, const ReadSetProfileConfig& config)
 {
     const auto region_itr = random_select(std::cbegin(regions), std::cend(regions));
-    const auto sample_region = choose_sample_region(*region_itr, 10 * config.max_reads_per_draw);
-    auto test_region = source.find_covered_subregion(sample, sample_region, config.max_reads_per_draw);
-    if (is_empty(test_region)) {
-        test_region = expand_rhs(test_region, 1);
-    }
-    return source.fetch_reads(sample, test_region);
+    const auto window = choose_sample_window(*region_itr, 100 * config.max_reads_per_draw);
+    return source.find_covered_subregion(sample, window, config.max_reads_per_draw);
 }
 
-auto draw_sample(const SampleName& sample, const InputRegionMap& regions,
+auto choose_sample_region(const SampleName& sample, const InputRegionMap& regions,
+                          const ReadManager& source, const ReadSetProfileConfig& config,
+                          std::discrete_distribution<>& contig_sampling_distribution)
+{
+    return choose_sample_region(sample, draw_sample(regions, contig_sampling_distribution)->second, source, config);
+}
+
+struct SamplingSummary
+{
+    InputRegionMap sampled_regions;
+};
+
+ReadManager::ReadContainer
+draw_next_sample(const SampleName& sample, const InputRegionMap& regions,
                  const ReadManager& source, const ReadSetProfileConfig& config,
+                 SamplingSummary& sampling_summary,
                  std::discrete_distribution<>& contig_sampling_distribution)
 {
-    return draw_sample(sample, draw_sample(regions, contig_sampling_distribution)->second, source, config);
-}
-
-template <typename Range>
-auto draw_sample_from_begin(const SampleName& sample, const Range& regions,
-                            const ReadManager& source, const ReadSetProfileConfig& config)
-{
-    const auto region_itr = random_select(std::cbegin(regions), std::cend(regions));
-    auto test_region = source.find_covered_subregion(sample, *region_itr, config.max_reads_per_draw);
-    if (is_empty(test_region)) {
-        test_region = expand_rhs(test_region, 1);
-    }
-    return source.fetch_reads(sample, test_region);
-}
-
-auto draw_sample_from_begin(const SampleName& sample, const InputRegionMap& regions,
-                            const ReadManager& source, const ReadSetProfileConfig& config,
-                            std::discrete_distribution<>& contig_sampling_distribution)
-{
-    return draw_sample_from_begin(sample, draw_sample(regions, contig_sampling_distribution)->second, source, config);
-}
-
-using ReadSetSamples = std::vector<ReadManager::ReadContainer>;
-
-bool all_empty(const ReadSetSamples& samples)
-{
-    return std::all_of(std::cbegin(samples), std::cend(samples), [] (const auto& reads) { return reads.empty(); });
-}
-
-auto draw_samples(const SampleName& sample, const InputRegionMap& regions,
-                  const ReadManager& source, const ReadSetProfileConfig& config,
-                  std::discrete_distribution<>& contig_sampling_distribution)
-{
-    ReadSetSamples result {};
-    result.reserve(config.max_draws_per_sample);
-    auto remaining_draws = config.max_draws_per_sample;
-    // Draw from each contig first to ensure all contigs get sampled
     for (const auto& p : regions) {
-	    std::generate_n(std::back_inserter(result), config.min_draws_per_contig,
-	                    [&] () { return draw_sample(sample, p.second, source, config); });
-        if (remaining_draws > 0) --remaining_draws;
+        if (sampling_summary.sampled_regions[p.first].size() < config.min_draws_per_contig) {
+            auto sample_region = choose_sample_region(sample, p.second, source, config);
+            sampling_summary.sampled_regions[sample_region.contig_name()].insert(sample_region);
+            return source.fetch_reads(sample, sample_region);
+        }
     }
-    // Then sample contigs randomly
-    std::generate_n(std::back_inserter(result), remaining_draws,
-                    [&] () { return draw_sample(sample, regions, source, config, contig_sampling_distribution); });
-    if (all_empty(result)) {
-        result.back() = draw_sample_from_begin(sample, regions, source, config, contig_sampling_distribution);
-    }
-    return result;
+    auto sample_region = choose_sample_region(sample, regions, source, config, contig_sampling_distribution);
+    sampling_summary.sampled_regions[sample_region.contig_name()].insert(sample_region);
+    return source.fetch_reads(sample, sample_region);
 }
 
-auto draw_samples(const std::vector<SampleName>& samples, const InputRegionMap& regions,
-                  const ReadManager& source, const ReadSetProfileConfig& config)
+auto make_contig_sampling_distribution(const InputRegionMap& regions)
 {
     std::vector<unsigned> contig_weights(regions.size());
     std::transform(std::cbegin(regions), std::cend(regions), std::begin(contig_weights),
                    [] (const auto& p) { return sum_region_sizes(p.second); });
-    std::discrete_distribution<> contig_sampling_distribution(std::cbegin(contig_weights), std::cend(contig_weights));
-    std::vector<ReadSetSamples> result {};
-    result.reserve(samples.size());
-    for (const auto& sample : samples) {
-        result.push_back(draw_samples(sample, regions, source, config, contig_sampling_distribution));
-    }
-    return result;
-}
-
-auto get_read_bytes(const std::vector<ReadSetSamples>& read_sets)
-{
-    std::deque<std::size_t> result {};
-    for (const auto& set : read_sets) {
-        for (const auto& reads : set) {
-            std::transform(std::cbegin(reads), std::cend(reads), std::back_inserter(result),
-                           [] (const auto& read) noexcept { return footprint(read).bytes(); });
-        }
-    }
-    return result;
+    return std::discrete_distribution<> {std::cbegin(contig_weights), std::cend(contig_weights)};
 }
 
 auto fragmented_footprint(const AlignedRead& read, const AlignedRead::NucleotideSequence::size_type fragment_size)
@@ -153,18 +104,6 @@ auto fragmented_footprint(const AlignedRead& read, const AlignedRead::Nucleotide
     const auto fragments = split(read, fragment_size);
     const static auto add_footprint = [] (auto total, const auto& read) { return total + footprint(read); };
     return std::accumulate(std::cbegin(fragments), std::cend(fragments), MemoryFootprint {0}, add_footprint);
-}
-
-auto compute_fragmented_template_bytes(const std::vector<ReadSetSamples>& read_sets, const AlignedRead::NucleotideSequence::size_type fragment_size)
-{
-    std::deque<std::size_t> result {};
-    for (const auto& set : read_sets) {
-        for (const auto& reads : set) {
-            std::transform(std::cbegin(reads), std::cend(reads), std::back_inserter(result),
-                           [fragment_size] (const auto& read) noexcept { return fragmented_footprint(read, fragment_size).bytes(); });
-        }
-    }
-    return result;
 }
 
 template <typename T>
@@ -202,6 +141,13 @@ void fill_summary_stats(const Range& values, ReadSetProfile::SummaryStats<T>& re
     result.stdev = maths::stdev(values);
 }
 
+void fill_summary_stats(const std::deque<MemoryFootprint>& footprints, ReadSetProfile::ReadMemoryStats& result)
+{
+    std::vector<std::size_t> bytes(footprints.size());
+    std::transform(std::cbegin(footprints), std::cend(footprints), std::begin(bytes), [] (auto footprint) { return footprint.bytes(); });
+    fill_summary_stats(bytes, result);
+}
+
 template <typename Range>
 void fill_depth_stats(const Range& depths, ReadSetProfile::DepthStats& result)
 {
@@ -229,34 +175,33 @@ profile_reads(const std::vector<SampleName>& samples,
     if (input_regions.empty()) return boost::none;
     const auto sampling_regions = get_covered_sample_regions(samples, input_regions, source);
     if (sampling_regions.empty()) return boost::none;
-    const auto read_sets = draw_samples(samples, sampling_regions, source, config);
-    if (read_sets.empty()) return boost::none;
-    const auto bytes = get_read_bytes(read_sets);
-    if (bytes.empty()) return boost::none;
+    
     ReadSetProfile result {};
-    fill_summary_stats(bytes, result.memory_stats);
-    if (config.fragment_size) {
-        const auto fragmented_bytes = compute_fragmented_template_bytes(read_sets, *config.fragment_size);
-        result.fragmented_memory_stats = ReadSetProfile::ReadMemoryStats {};
-        fill_summary_stats(fragmented_bytes, *result.fragmented_memory_stats);
-    }
+    std::deque<MemoryFootprint> memory_footprints {}, fragmented_memory_footprints {};
     std::deque<unsigned> depths {};
     std::unordered_map<GenomicRegion::ContigName, std::deque<unsigned>> contig_depths {};
-    std::vector<unsigned> read_lengths {};
-    std::vector<AlignedRead::MappingQuality> mapping_qualities {};
-    for (std::size_t s {0}; s < samples.size(); ++s) {
+    std::deque<unsigned> read_lengths {};
+    std::deque<AlignedRead::MappingQuality> mapping_qualities {};
+    auto contig_sampling_distribution = make_contig_sampling_distribution(sampling_regions);
+    
+    for (const auto& sample : samples) {
         std::deque<unsigned> sample_depths {};
         std::unordered_map<GenomicRegion::ContigName, std::deque<unsigned>> sample_contig_depths {};
-        for (const auto& reads : read_sets[s]) {
+        SamplingSummary sampling_summary {};
+        for (unsigned n {0}; n < config.max_draws_per_sample; ++n) {
+            const auto reads = draw_next_sample(sample, sampling_regions, source, config, sampling_summary, contig_sampling_distribution);
             if (!reads.empty()) {
                 auto read_depths = calculate_positional_coverage(reads);
                 utils::append(read_depths, sample_contig_depths[contig_name(reads.front())]);
                 utils::append(std::move(read_depths), sample_depths);
-                read_lengths.reserve(read_lengths.size() + reads.size());
-                std::transform(std::cbegin(reads), std::cend(reads), std::back_inserter(read_lengths),
-                               [] (const auto& read) { return sequence_size(read); });
-                std::transform(std::cbegin(reads), std::cend(reads), std::back_inserter(mapping_qualities),
-                               [] (const auto& read) { return read.mapping_quality(); });
+                for (const auto& read : reads) {
+                    read_lengths.push_back(sequence_size(read));
+                    mapping_qualities.push_back(read.mapping_quality());
+                    memory_footprints.push_back(footprint(read));
+                    if (config.fragment_size) {
+                        fragmented_memory_footprints.push_back(fragmented_footprint(read, *config.fragment_size));
+                    }
+                }
             }
         }
         ReadSetProfile::GenomeContigDepthStatsPair sample_depth_stats {};
@@ -266,23 +211,25 @@ profile_reads(const std::vector<SampleName>& samples,
                 sample_depth_stats.contig.emplace(p.first, make_depth_stats(p.second));
             }
         }
-        result.depth_stats.sample.emplace(samples[s], std::move(sample_depth_stats));
+        result.depth_stats.sample.emplace(sample, std::move(sample_depth_stats));
         utils::append(std::move(sample_depths), depths);
         for (auto& p : sample_contig_depths) {
             utils::append(std::move(p.second), contig_depths[p.first]);
         }
     }
+    if (memory_footprints.empty()) return boost::none;
+    fill_summary_stats(memory_footprints, result.memory_stats);
+    if (config.fragment_size) {
+        result.fragmented_memory_stats = ReadSetProfile::ReadMemoryStats {};
+        fill_summary_stats(fragmented_memory_footprints, *result.fragmented_memory_stats);
+    }
+    fill_summary_stats(read_lengths, result.length_stats);
+    fill_summary_stats(mapping_qualities, result.mapping_quality_stats);
     if (!depths.empty()) {
         fill_depth_stats(depths, result.depth_stats.combined.genome);
         for (const auto& p : contig_depths) {
             result.depth_stats.combined.contig.emplace(p.first, make_depth_stats(p.second));
         }
-    }
-    if (!read_lengths.empty()) {
-        fill_summary_stats(read_lengths, result.length_stats);
-    }
-    if (!mapping_qualities.empty()) {
-        fill_summary_stats(mapping_qualities, result.mapping_quality_stats);
     }
     return result;
 }
