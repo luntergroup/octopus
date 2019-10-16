@@ -181,6 +181,29 @@ bool ReadReader::iterate(const std::vector<SampleName>& samples,
     return impl_->iterate(samples, region, visitor);
 }
 
+bool ReadReader::iterate(const GenomicRegion& region,
+                         ContigRegionVisitor visitor) const
+{
+    std::lock_guard<std::mutex> lock {mutex_};
+    return impl_->iterate(region, visitor);
+}
+
+bool ReadReader::iterate(const SampleName& sample,
+                         const GenomicRegion& region,
+                         ContigRegionVisitor visitor) const
+{
+    std::lock_guard<std::mutex> lock {mutex_};
+    return impl_->iterate(sample, region, visitor);
+}
+
+bool ReadReader::iterate(const std::vector<SampleName>& samples,
+                         const GenomicRegion& region,
+                         ContigRegionVisitor visitor) const
+{
+    std::lock_guard<std::mutex> lock {mutex_};
+    return impl_->iterate(samples, region, visitor);
+}
+
 bool ReadReader::has_reads(const GenomicRegion& region) const
 {
     std::lock_guard<std::mutex> lock {mutex_};

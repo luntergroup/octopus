@@ -181,23 +181,7 @@ unsigned ReadManager::drop_samples(std::vector<SampleName> samples)
 void ReadManager::iterate(const GenomicRegion& region,
                           AlignedReadReadVisitor visitor) const
 {
-    if (all_readers_are_open()) {
-        for (const auto& p : open_readers_) {
-            if (!p.second.iterate(region, visitor)) return;
-        }
-    } else {
-        std::lock_guard<std::mutex> lock {mutex_};
-        auto reader_paths = get_reader_paths_containing_samples(samples());
-        auto reader_itr = partition_open(reader_paths);
-        while (!reader_paths.empty()) {
-            auto itr = std::find_if(reader_itr, end(reader_paths), [&] (const auto& reader_path) {
-                return !open_readers_.at(reader_path).iterate(region, visitor);
-            });
-            if (itr != end(reader_paths)) break;
-            reader_paths.erase(reader_itr, end(reader_paths));
-            reader_itr = open_readers(begin(reader_paths), end(reader_paths));
-        }
-    }
+    iterate(samples(), region, visitor);
 }
 
 void ReadManager::iterate(const SampleName& sample,
@@ -211,23 +195,27 @@ void ReadManager::iterate(const std::vector<SampleName>& samples,
                           const GenomicRegion& region,
                           AlignedReadReadVisitor visitor) const
 {
-    if (all_readers_are_open()) {
-        for (const auto& p : open_readers_) {
-            if (!p.second.iterate(samples, region, visitor)) return;
-        }
-    } else {
-        std::lock_guard<std::mutex> lock {mutex_};
-        auto reader_paths = get_reader_paths_containing_samples(samples);
-        auto reader_itr = partition_open(reader_paths);
-        while (!reader_paths.empty()) {
-            auto itr = std::find_if(reader_itr, end(reader_paths), [&] (const auto& reader_path) {
-                return !open_readers_.at(reader_path).iterate(samples, region, visitor);
-            });
-            if (itr != end(reader_paths)) break;
-            reader_paths.erase(reader_itr, end(reader_paths));
-            reader_itr = open_readers(begin(reader_paths), end(reader_paths));
-        }
-    }
+    iterate_helper(samples, region, visitor);
+}
+
+void ReadManager::iterate(const GenomicRegion& region,
+                          ContigRegionVisitor visitor) const
+{
+    iterate(samples(), region, visitor);
+}
+
+void ReadManager::iterate(const SampleName& sample,
+                          const GenomicRegion& region,
+                          ContigRegionVisitor visitor) const
+{
+    iterate(std::vector<SampleName> {sample}, region, visitor);
+}
+
+void ReadManager::iterate(const std::vector<SampleName>& samples,
+                          const GenomicRegion& region,
+                          ContigRegionVisitor visitor) const
+{
+    iterate_helper(samples, region, visitor);
 }
 
 bool ReadManager::has_reads(const SampleName& sample, const GenomicRegion& region) const

@@ -37,6 +37,7 @@ public:
     using SampleReadMap = IReadReaderImpl::SampleReadMap;
     using PositionList  = IReadReaderImpl::PositionList;
     using AlignedReadReadVisitor = IReadReaderImpl::AlignedReadReadVisitor;
+    using ContigRegionVisitor    = IReadReaderImpl::ContigRegionVisitor;
     
     ReadReader() = default;
     
@@ -74,6 +75,15 @@ public:
     bool iterate(const std::vector<SampleName>& samples,
                  const GenomicRegion& region,
                  AlignedReadReadVisitor visitor) const;
+    
+    bool iterate(const GenomicRegion& region,
+                 ContigRegionVisitor visitor) const;
+    bool iterate(const SampleName& sample,
+                 const GenomicRegion& region,
+                 ContigRegionVisitor visitor) const;
+    bool iterate(const std::vector<SampleName>& samples,
+                 const GenomicRegion& region,
+                 ContigRegionVisitor visitor) const;
     
     bool has_reads(const GenomicRegion& region) const;
     bool has_reads(const SampleName& sample,

@@ -427,6 +427,59 @@ HtslibSamFacade::iterate(const std::vector<SampleName>& samples,
     }
 }
 
+bool
+HtslibSamFacade::iterate(const GenomicRegion& region,
+                         ContigRegionVisitor visitor) const
+{
+    HtslibIterator itr {*this, region};
+    while (++itr) {
+        if (!visitor(sample_names_.at(itr.read_group()), itr.region())) return false;
+    }
+    return true;
+}
+
+bool
+HtslibSamFacade::iterate(const SampleName& sample,
+                         const GenomicRegion& region,
+                         ContigRegionVisitor visitor) const
+{
+    if (samples_.size() == 1 && samples_.front() == sample) {
+        return iterate(region, visitor);
+    } else {
+        HtslibIterator itr {*this, region};
+        while (++itr) {
+            const auto& read_sample = sample_names_.at(itr.read_group());
+            if (read_sample == sample) {
+                if (!visitor(sample, itr.region())) return false;
+            }
+        }
+        return true;
+    }
+}
+
+bool
+HtslibSamFacade::iterate(const std::vector<SampleName>& samples,
+                         const GenomicRegion& region,
+                         ContigRegionVisitor visitor) const
+{
+    if (samples.empty()) return true;
+    if (samples.size() == 1) {
+        return iterate(samples.front(), region, visitor);
+    } else if (is_subset(samples, samples_)) {
+        return iterate(region, visitor);
+    } else {
+        const auto readable_samples = get_readable_samples(samples, samples_);
+        HtslibIterator itr {*this, region};
+        while (++itr) {
+            const auto& sample = sample_names_.at(itr.read_group());
+            if (std::binary_search(std::cbegin(readable_samples), std::cend(readable_samples), sample)) {
+                if (!visitor(sample, itr.region())) return false;
+            }
+        }
+        return true;
+    }
+}
+
 // has_reads
 
 bool HtslibSamFacade::has_reads(const GenomicRegion& region) const
@@ -1042,6 +1095,13 @@ bool HtslibSamFacade::HtslibIterator::is_good() const noexcept
     const auto cigar_operations = bam_get_cigar(hts_bam1_.get());
     return std::all_of(cigar_operations, cigar_operations + cigar_length,
                        [] (const auto op) { return bam_cigar_oplen(op) > 0; });
+}
+
+ContigRegion HtslibSamFacade::HtslibIterator::region() const
+{
+    const auto cigar = extract_cigar_string(hts_bam1_.get());
+    const auto begin = clipped_begin(cigar, static_cast<ContigRegion::Position>(hts_bam1_->core.pos));
+    return ContigRegion {begin, begin + octopus::reference_size(cigar)};
 }
 
 std::size_t HtslibSamFacade::HtslibIterator::begin() const noexcept

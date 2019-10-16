@@ -26,6 +26,7 @@ public:
     using SampleReadMap = std::unordered_map<SampleName, ReadContainer>;
     using PositionList  = std::vector<GenomicRegion::Position>;
     using AlignedReadReadVisitor = std::function<bool(const SampleName&, AlignedRead)>;
+    using ContigRegionVisitor = std::function<bool(const SampleName&, ContigRegion)>;
     
     virtual ~IReadReaderImpl() noexcept = default;
     
@@ -44,6 +45,15 @@ public:
     virtual bool iterate(const std::vector<SampleName>& samples,
                          const GenomicRegion& region,
                          AlignedReadReadVisitor visitor) const = 0;
+    
+    virtual bool iterate(const GenomicRegion& region,
+                         ContigRegionVisitor visitor) const = 0;
+    virtual bool iterate(const SampleName& sample,
+                         const GenomicRegion& region,
+                         ContigRegionVisitor visitor) const = 0;
+    virtual bool iterate(const std::vector<SampleName>& samples,
+                         const GenomicRegion& region,
+                         ContigRegionVisitor visitor) const = 0;
     
     virtual bool has_reads(const GenomicRegion& region) const = 0;
     virtual bool has_reads(const SampleName& sample,
