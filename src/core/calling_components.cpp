@@ -396,15 +396,44 @@ boost::optional<fs::path> get_temp_directory(const options::OptionMap& options)
 }
 
 namespace {
-    
+
+bool includes(const std::vector<unsigned>& values, const unsigned value) noexcept
+{
+    return std::find(std::cbegin(values), std::cend(values), value) != std::cend(values);
+}
+
 auto profile_reads_helper(const std::vector<SampleName>& samples,
                           const InputRegionMap& input_regions,
                           const ReadManager& source,
+                          const PloidyMap& ploidies,
                           const options::OptionMap& options)
 {
     ReadSetProfileConfig config {};
     config.fragment_size = options::max_read_length(options);
-    return profile_reads(samples, input_regions, source, config);
+    if (samples.size() == 1) {
+        auto result = profile_reads(samples, input_regions, source, config);
+        if (result) result->depth_stats.sample.clear(); // no need to keep this duplicate info
+        return result;
+    } else if (options::use_same_read_profile_for_all_samples(options)) {
+        std::vector<SampleName> profile_samples {};
+        std::unordered_map<GenomicRegion::ContigName, std::vector<unsigned>> ploidies_covered {};
+        for (const auto& sample : samples) {
+            bool include_sample {false};
+            for (const auto& contig : extract_keys(input_regions)) {
+                const auto ploidy = ploidies.of(sample, contig);
+                if (ploidy > 0 && !includes(ploidies_covered[contig], ploidy)) {
+                    ploidies_covered[contig].push_back(ploidy);
+                    include_sample = true;
+                }
+            }
+            if (include_sample) profile_samples.push_back(sample);
+        }
+        auto result = profile_reads(profile_samples, input_regions, source, config);
+        if (result) result->depth_stats.sample.clear();
+        return result;
+    } else {
+        return profile_reads(samples, input_regions, source, config);
+    }
 }
 
 static const AlignedRead typical_illumina_read {
@@ -527,7 +556,8 @@ GenomeCallingComponents::Components::Components(ReferenceGenome&& reference, Rea
 , samples {extract_samples(options, this->read_manager)}
 , regions {get_search_regions(options, this->reference, this->read_manager)}
 , contigs {get_contigs(this->regions, this->reference, options::get_contig_output_order(options))}
-, reads_profile {profile_reads_helper(this->samples, this->regions, this->read_manager, options)}
+, ploidies {options::get_ploidy_map(options)}
+, reads_profile {profile_reads_helper(this->samples, this->regions, this->read_manager, this->ploidies, options)}
 , read_pipe {options::make_read_pipe(this->read_manager, this->reference, this->samples, options)}
 , haplotype_likelihood_model {options::make_haplotype_likelihood_model(options, this->reads_profile)}
 , caller_factory {options::make_caller_factory(this->reference, this->read_pipe, this->regions, options, this->reads_profile)}
@@ -538,7 +568,6 @@ GenomeCallingComponents::Components::Components(ReferenceGenome&& reference, Rea
 , read_buffer_footprint {options::get_target_read_buffer_size(options)}
 , read_buffer_size {}
 , progress_meter {regions}
-, ploidies {options::get_ploidy_map(options)}
 , pedigree {options::get_pedigree(options, samples)}
 , sites_only {options::call_sites_only(options)}
 , filter_request {}

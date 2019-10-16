@@ -53,6 +53,8 @@ ReadManager make_read_manager(const OptionMap& options);
 
 boost::optional<AlignedRead::NucleotideSequence::size_type> max_read_length(const OptionMap& options);
 
+bool use_same_read_profile_for_all_samples(const OptionMap& options);
+
 ReadPipe make_read_pipe(ReadManager& read_manager, const ReferenceGenome& reference, std::vector<SampleName> samples, const OptionMap& options);
 
 bool call_sites_only(const OptionMap& options);

@@ -814,6 +814,11 @@ boost::optional<AlignedRead::NucleotideSequence::size_type> max_read_length(cons
     }
 }
 
+bool use_same_read_profile_for_all_samples(const OptionMap& options)
+{
+    return options.at("use-same-read-profile-for-all-samples").as<bool>();
+}
+
 auto make_read_filterer(const OptionMap& options)
 {
     using std::make_unique;

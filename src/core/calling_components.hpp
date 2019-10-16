@@ -101,6 +101,7 @@ private:
         std::vector<SampleName> samples;
         InputRegionMap regions;
         std::vector<GenomicRegion::ContigName> contigs;
+        PloidyMap ploidies;
         boost::optional<ReadSetProfile> reads_profile;
         ReadPipe read_pipe;
         HaplotypeLikelihoodModel haplotype_likelihood_model;
@@ -112,7 +113,6 @@ private:
         MemoryFootprint read_buffer_footprint;
         std::size_t read_buffer_size;
         ProgressMeter progress_meter;
-        PloidyMap ploidies;
         boost::optional<Pedigree> pedigree;
         bool sites_only;
         boost::optional<Path> filter_request;
