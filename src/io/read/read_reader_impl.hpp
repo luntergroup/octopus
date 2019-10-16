@@ -9,6 +9,7 @@
 #include <cstddef>
 #include <unordered_map>
 #include <utility>
+#include <functional>
 
 #include <boost/optional.hpp>
 
@@ -20,10 +21,11 @@ namespace octopus { namespace io {
 class IReadReaderImpl
 {
 public:
-    using SampleName      = std::string;
-    using ReadContainer   = std::vector<AlignedRead>;
-    using SampleReadMap   = std::unordered_map<SampleName, ReadContainer>;
-    using PositionList    = std::vector<GenomicRegion::Position>;
+    using SampleName    = std::string;
+    using ReadContainer = std::vector<AlignedRead>;
+    using SampleReadMap = std::unordered_map<SampleName, ReadContainer>;
+    using PositionList  = std::vector<GenomicRegion::Position>;
+    using AlignedReadReadVisitor = std::function<bool(const SampleName&, AlignedRead)>;
     
     virtual ~IReadReaderImpl() noexcept = default;
     
@@ -33,6 +35,15 @@ public:
     
     virtual std::vector<SampleName> extract_samples() const = 0;
     virtual std::vector<std::string> extract_read_groups(const SampleName& sample) const = 0;
+    
+    virtual bool iterate(const GenomicRegion& region,
+                         AlignedReadReadVisitor visitor) const = 0;
+    virtual bool iterate(const SampleName& sample,
+                         const GenomicRegion& region,
+                         AlignedReadReadVisitor visitor) const = 0;
+    virtual bool iterate(const std::vector<SampleName>& samples,
+                         const GenomicRegion& region,
+                         AlignedReadReadVisitor visitor) const = 0;
     
     virtual bool has_reads(const GenomicRegion& region) const = 0;
     virtual bool has_reads(const SampleName& sample,

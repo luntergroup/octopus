@@ -37,6 +37,7 @@ public:
     using IReadReaderImpl::SampleName;
     using IReadReaderImpl::ReadContainer;
     using IReadReaderImpl::SampleReadMap;
+    using IReadReaderImpl::AlignedReadReadVisitor;
     using IReadReaderImpl::PositionList;
     
     using NucleotideSequence = AlignedRead::NucleotideSequence;
@@ -61,6 +62,15 @@ public:
     
     std::vector<SampleName> extract_samples() const override;
     std::vector<ReadGroupIdType> extract_read_groups(const SampleName& sample) const override;
+    
+    bool iterate(const GenomicRegion& region,
+                 AlignedReadReadVisitor visitor) const override;
+    bool iterate(const SampleName& sample,
+                 const GenomicRegion& region,
+                 AlignedReadReadVisitor visitor) const override;
+    bool iterate(const std::vector<SampleName>& samples,
+                 const GenomicRegion& region,
+                 AlignedReadReadVisitor visitor) const override;
     
     bool has_reads(const GenomicRegion& region) const override;
     bool has_reads(const SampleName& sample,

@@ -35,6 +35,7 @@ public:
     using SampleName    = IReadReaderImpl::SampleName;
     using ReadContainer = IReadReaderImpl::ReadContainer;
     using SampleReadMap = IReadReaderImpl::SampleReadMap;
+    using AlignedReadReadVisitor = IReadReaderImpl::AlignedReadReadVisitor;
     
     ReadManager() = default;
     
@@ -57,6 +58,15 @@ public:
     unsigned num_samples() const noexcept;
     const std::vector<SampleName>& samples() const;
     unsigned drop_samples(std::vector<SampleName> samples);
+    
+    void iterate(const GenomicRegion& region,
+                 AlignedReadReadVisitor visitor) const;
+    void iterate(const SampleName& sample,
+                 const GenomicRegion& region,
+                 AlignedReadReadVisitor visitor) const;
+    void iterate(const std::vector<SampleName>& samples,
+                 const GenomicRegion& region,
+                 AlignedReadReadVisitor visitor) const;
     
     bool has_reads(const SampleName& sample, const GenomicRegion& region) const;
     bool has_reads(const std::vector<SampleName>& samples, const GenomicRegion& region) const;

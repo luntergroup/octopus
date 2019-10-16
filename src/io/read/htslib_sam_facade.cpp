@@ -372,6 +372,61 @@ auto get_readable_samples(std::vector<S> request_samples, const std::vector<S>& 
 
 } // namespace
 
+// iterate
+
+bool
+HtslibSamFacade::iterate(const GenomicRegion& region,
+                         AlignedReadReadVisitor visitor) const
+{
+    HtslibIterator itr {*this, region};
+    while (++itr) {
+        if (!visitor(sample_names_.at(itr.read_group()), *itr)) return false;
+    }
+    return true;
+}
+
+bool
+HtslibSamFacade::iterate(const SampleName& sample,
+                         const GenomicRegion& region,
+                         AlignedReadReadVisitor visitor) const
+{
+    if (samples_.size() == 1 && samples_.front() == sample) {
+        return iterate(region, visitor);
+    } else {
+        HtslibIterator itr {*this, region};
+        while (++itr) {
+            const auto& read_sample = sample_names_.at(itr.read_group());
+            if (read_sample == sample) {
+                if (!visitor(sample, *itr)) return false;
+            }
+        }
+        return true;
+    }
+}
+
+bool
+HtslibSamFacade::iterate(const std::vector<SampleName>& samples,
+                         const GenomicRegion& region,
+                         AlignedReadReadVisitor visitor) const
+{
+    if (samples.empty()) return true;
+    if (samples.size() == 1) {
+        return iterate(samples.front(), region, visitor);
+    } else if (is_subset(samples, samples_)) {
+        return iterate(region, visitor);
+    } else {
+        const auto readable_samples = get_readable_samples(samples, samples_);
+        HtslibIterator itr {*this, region};
+        while (++itr) {
+            const auto& sample = sample_names_.at(itr.read_group());
+            if (std::binary_search(std::cbegin(readable_samples), std::cend(readable_samples), sample)) {
+                if (!visitor(sample, *itr)) return false;
+            }
+        }
+        return true;
+    }
+}
+
 // has_reads
 
 bool HtslibSamFacade::has_reads(const GenomicRegion& region) const
