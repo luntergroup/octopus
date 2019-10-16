@@ -117,6 +117,15 @@ S clipped_begin(const CigarString& cigar, S unclipped_begin) noexcept
 }
 
 template <typename S = CigarOperation::Size>
+S clipped_end(const CigarString& cigar, S unclipped_end) noexcept
+{
+    if (is_back_soft_clipped(cigar)) {
+        unclipped_end += static_cast<S>(cigar.back().size());
+    }
+    return unclipped_end;
+}
+
+template <typename S = CigarOperation::Size>
 S sum_operation_sizes(const CigarString& cigar) noexcept
 {
     return std::accumulate(std::cbegin(cigar), std::cend(cigar), S {0},
