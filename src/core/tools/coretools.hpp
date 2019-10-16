@@ -8,5 +8,6 @@
 #include "core/tools/vargen/variant_generator_builder.hpp"
 #include "core/tools/hapgen/haplotype_generator.hpp"
 #include "core/tools/phaser/phaser.hpp"
+#include "core/tools/bad_region_detector.hpp"
 
 #endif

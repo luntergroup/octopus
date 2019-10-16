@@ -1524,10 +1524,6 @@ auto make_haplotype_generator_builder(const OptionMap& options, const boost::opt
     .set_lagging_policy(lagging_policy).set_max_holdout_depth(max_holdout_depth)
     .set_max_indicator_join_distance(get_max_indicator_join_distance())
     .set_min_flank_pad(get_min_haplotype_flank_pad(options, input_reads_profile));
-    auto bad_region_detector = make_bad_region_detector(options, input_reads_profile);
-    if (bad_region_detector) {
-        result.set_bad_region_detector(std::move(*bad_region_detector));
-    }
     return result;
 }
 
@@ -1967,6 +1963,10 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
     if (target_working_memory) vc_builder.set_target_memory_footprint(*target_working_memory);
     vc_builder.set_execution_policy(get_thread_execution_policy(options));
     vc_builder.set_use_paired_reads(use_paired_reads(options)).set_use_linked_reads(use_linked_reads(options));
+    auto bad_region_detector = make_bad_region_detector(options, read_profile);
+    if (bad_region_detector) {
+        vc_builder.set_bad_region_detector(std::move(*bad_region_detector));
+    }
     return CallerFactory {std::move(vc_builder)};
 }
 

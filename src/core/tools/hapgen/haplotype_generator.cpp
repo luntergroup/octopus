@@ -127,11 +127,6 @@ auto make_lagged_walker(const HaplotypeGenerator::Policies& policies)
     };
 }
 
-bool all_empty(const ReadMap& reads) noexcept
-{
-    return std::all_of(std::cbegin(reads), std::cend(reads), [](const auto& p) noexcept { return p.second.empty(); });
-}
-
 } // namespace
 
 // public members
@@ -140,9 +135,7 @@ HaplotypeGenerator::HaplotypeGenerator(const ReferenceGenome& reference,
                                        const MappableFlatSet<Variant>& candidates,
                                        const ReadMap& reads,
                                        boost::optional<const TemplateMap&> read_templates,
-                                       boost::optional<const ReadPipe::Report&> reads_report,
-                                       Policies policies,
-                                       boost::optional<BadRegionDetector> bad_region_detector)
+                                       Policies policies)
 : policies_ {std::move(policies)}
 , tree_ {get_contig(candidates), reference}
 , default_walker_ {
@@ -168,29 +161,9 @@ get_walker_policy(policies.extension)
 , debug_log_{logging::get_debug_log()}
 , trace_log_{logging::get_trace_log()}
 {
-    assert(!candidates.empty());
     assert(!alleles_.empty());
     if (policies.lagging != Policies::Lagging::none) {
         lagged_walker_ = make_lagged_walker(policies);
-    }
-    if (bad_region_detector && !all_empty(reads_)) {
-        const auto bad_regions = bad_region_detector->detect(candidates, reads, reads_report);
-        for (const auto& bad_region : bad_regions) {
-            if (bad_region.severity == BadRegionDetector::BadRegion::Severity::high) {
-                if (debug_log_) {
-                    stream(*debug_log_) << "Erasing " << count_contained(alleles_, bad_region.region)
-                                        << " alleles in bad region " << bad_region.region;
-                }
-                alleles_.erase_contained(bad_region.region);
-            } else if (is_lagging_enabled()) {
-                lagging_exclusion_zones_.insert(bad_region.region);
-            }
-        }
-        if (!lagging_exclusion_zones_.empty() && debug_log_) {
-            auto log = stream(*debug_log_);
-            log << "Found lagging exclusion zones: ";
-            for (const auto& zone : lagging_exclusion_zones_) log << zone << " ";
-        }
     }
     if (alleles_.empty()) {
         rightmost_allele_ = candidates.back().ref_allele();
@@ -336,6 +309,18 @@ void HaplotypeGenerator::collapse(const HaplotypeBlock& haplotypes)
 bool HaplotypeGenerator::done() const noexcept
 {
     return alleles_.empty() && haplotype_blocks_.empty();
+}
+
+void HaplotypeGenerator::add_lagging_exclusion_zone(GenomicRegion region)
+{
+    if (debug_log_) stream(*debug_log_) << "Added lagging exclusion zone " << region << " to the haplotype generator";
+    lagging_exclusion_zones_.insert(std::move(region));
+}
+
+void HaplotypeGenerator::clear_lagging_exclusion_zones() noexcept
+{
+    if (debug_log_) stream(*debug_log_) << "Cleared " <<  lagging_exclusion_zones_.size() << " lagging exclusion zones from the haplotype generator";
+    lagging_exclusion_zones_.clear();
 }
 
 // private methods
@@ -1617,26 +1602,13 @@ HaplotypeGenerator::Builder& HaplotypeGenerator::Builder::set_max_indicator_join
     return *this;
 }
 
-HaplotypeGenerator::Builder& HaplotypeGenerator::Builder::set_max_expected_log_allele_count_per_base(double v) noexcept
-{
-    policies_.max_expected_log_allele_count_per_base = v;
-    return *this;
-}
-
-HaplotypeGenerator::Builder& HaplotypeGenerator::Builder::set_bad_region_detector(BadRegionDetector detector) noexcept
-{
-    bad_region_detector_ = std::move(detector);
-    return *this;
-}
-
 HaplotypeGenerator
 HaplotypeGenerator::Builder::build(const ReferenceGenome& reference,
                                    const MappableFlatSet<Variant>& candidates,
                                    const ReadMap& reads,
-                                   boost::optional<const TemplateMap&> read_templates,
-                                   boost::optional<const ReadPipe::Report&> reads_report) const
+                                   boost::optional<const TemplateMap&> read_templates) const
 {
-    return HaplotypeGenerator {reference, candidates, reads, read_templates, std::move(reads_report), policies_, bad_region_detector_};
+    return HaplotypeGenerator {reference, candidates, reads, read_templates,policies_};
 }
 
 } // namespace coretools

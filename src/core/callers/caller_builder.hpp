@@ -56,6 +56,7 @@ public:
     CallerBuilder& set_execution_policy(ExecutionPolicy policy) noexcept;
     CallerBuilder& set_use_paired_reads(bool use) noexcept;
     CallerBuilder& set_use_linked_reads(bool use) noexcept;
+    CallerBuilder& set_bad_region_detector(BadRegionDetector detector) noexcept;
     
     CallerBuilder& set_min_variant_posterior(Phred<double> posterior) noexcept;
     CallerBuilder& set_min_refcall_posterior(Phred<double> posterior) noexcept;
@@ -110,6 +111,7 @@ private:
         HaplotypeGenerator::Builder haplotype_generator_builder;
         HaplotypeLikelihoodModel likelihood_model;
         Phaser phaser;
+        boost::optional<BadRegionDetector> bad_region_detector = boost::none;
     };
     
     struct Parameters

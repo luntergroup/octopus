@@ -47,8 +47,30 @@ public:
     
     enum class RefCallType { none, blocked, positional };
     
-    struct Components;
-    struct Parameters;
+    struct Components
+    {
+        std::reference_wrapper<const ReferenceGenome> reference;
+        std::reference_wrapper<const ReadPipe> read_pipe;
+        VariantGenerator candidate_generator;
+        HaplotypeGenerator::Builder haplotype_generator_builder;
+        HaplotypeLikelihoodModel likelihood_model;
+        Phaser phaser;
+        boost::optional<BadRegionDetector> bad_region_detector = boost::none;
+    };
+    
+    struct Parameters
+    {
+        RefCallType refcall_type;
+        boost::optional<Phred<double>> refcall_block_merge_threshold;
+        bool call_sites_only;
+        unsigned max_haplotypes;
+        Phred<double> haplotype_extension_threshold, saturation_limit;
+        bool allow_model_filtering;
+        bool protect_reference_haplotype;
+        boost::optional<MemoryFootprint> target_max_memory;
+        ExecutionPolicy execution_policy;
+        bool use_paired_reads, use_linked_reads;
+    };
     
     using ReadMap = octopus::ReadMap;
     
@@ -99,31 +121,6 @@ protected:
         virtual std::shared_ptr<GenotypeProbabilityMap> genotype_posteriors() const = 0;
     };
     
-public:
-    struct Components
-    {
-        std::reference_wrapper<const ReferenceGenome> reference;
-        std::reference_wrapper<const ReadPipe> read_pipe;
-        VariantGenerator candidate_generator;
-        HaplotypeGenerator::Builder haplotype_generator_builder;
-        HaplotypeLikelihoodModel likelihood_model;
-        Phaser phaser;
-    };
-    
-    struct Parameters
-    {
-        RefCallType refcall_type;
-        boost::optional<Phred<double>> refcall_block_merge_threshold;
-        bool call_sites_only;
-        unsigned max_haplotypes;
-        Phred<double> haplotype_extension_threshold, saturation_limit;
-        bool allow_model_filtering;
-        bool protect_reference_haplotype;
-        boost::optional<MemoryFootprint> target_max_memory;
-        ExecutionPolicy execution_policy;
-        bool use_paired_reads, use_linked_reads;
-    };
-    
 private:
     enum class GeneratorStatus { good, skipped, done };
     
@@ -134,6 +131,7 @@ private:
     HaplotypeGenerator::Builder haplotype_generator_builder_;
     HaplotypeLikelihoodModel likelihood_model_;
     Phaser phaser_;
+    boost::optional<BadRegionDetector> bad_region_detector_;
     Parameters parameters_;
     
     // virtual methods
@@ -174,15 +172,18 @@ private:
     
     boost::optional<TemplateMap> make_read_templates(const ReadMap& reads) const;
     std::deque<CallWrapper>
-    call_variants(const GenomicRegion& call_region,  const MappableFlatSet<Variant>& candidates,
-                  const ReadMap& reads, const ReadPipe::Report& read_report, ProgressMeter& progress_meter) const;
+    call_variants(const GenomicRegion& call_region,
+                  const MappableFlatSet<Variant>& candidates,
+                  const ReadMap& reads,
+                  const boost::optional<TemplateMap>& read_templates,
+                  HaplotypeGenerator& haplotype_generator,
+                  ProgressMeter& progress_meter) const;
     bool refcalls_requested() const noexcept;
     MappableFlatSet<Variant> generate_candidate_variants(const GenomicRegion& region) const;
     HaplotypeGenerator 
     make_haplotype_generator(const MappableFlatSet<Variant>& candidates,
                              const ReadMap& reads,
-                             const boost::optional<TemplateMap>& read_templates,
-                             const ReadPipe::Report& read_report) const;
+                             const boost::optional<TemplateMap>& read_templates) const;
     HaplotypeLikelihoodArray make_haplotype_likelihood_cache() const;
     VcfRecordFactory make_record_factory(const ReadMap& reads) const;
     std::vector<Haplotype>

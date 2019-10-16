@@ -116,6 +116,9 @@ private:
 };
 
 } // namespace coretools
+
+using coretools::BadRegionDetector;
+
 } // namespace octopus
 
 #endif

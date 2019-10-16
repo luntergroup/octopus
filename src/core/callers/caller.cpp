@@ -42,6 +42,7 @@ Caller::Caller(Components&& components, Parameters parameters)
 , haplotype_generator_builder_ {std::move(components.haplotype_generator_builder)}
 , likelihood_model_ {std::move(components.likelihood_model)}
 , phaser_ {std::move(components.phaser)}
+, bad_region_detector_ {std::move(components.bad_region_detector)}
 , parameters_ {std::move(parameters)}
 {
     if (parameters_.max_haplotypes == 0) {
@@ -167,7 +168,26 @@ std::deque<VcfRecord> Caller::call(const GenomicRegion& call_region, ProgressMet
         // as we didn't fetch them earlier
         reads = read_pipe_.get().fetch_reads(call_region, reads_report);
     }
-    auto calls = call_variants(call_region, candidates, reads, reads_report, progress_meter);
+    std::vector<GenomicRegion> likely_difficult_regions {};
+    if (bad_region_detector_ && has_coverage(reads)) {
+        const auto bad_regions = bad_region_detector_->detect(candidates, reads, reads_report);
+        for (const auto& bad_region : bad_regions) {
+            if (bad_region.severity == BadRegionDetector::BadRegion::Severity::high) {
+                if (debug_log_) {
+                    stream(*debug_log_) << "Erasing " << count_contained(candidates, bad_region.region)
+                                        << " candidate variants in bad region " << bad_region.region;
+                }
+                candidates.erase_contained(bad_region.region);
+            } else{
+                likely_difficult_regions.push_back(bad_region.region);
+            }
+        }
+        likely_difficult_regions.shrink_to_fit();
+    }
+    const auto read_templates = make_read_templates(reads);
+    auto haplotype_generator = make_haplotype_generator(candidates, reads, read_templates);
+    for (auto& region : likely_difficult_regions) haplotype_generator.add_lagging_exclusion_zone(region);
+    auto calls = call_variants(call_region, candidates, reads, read_templates, haplotype_generator, progress_meter);
     candidates.clear();
     candidates.shrink_to_fit();
     progress_meter.log_completed(call_region);
@@ -395,10 +415,14 @@ boost::optional<TemplateMap> Caller::make_read_templates(const ReadMap& reads) c
 }
 
 std::deque<CallWrapper>
-Caller::call_variants(const GenomicRegion& call_region, const MappableFlatSet<Variant>& candidates,
-                      const ReadMap& reads, const ReadPipe::Report& read_report,
+Caller::call_variants(const GenomicRegion& call_region,
+                      const MappableFlatSet<Variant>& candidates,
+                      const ReadMap& reads,
+                      const boost::optional<TemplateMap>& read_templates,
+                      HaplotypeGenerator& haplotype_generator,
                       ProgressMeter& progress_meter) const
 {
+    auto haplotype_likelihoods = make_haplotype_likelihood_cache();
     std::deque<CallWrapper> result {};
     if (candidates.empty()) {
         if (refcalls_requested()) {
@@ -407,9 +431,6 @@ Caller::call_variants(const GenomicRegion& call_region, const MappableFlatSet<Va
         progress_meter.log_completed(call_region);
         return result;
     }
-    const auto read_templates = make_read_templates(reads);
-    auto haplotype_likelihoods = make_haplotype_likelihood_cache();
-    auto haplotype_generator = make_haplotype_generator(candidates, reads, read_templates, read_report);
     if (haplotype_generator.done()) {
         logging::WarningLogger warn_log {};
         stream(warn_log) << "No variants were considered in " << call_region << " as the region was considered uncallable";
@@ -1049,13 +1070,12 @@ MappableFlatSet<Variant> Caller::generate_candidate_variants(const GenomicRegion
 HaplotypeGenerator 
 Caller::make_haplotype_generator(const MappableFlatSet<Variant>& candidates,
                                  const ReadMap& reads, 
-                                 const boost::optional<TemplateMap>& read_templates,
-                                 const ReadPipe::Report& read_report) const
+                                 const boost::optional<TemplateMap>& read_templates) const
 {
     if (read_templates) {
-        return haplotype_generator_builder_.build(reference_, candidates, reads, *read_templates, read_report);
+        return haplotype_generator_builder_.build(reference_, candidates, reads, *read_templates);
     } else {
-        return haplotype_generator_builder_.build(reference_, candidates, reads, boost::none, read_report);
+        return haplotype_generator_builder_.build(reference_, candidates, reads, boost::none);
     }
 }
 

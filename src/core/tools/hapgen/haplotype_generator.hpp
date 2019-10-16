@@ -48,7 +48,6 @@ public:
         unsigned max_holdout_depth = 2;
         Haplotype::MappingDomain::Size min_flank_pad = 30;
         boost::optional<Haplotype::NucleotideSequence::size_type> max_indicator_join_distance = boost::none;
-        boost::optional<double> max_expected_log_allele_count_per_base = boost::none;
     };
     
     enum class Mode { allele, haplotype, allele_and_haplotype };
@@ -69,9 +68,7 @@ public:
                        const MappableFlatSet<Variant>& candidates,
                        const ReadMap& reads,
                        boost::optional<const TemplateMap&> read_templates,
-                       boost::optional<const ReadPipe::Report&> reads_report,
-                       Policies policies,
-                       boost::optional<BadRegionDetector> bad_region_detector);
+                       Policies policies);
     
     HaplotypeGenerator(const HaplotypeGenerator&)            = default;
     HaplotypeGenerator& operator=(const HaplotypeGenerator&) = default;
@@ -119,6 +116,9 @@ public:
     void collapse(const HaplotypeBlock& haplotypes);
     
     bool done() const noexcept;
+    
+    void add_lagging_exclusion_zone(GenomicRegion region);
+    void clear_lagging_exclusion_zones() noexcept;
     
 private:
     struct HoldoutSet
@@ -251,19 +251,15 @@ public:
     Builder& set_max_holdout_depth(unsigned n) noexcept;
     Builder& set_min_flank_pad(Haplotype::MappingDomain::Size n) noexcept;
     Builder& set_max_indicator_join_distance(Haplotype::NucleotideSequence::size_type n) noexcept;
-    Builder& set_max_expected_log_allele_count_per_base(double v) noexcept;
-    Builder& set_bad_region_detector(BadRegionDetector detector) noexcept;
     
     HaplotypeGenerator
     build(const ReferenceGenome& reference,
           const MappableFlatSet<Variant>& candidates,
           const ReadMap& reads,
-          boost::optional<const TemplateMap&> read_templates = boost::none,
-          boost::optional<const ReadPipe::Report&> reads_report = boost::none) const;
+          boost::optional<const TemplateMap&> read_templates = boost::none) const;
     
 private:
     Policies policies_;
-    boost::optional<BadRegionDetector> bad_region_detector_;
 };
 
 } // namespace coretools
