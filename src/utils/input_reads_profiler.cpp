@@ -59,7 +59,7 @@ choose_next_sample_region(const SampleName& sample,
                           std::discrete_distribution<>& contig_sampling_distribution,
                           SamplingSummary& sampling_summary)
 {
-    if (sampling_summary.num_samples < std::max(config.max_draws_per_sample, regions.size() * config.min_draws_per_contig)) {
+    if (!regions.empty() && sampling_summary.num_samples < std::max(config.max_draws_per_sample, regions.size() * config.min_draws_per_contig)) {
         for (const auto& p : regions) {
             if (sampling_summary.sampled_regions[p.first].size() < config.min_draws_per_contig) {
                 auto sample_region = choose_sample_region(sample, p.second);
