@@ -176,7 +176,7 @@ get_walker_policy(policies.extension)
     if (bad_region_detector && !all_empty(reads_)) {
         const auto bad_regions = bad_region_detector->detect(candidates, reads, reads_report);
         for (const auto& bad_region : bad_regions) {
-            if (bad_region.action == BadRegionDetector::BadRegion::RecommendedAction::skip) {
+            if (bad_region.severity == BadRegionDetector::BadRegion::Severity::high) {
                 if (debug_log_) {
                     stream(*debug_log_) << "Erasing " << count_contained(alleles_, bad_region.region)
                                         << " alleles in bad region " << bad_region.region;
