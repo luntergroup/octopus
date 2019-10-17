@@ -18,83 +18,78 @@ namespace octopus { namespace hmm { namespace simd {
 #define AVX512_PHMM
 
 #if defined(__GNUC__)
-    static inline int
-    _mm512_cvtsi512_si32(__m512i __A)
-    {
-        __v16si __b = (__v16si)__A;
-        return __b[0];
-    }
+
+static inline int _mm512_cvtsi512_si32(__m512i a)
+{
+    __v16si b = (__v16si) a;
+    return b[0];
+}
+
 #endif
 
-static inline __m512i 
-_mm512_insert_epi16(__m512i target, const std::int16_t x, const int index)
+static inline __m512i _mm512_insert_epi16(__m512i target, const std::int16_t x, const int index)
 {
     return _mm512_mask_set1_epi16(target, 1UL << index, x);
 }
-
-static inline __m512i
- _mm512_insert_epi32(__m512i target, const std::int32_t x, const int index)
+static inline __m512i _mm512_insert_epi32(__m512i target, const std::int32_t x, const int index)
 {
     return _mm512_mask_set1_epi32(target, 1UL << index, x);
 }
 
 template <int index>
-static inline int 
-_mm512_extract_epi32(__m512i target)
+int _mm512_extract_epi32(__m512i target)
 {
     return _mm512_cvtsi512_si32(_mm512_alignr_epi32(target, target, index));
 }
-
 template <int index>
-static inline int 
-_mm512_extract_epi16(__m512i target)
+int  _mm512_extract_epi16(__m512i target)
 {
     return (_mm512_extract_epi32<index / 2>(target) >> (index % 2 ? 16 : 0)) & 0xFFFF;
 }
 
-template <int n>
-std::enable_if_t<(n % 4 == 0), __m512i> _mm512_slli_si512(const __m512i& a) noexcept
+static inline __m512i _mm512_cmpeq_epi16(__m512i a, __m512i b)
 {
-    const static __m512i zero {_mm512_set1_epi32(0)};
-    return _mm512_alignr_epi32(zero, a, n / 4);
+    return _mm512_maskz_set1_epi16(_mm512_cmpeq_epi16_mask(a, b), 0xFFFF);
+}
+static inline __m512i _mm512_cmpeq_epi32(__m512i a, __m512i b)
+{
+    return _mm512_maskz_set1_epi32(_mm512_cmpeq_epi32_mask(a, b), 0xFFFFFFFF);
 }
 
-template <int n>
-std::enable_if_t<(n % 4 != 0), __m512i> _mm512_slli_si512(__m512i a) noexcept
-{
-    // set up temporary array and set upper half to zero 
-    // (this needs to happen outside any critical loop)
-    alignas(64) char temp[128];
-    _mm512_store_si512(temp+64, _mm512_setzero_si512());
-
-    // store input into lower half
-    _mm512_store_si512(temp, a);
+namespace detail {
     
-    // load shifted register
-    return _mm512_loadu_si512(temp+n);
-}
+// See https://stackoverflow.com/questions/58322652/emulating-shifts-on-64-bytes-with-avx-512/58396344?noredirect=1#comment103208249_58396344
 
-template <int n>
-std::enable_if_t<(n % 4 == 0), __m512i> _mm512_slri_si512(const __m512i& a) noexcept
+template <int count>
+std::enable_if_t<(count == 0), __m512i> _shift_right(__m512i a, __m512i carry = _mm512_setzero_si512())
 {
-    const static __m512i zero {_mm512_set1_epi32(0)};
-    return _mm512_alignr_epi32(a, zero, 64 - n / 4);
+    return a;
 }
-
-template <int n>
-std::enable_if_t<(n % 4 != 0), __m512i>  _mm512_slri_si512(__m512i a) noexcept
+template <int count>
+std::enable_if_t<(count == 64), __m512i> _shift_right(__m512i a, __m512i carry = _mm512_setzero_si512())
 {
-    // set up temporary array and set lower half to zero
-    // (this needs to happen outside any critical loop)
-    alignas(64) char temp[128];
-    _mm512_store_si512(temp, _mm512_setzero_si512());
-
-    // store input into upper half
-    _mm512_store_si512(temp+64, a);
-
-    // load shifted register
-    return _mm512_loadu_si512(temp+(64-n));
+    return carry;
 }
+template <int count>
+std::enable_if_t<(count > 0 && count < 64 && count % 4 == 0), __m512i> _shift_right(__m512i a, __m512i carry = _mm512_setzero_si512())
+{
+    return _mm512_alignr_epi32(carry, a, count / 4);
+}
+template <int count>
+std::enable_if_t<(count > 0 && count < 64 && count % 4 != 0), __m512i> _shift_right(__m512i a, __m512i carry = _mm512_setzero_si512())
+{
+    __m512i a0 = _shift_right<(count / 16 + 1) * 16>(a, carry);  // 16, 32, 48, 64
+    __m512i a1 = _shift_right<(count / 16    ) * 16>(a, carry);  //  0, 16, 32, 48
+    return _mm512_alignr_epi8(a0, a1, count % 16);
+}
+
+template <int count>
+__m512i _shift_left(__m512i a, __m512i carry = _mm512_setzero_si512())
+{
+  return _shift_right<64 - count>(carry, a);
+}
+
+} // namespace detail
 
 template <unsigned BandSize = 32,
           typename ScoreTp = short>
@@ -338,11 +333,11 @@ protected:
 private:
     static BlockType do_cmpeq(const BlockType& lhs, const BlockType& rhs, short) noexcept
     {
-        return _mm512_set1_epi16(_mm512_cmpeq_epi16_mask(lhs, rhs));
+        return _mm512_cmpeq_epi16(lhs, rhs);
     }
     static BlockType do_cmpeq(const BlockType& lhs, const BlockType& rhs, int) noexcept
     {
-        return _mm512_set1_epi32(_mm512_cmpeq_epi32_mask(lhs, rhs));
+        return _mm512_cmpeq_epi32(lhs, rhs);
     }
 protected:
     static VectorType _cmpeq(const VectorType& lhs, const VectorType& rhs) noexcept
@@ -354,9 +349,9 @@ protected:
         using detail::_shift_left;
         using detail::_shift_right;
         adjacent_apply_reverse([] (const auto& lhs, const auto& rhs) noexcept {
-            return _mm512_or_si512(_mm512_slli_si512<word_size>(rhs), _mm512_slri_si512<block_bytes_ - word_size>(lhs));
+            return _mm512_or_si512(_shift_left<word_size>(rhs), _shift_right<block_bytes_ - word_size>(lhs));
         }, a, a);
-        std::get<0>(a) = _mm512_slli_si512<word_size>(std::get<0>(a));
+        std::get<0>(a) = _shift_left<word_size>(std::get<0>(a));
         return a;
     }
     static VectorType _right_shift_word(VectorType a) noexcept
@@ -364,9 +359,9 @@ protected:
         using detail::_shift_left;
         using detail::_shift_right;
         adjacent_apply([] (const auto& lhs, const auto& rhs) noexcept {
-            return _mm512_or_si512(_mm512_slri_si512<word_size>(lhs), _mm512_slli_si512<block_bytes_ - word_size>(rhs));
+            return _mm512_or_si512(_shift_right<word_size>(lhs), _shift_left<block_bytes_ - word_size>(rhs));
         }, a, a);
-        std::get<num_blocks_ - 1>(a) = _mm512_slri_si512<word_size>(std::get<num_blocks_ - 1>(a));
+        std::get<num_blocks_ - 1>(a) = _shift_right<word_size>(std::get<num_blocks_ - 1>(a));
         return a;
     }
 private:
