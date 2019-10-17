@@ -38,37 +38,63 @@ static inline __m512i
     return _mm512_mask_set1_epi32(target, 1UL << index, x);
 }
 
+template <int index>
 static inline int 
-_mm512_extract_epi16(__m512i target, const int index)
+_mm512_extract_epi32(__m512i target)
 {
-    return _mm512_cvtsi512_si32(_mm512_srli_epi16(target, index)) & 0xFFFF;
+    return _mm512_cvtsi512_si32(_mm512_alignr_epi32(target, target, index));
 }
 
+template <int index>
 static inline int 
-_mm512_extract_epi32(__m512i target, const int index)
+_mm512_extract_epi16(__m512i target)
 {
-    return _mm512_cvtsi512_si32(_mm512_srli_epi32(target, index));
-}
-
-namespace detail {
-
-template <int n>
-__m512i _shift_left(const __m512i& a) noexcept
-{
-    std::array<std::uint8_t, 64 + (8 * n)> bytes {};
-    _mm512_store_si512(&bytes[0], a);
-    return _mm512_load_si512(&bytes[n]);
+    return (_mm512_extract_epi32<index / 2>(target) >> (index % 2 ? 16 : 0)) & 0xFFFF;
 }
 
 template <int n>
-__m512i _shift_right(const __m512i& a) noexcept
+std::enable_if_t<(n % 4 == 0), __m512i> _mm512_slli_si512(const __m512i& a) noexcept
 {
-    std::array<std::uint8_t, 64 + (8 * n)> bytes {};
-    _mm512_store_si512(&bytes[n], a);
-    return _mm512_load_si512(&bytes[0]);
+    const static __m512i zero {_mm512_set1_epi32(0)};
+    return _mm512_alignr_epi32(zero, a, n / 4);
 }
 
-} // namespace detail
+template <int n>
+std::enable_if_t<(n % 4 != 0), __m512i> _mm512_slli_si512(__m512i a) noexcept
+{
+    // set up temporary array and set upper half to zero 
+    // (this needs to happen outside any critical loop)
+    alignas(64) char temp[128];
+    _mm512_store_si512(temp+64, _mm512_setzero_si512());
+
+    // store input into lower half
+    _mm512_store_si512(temp, a);
+    
+    // load shifted register
+    return _mm512_loadu_si512(temp+n);
+}
+
+template <int n>
+std::enable_if_t<(n % 4 == 0), __m512i> _mm512_slri_si512(const __m512i& a) noexcept
+{
+    const static __m512i zero {_mm512_set1_epi32(0)};
+    return _mm512_alignr_epi32(a, zero, 64 - n / 4);
+}
+
+template <int n>
+std::enable_if_t<(n % 4 != 0), __m512i>  _mm512_slri_si512(__m512i a) noexcept
+{
+    // set up temporary array and set lower half to zero
+    // (this needs to happen outside any critical loop)
+    alignas(64) char temp[128];
+    _mm512_store_si512(temp, _mm512_setzero_si512());
+
+    // store input into upper half
+    _mm512_store_si512(temp+64, a);
+
+    // load shifted register
+    return _mm512_loadu_si512(temp+(64-n));
+}
 
 template <unsigned BandSize = 32,
           typename ScoreTp = short>
@@ -107,7 +133,7 @@ private:
     }
     static VectorType do_vectorise(ScoreType x, int) noexcept
     {
-        return make_array<num_blocks_>(_mm512_set1_epi16(x));
+        return make_array<num_blocks_>(_mm512_set1_epi32(x));
     }
 protected:
     static VectorType vectorise(ScoreType x) noexcept
@@ -157,7 +183,7 @@ private:
     static VectorType do_vectorise(const T* values, std::index_sequence<Is...>, int) noexcept
     {
         return {{(static_cast<void>(Is),
-            _mm512_set_epi32(values[block_words_ * Is + 16],
+            _mm512_set_epi32(values[block_words_ * Is + 15],
                              values[block_words_ * Is + 14],
                              values[block_words_ * Is + 13],
                              values[block_words_ * Is + 12],
@@ -201,12 +227,12 @@ private:
     template <int index>
     static auto do_extract(const BlockType& a, short) noexcept
     {
-        return _mm512_extract_epi16(a, index);
+        return _mm512_extract_epi16<index>(a);
     }
     template <int index>
     static auto do_extract(const BlockType& a, int) noexcept
     {
-        return _mm512_extract_epi32(a, index);
+        return _mm512_extract_epi32<index>(a);
     }
 protected:
     template <int index>
@@ -328,9 +354,9 @@ protected:
         using detail::_shift_left;
         using detail::_shift_right;
         adjacent_apply_reverse([] (const auto& lhs, const auto& rhs) noexcept {
-            return _mm512_or_si512(_shift_left<word_size>(rhs), _shift_right<block_bytes_ - word_size>(lhs));
+            return _mm512_or_si512(_mm512_slli_si512<word_size>(rhs), _mm512_slri_si512<block_bytes_ - word_size>(lhs));
         }, a, a);
-        std::get<0>(a) = _shift_left<word_size>(std::get<0>(a));
+        std::get<0>(a) = _mm512_slli_si512<word_size>(std::get<0>(a));
         return a;
     }
     static VectorType _right_shift_word(VectorType a) noexcept
@@ -338,9 +364,9 @@ protected:
         using detail::_shift_left;
         using detail::_shift_right;
         adjacent_apply([] (const auto& lhs, const auto& rhs) noexcept {
-            return _mm512_or_si512(_shift_right<word_size>(lhs), _shift_left<block_bytes_ - word_size>(rhs));
+            return _mm512_or_si512(_mm512_slri_si512<word_size>(lhs), _mm512_slli_si512<block_bytes_ - word_size>(rhs));
         }, a, a);
-        std::get<num_blocks_ - 1>(a) = _shift_right<word_size>(std::get<num_blocks_ - 1>(a));
+        std::get<num_blocks_ - 1>(a) = _mm512_slri_si512<word_size>(std::get<num_blocks_ - 1>(a));
         return a;
     }
 private:
