@@ -397,7 +397,7 @@ def partition_data(data_fname, validation_fraction, training_fname, validation_f
 def run_ranger_training(ranger, data_path, hyperparameters, threads, out, seed=None):
     cmd = [ranger, '--file', data_path, '--depvarname', 'TP', '--probability',
           '--ntree', str(hyperparameters["trees"]), '--targetpartitionsize', str(hyperparameters["min_node_size"]),
-          '--nthreads', str(threads), '--outprefix', out, '--write', '--impmeasure', '1', --verbose']
+          '--nthreads', str(threads), '--outprefix', out, '--write', '--impmeasure', '1', '--verbose']
     if seed is not None:
         cmd += ['--seed', str(seed)]
     sp.call(cmd)
