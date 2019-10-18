@@ -397,7 +397,7 @@ def partition_data(data_fname, validation_fraction, training_fname, validation_f
 def run_ranger_training(ranger, data_path, hyperparameters, threads, out, seed=None):
     cmd = [ranger, '--file', data_path, '--depvarname', 'TP', '--probability',
           '--ntree', str(hyperparameters["trees"]), '--targetpartitionsize', str(hyperparameters["min_node_size"]),
-          '--nthreads', str(threads), '--outprefix', out, '--write', '--verbose']
+          '--nthreads', str(threads), '--outprefix', out, '--write', '--impmeasure', '1', --verbose']
     if seed is not None:
         cmd += ['--seed', str(seed)]
     sp.call(cmd)
@@ -478,10 +478,6 @@ def main(options):
     ranger_out_prefix = join(options.out, options.prefix)
     hyperparameters = select_training_hypterparameters(master_data_file, training_params)
     run_ranger_training(options.ranger, master_data_file, hyperparameters, options.threads, ranger_out_prefix)
-    try:
-        remove(ranger_out_prefix + ".confusion")
-    except FileNotFoundError:
-        print('Ranger did not complete, perhaps it was killed due to insufficient memory')
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
