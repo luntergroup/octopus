@@ -100,13 +100,13 @@ auto get_contig(const MappableFlatSet<Variant>& candidates)
     if (!candidates.empty()) {
         return contig_name(candidates.front());
     } else {
-        throw std::runtime_error{"HaplotypeGenerator: not supplied with any candidates"};
+        return "";
     }
 }
 
 auto decompose(const MappableFlatSet<Variant>& variants)
 {
-    std::vector<Allele> alleles{};
+    std::vector<Allele> alleles {};
     alleles.reserve(2 * variants.size());
     for (const auto& variant : variants) {
         alleles.push_back(variant.ref_allele());
@@ -161,7 +161,6 @@ get_walker_policy(policies.extension)
 , debug_log_{logging::get_debug_log()}
 , trace_log_{logging::get_trace_log()}
 {
-    assert(!alleles_.empty());
     if (policies.lagging != Policies::Lagging::none) {
         lagged_walker_ = make_lagged_walker(policies);
     }
