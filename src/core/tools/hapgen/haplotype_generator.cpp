@@ -95,7 +95,7 @@ auto get_walker_policy(const HaplotypeGenerator::Policies::Lagging policy) noexc
     }
 }
 
-auto get_contig(const MappableFlatSet<Variant>& candidates)
+GenomicRegion::ContigName get_contig(const MappableFlatSet<Variant>& candidates)
 {
     if (!candidates.empty()) {
         return contig_name(candidates.front());
