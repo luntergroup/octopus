@@ -119,12 +119,15 @@ auto find_high_depth_regions_helper(const GenomicRegion& target_region, const Re
 std::vector<GenomicRegion>
 BadRegionDetector::find_high_depth_regions(const ReadMap& reads, OptionalReadsReport reads_reports) const
 {
-    if (reads_profile_) return {};
-    const auto target_region = encompassing_region(reads);
-    if (reads_reports) {
-        return find_high_depth_regions_helper(target_region, reads_reports->raw_depths, *reads_profile_);
+    if (reads_profile_) {
+        const auto target_region = encompassing_region(reads);
+        if (reads_reports) {
+            return find_high_depth_regions_helper(target_region, reads_reports->raw_depths, *reads_profile_);
+        } else {
+            return find_high_depth_regions_helper(target_region, reads, *reads_profile_);
+        }
     } else {
-        return find_high_depth_regions_helper(target_region, reads, *reads_profile_);
+        return {};
     }
 }
 
