@@ -220,7 +220,7 @@ private:
 template <typename Container>
 void HaplotypeGenerator::remove(const Container& haplotypes)
 {
-    if (haplotypes.empty()) return;
+    if (done() || haplotypes.empty()) return;
     reset_next_active_region();
     prune_all(haplotypes, tree_);
     if (debug_log_)
