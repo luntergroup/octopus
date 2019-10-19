@@ -437,7 +437,7 @@ auto discrete_sf(const Range& probabilities, std::size_t x)
 
 auto calculate_conditional_depth_probability(const unsigned target_depth, const ReadSetProfile::DepthStats& stats)
 {
-    const auto low_depth = stats.positive.mean + std::min(stats.positive.median, stats.positive.stdev);
+    const auto low_depth = stats.positive.mean + std::min(stats.positive.median, stats.positive.stdev) / 2;
     double result {1};
     if (low_depth < target_depth) {
         result *= discrete_sf(stats.distribution, target_depth);
@@ -477,7 +477,7 @@ double BadRegionDetector::calculate_probability_good(const RegionState& state, O
             }
         }
         if (state.read_stats.median_mapping_quality < reads_profile_->mapping_quality_stats.median) {
-            result /= std::min(reads_profile_->mapping_quality_stats.median - state.read_stats.median_mapping_quality, 4);
+            result /= std::min((reads_profile_->mapping_quality_stats.median - state.read_stats.median_mapping_quality) / 10, 4);
         }
     } else if (state.read_stats.median_mapping_quality < 40) {
         result /= 2;
@@ -501,6 +501,7 @@ double BadRegionDetector::calculate_probability_good(const RegionState& state, O
         const auto density_mean = size(state.region) * (params_.heterozygosity + tolerance_factor * params_.heterozygosity_stdev);
         result *= maths::poisson_sf(state.variant_stats->count, density_mean);
     }
+	result *= maths::poisson_sf(size(state.region), 5'000.0); // penalise very large regions
     return result;
 }
 
@@ -513,12 +514,13 @@ bool BadRegionDetector::is_bad(const RegionState& state, OptionalReadsReport rea
         case Parameters::Tolerance::high: {
             min_alleles = 20;
             tolerance_factor = 0.001;
-            min_region_size = 200;
+            min_region_size *= 3;
             break;
         }
         case Parameters::Tolerance::normal: {
             min_alleles = 10;
             tolerance_factor = 0.01;
+			min_region_size *= 2;
             break;
         }
         case Parameters::Tolerance::low: {
