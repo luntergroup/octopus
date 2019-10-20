@@ -9,7 +9,14 @@
 #endif
 
 #include <cstdint>
-#include <x86intrin.h>
+#include <array>
+#include <tuple>
+#include <type_traits>
+#include <cassert>
+#include <immintrin.h>
+
+#include "utils/array_tricks.hpp"
+#include "system.hpp"
 
 namespace octopus { namespace hmm { namespace simd {
 
