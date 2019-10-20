@@ -54,7 +54,9 @@ const VersionNumber Version {VERSION_MAJOR,
 
 static auto get_simd_extension()
 {
-    if (AVX2_AVAILABLE) {
+    if (AVX512_AVAILABLE) {
+        return SystemInfo::SIMDExtension::avx512;
+    } else if (AVX2_AVAILABLE) {
         return SystemInfo::SIMDExtension::avx2;
     } else {
         return SystemInfo::SIMDExtension::sse2;
@@ -94,7 +96,7 @@ std::ostream& operator<<(std::ostream& os, const SystemInfo::SIMDExtension simd)
     switch (simd) {
         case SIMD::sse2: os << "SSE2"; break;
         case SIMD::avx2: os << "AVX2"; break;
-        case SIMD::avx512: os << "AVX-512"; break;
+        case SIMD::avx512: os << "AVX512"; break;
     }
     return os;
 }
