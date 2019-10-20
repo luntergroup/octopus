@@ -40,6 +40,7 @@ enum class BadRegionTolerance { low, normal, high, unlimited };
 enum class ReadLinkage { none, paired, linked };
 enum class CandidateVariantDiscoveryProtocol { illumina, pacbio };
 enum class RealignedBAMType { full, mini };
+enum class ReadDeduplicationDetectionPolicy { relaxed, aggressive };
 
 std::istream& operator>>(std::istream& in, ContigOutputOrder& order);
 std::ostream& operator<<(std::ostream& os, const ContigOutputOrder& order);
@@ -63,6 +64,8 @@ std::istream& operator>>(std::istream& in, CandidateVariantDiscoveryProtocol& pr
 std::ostream& operator<<(std::ostream& os, const CandidateVariantDiscoveryProtocol& protocol);
 std::istream& operator>>(std::istream& in, RealignedBAMType& type);
 std::ostream& operator<<(std::ostream& os, const RealignedBAMType& type);
+std::istream& operator>>(std::istream& in, ReadDeduplicationDetectionPolicy& type);
+std::ostream& operator<<(std::ostream& os, const ReadDeduplicationDetectionPolicy& type);
 
 std::ostream& operator<<(std::ostream& os, const OptionMap& options);
 std::string to_string(const OptionMap& options, bool one_line = false, bool mark_modified = true);

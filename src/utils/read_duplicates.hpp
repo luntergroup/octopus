@@ -15,27 +15,24 @@
 
 namespace octopus {
 
-bool primary_segments_are_duplicates(const AlignedRead& lhs, const AlignedRead& rhs) noexcept;
-bool other_segments_are_duplicates(const AlignedRead& lhs, const AlignedRead& rhs) noexcept;
-bool are_duplicates(const AlignedRead& lhs, const AlignedRead& rhs) noexcept;
-
-struct IsDuplicate
+struct FivePrimeDuplicateDefinition
 {
-    bool operator()(const AlignedRead& lhs, const AlignedRead& rhs) const noexcept;
+    bool unpaired_equal(const AlignedRead& lhs, const AlignedRead& rhs) const noexcept;
+    bool paired_equal(const AlignedRead& lhs, const AlignedRead& rhs) const noexcept;
+};
+
+struct FivePrimeAndCigarDuplicateDefinition
+{
+    bool unpaired_equal(const AlignedRead& lhs, const AlignedRead& rhs) const noexcept;
+    bool paired_equal(const AlignedRead& lhs, const AlignedRead& rhs) const noexcept;
 };
 
 namespace detail {
 	
-template <typename Range>
-auto find_duplicate(const AlignedRead& read, const Range& reads) noexcept
+template <typename Range, typename DuplicateDefinition>
+auto find_duplicate(const AlignedRead& read, const Range& reads, const DuplicateDefinition& dup_def) noexcept
 {
-	return std::find_if(std::begin(reads), std::end(reads), [&read] (auto other_itr) { return IsDuplicate{}(read, *other_itr); });
-}
-
-template <typename Range>
-bool no_duplicates(const AlignedRead& read, const Range& reads) noexcept
-{
-    return std::none_of(std::cbegin(reads), std::cend(reads), [&read] (auto other_itr) { return IsDuplicate{}(read, *other_itr); });
+	return std::find_if(std::begin(reads), std::end(reads), [&] (auto other_itr) { return dup_def.paired_equal(read, *other_itr); });
 }
 
 struct NextSegmentLess
@@ -45,33 +42,35 @@ struct NextSegmentLess
 
 } // namespace detail
 
-template <typename ForwardIt>
+template <typename ForwardIt,
+          typename DuplicateDefinition>
 std::vector<std::vector<ForwardIt>>
-find_duplicate_reads(ForwardIt first, const ForwardIt last)
+find_duplicate_reads(ForwardIt first, const ForwardIt last,
+                     const DuplicateDefinition& duplicate_definition)
 {
     std::vector<std::vector<ForwardIt>> result {};
     std::vector<ForwardIt> buffer {};
     // Recall that reads come sorted w.r.t operator< and it is therefore not guaranteed that 'duplicate'
     // reads (according to IsDuplicate) will be adjacent to one another. In particular, operator< only
     // guarantees that duplicate read segment described in the AlignedRead object will be adjacent.
-    const static auto are_primary_dups = [] (const auto& lhs, const auto& rhs) { return primary_segments_are_duplicates(lhs, rhs); };
+    const auto are_primary_dups = [&] (const auto& lhs, const auto& rhs) { return duplicate_definition.unpaired_equal(lhs, rhs); };
     for (first = std::adjacent_find(first, last, are_primary_dups); first != last; first = std::adjacent_find(first, last, are_primary_dups)) {
         buffer.reserve(8);
         if (first->has_other_segment()) buffer.push_back(first);
         if (std::next(first)->has_other_segment()) buffer.push_back(std::next(first));
         const AlignedRead& primary_dup_read {*first};
         std::advance(first, 2);
-        for (; first != last && primary_segments_are_duplicates(*first, primary_dup_read); ++first) {
+        for (; first != last && are_primary_dups(*first, primary_dup_read); ++first) {
             if (first->has_other_segment()) buffer.push_back(first);
         }
         std::sort(buffer.begin(), buffer.end(), [] (ForwardIt lhs, ForwardIt rhs) { return detail::NextSegmentLess{}(*lhs, *rhs); });
-        const static auto are_dups = [] (ForwardIt lhs, ForwardIt rhs) { return are_duplicates(*lhs, *rhs); };
-        for (auto dup_itr = std::adjacent_find(buffer.cbegin(), buffer.cend(), are_dups); dup_itr != buffer.cend();
-                 dup_itr = std::adjacent_find(dup_itr, buffer.cend(), are_dups)) {
+        const auto are_duplicates = [&] (ForwardIt lhs, ForwardIt rhs) { return duplicate_definition.paired_equal(*lhs, *rhs); };
+        for (auto dup_itr = std::adjacent_find(buffer.cbegin(), buffer.cend(), are_duplicates); dup_itr != buffer.cend();
+                 dup_itr = std::adjacent_find(dup_itr, buffer.cend(), are_duplicates)) {
             std::vector<ForwardIt> duplicates {dup_itr, std::next(dup_itr, 2)};
             const AlignedRead& duplicate_read {**dup_itr};
             std::advance(dup_itr, 2);
-            for (; dup_itr != buffer.cend() && are_duplicates(**dup_itr, duplicate_read); ++dup_itr) {
+            for (; dup_itr != buffer.cend() && duplicate_definition.paired_equal(**dup_itr, duplicate_read); ++dup_itr) {
                 duplicates.push_back(*dup_itr);
             }
             result.push_back(std::move(duplicates));
@@ -79,6 +78,13 @@ find_duplicate_reads(ForwardIt first, const ForwardIt last)
         buffer.clear();
     }
     return result;
+}
+
+template <typename ForwardIt>
+std::vector<std::vector<ForwardIt>>
+find_duplicate_reads(ForwardIt first, const ForwardIt last)
+{
+    return find_duplicate_reads(first, last, FivePrimeDuplicateDefinition {});
 }
 
 namespace detail {
@@ -96,13 +102,16 @@ struct AlignedReadIteratorNameLess
 } // namespace detail
 
 template <typename ForwardIt,
-          typename BinaryPredicate>
+          typename BinaryPredicate,
+          typename DuplicateDefinition>
 ForwardIt 
 remove_duplicate_reads(ForwardIt first, ForwardIt last,
-                       const BinaryPredicate duplicate_compare)
+                       const BinaryPredicate duplicate_compare,
+                       const DuplicateDefinition& duplicate_definition)
 {
     // See comment in 'find_duplicates'
-    first = std::adjacent_find(first, last, [] (const auto& lhs, const auto& rhs) { return primary_segments_are_duplicates(lhs, rhs); });
+    const auto are_primary_dups = [&] (const auto& lhs, const auto& rhs) { return duplicate_definition.unpaired_equal(lhs, rhs); };
+    first = std::adjacent_find(first, last, are_primary_dups);
     if (first != last) {
         std::vector<ForwardIt> candidate_duplicates {first++};
 		using DuplicatePairedReadMap = std::map<ForwardIt, std::vector<AlignedRead>, detail::AlignedReadIteratorNameLess<ForwardIt>>;
@@ -110,8 +119,8 @@ remove_duplicate_reads(ForwardIt first, ForwardIt last,
         candidate_duplicates.reserve(100);
         for (auto read_itr = first; read_itr != last; ++read_itr) {
 			AlignedRead& read {*read_itr};
-            if (primary_segments_are_duplicates(read, *candidate_duplicates.front())) { // can check any candidate
-				const auto duplicate_itr = detail::find_duplicate(read, candidate_duplicates);
+            if (are_primary_dups(read, *candidate_duplicates.front())) { // can check any candidate
+				const auto duplicate_itr = detail::find_duplicate(read, candidate_duplicates, duplicate_definition);
                 if (duplicate_itr == std::end(candidate_duplicates)) { // read may not be a duplicate
                     if (read_itr != first) *first = std::move(read);
                     candidate_duplicates.emplace_back(first++);
@@ -200,11 +209,20 @@ struct DuplicateReadLess
 	}
 };
 
-template <typename ForwardIt>
+template <typename ForwardIt,
+          typename DuplicateDefinition>
 ForwardIt 
+remove_duplicate_reads(ForwardIt first, ForwardIt last,
+                       const DuplicateDefinition& duplicate_definition)
+{
+	return remove_duplicate_reads(first, last, DuplicateReadLess {}, duplicate_definition);
+}
+
+template <typename ForwardIt>
+ForwardIt
 remove_duplicate_reads(ForwardIt first, ForwardIt last)
 {
-	return remove_duplicate_reads(first, last, DuplicateReadLess {});
+    return remove_duplicate_reads(first, last, FivePrimeDuplicateDefinition {});
 }
 
 } // namespace

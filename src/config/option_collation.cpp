@@ -862,7 +862,18 @@ auto make_read_filterer(const OptionMap& options)
         result.add(make_unique<IsNotMarkedDuplicate>());
     }
     if (!options.at("allow-octopus-duplicates").as<bool>()) {
-        result.add(make_unique<IsNotDuplicate<ReadFilterer::ReadIterator>>());
+        using RDDP = ReadDeduplicationDetectionPolicy;
+        const auto duplicate_detection_policy = options.at("duplicate-read-detection-policy").as<RDDP>();
+        switch (duplicate_detection_policy) {
+            case RDDP::relaxed: {
+                result.add(make_unique<IsNotDuplicate<ReadFilterer::ReadIterator, FivePrimeAndCigarDuplicateDefinition>>());
+                break;
+            }
+            case RDDP::aggressive: {
+                result.add(make_unique<IsNotDuplicate<ReadFilterer::ReadIterator, FivePrimeDuplicateDefinition>>());
+                break;
+            }
+        }
     }
     if (!options.at("allow-qc-fails").as<bool>()) {
         result.add(make_unique<IsNotMarkedQcFail>());
