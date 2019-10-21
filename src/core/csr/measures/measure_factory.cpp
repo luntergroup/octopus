@@ -66,6 +66,7 @@ void init(MeasureMakerMap& measure_makers)
     measure_makers[name<DuplicateAlleleFraction>()]     = [] () { return make_wrapped_measure<DuplicateAlleleFraction>(); };
     measure_makers[name<ErrorRate>()]                   = [] () { return make_wrapped_measure<ErrorRate>(); };
     measure_makers[name<ErrorRateStdev>()]              = [] () { return make_wrapped_measure<ErrorRateStdev>(); };
+    measure_makers[name<IsTransversion>()]              = [] () { return make_wrapped_measure<IsTransversion>(); };
 }
 
 class BadParameterList : public UserError

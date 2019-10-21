@@ -53,5 +53,6 @@
 #include "core/csr/measures/duplicate_allele_fraction.hpp"
 #include "core/csr/measures/error_rate.hpp"
 #include "core/csr/measures/error_rate_stdev.hpp"
+#include "core/csr/measures/is_transversion.hpp"
 
 #endif
