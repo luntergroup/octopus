@@ -16,7 +16,7 @@ import urllib.request
 script_dir = dirname(abspath(__file__))
 default_octopus_bin = join(abspath(join(script_dir, pardir)), 'bin/octopus')
 
-default_measures = "AC AD ADP AF ARF BQ CC CRF DAD DAF DP DPC ER ERS FRF GC GQ GQD NC MC MF MP MRC MQ MQ0 MQD PP PPD QD QUAL REFCALL REB RSB RTB SB SD SF SHC SMQ SOMATIC STRL STRP VL".split()
+default_measures = "AC AD ADP AF ARF BQ CC CRF DAD DAF DP DPC ER ERS FRF GC GQ GQD ITV NC MC MF MP MRC MQ MQ0 MQD PP PPD QD QUAL REFCALL REB RSB RTB SB SD SF SHC SMQ SOMATIC STRL STRP VL".split()
 
 known_truth_set_urls = {
     "GIAB": {
