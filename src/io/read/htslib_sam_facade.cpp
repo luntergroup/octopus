@@ -432,8 +432,14 @@ HtslibSamFacade::iterate(const GenomicRegion& region,
                          ContigRegionVisitor visitor) const
 {
     HtslibIterator itr {*this, region};
-    while (++itr) {
-        if (!visitor(sample_names_.at(itr.read_group()), itr.region())) return false;
+    if (samples_.size() == 1) {
+        while (++itr) {
+            if (!visitor(samples_.front(), itr.region())) return false;
+        }
+    } else {
+        while (++itr) {
+            if (!visitor(sample_names_.at(itr.read_group()), itr.region())) return false;
+        }
     }
     return true;
 }
