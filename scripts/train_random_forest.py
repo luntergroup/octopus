@@ -215,7 +215,7 @@ def run_octopus(octopus, reference, reads, regions, threads, output,
     if config is not None:
         octopus_cmd += ['--config', config]
     if octopus_vcf is not None:
-        octopus_vcf += ['--filter-vcf', octopus_vcf]
+        octopus_cmd += ['--filter-vcf', octopus_vcf]
     if kind == "somatic":
         octopus_cmd += ['--caller', 'cancer', '--somatics-only']
     sp.call(octopus_cmd)
