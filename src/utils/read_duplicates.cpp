@@ -7,12 +7,7 @@
 
 namespace octopus {
 
-bool primary_segments_are_duplicates(const AlignedRead& lhs, const AlignedRead& rhs) noexcept
-{
-    return are_same_strand(lhs, rhs)
-		&& is_same_contig(lhs, rhs)
-		&& five_prime_mapping_position(lhs) == five_prime_mapping_position(rhs);
-}
+namespace {
 
 bool are_duplicates(const AlignedRead::Segment& lhs, const AlignedRead::Segment& rhs) noexcept
 {
@@ -22,7 +17,7 @@ bool are_duplicates(const AlignedRead::Segment& lhs, const AlignedRead::Segment&
            && lhs.inferred_template_length() == rhs.inferred_template_length();
 }
 
-bool other_segments_are_duplicates(const AlignedRead& lhs, const AlignedRead& rhs) noexcept
+bool next_segments_are_duplicates(const AlignedRead& lhs, const AlignedRead& rhs) noexcept
 {
     if (lhs.has_other_segment()) {
         return rhs.has_other_segment() && are_duplicates(lhs.next_segment(), rhs.next_segment());
@@ -31,14 +26,30 @@ bool other_segments_are_duplicates(const AlignedRead& lhs, const AlignedRead& rh
     }
 }
 
-bool are_duplicates(const AlignedRead& lhs, const AlignedRead& rhs) noexcept
+} // namespace
+
+bool FivePrimeDuplicateDefinition::unpaired_equal(const AlignedRead& lhs, const AlignedRead& rhs) const noexcept
 {
-    return primary_segments_are_duplicates(lhs, rhs) && other_segments_are_duplicates(lhs, rhs);
+    return are_same_strand(lhs, rhs)
+        && is_same_contig(lhs, rhs)
+		&& five_prime_mapping_position(lhs) == five_prime_mapping_position(rhs);
 }
 
-bool IsDuplicate::operator()(const AlignedRead& lhs, const AlignedRead& rhs) const noexcept
+bool FivePrimeDuplicateDefinition::paired_equal(const AlignedRead& lhs, const AlignedRead& rhs) const noexcept
 {
-    return are_duplicates(lhs, rhs);
+    return unpaired_equal(lhs, rhs) && next_segments_are_duplicates(lhs, rhs);
+}
+
+bool FivePrimeAndCigarDuplicateDefinition::unpaired_equal(const AlignedRead& lhs, const AlignedRead& rhs) const noexcept
+{
+    return are_same_strand(lhs, rhs)
+        && is_same_region(lhs, rhs)
+        && lhs.cigar() == rhs.cigar();
+}
+
+bool FivePrimeAndCigarDuplicateDefinition::paired_equal(const AlignedRead& lhs, const AlignedRead& rhs) const noexcept
+{
+    return unpaired_equal(lhs, rhs) && next_segments_are_duplicates(lhs, rhs);
 }
 
 namespace detail {

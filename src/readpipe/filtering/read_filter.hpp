@@ -299,16 +299,21 @@ private:
     virtual BidirIt do_partition(BidirIt first, BidirIt last) const = 0;
 };
 
-template <typename ForwardIt>
+template <typename ForwardIt,
+          typename DuplicateDefinition>
 struct IsNotDuplicate : ContextReadFilter<ForwardIt>
 {
-    IsNotDuplicate() : ContextReadFilter<ForwardIt> {"IsNotOctopusDuplicate"} {}
-    IsNotDuplicate(std::string name)
-    : ContextReadFilter<ForwardIt> {std::move(name)} {}
+    IsNotDuplicate() :  IsNotDuplicate<ForwardIt, DuplicateDefinition> {"IsNotOctopusDuplicate", DuplicateDefinition {}} {}
+    IsNotDuplicate(DuplicateDefinition duplicate_definition)
+    : IsNotDuplicate<ForwardIt, DuplicateDefinition> {"IsNotOctopusDuplicate", std::move(duplicate_definition)} {}
+    IsNotDuplicate(std::string name, DuplicateDefinition duplicate_definition)
+    : ContextReadFilter<ForwardIt> {std::move(name)}
+    , duplicate_definition_ {std::move(duplicate_definition)}
+    {}
     
     ForwardIt do_remove(ForwardIt first, ForwardIt last) const override
     {
-        return remove_duplicate_reads(first, last);
+        return remove_duplicate_reads(first, last, duplicate_definition_);
     }
     
     ForwardIt do_partition(ForwardIt first, ForwardIt last) const override
@@ -318,6 +323,9 @@ struct IsNotDuplicate : ContextReadFilter<ForwardIt>
         // http://stackoverflow.com/questions/36888033/implementing-partition-unique-and-stable-partition-unique-algorithms
         return last;
     }
+
+private:
+    DuplicateDefinition duplicate_definition_;
 };
 
 } // namespace readpipe

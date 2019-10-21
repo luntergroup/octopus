@@ -268,6 +268,10 @@ OptionMap parse_options(const int argc, const char** argv)
      po::bool_switch()->default_value(false),
      "Allows reads considered duplicates by octopus")
     
+    ("duplicate-read-detection-policy",
+     po::value<ReadDeduplicationDetectionPolicy>()->default_value(ReadDeduplicationDetectionPolicy::relaxed),
+     "Policy to use for duplicate read detection [RELAXED, AGGRESSIVE]")
+    
     ("allow-secondary-alignments",
      po::bool_switch()->default_value(false),
      "Allows reads marked as secondary alignments")
@@ -1475,6 +1479,31 @@ std::ostream& operator<<(std::ostream& out, const RealignedBAMType& type)
     return out;
 }
 
+std::istream& operator>>(std::istream& in, ReadDeduplicationDetectionPolicy& result)
+{
+    std::string token;
+    in >> token;
+    if (token == "RELAXED")
+        result = ReadDeduplicationDetectionPolicy::relaxed;
+    else if (token == "AGGRESSIVE")
+        result = ReadDeduplicationDetectionPolicy::aggressive;
+    else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token, "bamout-type"};
+    return in;
+}
+
+std::ostream& operator<<(std::ostream& out, const ReadDeduplicationDetectionPolicy& policy)
+{
+    switch (policy) {
+        case ReadDeduplicationDetectionPolicy::relaxed:
+            out << "RELAXED";
+            break;
+        case ReadDeduplicationDetectionPolicy::aggressive:
+            out << "AGGRESSIVE";
+            break;
+    }
+    return out;
+}
+
 namespace {
 
 template <typename T>
@@ -1595,6 +1624,8 @@ std::ostream& operator<<(std::ostream& os, const OptionMap& options)
             os << options[label].as<CandidateVariantDiscoveryProtocol>();
         } else if (is_type<RealignedBAMType>(value)) {
             os << options[label].as<RealignedBAMType>();
+        } else if (is_type<ReadDeduplicationDetectionPolicy>(value)) {
+            os << options[label].as<ReadDeduplicationDetectionPolicy>();
         } else {
             os << "UnknownType(" << ((boost::any)value.value()).type().name() << ")";
         }
