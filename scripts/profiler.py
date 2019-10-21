@@ -2,6 +2,7 @@
 
 import argparse
 import pandas as pd
+import numpy as np
 from pathlib import Path
 from math import log10, ceil
 
@@ -76,6 +77,27 @@ def combine_libraries(profiles, drop=False):
         result['library'] = "/".join(libraries)
     return result
 
+base_complements = {'A': 'T', 'C': 'G', 'G': 'C', 'T': 'A'}
+
+def complement(seq):
+    return ''.join(base_complements[base] for base in seq)
+
+def reverse_complement(seq):
+    return ''.join(base_complements[base] for base in reversed(seq))
+
+def all_complements(motif):
+    return sorted(np.unique([motif, complement(motif), reverse_complement(motif), reverse_complement(complement(motif))]))
+
+def group_repeat_motifs(df, basic_aggregators=['library', 'period', 'periods']):
+    motif_aggregators = basic_aggregators + ['motif']
+    result = df.copy()
+    result['motif'] = result.apply(lambda row: '/'.join(all_complements(row.motif)), axis=1)
+    result = result.groupby(motif_aggregators).aggregate({'library': 'first', 'errors': 'sum', 'reads': 'sum'}, axis='columns')
+    if 'library' in motif_aggregators: result = result.drop(columns=['library'])
+    result = result.reset_index()
+    result['error_rate'] = result.apply(lambda row: row.errors / get_error_rate_norm(row), axis=1)
+    return df
+
 def make_error_summaries(indel_profile_df):
     result = {}
     result['raw'] = indel_profile_df
@@ -96,14 +118,11 @@ def make_error_summaries(indel_profile_df):
     result['length'] = aggregate_errors(indel_profile_df, length_aggregators)
     motif_aggregators = period_aggregators + ['motif']
     result['homopolymer-motif'] = aggregate_errors(result['homopolymer'], motif_aggregators).drop(columns=motif_aggregators).reset_index()
-    result['homopolymer-class'] = result['homopolymer-motif'].drop(columns=['reference_footprint'])
-    result['homopolymer-class']['motif'] = result['homopolymer-class'].apply(lambda row: 'A/T' if row.motif in ['A', 'T'] else 'C/G', axis=1)
-    result['homopolymer-class'] = result['homopolymer-class'].groupby(motif_aggregators).aggregate({'library': 'first', 'errors': 'sum', 'reads': 'sum'}, axis='columns')
-    if 'library' in indel_profile_df: result['homopolymer-class'] = result['homopolymer-class'].drop(columns=['library'])
-    result['homopolymer-class'] = result['homopolymer-class'].reset_index()
-    result['homopolymer-class']['error_rate'] = result['homopolymer-class'].apply(lambda row: row.errors / get_error_rate_norm(row), axis=1)
+    result['homopolymer-class'] = group_repeat_motifs(result['homopolymer-motif'], period_aggregators)
     result['dinucleotide-motif'] = aggregate_errors(result['dinucleotide'], motif_aggregators).drop(columns=motif_aggregators).reset_index()
+    result['dinucleotide-class'] = group_repeat_motifs(result['dinucleotide-motif'], period_aggregators)
     result['trinucleotide-motif'] = aggregate_errors(result['trinucleotide'], motif_aggregators).drop(columns=motif_aggregators).reset_index()
+    result['trinucleotide-class'] = group_repeat_motifs(result['trinucleotide-motif'], period_aggregators)
     result['tetranucleotide-motif'] = aggregate_errors(result['tetranucleotide'], motif_aggregators).drop(columns=motif_aggregators).reset_index()
     result['pentanucleotide-motif'] = aggregate_errors(result['pentanucleotide'], motif_aggregators).drop(columns=motif_aggregators).reset_index()
     return result
@@ -135,16 +154,28 @@ def get_repeat_error_df(profile_df, pattern, max_periods):
             query_condition += " and motif == '" + motif + "'"
         else:
             motif_len = len(pattern[0])
-            query_condition += " and (motif == '" + pattern[0] + "'"
-            for motif in pattern[1:]:
-                " or motif == '" + motif + "'"
-            query_condition += ")"
-        if motif_len == 1:
-            profile_index = 'homopolymer-motif'
-        elif motif_len == 2:
-            profile_index = 'dinucleotide-motif'
-        elif motif_len == 3:
-            profile_index = 'trinucleotide-motif'
+            compound_pattern = '/'.join(sorted(pattern))
+            if motif_len == 1 and compound_pattern in profile_df['homopolymer-class']['motif'].unique():
+                query_condition = "motif == '" + compound_pattern + "'"
+                profile_index = 'homopolymer-class'
+            elif motif_len == 2 and compound_pattern in profile_df['dinucleotide-class']['motif'].unique():
+                query_condition = "motif == '" + compound_pattern + "'"
+                profile_index = 'dinucleotide-class'
+            elif motif_len == 3 and compound_pattern in profile_df['trinucleotide-class']['motif'].unique():
+                query_condition = "motif == '" + compound_pattern + "'"
+                profile_index = 'trinucleotide-class'
+            else:
+                query_condition += " and (motif == '" + pattern[0] + "'"
+                for motif in pattern[1:]:
+                    " or motif == '" + motif + "'"
+                query_condition += ")"
+        if profile_index == 'period':
+            if motif_len == 1:
+                profile_index = 'homopolymer-motif'
+            elif motif_len == 2:
+                profile_index = 'dinucleotide-motif'
+            elif motif_len == 3:
+                profile_index = 'trinucleotide-motif'
     result = profile_df[profile_index].query(query_condition).copy()
     result['phred_error'] = result['error_rate'].apply(rate_to_phred)
     return result
@@ -179,7 +210,8 @@ def smooth_empirical_model(open_model, extend_model=10):
 
 def make_octopus_indel_error_model(profile_df):
     result = {}
-    for pattern in [('A', 'T'), ('C', 'G'), 2, 3, 4, 5]:
+    homopolymer_patterns = list(set(tuple(all_complements(motif)) for motif in profile_df['homopolymer-motif']['motif'].unique()))
+    for pattern in homopolymer_patterns + [2, 3, 4, 5]:
         model = smooth_empirical_model(make_empirical_indel_error_model_helper(profile_df, pattern))
         if type(pattern) == int:
             result[pattern * 'N'] = model
