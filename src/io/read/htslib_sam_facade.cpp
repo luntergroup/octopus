@@ -370,6 +370,11 @@ auto get_readable_samples(std::vector<S> request_samples, const std::vector<S>& 
     return result;
 }
 
+bool contains(const std::vector<HtslibSamFacade::SampleName>& samples, const HtslibSamFacade::SampleName& sample) noexcept
+{
+    return std::find(std::cbegin(samples), std::cend(samples), sample) != std::cend(samples);
+}
+
 } // namespace
 
 // iterate
@@ -396,18 +401,20 @@ HtslibSamFacade::iterate(const SampleName& sample,
                          const GenomicRegion& region,
                          AlignedReadReadVisitor visitor) const
 {
-    if (samples_.size() == 1 && samples_.front() == sample) {
-        return iterate(region, visitor);
-    } else {
-        HtslibIterator itr {*this, region};
-        while (++itr) {
-            const auto& read_sample = sample_names_.at(itr.read_group());
-            if (read_sample == sample) {
-                if (!visitor(sample, *itr)) return false;
+    if (contains(samples_, sample)) {
+        if (samples_.size() == 1) {
+            return iterate(region, visitor);
+        } else {
+            HtslibIterator itr {*this, region};
+            while (++itr) {
+                const auto& read_sample = sample_names_.at(itr.read_group());
+                if (read_sample == sample) {
+                    if (!visitor(sample, *itr)) return false;
+                }
             }
         }
-        return true;
     }
+    return true;
 }
 
 bool
@@ -455,18 +462,20 @@ HtslibSamFacade::iterate(const SampleName& sample,
                          const GenomicRegion& region,
                          ContigRegionVisitor visitor) const
 {
-    if (samples_.size() == 1 && samples_.front() == sample) {
-        return iterate(region, visitor);
-    } else {
-        HtslibIterator itr {*this, region};
-        while (++itr) {
-            const auto& read_sample = sample_names_.at(itr.read_group());
-            if (read_sample == sample) {
-                if (!visitor(sample, itr.region())) return false;
+    if (contains(samples_, sample)) {
+        if (samples_.size() == 1) {
+            return iterate(region, visitor);
+        } else {
+            HtslibIterator itr {*this, region};
+            while (++itr) {
+                const auto& read_sample = sample_names_.at(itr.read_group());
+                if (read_sample == sample) {
+                    if (!visitor(sample, itr.region())) return false;
+                }
             }
         }
-        return true;
     }
+    return true;
 }
 
 bool
@@ -571,11 +580,6 @@ HtslibSamFacade::extract_read_positions(const GenomicRegion& region, std::size_t
         --max_coverage;
     }
     return result;
-}
-
-bool contains(const std::vector<HtslibSamFacade::SampleName>& samples, const HtslibSamFacade::SampleName& sample) noexcept
-{
-    return std::find(std::cbegin(samples), std::cend(samples), sample) != std::cend(samples);
 }
 
 HtslibSamFacade::PositionList
