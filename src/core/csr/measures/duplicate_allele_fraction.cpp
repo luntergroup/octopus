@@ -51,7 +51,7 @@ const std::string& DuplicateAlleleFraction::do_name() const
 
 std::string DuplicateAlleleFraction::do_describe() const
 {
-    return "Concordance of allele support from duplicate reads";
+    return "Fraction of realigned reads supporting ALT alleles identified as duplicates";
 }
 
 std::vector<std::string> DuplicateAlleleFraction::do_requirements() const
