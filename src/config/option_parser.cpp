@@ -67,7 +67,7 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<fs::path>(),
      "Sets the working directory")
     
-    ("threads",
+    ("threads,tentacles",
      po::value<int>()->implicit_value(0),
      "Maximum number of threads to be used. If no argument is provided unlimited threads are assumed")
     
