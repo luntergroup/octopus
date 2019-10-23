@@ -12,6 +12,14 @@ from sklearn.metrics import log_loss
 import json
 import urllib.request
 
+try:
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+    import pandas as pd
+    plotting_available = True
+except ImportError as plot_import_exception:
+    plotting_available = False
+
 script_dir = Path(__file__).parent.absolute()
 default_octopus_bin = script_dir / 'bin/octopus'
 
@@ -501,6 +509,22 @@ def main(options):
     ranger_out_prefix = options.out / options.prefix
     hyperparameters = select_training_hypterparameters(master_data_file, training_params)
     run_ranger_training(options.ranger, master_data_file, hyperparameters, options.threads, ranger_out_prefix)
+
+    if plotting_available:
+        importance_filename = ranger_out_prefix.with_suffix(".importance")
+        with importance_filename.open() as f:
+            importances = dict(t.strip().split(':') for t in f.readlines())
+            for measure, importance in importances.items():
+                importances[measure] = float(importance)
+            importances = pd.DataFrame.from_dict(importances, orient='index', columns=['Importance']).reset_index().rename(columns={'index': 'Measure'})
+            important, not_important = importances.query('Importance > 0'), importances.query('Importance == 0')
+
+            g = sns.barplot(x='Measure', y='Importance',
+                            data=important)
+            for item in g.get_xticklabels():
+                item.set_rotation(45)
+                g.tick_params(labelsize=5)
+            plt.savefig(importance_filename.with_suffix(".important.pdf"), format='pdf', transparent=True, bbox_inches='tight')
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
