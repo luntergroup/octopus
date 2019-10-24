@@ -575,6 +575,7 @@ bool is_good_somatic(const Variant& variant, const unsigned depth, const unsigne
     if (is_snv(variant)) {
         if (is_likely_runthrough_artifact(forward_strand_support, reverse_strand_support, observed_qualities)) return false;
         erase_below(observed_qualities, 20);
+        if (observed_qualities.size() <= num_edge_observations) return false;
         const auto good_support = observed_qualities.size() - num_edge_observations;
         const auto probability_vaf_greater_than_min_vaf = beta_sf(good_support, depth - good_support, vaf_def.min_vaf);
         return good_support > 1
