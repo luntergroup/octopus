@@ -175,6 +175,19 @@ void erase_indices(std::vector<T>& v, const std::vector<std::size_t>& indices)
 }
 
 void reduce(IndexedGenotypeVectorPair& genotypes,
+            const std::vector<double>& genotype_probabilities,
+            const std::size_t n)
+{
+    if (genotypes.raw.size() <= n) return;
+    const auto min_probability = nth_greatest_value(genotype_probabilities, n + 1);
+    std::size_t idx {0};
+    const auto is_low_probability = [&] (const auto& genotype) { return genotype_probabilities[idx++] <= min_probability; };
+    genotypes.raw.erase(std::remove_if(std::begin(genotypes.raw), std::end(genotypes.raw),is_low_probability), std::end(genotypes.raw));
+    idx = 0;
+    genotypes.indices.erase(std::remove_if(std::begin(genotypes.indices), std::end(genotypes.indices), is_low_probability), std::end(genotypes.indices));
+}
+
+void reduce(IndexedGenotypeVectorPair& genotypes,
             const MappableBlock<Haplotype>& haplotypes,
             const GenotypePriorModel& genotype_prior_model,
             const HaplotypeLikelihoodArray& haplotype_likelihoods,
@@ -184,12 +197,7 @@ void reduce(IndexedGenotypeVectorPair& genotypes,
     model::IndividualModel approx_model {genotype_prior_model};
     approx_model.prime(haplotypes);
     const auto approx_posteriors = approx_model.evaluate(genotypes.raw, genotypes.indices, haplotype_likelihoods).posteriors.genotype_log_probabilities;
-    const auto min_posterior = nth_greatest_value(approx_posteriors, n + 1);
-    std::size_t idx {0};
-    const auto is_low_probability = [&] (const auto& genotype) { return approx_posteriors[idx++] <= min_posterior; };
-    genotypes.raw.erase(std::remove_if(std::begin(genotypes.raw), std::end(genotypes.raw),is_low_probability), std::end(genotypes.raw));
-    idx = 0;
-    genotypes.indices.erase(std::remove_if(std::begin(genotypes.indices), std::end(genotypes.indices), is_low_probability), std::end(genotypes.indices));
+    reduce(genotypes, approx_posteriors, n);
 }
 
 void fit_sublone_model(const MappableBlock<Haplotype>& haplotypes,
@@ -218,7 +226,13 @@ void fit_sublone_model(const MappableBlock<Haplotype>& haplotypes,
         } else {
             const static auto not_included = [] (const auto& genotype, const auto& haplotype) -> bool {
                 return !genotype.contains(haplotype); };
-            std::tie(curr_genotypes.raw, curr_genotypes.indices) = extend_genotypes(prev_genotypes.raw, prev_genotypes.indices, haplotypes, not_included);
+            if (prev_genotypes.raw.size() * (haplotypes.size() / 2) > max_genotypes) {
+                auto probable_prev_genotypes = prev_genotypes;
+                reduce(probable_prev_genotypes, sublonal_inferences.max_evidence_params.genotype_log_probabilities, max_genotypes / (haplotypes.size() / 2));
+                std::tie(curr_genotypes.raw, curr_genotypes.indices) = extend_genotypes(probable_prev_genotypes.raw, probable_prev_genotypes.indices, haplotypes, not_included);
+            } else {
+                std::tie(curr_genotypes.raw, curr_genotypes.indices) = extend_genotypes(prev_genotypes.raw, prev_genotypes.indices, haplotypes, not_included);
+            }
         }
         reduce(curr_genotypes, haplotypes, genotype_prior_model, haplotype_likelihoods, max_genotypes);
         if (debug_log) stream(*debug_log) << "Generated " << curr_genotypes.raw.size() << " genotypes with clonality " << clonality;
