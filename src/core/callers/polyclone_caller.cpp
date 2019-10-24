@@ -84,7 +84,7 @@ PolycloneCaller::Latents::Latents(std::vector<Genotype<Haplotype>> haploid_genot
 , polyploid_genotypes_ {std::move(polyploid_genotypes)}
 , haploid_model_inferences_ {std::move(haploid_model_inferences)}
 , subclone_model_inferences_ {std::move(subclone_model_inferences)}
-, model_posteriors_ {}
+, model_log_posteriors_ {0, std::numeric_limits<double>::min()}
 , sample_ {sample}
 {
     if (!polyploid_genotypes_.empty()) {
@@ -94,11 +94,17 @@ PolycloneCaller::Latents::Latents(std::vector<Genotype<Haplotype>> haploid_genot
         const auto haploid_model_jp = haploid_model_prior + haploid_model_inferences_.log_evidence;
         const auto subclone_model_jp = subclone_model_prior + subclone_model_inferences_.approx_log_evidence;
         const auto norm = maths::log_sum_exp({haploid_model_jp, subclone_model_jp});
-        model_posteriors_.clonal = std::exp(haploid_model_jp - norm);
-        model_posteriors_.subclonal = std::exp(subclone_model_jp - norm);
-    } else {
-        model_posteriors_.clonal = 1.0;
-        model_posteriors_.subclonal = 0.0;
+        model_log_posteriors_ = {haploid_model_jp - norm, subclone_model_jp - norm};
+        auto log_posteriors = concat(haploid_model_inferences_.posteriors.genotype_log_probabilities,
+                                     subclone_model_inferences_.max_evidence_params.genotype_log_probabilities);
+        std::for_each(std::begin(log_posteriors), std::next(std::begin(log_posteriors), haploid_genotypes_.size()),
+                      [&] (auto& p) { p += model_log_posteriors_.clonal; });
+        std::for_each(std::next(std::begin(log_posteriors), haploid_genotypes_.size()), std::end(log_posteriors),
+                      [&] (auto& p) { p += model_log_posteriors_.subclonal; });
+        auto genotypes = concat(haploid_genotypes_, polyploid_genotypes_);
+        genotype_log_posteriors_ = std::make_shared<GenotypeProbabilityMap>(std::make_move_iterator(std::begin(genotypes)),
+                                                                            std::make_move_iterator(std::end(genotypes)));
+        insert_sample(sample_, log_posteriors, *genotype_log_posteriors_);
     }
 }
 
@@ -120,13 +126,14 @@ std::shared_ptr<PolycloneCaller::Latents::GenotypeProbabilityMap>
 PolycloneCaller::Latents::genotype_posteriors() const noexcept
 {
     if (genotype_posteriors_ == nullptr) {
-        const auto genotypes = concat(haploid_genotypes_, polyploid_genotypes_);
+        auto genotypes = concat(haploid_genotypes_, polyploid_genotypes_);
         auto posteriors = concat(haploid_model_inferences_.posteriors.genotype_probabilities,
                                  subclone_model_inferences_.max_evidence_params.genotype_probabilities);
+        const ModelProbabilities model_posterior {std::exp( model_log_posteriors_.clonal), std::exp( model_log_posteriors_.subclonal)};
         std::for_each(std::begin(posteriors), std::next(std::begin(posteriors), haploid_genotypes_.size()),
-                      [this] (auto& p) { p *= model_posteriors_.clonal; });
+                      [&] (auto& p) { p *= model_posterior.clonal; });
         std::for_each(std::next(std::begin(posteriors), haploid_genotypes_.size()), std::end(posteriors),
-                      [this] (auto& p) { p *= model_posteriors_.subclonal; });
+                      [=] (auto& p) { p *= model_posterior.subclonal; });
         genotype_posteriors_ = std::make_shared<GenotypeProbabilityMap>(std::make_move_iterator(std::begin(genotypes)),
                                                                         std::make_move_iterator(std::end(genotypes)));
         insert_sample(sample_, posteriors, *genotype_posteriors_);
@@ -297,22 +304,30 @@ using GenotypeCalls = std::vector<GenotypeCall>;
 
 // allele posterior calculations
 
-auto compute_posterior(const Allele& allele, const GenotypeProbabilityMap& genotype_posteriors)
+template <typename GenotypeOrAllele>
+auto marginalise_contained(const GenotypeOrAllele& element, const GenotypeProbabilityMap& genotype_log_posteriors)
 {
-    auto p = std::accumulate(std::cbegin(genotype_posteriors), std::cend(genotype_posteriors),
-                             0.0, [&allele] (const auto curr, const auto& p) {
-        return curr + (contains(p.first, allele) ? 0.0 : p.second);
-    });
-    return probability_false_to_phred(p);
+    thread_local std::vector<double> buffer {};
+    buffer.clear();
+    for (const auto& p : genotype_log_posteriors) {
+        if (!contains(p.first, element)) {
+            buffer.push_back(p.second);
+        }
+    }
+    if (!buffer.empty()) {
+        return log_probability_false_to_phred(std::min(maths::log_sum_exp(buffer), 0.0));
+    } else {
+        return Phred<> {std::numeric_limits<double>::infinity()};
+    }
 }
 
 auto compute_candidate_posteriors(const std::vector<Variant>& candidates,
-                                  const GenotypeProbabilityMap& genotype_posteriors)
+                                  const GenotypeProbabilityMap& genotype_log_posteriors)
 {
     VariantPosteriorVector result {};
     result.reserve(candidates.size());
     for (const auto& candidate : candidates) {
-        result.emplace_back(candidate, compute_posterior(candidate.alt_allele(), genotype_posteriors));
+        result.emplace_back(candidate, marginalise_contained(candidate.alt_allele(), genotype_log_posteriors));
     }
     return result;
 }
@@ -388,14 +403,14 @@ auto compute_posterior(const Genotype<Allele>& genotype, const GenotypeProbabili
 }
 
 GenotypeCalls call_genotypes(const Genotype<Haplotype>& genotype_call,
-                             const GenotypeProbabilityMap& genotype_posteriors,
+                             const GenotypeProbabilityMap& genotype_log_posteriors,
                              const std::vector<GenomicRegion>& variant_regions)
 {
     GenotypeCalls result {};
     result.reserve(variant_regions.size());
     for (const auto& region : variant_regions) {
         auto genotype_chunk = copy<Allele>(genotype_call, region);
-        const auto posterior = compute_posterior(genotype_chunk, genotype_posteriors);
+        const auto posterior = marginalise_contained(genotype_chunk, genotype_log_posteriors);
         result.emplace_back(std::move(genotype_chunk), posterior);
     }
     return result;
@@ -452,15 +467,15 @@ std::vector<std::unique_ptr<octopus::VariantCall>>
 PolycloneCaller::call_variants(const std::vector<Variant>& candidates, const Latents& latents) const
 {
     log(latents);
-    const auto& genotype_posteriors = (*latents.genotype_posteriors())[sample()];
-    debug::log(genotype_posteriors, debug_log_, trace_log_);
-    const auto candidate_posteriors = compute_candidate_posteriors(candidates, genotype_posteriors);
+    const auto& genotype_log_posteriors = (*latents.genotype_log_posteriors_)[sample()];
+    debug::log(genotype_log_posteriors, debug_log_, trace_log_);
+    const auto candidate_posteriors = compute_candidate_posteriors(candidates, genotype_log_posteriors);
     debug::log(candidate_posteriors, debug_log_, trace_log_, parameters_.min_variant_posterior);
     const bool force_call_non_ref {has_callable(candidate_posteriors, parameters_.min_variant_posterior)};
-    const auto genotype_call = octopus::call_genotype(genotype_posteriors, force_call_non_ref);
+    const auto genotype_call = octopus::call_genotype(genotype_log_posteriors, force_call_non_ref);
     auto variant_calls = call_candidates(candidate_posteriors, genotype_call, parameters_.min_variant_posterior);
     const auto called_regions = extract_regions(variant_calls);
-    auto genotype_calls = call_genotypes(genotype_call, genotype_posteriors, called_regions);
+    auto genotype_calls = call_genotypes(genotype_call, genotype_log_posteriors, called_regions);
     return transform_calls(sample(), std::move(variant_calls), std::move(genotype_calls));
 }
 
@@ -496,9 +511,9 @@ std::unique_ptr<GenotypePriorModel> PolycloneCaller::make_prior_model(const Hapl
 void PolycloneCaller::log(const Latents& latents) const
 {
     if (debug_log_) {
-        stream(*debug_log_) << "Clonal model posterior is " << latents.model_posteriors_.clonal
-                            << " and subclonal model posterior is " << latents.model_posteriors_.subclonal;
-        if (latents.model_posteriors_.subclonal > latents.model_posteriors_.clonal) {
+        stream(*debug_log_) << "Clonal model posterior is " << latents.model_log_posteriors_.clonal
+                            << " and subclonal model posterior is " << latents.model_log_posteriors_.subclonal;
+        if (latents.model_log_posteriors_.subclonal > latents.model_log_posteriors_.clonal) {
             stream(*debug_log_) << "Detected subclonality is " << latents.polyploid_genotypes_.front().ploidy();
         }
     }
