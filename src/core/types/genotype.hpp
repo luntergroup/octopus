@@ -978,6 +978,7 @@ bool is_max_zygosity(const Genotype<MappableType>& genotype)
 }
 
 std::size_t num_max_zygosity_genotypes(unsigned num_elements, unsigned ploidy);
+boost::optional<std::size_t> num_max_zygosity_genotypes_nothrow(unsigned num_elements, unsigned ploidy) noexcept;
 
 template <typename Range>
 void
@@ -985,7 +986,11 @@ generate_all_max_zygosity_genotypes(std::vector<Genotype<detail::value_type_t<ty
                                     const Range& elements, const unsigned ploidy)
 {
     if (elements.size() >= ploidy) {
-        result.reserve(num_max_zygosity_genotypes(elements.size(), ploidy));
+        try {
+            result.reserve(num_max_zygosity_genotypes(elements.size(), ploidy));
+        } catch (const std::overflow_error& e) {
+            result.reserve(std::numeric_limits<std::size_t>::max()); // Probably this will throw a bad_alloc
+        }
         generate_all_genotypes(elements, ploidy, [ploidy] (const auto& genotype) { return genotype.zygosity() == ploidy; },
                                std::back_inserter(result));
     }
@@ -1008,7 +1013,11 @@ generate_all_max_zygosity_genotypes(std::vector<Genotype<detail::value_type_t<ty
                                     const Range& elements, const unsigned ploidy)
 {
     if (elements.size() >= ploidy) {
-        result.reserve(num_max_zygosity_genotypes(elements.size(), ploidy));
+        try {
+            result.reserve(num_max_zygosity_genotypes(elements.size(), ploidy));
+        } catch (const std::overflow_error& e) {
+            result.reserve(std::numeric_limits<std::size_t>::max()); // Probably this will throw a bad_alloc
+        }
         generate_all_genotypes(elements, ploidy, [ploidy] (const auto& genotype) { return genotype.zygosity() == ploidy; },
                                std::back_inserter(result), indices);
     }

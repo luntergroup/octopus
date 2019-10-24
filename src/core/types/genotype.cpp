@@ -6,6 +6,7 @@
 #include <iostream>
 
 #include <boost/math/special_functions/binomial.hpp>
+#include <boost/numeric/conversion/cast.hpp>
 
 #include "utils/maths.hpp"
 
@@ -43,11 +44,21 @@ Genotype<Haplotype>::Genotype(std::initializer_list<std::shared_ptr<Haplotype>> 
     std::sort(std::begin(haplotypes_), std::end(haplotypes_), HaplotypePtrLess {});
 }
 
+namespace detail {
+
+template <typename T, typename BinaryPredicate>
+typename std::vector<T>::iterator
+insert_sorted(T value, std::vector<T>& values, BinaryPredicate compare)
+{
+    auto position = std::upper_bound(std::begin(values), std::end(values), value, compare);
+    return values.insert(position, std::move(value));
+}
+
+} // namespace detail
+
 void Genotype<Haplotype>::emplace(const std::shared_ptr<Haplotype>& haplotype)
 {
-    haplotypes_.emplace_back(haplotype);
-    std::inplace_merge(std::begin(haplotypes_), std::prev(std::end(haplotypes_)),
-                       std::end(haplotypes_), HaplotypePtrLess {});
+    detail::insert_sorted(haplotype, haplotypes_, HaplotypePtrLess {});
 }
 
 const Haplotype& Genotype<Haplotype>::operator[](const unsigned n) const
@@ -242,7 +253,22 @@ generate_all_genotypes(const std::vector<std::shared_ptr<Haplotype>>& haplotypes
 
 std::size_t num_max_zygosity_genotypes(const unsigned num_elements, const unsigned ploidy)
 {
-    return boost::math::binomial_coefficient<double>(num_elements, ploidy);
+    namespace bmp = boost::math::policies;
+    using policy = bmp::policy<bmp::overflow_error<bmp::throw_on_error>>;
+    try {
+        return boost::numeric_cast<std::size_t>(boost::math::binomial_coefficient<double>(num_elements, ploidy, policy {}));
+    } catch (const boost::numeric::positive_overflow& e) {
+        throw std::overflow_error {e.what()};
+    }
+}
+
+boost::optional<std::size_t> num_max_zygosity_genotypes_nothrow(unsigned num_elements, unsigned ploidy) noexcept
+{
+    boost::optional<std::size_t> result {};
+    try {
+        result = num_max_zygosity_genotypes(num_elements, ploidy);
+    } catch (const std::overflow_error&) {}
+    return result;
 }
 
 namespace debug {
