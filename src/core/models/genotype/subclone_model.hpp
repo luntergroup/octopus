@@ -51,7 +51,7 @@ public:
         using GenotypeMixturesDirichletAlphaMap = std::unordered_map<SampleName, GenotypeMixturesDirichletAlphas>;
         using ProbabilityVector                 = std::vector<double>;
         
-        ProbabilityVector genotype_probabilities;
+        ProbabilityVector genotype_probabilities, genotype_log_probabilities;
         GenotypeMixturesDirichletAlphaMap alphas;
     };
     
@@ -279,9 +279,15 @@ template <std::size_t K, typename G, typename GI, typename GPM>
 typename SubcloneModelBase<G, GI, GPM>::InferredLatents
 expand(VBResultPacket<K>& vb_results, const std::vector<SampleName>& samples, LogProbabilityVector genotype_log_priors)
 {
-    typename SubcloneModelBase<G, GI, GPM>::Latents posterior_latents {std::move(vb_results.map_latents.genotype_posteriors),
-                                                                       expand<K, G, GI, GPM>(samples, std::move(vb_results.map_latents.alphas))};
-    return {std::move(posterior_latents), std::move(genotype_log_priors), std::move(vb_results.evidence_weighted_genotype_posteriors), vb_results.max_log_evidence};
+    typename SubcloneModelBase<G, GI, GPM>::Latents posterior_latents {
+        std::move(vb_results.map_latents.genotype_posteriors),
+        std::move(vb_results.map_latents.genotype_log_posteriors),
+        expand<K, G, GI, GPM>(samples, std::move(vb_results.map_latents.alphas))
+        };
+    return {std::move(posterior_latents),
+            std::move(genotype_log_priors),
+            std::move(vb_results.evidence_weighted_genotype_posteriors),
+            vb_results.max_log_evidence};
 }
 
 template <std::size_t K, typename G, typename GI, typename GPM>
