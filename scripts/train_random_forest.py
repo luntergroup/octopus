@@ -231,7 +231,7 @@ def run_octopus(octopus, reference, reads, regions, threads, output,
     sp.call(octopus_cmd)
 
 def get_vcf_samples(vcf_filename):
-    vcf = ps.VariantFile(vcf_filename)
+    vcf = ps.VariantFile(str(vcf_filename))
     return vcf.header.samples
 
 def run_rtg(rtg, rtg_ref_path, truth_vcf_path, confident_bed_path, octopus_vcf_path, out_dir,
@@ -256,8 +256,8 @@ def run_rtg(rtg, rtg_ref_path, truth_vcf_path, confident_bed_path, octopus_vcf_p
             cmd += ['--sample', truth_samples[0] + "," + sample]
     sp.call(cmd)
 
-def read_vcf_samples(vcf_fname):
-    vcf = ps. VariantFile(vcf_fname)
+def read_vcf_samples(vcf_filename):
+    vcf = ps.VariantFile(str(vcf_filename))
     return vcf.header.samples
 
 def get_annotation(field, rec, sample=None):
@@ -287,9 +287,9 @@ def index_vcf(vcf_filename):
     sp.call(['tabix', '-f', str(vcf_filename)])
 
 def filter_somatic(vcf_filename):
-    in_vcf = ps.VariantFile(vcf_filename)
+    in_vcf = ps.VariantFile(str(vcf_filename))
     tmp_vcf_filename = Path(str(vcf_filename).replace('.vcf', '.tmp.vcf'))
-    out_vcf = ps.VariantFile(tmp_vcf_filename, 'wz', header=in_vcf.header)
+    out_vcf = ps.VariantFile(str(tmp_vcf_filename), 'wz', header=in_vcf.header)
     num_skipped_records = 0
     for rec in in_vcf:
         if is_somatic_record(rec):
@@ -305,7 +305,7 @@ def filter_somatic(vcf_filename):
     index_vcf(vcf_filename)
 
 def read_octopus_header_info(vcf_filename):
-    vcf = ps.VariantFile(vcf_filename)
+    vcf = ps.VariantFile(str(vcf_filename))
     for record in vcf.header.records:
         if record.key == "octopus":
             return dict(record)
@@ -380,8 +380,8 @@ def is_missing(x):
 def annotation_to_string(x, missing_value):
     return str(missing_value) if is_missing(x) else str(x)
 
-def make_ranger_data(octopus_vcf_path, out_path, classifcation, measures, missing_value=-1, fraction=1):
-    vcf = ps. VariantFile(octopus_vcf_path)
+def make_ranger_data(octopus_vcf_filename, out_path, classifcation, measures, missing_value=-1, fraction=1):
+    vcf = ps.VariantFile(str(octopus_vcf_filename))
     with out_path.open(mode='w') as ranger_data:
         datawriter = csv.writer(ranger_data, delimiter=' ')
         for rec in vcf:
@@ -499,7 +499,7 @@ def main(options):
             make_ranger_data(fp_train_vcf_path, fp_data_path, False, default_measures, options.missing_value, fraction=example.fp)
             data_files.append(fp_data_path)
             tmp_files += [tp_train_vcf_path, fp_train_vcf_path]
-    master_data_file = options.out / (options.prefix + ".dat")
+    master_data_file = options.out / (str(options.prefix) + ".dat")
     concat(data_files, master_data_file)
     for file in tmp_files + data_files:
         file.unlink()
