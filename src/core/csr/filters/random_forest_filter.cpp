@@ -327,11 +327,11 @@ void RandomForestFilter::prepare_for_classification(boost::optional<Log>& log) c
                                     1000, nullptr, 12, ranger_threads, forest_paths_[forest_idx].string(), ranger::ImportanceMode::IMP_GINI, 1, "",
                                     tmp, "", true, cat_vars, false, ranger::SplitRule::LOGRANK, "", false, 1.0,
                                     ranger::DEFAULT_ALPHA, ranger::DEFAULT_MINPROP, false,
-                                    ranger::PredictionType::RESPONSE, ranger::DEFAULT_NUM_RANDOM_SPLITS);
+                                    ranger::PredictionType::RESPONSE, ranger::DEFAULT_NUM_RANDOM_SPLITS, ranger::DEFAULT_MAXDEPTH);
                 } catch (const std::runtime_error& e) {
                     throw MalformedForestFile {forest_paths_[forest_idx]};
                 }
-                forest->run(false);
+                forest->run(false, false);
                 forest->writePredictionFile();
                 std::ifstream prediction_file {ranger_prediction_fname.string()};
                 const auto tp_first = read_header(prediction_file);
