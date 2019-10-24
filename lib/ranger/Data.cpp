@@ -33,16 +33,14 @@ size_t Data::getVariableID(const std::string& variable_name) const {
   return (std::distance(variable_names.cbegin(), it));
 }
 
-// #nocov start (cannot be tested anymore because GenABEL not on CRAN)
 void Data::addSnpData(unsigned char* snp_data, size_t num_cols_snp) {
   num_cols = num_cols_no_snp + num_cols_snp;
   num_rows_rounded = roundToNextMultiple(num_rows, 4);
   this->snp_data = snp_data;
 }
-// #nocov end
 
 // #nocov start
-bool Data::loadFromFile(std::string filename, std::vector<std::string>& dependent_variable_names) {
+bool Data::loadFromFile(std::string filename) {
 
   bool result;
 
@@ -69,11 +67,11 @@ bool Data::loadFromFile(std::string filename, std::vector<std::string>& dependen
 
   // Find out if comma, semicolon or whitespace seperated and call appropriate method
   if (header_line.find(",") != std::string::npos) {
-    result = loadFromFileOther(input_file, header_line, dependent_variable_names, ',');
+    result = loadFromFileOther(input_file, header_line, ',');
   } else if (header_line.find(";") != std::string::npos) {
-    result = loadFromFileOther(input_file, header_line, dependent_variable_names, ';');
+    result = loadFromFileOther(input_file, header_line, ';');
   } else {
-    result = loadFromFileWhitespace(input_file, header_line, dependent_variable_names);
+    result = loadFromFileWhitespace(input_file, header_line);
   }
 
   externalData = false;
@@ -81,36 +79,19 @@ bool Data::loadFromFile(std::string filename, std::vector<std::string>& dependen
   return result;
 }
 
-bool Data::loadFromFileWhitespace(std::ifstream& input_file, std::string header_line,
-    std::vector<std::string>& dependent_variable_names) {
-
-  size_t num_dependent_variables = dependent_variable_names.size();
-  std::vector<size_t> dependent_varIDs;
-  dependent_varIDs.resize(num_dependent_variables);
+bool Data::loadFromFileWhitespace(std::ifstream& input_file, std::string header_line) {
 
   // Read header
   std::string header_token;
   std::stringstream header_line_stream(header_line);
-  size_t col = 0;
   while (header_line_stream >> header_token) {
-    bool is_dependent_var = false;
-    for (size_t i = 0; i < dependent_variable_names.size(); ++i) {
-      if (header_token == dependent_variable_names[i]) {
-        dependent_varIDs[i] = col;
-        is_dependent_var = true;
-      }
-    }
-    if (!is_dependent_var) {
-      variable_names.push_back(header_token);
-    }
-    ++col;
+    variable_names.push_back(header_token);
   }
-
   num_cols = variable_names.size();
   num_cols_no_snp = num_cols;
 
   // Read body
-  reserveMemory(num_dependent_variables);
+  reserveMemory();
   bool error = false;
   std::string line;
   size_t row = 0;
@@ -118,30 +99,14 @@ bool Data::loadFromFileWhitespace(std::ifstream& input_file, std::string header_
     double token;
     std::stringstream line_stream(line);
     size_t column = 0;
-    while (readFromStream(line_stream, token)) {
-      size_t column_x = column;
-      bool is_dependent_var = false;
-      for (size_t i = 0; i < dependent_varIDs.size(); ++i) {
-        if (column == dependent_varIDs[i]) {
-          set_y(i, row, token, error);
-          is_dependent_var = true;
-          break;
-        } else if (column > dependent_varIDs[i]) {
-          --column_x;
-        }
-      }
-      if (!is_dependent_var) {
-        set_x(column_x, row, token, error);
-      }
+    while (line_stream >> token) {
+      set(column, row, token, error);
       ++column;
     }
-    if (column > (num_cols + num_dependent_variables)) {
-      throw std::runtime_error(
-          std::string("Could not open input file. Too many columns in row ") + std::to_string(row) + std::string("."));
-    } else if (column < (num_cols + num_dependent_variables)) {
-      throw std::runtime_error(
-          std::string("Could not open input file. Too few columns in row ") + std::to_string(row)
-              + std::string(". Are all values numeric?"));
+    if (column > num_cols) {
+      throw std::runtime_error("Could not open input file. Too many columns in a row.");
+    } else if (column < num_cols) {
+      throw std::runtime_error("Could not open input file. Too few columns in a row. Are all values numeric?");
     }
     ++row;
   }
@@ -149,36 +114,19 @@ bool Data::loadFromFileWhitespace(std::ifstream& input_file, std::string header_
   return error;
 }
 
-bool Data::loadFromFileOther(std::ifstream& input_file, std::string header_line,
-    std::vector<std::string>& dependent_variable_names, char seperator) {
-
-  size_t num_dependent_variables = dependent_variable_names.size();
-  std::vector<size_t> dependent_varIDs;
-  dependent_varIDs.resize(num_dependent_variables);
+bool Data::loadFromFileOther(std::ifstream& input_file, std::string header_line, char seperator) {
 
   // Read header
   std::string header_token;
   std::stringstream header_line_stream(header_line);
-  size_t col = 0;
   while (getline(header_line_stream, header_token, seperator)) {
-    bool is_dependent_var = false;
-    for (size_t i = 0; i < dependent_variable_names.size(); ++i) {
-      if (header_token == dependent_variable_names[i]) {
-        dependent_varIDs[i] = col;
-        is_dependent_var = true;
-      }
-    }
-    if (!is_dependent_var) {
-      variable_names.push_back(header_token);
-    }
-    ++col;
+    variable_names.push_back(header_token);
   }
-
   num_cols = variable_names.size();
   num_cols_no_snp = num_cols;
 
   // Read body
-  reserveMemory(num_dependent_variables);
+  reserveMemory();
   bool error = false;
   std::string line;
   size_t row = 0;
@@ -189,22 +137,8 @@ bool Data::loadFromFileOther(std::ifstream& input_file, std::string header_line,
     size_t column = 0;
     while (getline(line_stream, token_string, seperator)) {
       std::stringstream token_stream(token_string);
-      readFromStream(token_stream, token);
-
-      size_t column_x = column;
-      bool is_dependent_var = false;
-      for (size_t i = 0; i < dependent_varIDs.size(); ++i) {
-        if (column == dependent_varIDs[i]) {
-          set_y(i, row, token, error);
-          is_dependent_var = true;
-          break;
-        } else if (column > dependent_varIDs[i]) {
-          --column_x;
-        }
-      }
-      if (!is_dependent_var) {
-        set_x(column_x, row, token, error);
-      }
+      token_stream >> token;
+      set(column, row, token, error);
       ++column;
     }
     ++row;
@@ -214,15 +148,14 @@ bool Data::loadFromFileOther(std::ifstream& input_file, std::string header_line,
 }
 // #nocov end
 
-void Data::getAllValues(std::vector<double>& all_values, std::vector<size_t>& sampleIDs, size_t varID, size_t start,
-    size_t end) const {
+void Data::getAllValues(std::vector<double>& all_values, std::vector<size_t>& sampleIDs, size_t varID) const {
 
   // All values for varID (no duplicates) for given sampleIDs
   if (getUnpermutedVarID(varID) < num_cols_no_snp) {
 
-    all_values.reserve(end - start);
-    for (size_t pos = start; pos < end; ++pos) {
-      all_values.push_back(get_x(sampleIDs[pos], varID));
+    all_values.reserve(sampleIDs.size());
+    for (size_t i = 0; i < sampleIDs.size(); ++i) {
+      all_values.push_back(get(sampleIDs[i], varID));
     }
     std::sort(all_values.begin(), all_values.end());
     all_values.erase(std::unique(all_values.begin(), all_values.end()), all_values.end());
@@ -232,14 +165,13 @@ void Data::getAllValues(std::vector<double>& all_values, std::vector<size_t>& sa
   }
 }
 
-void Data::getMinMaxValues(double& min, double&max, std::vector<size_t>& sampleIDs, size_t varID, size_t start,
-    size_t end) const {
+void Data::getMinMaxValues(double& min, double&max, std::vector<size_t>& sampleIDs, size_t varID) const {
   if (sampleIDs.size() > 0) {
-    min = get_x(sampleIDs[start], varID);
+    min = get(sampleIDs[0], varID);
     max = min;
   }
-  for (size_t pos = start; pos < end; ++pos) {
-    double value = get_x(sampleIDs[pos], varID);
+  for (size_t i = 1; i < sampleIDs.size(); ++i) {
+    double value = get(sampleIDs[i], varID);
     if (value < min) {
       min = value;
     }
@@ -260,15 +192,14 @@ void Data::sort() {
     // Get all unique values
     std::vector<double> unique_values(num_rows);
     for (size_t row = 0; row < num_rows; ++row) {
-      unique_values[row] = get_x(row, col);
+      unique_values[row] = get(row, col);
     }
     std::sort(unique_values.begin(), unique_values.end());
     unique_values.erase(unique(unique_values.begin(), unique_values.end()), unique_values.end());
 
     // Get index of unique value
     for (size_t row = 0; row < num_rows; ++row) {
-      size_t idx = std::lower_bound(unique_values.begin(), unique_values.end(), get_x(row, col))
-          - unique_values.begin();
+      size_t idx = std::lower_bound(unique_values.begin(), unique_values.end(), get(row, col)) - unique_values.begin();
       index_data[col * num_rows + row] = idx;
     }
 
@@ -281,13 +212,13 @@ void Data::sort() {
 }
 
 // TODO: Implement ordering for multiclass and survival
-// #nocov start (cannot be tested anymore because GenABEL not on CRAN)
-void Data::orderSnpLevels(bool corrected_importance) {
+void Data::orderSnpLevels(std::string dependent_variable_name, bool corrected_importance) {
   // Stop if now SNP data
   if (snp_data == 0) {
     return;
   }
 
+  size_t dependent_varID = getVariableID(dependent_variable_name);
   size_t num_snps;
   if (corrected_importance) {
     num_snps = 2 * (num_cols - num_cols_no_snp);
@@ -322,7 +253,7 @@ void Data::orderSnpLevels(bool corrected_importance) {
         value = 0;
       }
 
-      means[value] += get_y(row, 0);
+      means[value] += get(row, dependent_varID);
       ++counts[value];
     }
 
@@ -336,7 +267,6 @@ void Data::orderSnpLevels(bool corrected_importance) {
 
   order_snps = true;
 }
-// #nocov end
 
 } // namespace ranger
 

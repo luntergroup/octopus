@@ -18,12 +18,13 @@
 
 namespace ranger {
 
-void ForestProbability::loadForest(size_t num_trees,
+void ForestProbability::loadForest(size_t dependent_varID, size_t num_trees,
     std::vector<std::vector<std::vector<size_t>> >& forest_child_nodeIDs,
     std::vector<std::vector<size_t>>& forest_split_varIDs, std::vector<std::vector<double>>& forest_split_values,
     std::vector<double>& class_values, std::vector<std::vector<std::vector<double>>>& forest_terminal_class_counts,
     std::vector<bool>& is_ordered_variable) {
 
+  this->dependent_varID = dependent_varID;
   this->num_trees = num_trees;
   this->class_values = class_values;
   data->setIsOrderedVariable(is_ordered_variable);
@@ -33,7 +34,7 @@ void ForestProbability::loadForest(size_t num_trees,
   for (size_t i = 0; i < num_trees; ++i) {
     trees.push_back(
         std::make_unique<TreeProbability>(forest_child_nodeIDs[i], forest_split_varIDs[i], forest_split_values[i],
-            &this->class_values, &response_classIDs, forest_terminal_class_counts[i]));
+                                          &this->class_values, &response_classIDs, forest_terminal_class_counts[i]));
   }
 
   // Create thread ranges
@@ -50,11 +51,11 @@ std::vector<std::vector<std::vector<double>>> ForestProbability::getTerminalClas
   return result;
 }
 
-void ForestProbability::initInternal() {
+void ForestProbability::initInternal(std::string status_variable_name) {
 
   // If mtry not set, use floored square root of number of independent variables.
   if (mtry == 0) {
-    unsigned long temp = sqrt((double) num_independent_variables);
+    unsigned long temp = sqrt((double) (num_variables - 1));
     mtry = std::max((unsigned long) 1, temp);
   }
 
@@ -66,7 +67,7 @@ void ForestProbability::initInternal() {
   // Create class_values and response_classIDs
   if (!prediction_mode) {
     for (size_t i = 0; i < num_samples; ++i) {
-      double value = data->get_y(i, 0);
+      double value = data->get(i, dependent_varID);
 
       // If classID is already in class_values, use ID. Else create a new one.
       uint classID = find(class_values.begin(), class_values.end(), value) - class_values.begin();
@@ -74,10 +75,6 @@ void ForestProbability::initInternal() {
         class_values.push_back(value);
       }
       response_classIDs.push_back(classID);
-    }
-
-    if (splitrule == HELLINGER && class_values.size() != 2) {
-      throw std::runtime_error("Hellinger splitrule only implemented for binary classification.");
     }
   }
 
@@ -174,7 +171,6 @@ void ForestProbability::computePredictionErrorInternal() {
 
 // MSE with predicted probability and true data
   size_t num_predictions = 0;
-  overall_prediction_error = 0;
   for (size_t i = 0; i < predictions[0].size(); ++i) {
     if (samples_oob_count[i] > 0) {
       ++num_predictions;
@@ -265,7 +261,7 @@ void ForestProbability::writePredictionFile() {
 void ForestProbability::saveToFileInternal(std::ofstream& outfile) {
 
 // Write num_variables
-  outfile.write((char*) &num_independent_variables, sizeof(num_independent_variables));
+  outfile.write((char*) &num_variables, sizeof(num_variables));
 
 // Write treetype
   TreeType treetype = TREE_PROBABILITY;
@@ -314,9 +310,13 @@ void ForestProbability::loadFromFileInternal(std::ifstream& infile) {
       terminal_class_counts[terminal_nodes[j]] = terminal_class_counts_vector[j];
     }
 
-    // If dependent variable not in test data, throw error
-    if (num_variables_saved != num_independent_variables) {
-      throw std::runtime_error("Number of independent variables in data does not match with the loaded forest.");
+    // If dependent variable not in test data, change variable IDs accordingly
+    if (num_variables_saved > num_variables) {
+      for (auto& varID : split_varIDs) {
+        if (varID >= dependent_varID) {
+          --varID;
+        }
+      }
     }
 
     // Create tree
