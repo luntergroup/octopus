@@ -231,6 +231,8 @@ auto open_hts_writable_file(const boost::filesystem::path& path)
     const auto extension = path.extension();
     if (extension == ".bam") {
         mode += "b";
+    } else if (extension == "cram") {
+        mode += "c";
     }
     return sam_open(path.c_str(), mode.c_str());
 }
@@ -1367,7 +1369,9 @@ void HtslibSamFacade::set_fixed_length_data(const AlignedRead& read, bam1_t* res
     if (read.has_other_segment()) {
         set_segment(read, hts_targets_.at(read.next_segment().contig_name()), result);
     } else {
-        result->core.mtid = '*';
+        result->core.mtid = -1;
+        result->core.mpos = 0;
+        result->core.isize = 0;
     }
 }
 
