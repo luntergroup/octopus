@@ -27,6 +27,8 @@ template <typename Genotype_, typename GenotypeIndex_, typename GenotypePriorMod
 class SubcloneModelBase
 {
 public:
+    constexpr static unsigned max_ploidy = 100;
+    
     struct AlgorithmParameters
     {
         unsigned max_iterations = 1000;
@@ -316,7 +318,8 @@ run_variational_bayes_helper(const std::vector<SampleName>& samples,
     return expand<K, G, GI, GPM>(vb_results, samples, std::move(genotype_log_priors));
 }
 
-template <typename G, typename GI, typename GPM>
+template <typename G, typename GI, typename GPM,
+          std::size_t... Is>
 typename SubcloneModelBase<G, GI, GPM>::InferredLatents
 run_variational_bayes_helper(const std::vector<SampleName>& samples,
                              const std::vector<G>& genotypes,
@@ -324,33 +327,29 @@ run_variational_bayes_helper(const std::vector<SampleName>& samples,
                              LogProbabilityVector genotype_log_priors,
                              const HaplotypeLikelihoodArray& haplotype_log_likelihoods,
                              const typename SubcloneModelBase<G, GI, GPM>::AlgorithmParameters& params,
-                             std::vector<LogProbabilityVector>&& seeds)
+                             std::vector<LogProbabilityVector>&& seeds,
+                             std::index_sequence<Is...>)
 {
-    using std::move;
-    switch (genotypes.front().ploidy()) {
-        case 1: return run_variational_bayes_helper<1, G, GI, GPM>(samples, genotypes, prior_alphas, move(genotype_log_priors),
-                                                                   haplotype_log_likelihoods, params, move(seeds));
-        case 2: return run_variational_bayes_helper<2, G, GI, GPM>(samples, genotypes, prior_alphas, move(genotype_log_priors),
-                                                                   haplotype_log_likelihoods, params, move(seeds));
-        case 3: return run_variational_bayes_helper<3, G, GI, GPM>(samples, genotypes, prior_alphas, move(genotype_log_priors),
-                                                                   haplotype_log_likelihoods, params, move(seeds));
-        case 4: return run_variational_bayes_helper<4, G, GI, GPM>(samples, genotypes, prior_alphas, move(genotype_log_priors),
-                                                                   haplotype_log_likelihoods, params, move(seeds));
-        case 5: return run_variational_bayes_helper<5, G, GI, GPM>(samples, genotypes, prior_alphas, move(genotype_log_priors),
-                                                                   haplotype_log_likelihoods, params, move(seeds));
-        case 6: return run_variational_bayes_helper<6, G, GI, GPM>(samples, genotypes, prior_alphas, move(genotype_log_priors),
-                                                                   haplotype_log_likelihoods, params, move(seeds));
-        case 7: return run_variational_bayes_helper<7, G, GI, GPM>(samples, genotypes, prior_alphas, move(genotype_log_priors),
-                                                                   haplotype_log_likelihoods, params, move(seeds));
-        case 8: return run_variational_bayes_helper<8, G, GI, GPM>(samples, genotypes, prior_alphas, move(genotype_log_priors),
-                                                                   haplotype_log_likelihoods, params, move(seeds));
-        case 9: return run_variational_bayes_helper<9, G, GI, GPM>(samples, genotypes, prior_alphas, move(genotype_log_priors),
-                                                                   haplotype_log_likelihoods, params, move(seeds));
-        case 10: return run_variational_bayes_helper<10, G, GI, GPM>(samples, genotypes, prior_alphas, move(genotype_log_priors),
-                                                                     haplotype_log_likelihoods, params, move(seeds));
-        default: throw UnimplementedFeatureError {"ploidies above 10", "SubcloneModel"};
+    constexpr auto max_ploidy = std::index_sequence<Is...>::size();
+    const auto ploidy = genotypes.front().ploidy();
+    if (ploidy > max_ploidy) {
+        throw UnimplementedFeatureError {"ploidies above " + std::to_string(max_ploidy), "SubcloneModel"};
     }
+    typename SubcloneModelBase<G, GI, GPM>::InferredLatents result;
+    int unused[] = {(ploidy == Is ?
+                    (result = run_variational_bayes_helper<Is, G, GI, GPM>(samples, genotypes, prior_alphas, std::move(genotype_log_priors),
+                                                                            haplotype_log_likelihoods, params, std::move(seeds))
+                                                                            , 0) : 0)...};
+    (void) unused;
+    return result;
 }
+
+template<std::size_t N, std::size_t... Seq>
+constexpr std::index_sequence<N + Seq ...>
+add(std::index_sequence<Seq...>) { return {}; }
+
+template<std::size_t Min, std::size_t Max>
+using make_index_range = decltype(add<Min>(std::make_index_sequence<Max - Min>()));
 
 template <typename G, typename GI, typename GPM>
 typename SubcloneModelBase<G, GI, GPM>::InferredLatents
@@ -361,10 +360,12 @@ run_variational_bayes(const std::vector<SampleName>& samples,
                       const typename SubcloneModelBase<G, GI, GPM>::AlgorithmParameters& params,
                       boost::optional<IndexData<GI>> index_data = boost::none)
 {
+    constexpr auto max_ploidy = SubcloneModelBase<G, GI, GPM>::max_ploidy;
     auto genotype_log_priors = evaluate_genotype_priors<G, GI, GPM>(genotypes, priors, index_data);
     auto seeds = generate_seeds(samples, genotypes, genotype_log_priors, haplotype_log_likelihoods, priors, params.max_seeds, index_data);
     return run_variational_bayes_helper<G, GI, GPM>(samples, genotypes, priors.alphas, std::move(genotype_log_priors),
-                                                    haplotype_log_likelihoods, params, std::move(seeds));
+                                                    haplotype_log_likelihoods, params, std::move(seeds),
+                                                    make_index_range<1, max_ploidy + 1> {});
 }
 
 } // namespace detail
