@@ -38,6 +38,17 @@ PolycloneCaller::PolycloneCaller(Caller::Components&& components,
     if (parameters_.max_clones < 1) {
         throw std::logic_error {"PolycloneCaller: max_clones must be > 1"};
     }
+    if (parameters_.max_clones > model::SubcloneModel::max_ploidy) {
+        static std::atomic_bool warned {false};
+        if (!warned) {
+            warned = true;
+            logging::WarningLogger log {};
+            stream(log) << "Maximum supported clonality is "
+                            << model::SubcloneModel::max_ploidy
+                            << " but " << parameters_.max_clones << " was requested";
+        }
+        parameters_.max_clones = model::SubcloneModel::max_ploidy;
+    }
 }
 
 std::string PolycloneCaller::do_name() const
