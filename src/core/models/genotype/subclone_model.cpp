@@ -301,8 +301,7 @@ generate_seeds(const std::vector<SampleName>& samples,
         } else {
             latents = germline_model.evaluate(genotypes, haplotype_log_likelihoods);
         }
-        result.push_back(latents.posteriors.genotype_probabilities);
-        maths::log_each(result.back());
+        result.push_back(latents.posteriors.genotype_log_probabilities);
     }
     return result;
 }

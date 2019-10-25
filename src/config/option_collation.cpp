@@ -964,10 +964,15 @@ bool is_single_cell_calling(const OptionMap& options)
     return options.at("caller").as<std::string>() == "cell";
 }
 
+auto get_min_credible_vaf_probability(const OptionMap& options)
+{
+    return options.at("min-candidate-credible-vaf-probability").as<float>();
+}
+
 auto get_default_somatic_inclusion_predicate(const OptionMap& options, boost::optional<SampleName> normal = boost::none)
 {
     const auto min_credible_vaf = options.at("min-credible-somatic-frequency").as<float>();
-    const auto min_credible_vaf_probability = options.at("min-candidate-credible-vaf-probability").as<float>();
+    const auto min_credible_vaf_probability = get_min_credible_vaf_probability(options);
     if (normal) {
         return coretools::UnknownCopyNumberInclusionPredicate {*normal, min_credible_vaf, min_credible_vaf_probability};
     } else {
@@ -982,7 +987,9 @@ double get_min_clone_vaf(const OptionMap& options)
 
 auto get_default_polyclone_inclusion_predicate(const OptionMap& options)
 {
-    return coretools::UnknownCopyNumberInclusionPredicate {get_min_clone_vaf(options)};
+    const auto min_vaf = get_min_clone_vaf(options);
+    const auto min_vaf_probability = get_min_credible_vaf_probability(options);
+    return coretools::UnknownCopyNumberInclusionPredicate {min_vaf, min_vaf_probability};
 }
 
 auto get_default_single_cell_inclusion_predicate(const OptionMap& options)
@@ -999,7 +1006,7 @@ coretools::CigarScanner::Options::InclusionPredicate get_candidate_variant_inclu
         }
         return get_default_somatic_inclusion_predicate(options, normal);
     } else if (is_polyclone_calling(options)) {
-        return get_default_somatic_inclusion_predicate(options);
+        return get_default_polyclone_inclusion_predicate(options);
     } else if (is_single_cell_calling(options)) {
         return get_default_single_cell_inclusion_predicate(options);
     } else {
@@ -2064,13 +2071,6 @@ make_call_filter_factory(const ReferenceGenome& reference, ReadPipe& read_pipe, 
                 } else {
                     logging::WarningLogger log {};
                     log << "Both germline and somatic forests must be provided for random forest cancer variant filtering";
-                }
-            } else if (caller == "trio") {
-                if (options.at("denovos-only").as<bool>()) {
-                    forest_types.front() = RandomForestFilterFactory::ForestType::denovo;
-                } else if (is_set("somatic-forest-file", options)) {
-                    forest_files.push_back(resolve_path(options.at("somatic-forest-file").as<fs::path>(), options));
-                    forest_types.push_back(RandomForestFilterFactory::ForestType::denovo);
                 }
             }
             result = std::make_unique<RandomForestFilterFactory>(std::move(forest_files), std::move(forest_types), *temp_directory, forest_options);

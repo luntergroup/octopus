@@ -231,6 +231,8 @@ auto open_hts_writable_file(const boost::filesystem::path& path)
     const auto extension = path.extension();
     if (extension == ".bam") {
         mode += "b";
+    } else if (extension == "cram") {
+        mode += "c";
     }
     return sam_open(path.c_str(), mode.c_str());
 }
@@ -1183,7 +1185,9 @@ void set_segment(const AlignedRead& read, const std::int32_t tid, bam1_t* result
 
 auto name_bytes(const AlignedRead& read) noexcept
 {
-    return read.name().size() + 1 + read.name().size() % 4;
+    auto result = read.name().size() + 1;
+    if (result % 4 > 0) result +=  4 - (result % 4); // next address must be 4-byte aligned
+    return result;
 }
 
 auto sequence_bytes(const AlignedRead& read) noexcept
@@ -1250,9 +1254,10 @@ void set_name(const AlignedRead& read, bam1_t* result)
 {
     const auto& name = read.name();
     std::copy(std::cbegin(name), std::cend(name), result->data);
-    result->core.l_extranul = name.size() % 4;
-    result->core.l_qname = name.size() + result->core.l_extranul + 1;
-    result->l_data += name_bytes(read);
+    result->core.l_qname = name.size() + 1;
+    result->core.l_extranul = (result->core.l_qname % 4 > 0) ? 4 - (result->core.l_qname % 4) : 0; // next address must be 4 byte aligned
+    result->core.l_qname += result->core.l_extranul;
+    result->l_data += result->core.l_qname;
 }
 
 void set_cigar(const AlignedRead& read, bam1_t* result) noexcept
@@ -1367,7 +1372,9 @@ void HtslibSamFacade::set_fixed_length_data(const AlignedRead& read, bam1_t* res
     if (read.has_other_segment()) {
         set_segment(read, hts_targets_.at(read.next_segment().contig_name()), result);
     } else {
-        result->core.mtid = '*';
+        result->core.mtid = -1;
+        result->core.mpos = 0;
+        result->core.isize = 0;
     }
 }
 
