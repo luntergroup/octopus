@@ -978,6 +978,23 @@ bool is_max_zygosity(const Genotype<MappableType>& genotype)
 }
 
 std::size_t num_max_zygosity_genotypes(unsigned num_elements, unsigned ploidy);
+boost::optional<std::size_t> num_max_zygosity_genotypes_nothrow(unsigned num_elements, unsigned ploidy) noexcept;
+
+template <typename Range>
+void
+generate_all_max_zygosity_genotypes(std::vector<Genotype<detail::value_type_t<typename Range::value_type>>>& result,
+                                    const Range& elements, const unsigned ploidy)
+{
+    if (elements.size() >= ploidy) {
+        try {
+            result.reserve(num_max_zygosity_genotypes(elements.size(), ploidy));
+        } catch (const std::overflow_error& e) {
+            result.reserve(std::numeric_limits<std::size_t>::max()); // Probably this will throw a bad_alloc
+        }
+        generate_all_genotypes(elements, ploidy, [ploidy] (const auto& genotype) { return genotype.zygosity() == ploidy; },
+                               std::back_inserter(result));
+    }
+}
 
 template <typename Range>
 auto
@@ -985,11 +1002,25 @@ generate_all_max_zygosity_genotypes(const Range& elements, const unsigned ploidy
 {
     using MappableType = detail::value_type_t<typename Range::value_type>;
     std::vector<Genotype<MappableType>> result {};
-    if (elements.size() < ploidy) return result;
-    result.reserve(num_max_zygosity_genotypes(elements.size(), ploidy));
-    generate_all_genotypes(elements, ploidy, [ploidy] (const auto& genotype) { return genotype.zygosity() == ploidy; },
-                           std::back_inserter(result));
+    generate_all_max_zygosity_genotypes(result, elements, ploidy);
     return result;
+}
+
+template <typename Range>
+void
+generate_all_max_zygosity_genotypes(std::vector<Genotype<detail::value_type_t<typename Range::value_type>>>& result,
+                                    std::vector<GenotypeIndex>& indices,
+                                    const Range& elements, const unsigned ploidy)
+{
+    if (elements.size() >= ploidy) {
+        try {
+            result.reserve(num_max_zygosity_genotypes(elements.size(), ploidy));
+        } catch (const std::overflow_error& e) {
+            result.reserve(std::numeric_limits<std::size_t>::max()); // Probably this will throw a bad_alloc
+        }
+        generate_all_genotypes(elements, ploidy, [ploidy] (const auto& genotype) { return genotype.zygosity() == ploidy; },
+                               std::back_inserter(result), indices);
+    }
 }
 
 template <typename Range>
@@ -999,11 +1030,62 @@ generate_all_max_zygosity_genotypes(const Range& elements, const unsigned ploidy
 {
     using MappableType = detail::value_type_t<typename Range::value_type>;
     std::vector<Genotype<MappableType>> result {};
-    if (elements.size() < ploidy) return result;
-    result.reserve(num_max_zygosity_genotypes(elements.size(), ploidy));
-    generate_all_genotypes(elements, ploidy, [ploidy] (const auto& genotype) { return genotype.zygosity() == ploidy; },
-                           std::back_inserter(result), indices);
+    generate_all_max_zygosity_genotypes(result, indices, elements, ploidy);
     return result;
+}
+
+template <typename UnaryPredicate>
+std::vector<Genotype<Haplotype>>
+extend_genotypes(const std::vector<Genotype<Haplotype>>& genotypes,
+                 const std::vector<Haplotype>& haplotypes,
+                 UnaryPredicate selector)
+{
+    std::vector<std::shared_ptr<Haplotype>> temp_pointers(haplotypes.size());
+    std::transform(std::cbegin(haplotypes), std::cend(haplotypes), std::begin(temp_pointers),
+                   [] (const auto& haplotype) { return std::make_shared<Haplotype>(haplotype); });
+    std::vector<Genotype<Haplotype>> result {};
+    result.reserve(genotypes.size() * haplotypes.size());
+    for (const auto& genotype : genotypes) {
+        for (const auto& haplotype_ptr : temp_pointers) {
+            if (selector(genotype, *haplotype_ptr)) {
+                auto extended_genotype = genotype;
+                extended_genotype.emplace(haplotype_ptr);
+                result.push_back(std::move(extended_genotype));
+            }
+        }
+    }
+    return result;
+}
+
+template <typename UnaryPredicate>
+std::pair<std::vector<Genotype<Haplotype>>, std::vector<GenotypeIndex>>
+extend_genotypes(const std::vector<Genotype<Haplotype>>& genotypes,
+                 const std::vector<GenotypeIndex>& indices,
+                 const std::vector<Haplotype>& haplotypes,
+                 UnaryPredicate selector)
+{
+    std::vector<std::shared_ptr<Haplotype>> temp_pointers(haplotypes.size());
+    std::transform(std::cbegin(haplotypes), std::cend(haplotypes), std::begin(temp_pointers),
+                   [] (const auto& haplotype) { return std::make_shared<Haplotype>(haplotype); });
+    std::vector<Genotype<Haplotype>> extended_genotypes {};
+    std::vector<GenotypeIndex> extended_indices {};
+    const auto max_extended_genotypes = genotypes.size() * haplotypes.size();
+    extended_genotypes.reserve(max_extended_genotypes);
+    extended_indices.reserve(max_extended_genotypes);
+    for (std::size_t g {0}; g < genotypes.size(); ++g) {
+        for (std::size_t h {0}; h < haplotypes.size(); ++h) {
+            const auto& haplotype_ptr = temp_pointers[h];
+            if (selector(genotypes[g], haplotypes[h])) {
+                auto extended_genotype = genotypes[g];
+                extended_genotype.emplace(haplotype_ptr);
+                extended_genotypes.push_back(std::move(extended_genotype));
+                auto new_index = indices[g];
+                new_index.push_back(h);
+                extended_indices.push_back(std::move(new_index));
+            }
+        }
+    }
+    return std::make_pair(std::move(extended_genotypes), std::move(extended_indices));
 }
 
 namespace detail {

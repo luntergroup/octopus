@@ -133,10 +133,10 @@ private:
     std::vector<Genotype<Haplotype>> haploid_genotypes_, polyploid_genotypes_;
     HaploidModelInferences haploid_model_inferences_;
     SubloneModelInferences subclone_model_inferences_;
-    PolycloneCaller::ModelProbabilities model_posteriors_;
+    PolycloneCaller::ModelProbabilities model_log_posteriors_;
     SampleName sample_;
     
-    mutable std::shared_ptr<GenotypeProbabilityMap> genotype_posteriors_;
+    mutable std::shared_ptr<GenotypeProbabilityMap> genotype_posteriors_, genotype_log_posteriors_;
     mutable std::shared_ptr<HaplotypeProbabilityMap> haplotype_posteriors_;
     
     friend PolycloneCaller;
