@@ -101,6 +101,9 @@ using SubcloneModel = SubcloneModelBase<Genotype<Haplotype>, GenotypeIndex, Geno
 using SomaticSubcloneModel = SubcloneModelBase<CancerGenotype<Haplotype>, CancerGenotypeIndex, CancerGenotypePriorModel>;
 
 template <typename G, typename GI, typename GPM>
+constexpr unsigned SubcloneModelBase<G, GI, GPM>::max_ploidy;
+
+template <typename G, typename GI, typename GPM>
 SubcloneModelBase<G, GI, GPM>::SubcloneModelBase(std::vector<SampleName> samples, Priors priors)
 : SubcloneModelBase {std::move(samples), std::move(priors), AlgorithmParameters {}}
 {}
