@@ -337,11 +337,12 @@ def read_pedigree(vcf_filename):
         return Path(options[options.index('--pedigree') + 1])
     return None
 
-def eval_octopus(octopus, rtg, example, out_dir, threads, kind="germline"):
+def eval_octopus(octopus, rtg, example, out_dir, threads, kind="germline", overwrite=False):
     if example.reads is not None:
         octopus_vcf = out_dir / get_octopus_output_filename(example.reference, example.reads, kind=kind)
-        run_octopus(octopus, example.reference, example.reads, example.regions, threads, octopus_vcf,
-                    config=example.config, octopus_vcf=example.octopus_vcf, kind=kind)
+        if overwrite or not octopus_vcf.exists():
+            run_octopus(octopus, example.reference, example.reads, example.regions, threads, octopus_vcf,
+                        config=example.config, octopus_vcf=example.octopus_vcf, kind=kind)
     else:
         assert example.octopus_vcf is not None
         octopus_vcf = example.octopus_vcf
@@ -352,22 +353,25 @@ def eval_octopus(octopus, rtg, example, out_dir, threads, kind="germline"):
     result = []
     if len(samples) == 1:
         vcfeval_dir = out_dir / (octopus_vcf.stem + "." + '.eval')
-        if vcfeval_dir.exists(): shutil.rmtree(vcfeval_dir)
-        run_rtg(rtg, example.sdf, example.truth, example.confident, octopus_vcf, vcfeval_dir, bed_regions=example.regions, kind=kind)
+        if not vcfeval_dir.exists() or overwrite:
+            if vcfeval_dir.exists(): shutil.rmtree(vcfeval_dir)
+            run_rtg(rtg, example.sdf, example.truth, example.confident, octopus_vcf, vcfeval_dir, bed_regions=example.regions, kind=kind)
         result.append(vcfeval_dir)
     elif kind == "somatic":
         for sample in samples:
             if not is_normal_sample(sample, octopus_vcf):
                 vcfeval_dir = out_dir / (octopus_vcf.stem + "." + sample + '.eval')
-                if vcfeval_dir.exists(): shutil.rmtree(vcfeval_dir)
-                run_rtg(rtg, example.sdf, example.truth, example.confident, octopus_vcf, vcfeval_dir, bed_regions=example.regions, sample=sample, kind=kind)
+                if not vcfeval_dir.exists() or overwrite:
+                    if vcfeval_dir.exists(): shutil.rmtree(vcfeval_dir)
+                    run_rtg(rtg, example.sdf, example.truth, example.confident, octopus_vcf, vcfeval_dir, bed_regions=example.regions, sample=sample, kind=kind)
                 result.append(vcfeval_dir)
     else:
         for sample in samples:
             if sample in example.truth:
                 vcfeval_dir = out_dir / (octopus_vcf.stem + "." + sample + '.eval')
-                if vcfeval_dir.exists(): shutil.rmtree(vcfeval_dir)
-                run_rtg(rtg, example.sdf, example.truth[sample], example.confident[sample], octopus_vcf, vcfeval_dir, bed_regions=example.regions, sample=sample, kind=kind)
+                if not vcfeval_dir.exists() or overwrite:
+                    if vcfeval_dir.exists(): shutil.rmtree(vcfeval_dir)
+                    run_rtg(rtg, example.sdf, example.truth[sample], example.confident[sample], octopus_vcf, vcfeval_dir, bed_regions=example.regions, sample=sample, kind=kind)
                 result.append(vcfeval_dir)
     return result
 
@@ -484,7 +488,7 @@ def main(options):
     options.out.mkdir(parents=True, exist_ok=True)
     data_files, tmp_files = [], []
     for example in examples:
-        vcfeval_dirs = eval_octopus(options.octopus, options.rtg, example, options.out, options.threads, kind=options.kind)
+        vcfeval_dirs = eval_octopus(options.octopus, options.rtg, example, options.out, options.threads, kind=options.kind, overwrite=options.overwrite)
         for vcfeval_dir in vcfeval_dirs:
             tp_vcf_path = vcfeval_dir / "tp.vcf.gz"
             tp_train_vcf_path = Path(str(tp_vcf_path).replace("tp.vcf", "tp.train.vcf"))
@@ -564,5 +568,9 @@ if __name__ == '__main__':
                         type=str,
                         default='germline',
                         help='Kind of random forest to train [germline, somatic]')
+    parser.add_argument('--overwrite',
+                        default=False,
+                        help='Overwrite existing calls and evaluation files',
+                        action='store_true')
     parsed, unparsed = parser.parse_known_args()
     main(parsed)
