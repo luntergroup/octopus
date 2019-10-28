@@ -80,6 +80,7 @@ private:
     std::function<std::int8_t(std::vector<Measure::ResultType>)> chooser_;
     std::size_t num_chooser_measures_;
     Options options_;
+    ConcurrencyPolicy threading_;
     
     mutable std::vector<std::vector<File>> data_;
     mutable std::size_t num_records_;

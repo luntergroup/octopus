@@ -84,6 +84,7 @@ RandomForestFilter::RandomForestFilter(FacetFactory facet_factory,
 , chooser_ {std::move(chooser)}
 , num_chooser_measures_ {chooser_measures.size()}
 , options_ {std::move(options)}
+, threading_ {threading}
 , num_records_ {0}
 , data_buffer_ {}
 {
@@ -319,10 +320,11 @@ void RandomForestFilter::prepare_for_classification(boost::optional<Log>& log) c
             if (forest_choice_itr != std::cend(choices_[sample_idx])) {
                 const auto& file = data_[forest_idx][sample_idx];
                 std::vector<std::string> tmp {}, cat_vars {};
+                const auto ranger_threads = threading_.max_threads ? *threading_.max_threads : 1u;
                 const auto forest = make_forest();
                 try {
                     forest->initCpp("", ranger::MemoryMode::MEM_DOUBLE, file.path.string(), 0, ranger_prefix.string(),
-                                    1000, nullptr, 12, 1, forest_paths_[forest_idx].string(), ranger::ImportanceMode::IMP_GINI, 1, "",
+                                    1000, nullptr, 12, ranger_threads, forest_paths_[forest_idx].string(), ranger::ImportanceMode::IMP_GINI, 1, "",
                                     tmp, "", true, cat_vars, false, ranger::SplitRule::LOGRANK, "", false, 1.0,
                                     ranger::DEFAULT_ALPHA, ranger::DEFAULT_MINPROP, false,
                                     ranger::PredictionType::RESPONSE, ranger::DEFAULT_NUM_RANDOM_SPLITS, ranger::DEFAULT_MAXDEPTH);
