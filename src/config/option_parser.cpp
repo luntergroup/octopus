@@ -544,8 +544,8 @@ OptionMap parse_options(const int argc, const char** argv)
      "Use independent genotype priors for joint calling")
     
     ("model-posterior",
-     po::bool_switch()->default_value(false),
-     "Calculate model posteriors for every call")
+     po::value<ModelPosteriorPolicy>()->default_value(ModelPosteriorPolicy::special),
+     "Policy for calculating model posteriors for variant calls [ALL, OFF, SPECIAL]")
     
     ("disable-inactive-flank-scoring",
      po::bool_switch()->default_value(false),
@@ -1499,6 +1499,36 @@ std::ostream& operator<<(std::ostream& out, const ReadDeduplicationDetectionPoli
             break;
         case ReadDeduplicationDetectionPolicy::aggressive:
             out << "AGGRESSIVE";
+            break;
+    }
+    return out;
+}
+
+std::istream& operator>>(std::istream& in, ModelPosteriorPolicy& result)
+{
+    std::string token;
+    in >> token;
+    if (token == "ALL")
+        result = ModelPosteriorPolicy::all;
+    else if (token == "OFF")
+        result = ModelPosteriorPolicy::off;
+    else if (token == "SPECIAL")
+        result = ModelPosteriorPolicy::special;
+    else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token, "model-posterior"};
+    return in;
+}
+
+std::ostream& operator<<(std::ostream& out, const ModelPosteriorPolicy& policy)
+{
+    switch (policy) {
+        case ModelPosteriorPolicy::all:
+            out << "ALL";
+            break;
+        case ModelPosteriorPolicy::off:
+            out << "OFF";
+            break;
+        case ModelPosteriorPolicy::special:
+            out << "SPECIAL";
             break;
     }
     return out;

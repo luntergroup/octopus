@@ -41,6 +41,7 @@ enum class ReadLinkage { none, paired, linked };
 enum class CandidateVariantDiscoveryProtocol { illumina, pacbio };
 enum class RealignedBAMType { full, mini };
 enum class ReadDeduplicationDetectionPolicy { relaxed, aggressive };
+enum class ModelPosteriorPolicy { all, off, special };
 
 std::istream& operator>>(std::istream& in, ContigOutputOrder& order);
 std::ostream& operator<<(std::ostream& os, const ContigOutputOrder& order);
@@ -66,6 +67,8 @@ std::istream& operator>>(std::istream& in, RealignedBAMType& type);
 std::ostream& operator<<(std::ostream& os, const RealignedBAMType& type);
 std::istream& operator>>(std::istream& in, ReadDeduplicationDetectionPolicy& type);
 std::ostream& operator<<(std::ostream& os, const ReadDeduplicationDetectionPolicy& type);
+std::istream& operator>>(std::istream& in, ModelPosteriorPolicy& policy);
+std::ostream& operator<<(std::ostream& os, const ModelPosteriorPolicy& policy);
 
 std::ostream& operator<<(std::ostream& os, const OptionMap& options);
 std::string to_string(const OptionMap& options, bool one_line = false, bool mark_modified = true);

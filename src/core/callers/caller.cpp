@@ -928,7 +928,8 @@ void Caller::set_model_posteriors(std::vector<CallWrapper>& calls, const Latents
                                   const HaplotypeBlock& haplotypes,
                                   const HaplotypeLikelihoodArray& haplotype_likelihoods) const
 {
-    if (parameters_.allow_model_filtering || requires_model_evaluation(calls)) {
+    if (parameters_.model_posterior_policy == ModelPosteriorPolicy::all
+        || (parameters_.model_posterior_policy == ModelPosteriorPolicy::special && requires_model_evaluation(calls))) {
         const auto mp = calculate_model_posterior(haplotypes, haplotype_likelihoods, latents);
         if (mp) {
             for (auto& call : calls) {

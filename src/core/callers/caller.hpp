@@ -46,6 +46,7 @@ public:
     using CallTypeSet = std::set<std::type_index>;
     
     enum class RefCallType { none, blocked, positional };
+    enum class ModelPosteriorPolicy { all, off, special };
     
     struct Components
     {
@@ -65,7 +66,7 @@ public:
         bool call_sites_only;
         unsigned max_haplotypes;
         Phred<double> haplotype_extension_threshold, saturation_limit;
-        bool allow_model_filtering;
+        ModelPosteriorPolicy model_posterior_policy;
         bool protect_reference_haplotype;
         boost::optional<MemoryFootprint> target_max_memory;
         ExecutionPolicy execution_policy;

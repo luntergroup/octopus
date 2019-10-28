@@ -1831,9 +1831,13 @@ public:
     UnimplementedCaller(std::string caller) : caller_ {caller} {}
 };
 
-bool allow_model_filtering(const OptionMap& options)
+Caller::ModelPosteriorPolicy get_model_posterior_policy(const OptionMap& options)
 {
-    return options.count("model-posterior") == 1 && options.at("model-posterior").as<bool>();
+    switch (options.at("model-posterior").as<ModelPosteriorPolicy>()) {
+        case ModelPosteriorPolicy::all: return Caller::ModelPosteriorPolicy::all;
+        case ModelPosteriorPolicy::off: return Caller::ModelPosteriorPolicy::off;
+        case ModelPosteriorPolicy::special: return Caller::ModelPosteriorPolicy::special;
+    }
 }
 
 auto get_normal_contamination_risk(const OptionMap& options)
@@ -1965,7 +1969,7 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
         vc_builder.set_somatic_snv_mutation_rate(options.at("somatic-snv-mutation-rate").as<float>());
         vc_builder.set_somatic_indel_mutation_rate(options.at("somatic-indel-mutation-rate").as<float>());
     }
-    vc_builder.set_model_filtering(allow_model_filtering(options));
+    vc_builder.set_model_posterior_policy(get_model_posterior_policy(options));
     vc_builder.set_max_genotypes(as_unsigned("max-genotypes", options));
     if (is_set("max-vb-seeds", options)) vc_builder.set_max_vb_seeds(as_unsigned("max-vb-seeds", options));
     if (is_fast_mode(options)) {

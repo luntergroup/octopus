@@ -62,7 +62,7 @@ public:
     CallerBuilder& set_min_refcall_posterior(Phred<double> posterior) noexcept;
     CallerBuilder& set_max_haplotypes(unsigned n) noexcept;
     CallerBuilder& set_haplotype_extension_threshold(Phred<double> p) noexcept;
-    CallerBuilder& set_model_filtering(bool b) noexcept;
+    CallerBuilder& set_model_posterior_policy(Caller::ModelPosteriorPolicy policy) noexcept;
     CallerBuilder& set_min_phase_score(Phred<double> score) noexcept;
     CallerBuilder& set_snp_heterozygosity(double heterozygosity) noexcept;
     CallerBuilder& set_indel_heterozygosity(double heterozygosity) noexcept;
