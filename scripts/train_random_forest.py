@@ -435,7 +435,7 @@ def run_ranger_training(ranger, data_path, hyperparameters, threads, out, seed=N
 
 def run_ranger_prediction(ranger, forest, data_path, threads, out):
     cmd = [str(ranger), '--file', str(data_path), '--predict', str(forest),
-           '--nthreads', str(threads), '--outprefix', str(out), '--verbose']
+           '--probability', '--nthreads', str(threads), '--outprefix', str(out), '--verbose']
     sp.call(cmd)
 
 def read_predictions(prediction_fname):
