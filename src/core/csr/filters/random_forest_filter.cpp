@@ -95,8 +95,8 @@ std::string RandomForestFilter::do_name() const
     return "random forest";
 }
 
-const std::string RandomForestFilter::genotype_quality_name_ = "RFQUAL";
-const std::string RandomForestFilter::call_quality_name_ = "RFQUAL_ALL";
+const std::string RandomForestFilter::genotype_quality_name_ = "RFGQ";
+const std::string RandomForestFilter::call_quality_name_ = "RFGQ_ALL";
 
 std::unique_ptr<ranger::Forest> RandomForestFilter::make_forest() const
 {
@@ -115,7 +115,7 @@ boost::optional<std::string> RandomForestFilter::call_quality_name() const
 
 void RandomForestFilter::annotate(VcfHeader::Builder& header) const
 {
-    header.add_info(call_quality_name_, "1", "Float", "Combined quality score for call using product of sample RFQUAL");
+    header.add_info(call_quality_name_, "1", "Float", "Combined quality score for call using product of sample RFQQ");
     header.add_format(genotype_quality_name_, "1", "Float", "Empirical quality score from random forest classifier");
     header.add_filter("RF", "Random Forest filtered");
 }
