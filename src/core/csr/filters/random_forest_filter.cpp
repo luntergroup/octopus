@@ -321,7 +321,7 @@ void RandomForestFilter::prepare_for_classification(boost::optional<Log>& log) c
                 std::vector<std::string> tmp {}, cat_vars {};
                 const auto forest = make_forest();
                 try {
-                    forest->initCpp("TP", ranger::MemoryMode::MEM_DOUBLE, file.path.string(), 0, ranger_prefix.string(),
+                    forest->initCpp("", ranger::MemoryMode::MEM_DOUBLE, file.path.string(), 0, ranger_prefix.string(),
                                     1000, nullptr, 12, 1, forest_paths_[forest_idx].string(), ranger::ImportanceMode::IMP_GINI, 1, "",
                                     tmp, "", true, cat_vars, false, ranger::SplitRule::LOGRANK, "", false, 1.0,
                                     ranger::DEFAULT_ALPHA, ranger::DEFAULT_MINPROP, false,
