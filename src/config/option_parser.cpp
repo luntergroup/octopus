@@ -176,6 +176,10 @@ OptionMap parse_options(const int argc, const char** argv)
     ("very-fast",
      po::bool_switch()->default_value(false),
      "Same as --fast but also disables inactive flank scoring")
+    
+    ("bad-region-tolerance",
+     po::value<BadRegionTolerance>()->default_value(BadRegionTolerance::normal),
+     "Tolerance for skipping regions that are considered unlikely to be callable [LOW, NORMAL, HIGH, UNLIMITED]")
     ;
     
     po::options_description read_preprocessing("Read preprocessing");
@@ -467,10 +471,6 @@ OptionMap parse_options(const int argc, const char** argv)
     ("dont-protect-reference-haplotype",
      po::bool_switch()->default_value(false),
      "Do not protect the reference haplotype from filtering")
-    
-    ("bad-region-tolerance",
-     po::value<BadRegionTolerance>()->default_value(BadRegionTolerance::normal),
-     "Tolerance for skipping regions that are considered unlikely to be callable [LOW, NORMAL, HIGH, UNLIMITED]")
     ;
     
     po::options_description general_variant_calling("Variant calling (general)");
