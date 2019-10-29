@@ -129,9 +129,16 @@ fs::path get_working_directory(const OptionMap& options)
     return fs::current_path();
 }
 
+SymblinkResolvePolicy get_symlink_resolve_policy(const OptionMap& options)
+{
+    return options.at("resolve-symlinks").as<bool>() ? SymblinkResolvePolicy::resolve : SymblinkResolvePolicy::dont_resolve;
+}
+
 fs::path resolve_path(const fs::path& path, const OptionMap& options)
 {
-    return ::octopus::resolve_path(path, get_working_directory(options));
+    const auto wd_policy = WorkingDirectoryResolvePolicy::prefer_working_directory;
+    const auto symlink_policy = get_symlink_resolve_policy(options);
+    return ::octopus::resolve_path(path, get_working_directory(options), wd_policy, symlink_policy);
 }
 
 struct Line

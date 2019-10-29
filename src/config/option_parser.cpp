@@ -67,6 +67,10 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<fs::path>(),
      "Sets the working directory")
     
+    ("resolve-symlinks",
+     po::bool_switch()->default_value(false),
+     "Replace all symlinks to their resolved targets during startup")
+    
     ("threads",
      po::value<int>()->implicit_value(0),
      "Maximum number of threads to be used. If no argument is provided unlimited threads are assumed")
