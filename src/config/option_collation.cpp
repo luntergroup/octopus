@@ -1833,11 +1833,13 @@ public:
 
 Caller::ModelPosteriorPolicy get_model_posterior_policy(const OptionMap& options)
 {
+    Caller::ModelPosteriorPolicy result {};
     switch (options.at("model-posterior").as<ModelPosteriorPolicy>()) {
-        case ModelPosteriorPolicy::all: return Caller::ModelPosteriorPolicy::all;
-        case ModelPosteriorPolicy::off: return Caller::ModelPosteriorPolicy::off;
-        case ModelPosteriorPolicy::special: return Caller::ModelPosteriorPolicy::special;
+        case ModelPosteriorPolicy::all: result = Caller::ModelPosteriorPolicy::all;
+        case ModelPosteriorPolicy::off: result = Caller::ModelPosteriorPolicy::off;
+        case ModelPosteriorPolicy::special: result = Caller::ModelPosteriorPolicy::special;
     }
+    return result;
 }
 
 auto get_normal_contamination_risk(const OptionMap& options)
