@@ -1919,7 +1919,7 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
             vc_builder.set_refcall_type(CallerBuilder::RefCallType::positional);
         } else {
             vc_builder.set_refcall_type(CallerBuilder::RefCallType::blocked);
-            auto block_merge_threshold = options.at("refcall-block-merge-threshold").as<Phred<double>>();
+            auto block_merge_threshold = options.at("refcall-block-merge-quality").as<Phred<double>>();
             if (block_merge_threshold.score() > 0) {
                 vc_builder.set_refcall_merge_block_threshold(block_merge_threshold);
             }

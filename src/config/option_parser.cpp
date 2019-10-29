@@ -510,7 +510,7 @@ OptionMap parse_options(const int argc, const char** argv)
      "Caller will report reference confidence calls for each position [POSITIONAL],"
      " or in automatically sized blocks [BLOCKED]")
      
-    ("refcall-block-merge-threshold",
+    ("refcall-block-merge-quality",
      po::value<Phred<double>>()->default_value(Phred<double> {10.0}),
      "Threshold to merge adjacent refcall positions when using blocked refcalling")
      
