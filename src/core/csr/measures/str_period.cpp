@@ -18,7 +18,7 @@
 
 namespace octopus { namespace csr {
 
-const std::string STRPeriod::name_ = "STR_PERIOD";
+const std::string STRPeriod::name_ = "STRP";
 
 std::unique_ptr<Measure> STRPeriod::do_clone() const
 {

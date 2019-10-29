@@ -1329,6 +1329,18 @@ HaplotypeLikelihoodModel make_filtering_haplotype_likelihood_model(const GenomeC
     return result;
 }
 
+Pedigree get_pedigree(const GenomeCallingComponents& components)
+{
+    auto result = components.pedigree();
+    if (!result) {
+        result = Pedigree {components.samples().size()};
+        for (const auto& sample : components.samples()) {
+            result->add_founder({sample});
+        }
+    }
+    return *result;
+}
+
 void run_csr(GenomeCallingComponents& components)
 {
     if (apply_csr(components)) {
@@ -1356,7 +1368,7 @@ void run_csr(GenomeCallingComponents& components)
         const auto filter = filter_factory.make(components.reference(), std::move(buffered_rp), in.fetch_header(),
                                                 components.ploidies(),
                                                 make_filtering_haplotype_likelihood_model(components),
-                                                components.pedigree(),
+                                                get_pedigree(components),
                                                 progress, components.num_threads());
         assert(filter);
         VcfWriter& out {*components.filtered_output()};
