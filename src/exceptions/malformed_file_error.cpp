@@ -70,21 +70,18 @@ boost::optional<std::string> get_type(const boost::filesystem::path& file)
 std::string MalformedFileError::do_why() const
 {
     std::ostringstream ss {};
-    
     const auto type = get_type(file_);
-    
     ss << "the ";
-    
     if (type) {
         ss << *type << ' ';
     }
-    
     ss << "file you specified " << file_ << ' ';
-    
+    if (boost::filesystem::is_symlink(file_)) {
+        ss << '(' << boost::filesystem::read_symlink(file_) << ") ";
+    }
     if (location_) {
         ss << "in " << *location_ << ' ';
     }
-    
     if (valid_types_.empty()) {
         if (reason_) {
             ss << "is malformed because " << *reason_;
@@ -101,7 +98,6 @@ std::string MalformedFileError::do_why() const
                   std::ostream_iterator<std::string> {ss, "; "});
         ss << valid_types_.back() << ')';
     }
-    
     return ss.str();
 }
 
