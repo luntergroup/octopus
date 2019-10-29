@@ -7,9 +7,9 @@ include(CheckIPOSupported)
 project(octopus)
 
 set(octopus_VERSION_MAJOR 0)
-set(octopus_VERSION_MINOR 6)
-set(octopus_VERSION_PATCH 3)
-set(octopus_VERSION_RELEASE beta)
+set(octopus_VERSION_MINOR 7)
+set(octopus_VERSION_PATCH 0)
+set(octopus_VERSION_RELEASE "")
 
 # Get the current working branch
 execute_process(
