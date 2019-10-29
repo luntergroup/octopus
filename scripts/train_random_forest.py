@@ -20,7 +20,7 @@ try:
 except ImportError as plot_import_exception:
     plotting_available = False
 
-script_dir = Path(__file__).parent.absolute()
+script_dir = Path(__file__).parent.parent.absolute()
 default_octopus_bin = script_dir / 'bin/octopus'
 
 default_measures = "AC AD ADP AF ARF BQ CC CRF DAD DAF DC DENOVO DP DPC ER ERS FRF GC GQ GQD ITV NC MC MF MP MRC MQ MQ0 MQD PP PPD QD QUAL REFCALL REB RSB RTB SB SD SF SHC SMQ SOMATIC STRL STRP VL".split()
