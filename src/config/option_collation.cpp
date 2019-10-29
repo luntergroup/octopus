@@ -1835,9 +1835,9 @@ Caller::ModelPosteriorPolicy get_model_posterior_policy(const OptionMap& options
 {
     Caller::ModelPosteriorPolicy result {};
     switch (options.at("model-posterior").as<ModelPosteriorPolicy>()) {
-        case ModelPosteriorPolicy::all: result = Caller::ModelPosteriorPolicy::all;
-        case ModelPosteriorPolicy::off: result = Caller::ModelPosteriorPolicy::off;
-        case ModelPosteriorPolicy::special: result = Caller::ModelPosteriorPolicy::special;
+        case ModelPosteriorPolicy::all: result = Caller::ModelPosteriorPolicy::all; break;
+        case ModelPosteriorPolicy::off: result = Caller::ModelPosteriorPolicy::off; break;
+        case ModelPosteriorPolicy::special: result = Caller::ModelPosteriorPolicy::special; break;
     }
     return result;
 }
