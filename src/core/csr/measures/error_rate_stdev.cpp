@@ -100,7 +100,7 @@ const std::string& ErrorRateStdev::do_name() const
 
 std::string ErrorRateStdev::do_describe() const
 {
-    return "Error rate in reads overlapping the site";
+    return "Error rate standard deviation in reads overlapping the site";
 }
 
 std::vector<std::string> ErrorRateStdev::do_requirements() const
