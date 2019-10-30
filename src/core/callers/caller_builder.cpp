@@ -348,7 +348,7 @@ Caller::Components CallerBuilder::make_components() const
         components_.variant_generator_builder.build(components_.reference),
         components_.haplotype_generator_builder,
         components_.likelihood_model,
-        Phaser {Phaser::Config {Phaser::GenotypeMatchType::unique, params_.min_phase_score}},
+        Phaser {Phaser::Config {Phaser::GenotypeMatchType::exact, params_.min_phase_score}},
         components_.bad_region_detector
     };
 }
