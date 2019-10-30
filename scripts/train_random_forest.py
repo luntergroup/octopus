@@ -171,7 +171,7 @@ def load_training_config(options):
                 if example.reference in sdf_references:
                     example.sdf = sdf_references[example.reference]
                 else:
-                    example.sdf = options.out / (example.reference.stem + 'sdf')
+                    example.sdf = options.out / (example.reference.stem + '.sdf')
                     make_sdf_ref(example.reference, options.rtg, example.sdf)
                 sdf_references[example.reference] = example.sdf
             else:
@@ -352,7 +352,7 @@ def eval_octopus(octopus, rtg, example, out_dir, threads, kind="germline", overw
     samples = read_vcf_samples(octopus_vcf)
     result = []
     if len(samples) == 1:
-        vcfeval_dir = out_dir / (octopus_vcf.stem + "." + '.eval')
+        vcfeval_dir = out_dir / (octopus_vcf.stem + '.eval')
         if not vcfeval_dir.exists() or overwrite:
             if vcfeval_dir.exists(): shutil.rmtree(vcfeval_dir)
             run_rtg(rtg, example.sdf, example.truth, example.confident, octopus_vcf, vcfeval_dir, bed_regions=example.regions, kind=kind)
@@ -360,7 +360,7 @@ def eval_octopus(octopus, rtg, example, out_dir, threads, kind="germline", overw
     elif kind == "somatic":
         for sample in samples:
             if not is_normal_sample(sample, octopus_vcf):
-                vcfeval_dir = out_dir / (octopus_vcf.stem + "." + sample + '.eval')
+                vcfeval_dir = out_dir / (octopus_vcf.stem + '.' + sample + '.eval')
                 if not vcfeval_dir.exists() or overwrite:
                     if vcfeval_dir.exists(): shutil.rmtree(vcfeval_dir)
                     run_rtg(rtg, example.sdf, example.truth, example.confident, octopus_vcf, vcfeval_dir, bed_regions=example.regions, sample=sample, kind=kind)
@@ -368,7 +368,7 @@ def eval_octopus(octopus, rtg, example, out_dir, threads, kind="germline", overw
     else:
         for sample in samples:
             if sample in example.truth:
-                vcfeval_dir = out_dir / (octopus_vcf.stem + "." + sample + '.eval')
+                vcfeval_dir = out_dir / (octopus_vcf.stem + '.' + sample + '.eval')
                 if not vcfeval_dir.exists() or overwrite:
                     if vcfeval_dir.exists(): shutil.rmtree(vcfeval_dir)
                     run_rtg(rtg, example.sdf, example.truth[sample], example.confident[sample], octopus_vcf, vcfeval_dir, bed_regions=example.regions, sample=sample, kind=kind)
