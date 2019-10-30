@@ -71,6 +71,8 @@ public:
     bool is_homozygous() const;
     unsigned zygosity() const;
     
+    Genotype<MappableType> collapse() const;
+    
     std::vector<MappableType> copy_unique() const;
     
 private:
@@ -121,6 +123,8 @@ public:
     
     bool is_homozygous() const;
     unsigned zygosity() const;
+    
+    Genotype<Haplotype> collapse() const;
     
     std::vector<Haplotype> copy_unique() const;
     std::vector<std::reference_wrapper<const Haplotype>> copy_unique_ref() const;
@@ -237,6 +241,20 @@ template <typename MappableType>
 unsigned Genotype<MappableType>::count(const MappableType& element) const
 {
     return std::count(std::cbegin(elements_), std::cend(elements_), element);
+}
+
+template <typename MappableType>
+Genotype<MappableType> Genotype<MappableType>::collapse() const
+{
+    if (ploidy() < 2) return *this;
+    Genotype<MappableType> result {ploidy()};
+    result.emplace(elements_.front());
+    std::for_each(std::next(std::cbegin(elements_)), std::cend(elements_), [&] (const auto& element) {
+        if (!result.contains(element)) {
+            result.emplace(element);
+        }
+    });
+    return result;
 }
 
 template <typename MappableType>
