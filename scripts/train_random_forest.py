@@ -454,23 +454,23 @@ def read_truth_labels(truth_fname):
         true_label_index = truth_file.readline().strip().split().index('TP')
         return np.array([int(line.strip().split()[true_label_index]) for line in truth_file])
 
-def select_training_hypterparameters(master_data_fname, options):
-    if options is None or options.hyperparameters is None:
+def select_training_hypterparameters(master_data_fname, training_params, options):
+    if training_params is None or training_params.hyperparameters is None:
         return {"trees": 500, "min_node_size": 10}
-    elif len(options.hyperparameters) == 1:
-        return options.hyperparameters[0]
+    elif len(training_params.hyperparameters) == 1:
+        return training_params.hyperparameters[0]
     else:
         # Use cross-validation to select hypterparameters
         training_data_fname = Path(str(master_data_fname).replace('.dat', '.train.data'))
         validation_data_fname = Path(str(master_data_fname).replace('.dat', '.validate.data'))
-        partition_data(master_data_fname, options.cross_validation_fraction, training_data_fname, validation_data_fname)
+        partition_data(master_data_fname, training_params.cross_validation_fraction, training_data_fname, validation_data_fname)
         optimal_params, min_loss = None, None
         cross_validation_temp_dir = options.out / 'cross_validation'
         cross_validation_temp_dir.mkdir(parents=True)
         cross_validation_prefix = cross_validation_temp_dir / options.prefix
         prediction_fname = cross_validation_prefix + '.prediction'
         forest_fname = cross_validation_prefix + '.forest'
-        for params in options.hyperparameters:
+        for params in training_params.hyperparameters:
             trees, min_node_size = params["trees"], params["min_node_size"]
             print('Training cross validation forest with trees =', trees, 'min_node_size =', min_node_size)
             run_ranger_training(options.ranger, training_data_fname, trees, min_node_size, options.threads, cross_validation_prefix, seed=10)
@@ -511,7 +511,7 @@ def main(options):
     ranger_header = ' '.join(default_measures + ['TP'])
     add_header(master_data_file, ranger_header)
     ranger_out_prefix = options.out / options.prefix
-    hyperparameters = select_training_hypterparameters(master_data_file, training_params)
+    hyperparameters = select_training_hypterparameters(master_data_file, training_params, options)
     run_ranger_training(options.ranger, master_data_file, hyperparameters, options.threads, ranger_out_prefix)
 
     if plotting_available:
