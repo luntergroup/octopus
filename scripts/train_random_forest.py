@@ -468,8 +468,8 @@ def select_training_hypterparameters(master_data_fname, training_params, options
         cross_validation_temp_dir = options.out / 'cross_validation'
         cross_validation_temp_dir.mkdir(parents=True)
         cross_validation_prefix = cross_validation_temp_dir / options.prefix
-        prediction_fname = cross_validation_prefix + '.prediction'
-        forest_fname = cross_validation_prefix + '.forest'
+        prediction_fname = cross_validation_prefix.with_suffix('.prediction')
+        forest_fname = cross_validation_prefix.with_suffix('.forest')
         for params in training_params.hyperparameters:
             trees, min_node_size = params["trees"], params["min_node_size"]
             print('Training cross validation forest with trees =', trees, 'min_node_size =', min_node_size)
