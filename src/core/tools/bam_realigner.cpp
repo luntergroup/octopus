@@ -254,12 +254,19 @@ auto assign_and_realign(const std::vector<AlignedRead>& reads,
             AmbiguousReadList unassigned_reads {};
             auto support = compute_haplotype_support_helper(genotype, reads, unassigned_reads, alignment_model, read_linkage);
             int haplotype_id {0};
-            for (auto& p : support) {
-                if (!p.second.empty()) {
-                    report.n_reads_assigned += p.second.size();
-                    utils::append(realign_and_annotate(p.second, p.first, reference, alignment_model, haplotype_id), result);
+            for (const auto& haplotype : genotype) {
+                // Iterate through the genotype to get haplotypes in correct order (sorted) so that the
+                // HP IDs match up with GT indices
+                const auto haplotype_itr = support.find(haplotype);
+                if (haplotype_itr != std::cend(support)) {
+                    auto& assigned = haplotype_itr->second;
+                    if (!assigned.empty()) {
+                        report.n_reads_assigned += assigned.size();
+                        utils::append(realign_and_annotate(assigned, haplotype, reference, alignment_model, haplotype_id), result);
+                    }
+                    support.erase(haplotype_itr);
+                    ++haplotype_id;
                 }
-                ++haplotype_id;
             }
             if (!unassigned_reads.empty()) {
                 // Reads that could not be assigned to a unique haplotype are randomly aligned to any of the
