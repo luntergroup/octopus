@@ -8,7 +8,7 @@ from os import rename, remove
 
 def get_haplotype_id(read):
     try:
-        return int(read.get_tag('hi'))
+        return int(read.get_tag('HP'))
     except KeyError:
         return None
 

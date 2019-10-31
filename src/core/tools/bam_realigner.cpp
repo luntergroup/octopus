@@ -173,7 +173,7 @@ auto realign_and_annotate(const std::vector<AlignedRead>& reads,
         const auto inferred_haplotype = get_aligned_part(expanded_haplotype, read, inferred_alignments[n], reference);
         result.back().annotate("md", to_md_string(inferred_alignments[n].cigar, inferred_haplotype));
         if (haplotype_id) {
-            result.back().annotate("hi", std::to_string(*haplotype_id));
+            result.back().annotate("HP", std::to_string(*haplotype_id));
         }
         result.back().annotate("PS", to_string(mapped_region(haplotype)));
         result.back().annotate("LK", std::to_string(static_cast<unsigned>(std::abs(log_likelihoods[n] / maths::constants::ln10Div10<>)))); // std::abs to avoid -0.0
