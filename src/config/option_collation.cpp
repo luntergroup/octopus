@@ -1880,14 +1880,14 @@ bool is_experimental_caller(const std::string& caller) noexcept
     return caller == "population" || caller == "polyclone" || caller == "cell";
 }
 
-bool use_paired_reads(const OptionMap& options)
+ReadLinkageType get_read_linkage_type(const OptionMap& options)
 {
-    return options.at("read-linkage").as<ReadLinkage>() == ReadLinkage::paired;
-}
-
-bool use_linked_reads(const OptionMap& options)
-{
-    return options.at("read-linkage").as<ReadLinkage>() == ReadLinkage::linked;
+    switch (options.at("read-linkage").as<ReadLinkage>()) {
+        case ReadLinkage::linked: return ReadLinkageType::paired_and_barcode;
+        case ReadLinkage::paired: return ReadLinkageType::paired;
+        case ReadLinkage::none: return ReadLinkageType::none;
+        default: return ReadLinkageType::paired;
+    }
 }
 
 bool protect_reference_haplotype(const OptionMap& options)
@@ -1993,7 +1993,7 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
     const auto target_working_memory = get_target_working_memory(options);
     if (target_working_memory) vc_builder.set_target_memory_footprint(*target_working_memory);
     vc_builder.set_execution_policy(get_thread_execution_policy(options));
-    vc_builder.set_use_paired_reads(use_paired_reads(options)).set_use_linked_reads(use_linked_reads(options));
+    vc_builder.set_read_linkage(get_read_linkage_type(options));
     auto bad_region_detector = make_bad_region_detector(options, read_profile);
     if (bad_region_detector) {
         vc_builder.set_bad_region_detector(std::move(*bad_region_detector));

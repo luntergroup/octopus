@@ -181,20 +181,6 @@ auto realign_and_annotate(const std::vector<AlignedRead>& reads,
     return result;
 }
 
-auto make_paired_read_templates(const std::vector<AlignedRead>& reads)
-{
-    std::vector<AlignedTemplate> result {};
-    make_paired_read_templates(std::cbegin(reads), std::cend(reads), std::back_inserter(result));
-    return result;
-}
-
-auto make_linked_read_templates(const std::vector<AlignedRead>& reads)
-{
-    std::vector<AlignedTemplate> result {};
-    make_linked_read_templates(std::cbegin(reads), std::cend(reads), std::back_inserter(result));
-    return result;
-}
-
 std::size_t count_reads(const std::vector<AlignedTemplate>& templates) noexcept
 {
     return std::accumulate(std::cbegin(templates), std::cend(templates), std::size_t {0},
@@ -228,17 +214,11 @@ compute_haplotype_support_helper(const Genotype<Haplotype>& genotype,
     return result;
 }
 
-enum class ReadLinkage { none, paired, linked };
-
-ReadLinkage get_rad_linkage_type(const BAMRealigner::Config& config)
+auto make_read_templates(const std::vector<AlignedRead>& reads, const ReadLinkageType read_linkage)
 {
-    if (config.use_linked_reads) {
-        return ReadLinkage::linked;
-    } else if (config.use_paired_reads) {
-        return ReadLinkage::paired;
-    } else {
-        return ReadLinkage::none;
-    }
+    std::vector<AlignedTemplate> result {};
+    make_read_templates(std::cbegin(reads), std::cend(reads), std::back_inserter(result), read_linkage);
+    return result;
 }
 
 HaplotypeSupportMap
@@ -246,22 +226,15 @@ compute_haplotype_support_helper(const Genotype<Haplotype>& genotype,
                                  const std::vector<AlignedRead>& reads,
                                  AmbiguousReadList& unassigned_reads,
                                  const HaplotypeLikelihoodModel& alignment_model,
-                                 const ReadLinkage read_linkage)
+                                 const ReadLinkageType read_linkage)
 {
-    switch (read_linkage) {
-        case ReadLinkage::paired: {
-            const auto templates = make_paired_read_templates(reads);
-            return compute_haplotype_support_helper(genotype, templates, unassigned_reads, alignment_model);
-        }
-        case ReadLinkage::linked: {
-            const auto templates = make_linked_read_templates(reads);
-            return compute_haplotype_support_helper(genotype, templates, unassigned_reads, alignment_model);
-        }
-        default: {
-            AssignmentConfig assigner_config {};
-            assigner_config.ambiguous_record = AssignmentConfig::AmbiguousRecord::haplotypes;
-            return compute_haplotype_support(genotype, reads, unassigned_reads, alignment_model, assigner_config);
-        }
+    if (read_linkage != ReadLinkageType::none) {
+        const auto templates = make_read_templates(reads, read_linkage);
+        return compute_haplotype_support_helper(genotype, templates, unassigned_reads, alignment_model);
+    } else {
+        AssignmentConfig assigner_config {};
+        assigner_config.ambiguous_record = AssignmentConfig::AmbiguousRecord::haplotypes;
+        return compute_haplotype_support(genotype, reads, unassigned_reads, alignment_model, assigner_config);
     }
 }
 
@@ -269,7 +242,7 @@ auto assign_and_realign(const std::vector<AlignedRead>& reads,
                         const Genotype<Haplotype>& genotype,
                         const ReferenceGenome& reference,
                         const HaplotypeLikelihoodModel& alignment_model,
-                        const ReadLinkage read_linkage,
+                        const ReadLinkageType read_linkage,
                         BAMRealigner::Report& report)
 {
     std::vector<AnnotatedAlignedRead> result {};
@@ -337,7 +310,6 @@ BAMRealigner::realign(ReadReader& src, VcfReader& variants, ReadWriter& dst,
     Report report {};
     BatchList batch {};
     boost::optional<GenomicRegion> batch_region {};
-    const auto read_linkage = get_rad_linkage_type(config_);
     for (auto p = variants.iterate(); p.first != p.second;) {
         std::tie(batch, batch_region) = read_next_batch(p.first, p.second, src, reference, samples, batch_region);
         for (auto& sample : batch) {
@@ -351,7 +323,7 @@ BAMRealigner::realign(ReadReader& src, VcfReader& variants, ReadWriter& dst,
                                       std::make_move_iterator(overlapped_reads.end()));
                 sample_reads_itr = sample.reads.erase(overlapped_reads.begin(), overlapped_reads.end());
                 auto bad_reads = to_annotated(remove_unalignable_reads(genotype_reads));
-                auto realignments = assign_and_realign(genotype_reads, genotype, reference, config_.alignment_model, read_linkage, report);
+                auto realignments = assign_and_realign(genotype_reads, genotype, reference, config_.alignment_model, config_.read_linkage, report);
                 report.n_reads_unassigned += bad_reads.size();
                 move_merge(bad_reads, realignments);
                 move_merge(realignments, realigned_reads);

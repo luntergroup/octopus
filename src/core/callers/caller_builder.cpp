@@ -129,15 +129,9 @@ CallerBuilder& CallerBuilder::set_execution_policy(ExecutionPolicy policy) noexc
     return *this;
 }
 
-CallerBuilder& CallerBuilder::set_use_paired_reads(bool use) noexcept
+CallerBuilder& CallerBuilder::set_read_linkage(ReadLinkageType linkage) noexcept
 {
-    params_.general.use_paired_reads = use;
-    return *this;
-}
-
-CallerBuilder& CallerBuilder::set_use_linked_reads(bool use) noexcept
-{
-    params_.general.use_linked_reads = use;
+    params_.general.read_linkage = linkage;
     return *this;
 }
 
