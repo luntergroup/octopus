@@ -429,10 +429,10 @@ def run_ranger_training(ranger, data_path, hyperparameters, threads, out, seed=N
            '--nthreads', str(threads), '--outprefix', str(out), '--write', '--impmeasure', '1', '--verbose']
     if 'trees' in hyperparameters:
         cmd += ['--ntree', str(hyperparameters["trees"])]
-    if 'targetpartitionsize' in hyperparameters:
+    if 'min_node_size' in hyperparameters:
         cmd += ['--targetpartitionsize', str(hyperparameters["min_node_size"])]
-    if 'maxdepth' in hyperparameters:
-        cmd += ['--maxdepth', str(hyperparameters["maxdepth"])]
+    if 'max_depth' in hyperparameters:
+        cmd += ['--maxdepth', str(hyperparameters["max_depth"])]
     if seed is not None:
         cmd += ['--seed', str(seed)]
     sp.call(cmd)
@@ -466,20 +466,19 @@ def select_training_hypterparameters(master_data_fname, training_params, options
         partition_data(master_data_fname, training_params.cross_validation_fraction, training_data_fname, validation_data_fname)
         optimal_params, min_loss = None, None
         cross_validation_temp_dir = options.out / 'cross_validation'
-        cross_validation_temp_dir.mkdir(parents=True)
+        cross_validation_temp_dir.mkdir(parents=True, exist_ok=True)
         cross_validation_prefix = cross_validation_temp_dir / options.prefix
         prediction_fname = cross_validation_prefix.with_suffix('.prediction')
         forest_fname = cross_validation_prefix.with_suffix('.forest')
-        for params in training_params.hyperparameters:
-            trees, min_node_size = params["trees"], params["min_node_size"]
-            print('Training cross validation forest with trees =', trees, 'min_node_size =', min_node_size)
-            run_ranger_training(options.ranger, training_data_fname, trees, min_node_size, options.threads, cross_validation_prefix, seed=10)
+        for hyperparameters in training_params.hyperparameters:
+            print('Training cross validation forest with hyperparameters', hyperparameters)
+            run_ranger_training(options.ranger, training_data_fname, hyperparameters, options.threads, cross_validation_prefix, seed=10)
             run_ranger_prediction(options.ranger, forest_fname, validation_data_fname, options.threads, cross_validation_prefix)
             truth_labels, predictions = read_truth_labels(validation_data_fname), read_predictions(prediction_fname)
             loss = log_loss(truth_labels, predictions)
             print('Binary cross entropy =', loss)
             if min_loss is None or loss < min_loss:
-                min_loss, optimal_params = loss, params
+                min_loss, optimal_params = loss, hyperparameters 
         shutil.rmtree(cross_validation_temp_dir)
         return optimal_params
 
