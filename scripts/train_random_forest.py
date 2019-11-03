@@ -491,15 +491,15 @@ def main(options):
         for vcfeval_dir in vcfeval_dirs:
             tp_vcf_path = vcfeval_dir / "tp.vcf.gz"
             tp_train_vcf_path = Path(str(tp_vcf_path).replace("tp.vcf", "tp.train.vcf"))
-            subset(tp_vcf_path, tp_train_vcf_path, example.regions)
+            if not tp_train_vcf_path.exists(): subset(tp_vcf_path, tp_train_vcf_path, example.regions)
             tp_data_path = Path(str(tp_train_vcf_path).replace(".vcf.gz", ".dat"))
-            make_ranger_data(tp_train_vcf_path, tp_data_path, True, default_measures, options.missing_value, fraction=example.tp)
+            if not tp_data_path.exists(): make_ranger_data(tp_train_vcf_path, tp_data_path, True, default_measures, options.missing_value, fraction=example.tp)
             data_files.append(tp_data_path)
             fp_vcf_path = vcfeval_dir / "fp.vcf.gz"
             fp_train_vcf_path = Path(str(fp_vcf_path).replace("fp.vcf", "fp.train.vcf"))
-            subset(fp_vcf_path, fp_train_vcf_path, example.regions)
+            if not fp_train_vcf_path.exists(): subset(fp_vcf_path, fp_train_vcf_path, example.regions)
             fp_data_path = Path(str(fp_train_vcf_path).replace(".vcf.gz", ".dat"))
-            make_ranger_data(fp_train_vcf_path, fp_data_path, False, default_measures, options.missing_value, fraction=example.fp)
+            if not fp_data_path.exists(): make_ranger_data(fp_train_vcf_path, fp_data_path, False, default_measures, options.missing_value, fraction=example.fp)
             data_files.append(fp_data_path)
             tmp_files += [tp_train_vcf_path, fp_train_vcf_path]
     master_data_file = options.out / (str(options.prefix) + ".dat")
