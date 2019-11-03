@@ -171,7 +171,7 @@ def load_training_config(options):
                 if example.reference in sdf_references:
                     example.sdf = sdf_references[example.reference]
                 else:
-                    example.sdf = options.out / (example.reference.stem + 'sdf')
+                    example.sdf = options.out / (example.reference.stem + '.sdf')
                     make_sdf_ref(example.reference, options.rtg, example.sdf)
                 sdf_references[example.reference] = example.sdf
             else:
@@ -352,7 +352,7 @@ def eval_octopus(octopus, rtg, example, out_dir, threads, kind="germline", overw
     samples = read_vcf_samples(octopus_vcf)
     result = []
     if len(samples) == 1:
-        vcfeval_dir = out_dir / (octopus_vcf.stem + "." + '.eval')
+        vcfeval_dir = out_dir / (octopus_vcf.stem + '.eval')
         if not vcfeval_dir.exists() or overwrite:
             if vcfeval_dir.exists(): shutil.rmtree(vcfeval_dir)
             run_rtg(rtg, example.sdf, example.truth, example.confident, octopus_vcf, vcfeval_dir, bed_regions=example.regions, kind=kind)
@@ -360,7 +360,7 @@ def eval_octopus(octopus, rtg, example, out_dir, threads, kind="germline", overw
     elif kind == "somatic":
         for sample in samples:
             if not is_normal_sample(sample, octopus_vcf):
-                vcfeval_dir = out_dir / (octopus_vcf.stem + "." + sample + '.eval')
+                vcfeval_dir = out_dir / (octopus_vcf.stem + '.' + sample + '.eval')
                 if not vcfeval_dir.exists() or overwrite:
                     if vcfeval_dir.exists(): shutil.rmtree(vcfeval_dir)
                     run_rtg(rtg, example.sdf, example.truth, example.confident, octopus_vcf, vcfeval_dir, bed_regions=example.regions, sample=sample, kind=kind)
@@ -368,7 +368,7 @@ def eval_octopus(octopus, rtg, example, out_dir, threads, kind="germline", overw
     else:
         for sample in samples:
             if sample in example.truth:
-                vcfeval_dir = out_dir / (octopus_vcf.stem + "." + sample + '.eval')
+                vcfeval_dir = out_dir / (octopus_vcf.stem + '.' + sample + '.eval')
                 if not vcfeval_dir.exists() or overwrite:
                     if vcfeval_dir.exists(): shutil.rmtree(vcfeval_dir)
                     run_rtg(rtg, example.sdf, example.truth[sample], example.confident[sample], octopus_vcf, vcfeval_dir, bed_regions=example.regions, sample=sample, kind=kind)
@@ -429,10 +429,10 @@ def run_ranger_training(ranger, data_path, hyperparameters, threads, out, seed=N
            '--nthreads', str(threads), '--outprefix', str(out), '--write', '--impmeasure', '1', '--verbose']
     if 'trees' in hyperparameters:
         cmd += ['--ntree', str(hyperparameters["trees"])]
-    if 'targetpartitionsize' in hyperparameters:
+    if 'min_node_size' in hyperparameters:
         cmd += ['--targetpartitionsize', str(hyperparameters["min_node_size"])]
-    if 'maxdepth' in hyperparameters:
-        cmd += ['--maxdepth', str(hyperparameters["maxdepth"])]
+    if 'max_depth' in hyperparameters:
+        cmd += ['--maxdepth', str(hyperparameters["max_depth"])]
     if seed is not None:
         cmd += ['--seed', str(seed)]
     sp.call(cmd)
@@ -454,32 +454,31 @@ def read_truth_labels(truth_fname):
         true_label_index = truth_file.readline().strip().split().index('TP')
         return np.array([int(line.strip().split()[true_label_index]) for line in truth_file])
 
-def select_training_hypterparameters(master_data_fname, options):
-    if options is None or options.hyperparameters is None:
+def select_training_hypterparameters(master_data_fname, training_params, options):
+    if training_params is None or training_params.hyperparameters is None:
         return {"trees": 500, "min_node_size": 10}
-    elif len(options.hyperparameters) == 1:
-        return options.hyperparameters[0]
+    elif len(training_params.hyperparameters) == 1:
+        return training_params.hyperparameters[0]
     else:
         # Use cross-validation to select hypterparameters
         training_data_fname = Path(str(master_data_fname).replace('.dat', '.train.data'))
         validation_data_fname = Path(str(master_data_fname).replace('.dat', '.validate.data'))
-        partition_data(master_data_fname, options.cross_validation_fraction, training_data_fname, validation_data_fname)
+        partition_data(master_data_fname, training_params.cross_validation_fraction, training_data_fname, validation_data_fname)
         optimal_params, min_loss = None, None
         cross_validation_temp_dir = options.out / 'cross_validation'
-        cross_validation_temp_dir.mkdir(parents=True)
+        cross_validation_temp_dir.mkdir(parents=True, exist_ok=True)
         cross_validation_prefix = cross_validation_temp_dir / options.prefix
-        prediction_fname = cross_validation_prefix + '.prediction'
-        forest_fname = cross_validation_prefix + '.forest'
-        for params in options.hyperparameters:
-            trees, min_node_size = params["trees"], params["min_node_size"]
-            print('Training cross validation forest with trees =', trees, 'min_node_size =', min_node_size)
-            run_ranger_training(options.ranger, training_data_fname, trees, min_node_size, options.threads, cross_validation_prefix, seed=10)
+        prediction_fname = cross_validation_prefix.with_suffix('.prediction')
+        forest_fname = cross_validation_prefix.with_suffix('.forest')
+        for hyperparameters in training_params.hyperparameters:
+            print('Training cross validation forest with hyperparameters', hyperparameters)
+            run_ranger_training(options.ranger, training_data_fname, hyperparameters, options.threads, cross_validation_prefix, seed=10)
             run_ranger_prediction(options.ranger, forest_fname, validation_data_fname, options.threads, cross_validation_prefix)
             truth_labels, predictions = read_truth_labels(validation_data_fname), read_predictions(prediction_fname)
             loss = log_loss(truth_labels, predictions)
             print('Binary cross entropy =', loss)
             if min_loss is None or loss < min_loss:
-                min_loss, optimal_params = loss, params
+                min_loss, optimal_params = loss, hyperparameters 
         shutil.rmtree(cross_validation_temp_dir)
         return optimal_params
 
@@ -492,15 +491,15 @@ def main(options):
         for vcfeval_dir in vcfeval_dirs:
             tp_vcf_path = vcfeval_dir / "tp.vcf.gz"
             tp_train_vcf_path = Path(str(tp_vcf_path).replace("tp.vcf", "tp.train.vcf"))
-            subset(tp_vcf_path, tp_train_vcf_path, example.regions)
+            if not tp_train_vcf_path.exists(): subset(tp_vcf_path, tp_train_vcf_path, example.regions)
             tp_data_path = Path(str(tp_train_vcf_path).replace(".vcf.gz", ".dat"))
-            make_ranger_data(tp_train_vcf_path, tp_data_path, True, default_measures, options.missing_value, fraction=example.tp)
+            if not tp_data_path.exists(): make_ranger_data(tp_train_vcf_path, tp_data_path, True, default_measures, options.missing_value, fraction=example.tp)
             data_files.append(tp_data_path)
             fp_vcf_path = vcfeval_dir / "fp.vcf.gz"
             fp_train_vcf_path = Path(str(fp_vcf_path).replace("fp.vcf", "fp.train.vcf"))
-            subset(fp_vcf_path, fp_train_vcf_path, example.regions)
+            if not fp_train_vcf_path.exists(): subset(fp_vcf_path, fp_train_vcf_path, example.regions)
             fp_data_path = Path(str(fp_train_vcf_path).replace(".vcf.gz", ".dat"))
-            make_ranger_data(fp_train_vcf_path, fp_data_path, False, default_measures, options.missing_value, fraction=example.fp)
+            if not fp_data_path.exists(): make_ranger_data(fp_train_vcf_path, fp_data_path, False, default_measures, options.missing_value, fraction=example.fp)
             data_files.append(fp_data_path)
             tmp_files += [tp_train_vcf_path, fp_train_vcf_path]
     master_data_file = options.out / (str(options.prefix) + ".dat")
@@ -511,7 +510,7 @@ def main(options):
     ranger_header = ' '.join(default_measures + ['TP'])
     add_header(master_data_file, ranger_header)
     ranger_out_prefix = options.out / options.prefix
-    hyperparameters = select_training_hypterparameters(master_data_file, training_params)
+    hyperparameters = select_training_hypterparameters(master_data_file, training_params, options)
     run_ranger_training(options.ranger, master_data_file, hyperparameters, options.threads, ranger_out_prefix)
 
     if plotting_available:
