@@ -81,7 +81,7 @@ public:
     PhaseSet
     phase(const MappableBlock<Haplotype>& haplotypes,
           const GenotypePosteriorMap& genotype_posteriors,
-          const std::vector<GenomicRegion>& regions,
+          const std::vector<GenomicRegion>& variation_regions,
           boost::optional<GenotypeCallMap> genotype_calls = boost::none) const;
     
 private:

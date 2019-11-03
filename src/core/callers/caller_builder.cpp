@@ -129,15 +129,9 @@ CallerBuilder& CallerBuilder::set_execution_policy(ExecutionPolicy policy) noexc
     return *this;
 }
 
-CallerBuilder& CallerBuilder::set_use_paired_reads(bool use) noexcept
+CallerBuilder& CallerBuilder::set_read_linkage(ReadLinkageType linkage) noexcept
 {
-    params_.general.use_paired_reads = use;
-    return *this;
-}
-
-CallerBuilder& CallerBuilder::set_use_linked_reads(bool use) noexcept
-{
-    params_.general.use_linked_reads = use;
+    params_.general.read_linkage = linkage;
     return *this;
 }
 
@@ -348,7 +342,7 @@ Caller::Components CallerBuilder::make_components() const
         components_.variant_generator_builder.build(components_.reference),
         components_.haplotype_generator_builder,
         components_.likelihood_model,
-        Phaser {Phaser::Config {Phaser::GenotypeMatchType::unique, params_.min_phase_score}},
+        Phaser {Phaser::Config {Phaser::GenotypeMatchType::exact, params_.min_phase_score}},
         components_.bad_region_detector
     };
 }

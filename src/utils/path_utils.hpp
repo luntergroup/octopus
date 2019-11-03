@@ -11,7 +11,8 @@ namespace octopus {
 
 namespace fs = boost::filesystem;
 
-enum class PathResolvePolicy { prefer_working_directory, prefer_run_directory };
+enum class WorkingDirectoryResolvePolicy { prefer_working_directory, prefer_run_directory };
+enum class SymblinkResolvePolicy { resolve, dont_resolve };
 
 boost::optional<fs::path> get_home_directory();
 
@@ -19,8 +20,10 @@ bool is_shorthand_user_path(const fs::path& path) noexcept;
 
 fs::path expand_user_path(const fs::path& path);
 
-fs::path resolve_path(const fs::path& path, const fs::path& working_directory,
-                      PathResolvePolicy policy = PathResolvePolicy::prefer_working_directory);
+fs::path
+resolve_path(const fs::path& path, const fs::path& working_directory,
+             WorkingDirectoryResolvePolicy wd_policy = WorkingDirectoryResolvePolicy::prefer_working_directory,
+             SymblinkResolvePolicy symblink_policy = SymblinkResolvePolicy::dont_resolve);
 
 } // namespace octopus
 

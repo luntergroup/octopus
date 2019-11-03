@@ -176,7 +176,8 @@ remove_duplicate_reads(ForwardIt first, ForwardIt last,
 							utils::append(std::move(p.second), buffer);
 							std::vector<AlignedTemplate> duplicate_pairs {};
 							duplicate_pairs.reserve(buffer.size() / 2);
-							make_paired_read_templates(std::cbegin(buffer), std::cend(buffer), std::back_inserter(duplicate_pairs), true);
+							make_read_templates(std::cbegin(buffer), std::cend(buffer), std::back_inserter(duplicate_pairs),
+							                    ReadLinkageType::paired, true);
 							assert(duplicate_pairs.size() > 0);
 							const auto& best_pair = *std::max_element(std::cbegin(duplicate_pairs), std::cend(duplicate_pairs), duplicate_compare);
 							assert(best_pair.size() == 2);

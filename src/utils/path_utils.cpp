@@ -67,30 +67,44 @@ fs::path expand_user_path(const fs::path& path)
     return path;
 }
 
-fs::path resolve_path(const fs::path& path, const fs::path& working_directory, const PathResolvePolicy policy)
+fs::path
+resolve_path(const fs::path& path, const fs::path& working_directory,
+             const WorkingDirectoryResolvePolicy wd_policy,
+             const SymblinkResolvePolicy symlink_policy)
 {
+    fs::path result {};
     if (is_shorthand_user_path(path)) {
-        return expand_user_path(path); // must be a root path
-    }
-    const auto wd_full_path = working_directory / path;
-    if (fs::exists(path)) {
-        if (fs::exists(wd_full_path) && policy == PathResolvePolicy::prefer_working_directory) {
-            return wd_full_path;
+        result = expand_user_path(path); // must be a root path
+    } else {
+        const auto wd_full_path = working_directory / path;
+        if (fs::exists(path)) {
+            if (fs::exists(wd_full_path) && wd_policy == WorkingDirectoryResolvePolicy::prefer_working_directory) {
+                result = wd_full_path;
+            } else {
+                result = path; // must be a root path
+            }
         } else {
-            return fs::canonical(path); // must be a root path
+            const auto parent_dir = path.parent_path();
+            if (fs::exists(parent_dir) && fs::is_directory(parent_dir)) {
+                auto tmp = working_directory;
+                tmp /= path;
+                auto wd_parent = tmp.parent_path();
+                if (fs::exists(wd_parent) && fs::is_directory(wd_parent)) {
+                    result = tmp; // prefer working directory in case of name clash
+                } else {
+                    result = path; // must be yet-to-be-created root path
+                }
+            } else {
+                result = wd_full_path;
+            }
         }
     }
-    const auto parent_dir = path.parent_path();
-    if (fs::exists(parent_dir) && fs::is_directory(parent_dir)) {
-        auto tmp = working_directory;
-        tmp /= path;
-        auto wd_parent = tmp.parent_path();
-        if (fs::exists(wd_parent) && fs::is_directory(wd_parent)) {
-            return tmp; // prefer working directory in case of name clash
-        }
-        return path; // must be yet-to-be-created root path
+    if (symlink_policy == SymblinkResolvePolicy::resolve) {
+        result = fs::canonical(result);
+    } else {
+        result = fs::absolute(result);
     }
-    return wd_full_path;
+    return result;
 }
 
 } // namespace octopus

@@ -312,40 +312,21 @@ bool has_reference(const Container& haplotypes)
     return find_reference(haplotypes) != std::cend(haplotypes);
 }
 
-TemplateContainer make_paired_read_templates_helper(const ReadContainer& reads)
+TemplateContainer make_read_templates_helper(const ReadContainer& reads, const ReadLinkageType linkage)
 {
     std::vector<AlignedTemplate> buffer {};
     buffer.reserve(reads.size());
-    make_paired_read_templates(std::cbegin(reads), std::cend(reads), std::back_inserter(buffer));
+    make_read_templates(std::cbegin(reads), std::cend(reads), std::back_inserter(buffer), linkage);
     std::sort(std::begin(buffer), std::end(buffer));
     return {ForwardSortedTag {}, std::make_move_iterator(std::begin(buffer)), std::make_move_iterator(std::end(buffer))};
 }
 
-TemplateMap make_paired_read_templates_helper(const ReadMap& reads)
+TemplateMap make_read_templates_helper(const ReadMap& reads, const ReadLinkageType linkage)
 {
     TemplateMap result {};
     result.reserve(reads.size());
     for (const auto& p : reads) {
-        result.emplace(p.first, make_paired_read_templates_helper(p.second));
-    }
-    return result;
-}
-
-TemplateContainer make_linked_read_templates_helper(const ReadContainer& reads)
-{
-    std::vector<AlignedTemplate> buffer {};
-    buffer.reserve(reads.size());
-    make_linked_read_templates(std::cbegin(reads), std::cend(reads), std::back_inserter(buffer));
-    std::sort(std::begin(buffer), std::end(buffer));
-    return {ForwardSortedTag {}, std::make_move_iterator(std::begin(buffer)), std::make_move_iterator(std::end(buffer))};
-}
-
-TemplateMap make_linked_read_templates_helper(const ReadMap& reads)
-{
-    TemplateMap result {};
-    result.reserve(reads.size());
-    for (const auto& p : reads) {
-        result.emplace(p.first, make_linked_read_templates_helper(p.second));
+        result.emplace(p.first, make_read_templates_helper(p.second, linkage));
     }
     return result;
 }
@@ -405,10 +386,8 @@ bool have_callable_region(const GenomicRegion& active_region,
 
 boost::optional<TemplateMap> Caller::make_read_templates(const ReadMap& reads) const
 {
-    if (parameters_.use_linked_reads) {
-        return make_linked_read_templates_helper(reads);
-    } else if (parameters_.use_paired_reads) {
-        return make_paired_read_templates_helper(reads);
+    if (parameters_.read_linkage != ReadLinkageType::none) {
+        return make_read_templates_helper(reads, parameters_.read_linkage);
     } else {
         return boost::none;
     }

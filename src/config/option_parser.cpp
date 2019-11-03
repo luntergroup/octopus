@@ -67,6 +67,10 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<fs::path>(),
      "Sets the working directory")
     
+    ("resolve-symlinks",
+     po::bool_switch()->default_value(false),
+     "Replace all symlinks to their resolved targets during startup")
+    
     ("threads",
      po::value<int>()->implicit_value(0),
      "Maximum number of threads to be used. If no argument is provided unlimited threads are assumed")
@@ -506,7 +510,7 @@ OptionMap parse_options(const int argc, const char** argv)
      "Caller will report reference confidence calls for each position [POSITIONAL],"
      " or in automatically sized blocks [BLOCKED]")
      
-    ("refcall-block-merge-threshold",
+    ("refcall-block-merge-quality",
      po::value<Phred<double>>()->default_value(Phred<double> {10.0}),
      "Threshold to merge adjacent refcall positions when using blocked refcalling")
      

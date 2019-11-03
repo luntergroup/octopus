@@ -93,11 +93,15 @@ bool is_rightmost_segment(const AlignedRead& read) noexcept;
 unsigned sum_mapping_qualities(const AlignedTemplate& reads) noexcept;
 unsigned sum_base_qualities(const AlignedTemplate& reads) noexcept;
 
+enum class ReadLinkageType { none, paired, barcode_only, paired_and_barcode };
+
+namespace detail {
+
 template <typename ForwardIterator, typename OutputIterator>
 OutputIterator
 make_paired_read_templates(ForwardIterator first_read_itr, ForwardIterator last_read_itr,
                            OutputIterator result_itr,
-						   const bool pairs_only = false)
+                           const bool pairs_only = false)
 {
     std::unordered_map<std::string, MappableReferenceWrapper<const AlignedRead>> buffer {};
     buffer.reserve(std::distance(first_read_itr, last_read_itr) / 2);
@@ -122,18 +126,19 @@ make_paired_read_templates(ForwardIterator first_read_itr, ForwardIterator last_
             *result_itr++ = {read};
         }
     });
-	if (!pairs_only) {
-	    for (const auto& p : buffer) {
-	        *result_itr++ = {p.second};
-	    }
-	}
+    if (!pairs_only) {
+        for (const auto& p : buffer) {
+            *result_itr++ = {p.second};
+        }
+    }
     return result_itr;
 }
 
 template <typename ForwardIterator, typename OutputIterator>
 OutputIterator
-make_linked_read_templates(ForwardIterator first_read_itr, ForwardIterator last_read_itr,
-                           OutputIterator result_itr)
+make_barcode_linked_read_templates(ForwardIterator first_read_itr, ForwardIterator last_read_itr,
+                                   OutputIterator result_itr,
+                                   const bool linked_only = false)
 {
     std::unordered_map<AlignedRead::NucleotideSequence, std::vector<MappableReferenceWrapper<const AlignedRead>>> buffer {};
     buffer.reserve(std::distance(first_read_itr, last_read_itr));
@@ -144,12 +149,96 @@ make_linked_read_templates(ForwardIterator first_read_itr, ForwardIterator last_
         std::sort(std::begin(p.second), std::end(p.second));
         if (!p.first.empty()) {
             *result_itr++ = {std::cbegin(p.second), std::cend(p.second)};
-        } else {
+        } else if (!linked_only) {
             std::transform(std::cbegin(p.second), std::cend(p.second), result_itr,
                            [] (const auto& read) -> AlignedTemplate { return {read}; });
         }
     }
     return result_itr;
+}
+
+template <typename T>
+void try_erase(const T& value, std::vector<MappableReferenceWrapper<const T>>& refs)
+{
+    auto itr = std::find_if(std::cbegin(refs), std::cend(refs), [&value] (const T& v) { return v == value; });
+    if (itr != std::cend(refs)) refs.erase(itr);
+}
+
+template <typename ForwardIterator, typename OutputIterator>
+OutputIterator
+make_paired_and_barcode_linked_read_templates(ForwardIterator first_read_itr, ForwardIterator last_read_itr,
+                                              OutputIterator result_itr,
+                                              const bool linked_only = false)
+{
+    const auto num_reads = static_cast<std::size_t>(std::distance(first_read_itr, last_read_itr));
+    std::unordered_map<std::string, MappableReferenceWrapper<const AlignedRead>> pairs {};
+    pairs.reserve(num_reads / 2);
+    std::unordered_map<AlignedRead::NucleotideSequence, std::vector<MappableReferenceWrapper<const AlignedRead>>> barcodes {};
+    barcodes.reserve(num_reads / 2);
+    std::for_each(first_read_itr, last_read_itr, [&] (const AlignedRead& read) {
+        const auto pair = pairs.find(read.name());
+        if (pair == std::cend(pairs)) {
+            pairs.emplace(read.name(), read);
+            barcodes[read.barcode()].emplace_back(read);
+        } else {
+            const AlignedRead& mate {pair->second.get()};
+            auto& mate_template = barcodes.at(mate.barcode());
+            if (read.barcode() == mate.barcode()) {
+                if (!read.barcode().empty()) {
+                    mate_template.emplace_back(read);
+                } else {
+                    try_erase(mate, mate_template);
+                    *result_itr++ = {{read, mate}};
+                }
+            } else {
+                if (mate.barcode().empty()) {
+                    try_erase(mate, mate_template);
+                    auto& read_template = barcodes[read.barcode()];
+                    read_template.emplace_back(read);
+                    read_template.emplace_back(mate);
+                } else if (read.barcode().empty()) {
+                    barcodes[mate.barcode()].emplace_back(read);
+                } else {
+                    try_erase(mate, mate_template);
+                    *result_itr++ = {{read, mate}};
+                }
+            }
+            pairs.erase(pair);
+        }
+    });
+    for (auto& p : barcodes) {
+        if (!p.second.empty()) {
+            std::sort(std::begin(p.second), std::end(p.second));
+            if (!p.first.empty()) {
+                *result_itr++ = {std::cbegin(p.second), std::cend(p.second)};
+            } else if (!linked_only) {
+                std::transform(std::cbegin(p.second), std::cend(p.second), result_itr,
+                               [] (const auto& read) -> AlignedTemplate { return {read}; });
+            }
+        }
+    }
+    return result_itr;
+}
+
+} // namespace detail
+
+template <typename ForwardIterator, typename OutputIterator>
+OutputIterator
+make_read_templates(ForwardIterator first_read_itr, ForwardIterator last_read_itr,
+                    OutputIterator result_itr,
+                    const ReadLinkageType linkage,
+                    const bool linked_only = false)
+{
+    if (linkage == ReadLinkageType::paired_and_barcode) {
+        return detail::make_paired_and_barcode_linked_read_templates(first_read_itr, last_read_itr, result_itr, linked_only);
+    } else if (linkage == ReadLinkageType::barcode_only) {
+        return detail::make_barcode_linked_read_templates(first_read_itr, last_read_itr, result_itr, linked_only);
+    } else if (linkage == ReadLinkageType::paired) {
+        return detail::make_paired_read_templates(first_read_itr, last_read_itr, result_itr, linked_only);
+    } else {
+        assert(linkage == ReadLinkageType::none);
+        return result_itr;
+    }
 }
 
 } // namespace octopus

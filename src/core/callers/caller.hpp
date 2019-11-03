@@ -70,7 +70,7 @@ public:
         bool protect_reference_haplotype;
         boost::optional<MemoryFootprint> target_max_memory;
         ExecutionPolicy execution_policy;
-        bool use_paired_reads, use_linked_reads;
+        ReadLinkageType read_linkage;
     };
     
     using ReadMap = octopus::ReadMap;

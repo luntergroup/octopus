@@ -83,11 +83,23 @@ bool Genotype<Haplotype>::is_homozygous() const
 
 unsigned Genotype<Haplotype>::zygosity() const
 {
+    if (ploidy() < 2) return ploidy();
     unsigned result {0};
     for (auto it = std::cbegin(haplotypes_), last = std::cend(haplotypes_); it != last; ++result) {
         // naive algorithm faster in practice than binary searching
         it = std::find_if_not(std::next(it), last, [it] (const auto& x) { return *x == **it; });
     }
+    return result;
+}
+
+Genotype<Haplotype> Genotype<Haplotype>::collapse() const
+{
+    if (zygosity() == ploidy()) return *this;
+    std::vector<std::reference_wrapper<const HaplotypePtr>> unique {};
+    unique.reserve(ploidy());
+    std::unique_copy(std::cbegin(haplotypes_), std::cend(haplotypes_), std::back_inserter(unique), HaplotypePtrEqual {});
+    Genotype<Haplotype> result {static_cast<unsigned>(unique.size())};
+    for (const auto& haplotype_ptr : unique) result.emplace(haplotype_ptr.get());
     return result;
 }
 
