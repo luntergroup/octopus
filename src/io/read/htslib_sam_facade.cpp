@@ -1021,7 +1021,8 @@ void add_supplementary_alignments(const bam1_t* record, AlignedRead& read)
         for (auto tuple : utils::split(bam_aux2Z(ptr), ';')) {
             auto fields = utils::split(tuple, ',');
             auto cigar = parse_cigar(fields[3]);
-            auto begin_pos = boost::lexical_cast<GenomicRegion::Position>(fields[1]) - 1;
+            auto begin_pos = boost::lexical_cast<GenomicRegion::Position>(fields[1]);
+            if (begin_pos > 0) --begin_pos;
             GenomicRegion region {std::move(fields[0]), begin_pos, begin_pos + reference_size(cigar)};
             auto strand = fields[2] == "+" ? AlignedRead::Direction::forward : AlignedRead::Direction::reverse;
             auto mapping_quality = boost::numeric_cast<AlignedRead::MappingQuality>(boost::lexical_cast<int>(fields[4]));
