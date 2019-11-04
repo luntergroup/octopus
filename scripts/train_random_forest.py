@@ -442,39 +442,39 @@ def run_ranger_prediction(ranger, forest, data_path, threads, out):
            '--probability', '--nthreads', str(threads), '--outprefix', str(out), '--verbose']
     sp.call(cmd)
 
-def read_predictions(prediction_fname):
-    with prediction_fname.open() as prediction_file:
+def read_predictions(prediction_filename):
+    with prediction_filename.open() as prediction_file:
         next(prediction_file)
         next(prediction_file)
         next(prediction_file)
         return np.array([float(line.strip().split()[0]) for line in prediction_file])
 
-def read_truth_labels(truth_fname):
-    with truth_fname.open() as truth_file:
+def read_truth_labels(truth_filename):
+    with truth_filename.open() as truth_file:
         true_label_index = truth_file.readline().strip().split().index('TP')
         return np.array([int(line.strip().split()[true_label_index]) for line in truth_file])
 
-def select_training_hypterparameters(master_data_fname, training_params, options):
+def select_training_hypterparameters(master_data_filename, training_params, options):
     if training_params is None or training_params.hyperparameters is None:
         return {"trees": 500, "min_node_size": 10}
     elif len(training_params.hyperparameters) == 1:
         return training_params.hyperparameters[0]
     else:
         # Use cross-validation to select hypterparameters
-        training_data_fname = Path(str(master_data_fname).replace('.dat', '.train.data'))
-        validation_data_fname = Path(str(master_data_fname).replace('.dat', '.validate.data'))
-        partition_data(master_data_fname, training_params.cross_validation_fraction, training_data_fname, validation_data_fname)
+        training_data_filename = Path(str(master_data_filename).replace('.dat', '.train.data'))
+        validation_data_filename = Path(str(master_data_filename).replace('.dat', '.validate.data'))
+        partition_data(master_data_filename, training_params.cross_validation_fraction, training_data_filename, validation_data_filename)
         optimal_params, min_loss = None, None
         cross_validation_temp_dir = options.out / 'cross_validation'
         cross_validation_temp_dir.mkdir(parents=True, exist_ok=True)
         cross_validation_prefix = cross_validation_temp_dir / options.prefix
-        prediction_fname = cross_validation_prefix.with_suffix('.prediction')
-        forest_fname = cross_validation_prefix.with_suffix('.forest')
+        prediction_filename = cross_validation_prefix.with_suffix(cross_validation_prefix.suffix + '.prediction')
+        forest_filename = cross_validation_prefix.with_suffix(cross_validation_prefix.suffix + '.forest')
         for hyperparameters in training_params.hyperparameters:
             print('Training cross validation forest with hyperparameters', hyperparameters)
-            run_ranger_training(options.ranger, training_data_fname, hyperparameters, options.threads, cross_validation_prefix, seed=10)
-            run_ranger_prediction(options.ranger, forest_fname, validation_data_fname, options.threads, cross_validation_prefix)
-            truth_labels, predictions = read_truth_labels(validation_data_fname), read_predictions(prediction_fname)
+            run_ranger_training(options.ranger, training_data_filename, hyperparameters, options.threads, cross_validation_prefix, seed=10)
+            run_ranger_prediction(options.ranger, forest_filename, validation_data_filename, options.threads, cross_validation_prefix)
+            truth_labels, predictions = read_truth_labels(validation_data_filename), read_predictions(prediction_filename)
             loss = log_loss(truth_labels, predictions)
             print('Binary cross entropy =', loss)
             if min_loss is None or loss < min_loss:
