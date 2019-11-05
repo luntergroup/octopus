@@ -514,7 +514,7 @@ def main(options):
     run_ranger_training(options.ranger, master_data_file, hyperparameters, options.threads, ranger_out_prefix)
 
     if plotting_available:
-        importance_filename = ranger_out_prefix.with_suffix(".importance")
+        importance_filename = ranger_out_prefix.with_suffix(ranger_out_prefix.suffix + ".importance")
         with importance_filename.open() as f:
             importances = dict(t.strip().split(':') for t in f.readlines())
             for measure, importance in importances.items():
