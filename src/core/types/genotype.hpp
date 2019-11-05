@@ -1218,6 +1218,19 @@ auto copy_unique(const Container& genotypes, const GenomicRegion& region)
     return result;
 }
 
+namespace detail {
+
+template <typename T>
+struct ElementExtractor
+{
+    explicit ElementExtractor(unsigned index) noexcept : index_ {index} {}
+    const T& operator()(const Genotype<T>& genotype) const noexcept { return genotype[index_]; }
+private:
+    unsigned index_;
+};
+
+} // namespace detail
+
 template <typename AlleleType>
 void sort_alleles_in_haplotype_order(std::vector<Genotype<AlleleType>>& genotypes)
 {
@@ -1227,8 +1240,7 @@ void sort_alleles_in_haplotype_order(std::vector<Genotype<AlleleType>>& genotype
         std::vector<unsigned> allele_order(ploidy);
         std::iota(std::begin(allele_order), std::end(allele_order), 0);
         const auto haplotype_order = [&genotypes] (const unsigned lhs, const unsigned rhs) -> bool {
-            const auto get_lhs = [lhs] (const Genotype<AlleleType>& genotype) { return genotype[lhs]; };
-            const auto get_rhs = [rhs] (const Genotype<AlleleType>& genotype) { return genotype[rhs]; };
+            const detail::ElementExtractor<AlleleType> get_lhs {lhs}, get_rhs {rhs};
             using boost::make_transform_iterator;
             return std::lexicographical_compare(make_transform_iterator(std::cbegin(genotypes), get_lhs),
                                                 make_transform_iterator(std::cend(genotypes), get_lhs),
