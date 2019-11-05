@@ -237,6 +237,7 @@ set(CORE_SOURCES
     core/types/calls/cell_variant_call.cpp
     core/types/calls/call_wrapper.hpp
     core/types/calls/call_wrapper.cpp
+    core/types/calls/call_utils.hpp
     core/tools/vcf_header_factory.hpp
     core/tools/vcf_header_factory.cpp
     core/tools/vcf_record_factory.hpp

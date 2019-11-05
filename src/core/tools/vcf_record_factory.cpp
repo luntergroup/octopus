@@ -22,6 +22,7 @@
 #include "basics/mappable_reference_wrapper.hpp"
 #include "core/types/allele.hpp"
 #include "core/types/calls/variant_call.hpp"
+#include "core/types/calls/call_utils.hpp"
 #include "utils/mappable_algorithms.hpp"
 #include "utils/read_stats.hpp"
 #include "utils/string_utils.hpp"
@@ -247,6 +248,7 @@ std::vector<VcfRecord> VcfRecordFactory::make(std::vector<CallWrapper>&& calls) 
     // TODO: refactor this!!!
     assert(std::is_sorted(std::cbegin(calls), std::cend(calls)));
     resolve_indel_genotypes(calls, samples_, reference_);
+    sort_genotype_alleles(calls, samples_);
     pad_indels(calls, samples_);
     std::vector<VcfRecord> result {};
     result.reserve(calls.size());
