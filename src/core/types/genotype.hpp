@@ -19,6 +19,7 @@
 #include <cassert>
 
 #include <boost/functional/hash.hpp>
+#include <boost/iterator/transform_iterator.hpp>
 
 #include "concepts/equitable.hpp"
 #include "concepts/mappable.hpp"
@@ -74,6 +75,8 @@ public:
     Genotype<MappableType> collapse() const;
     
     std::vector<MappableType> copy_unique() const;
+    
+    void reorder_alleles(const std::vector<unsigned>& order);
     
 private:
     std::vector<MappableType> elements_;
@@ -264,6 +267,35 @@ std::vector<MappableType> Genotype<MappableType>::copy_unique() const
     std::sort(std::begin(result), std::end(result));
     result.erase(std::unique(std::begin(result), std::end(result)), std::end(result));
     return result;
+}
+
+template <typename order_iterator, typename value_iterator>
+void reorder(order_iterator order_begin, order_iterator order_end, value_iterator v)
+{
+    // See https://stackoverflow.com/a/1267878/2970186
+    using value_t = typename std::iterator_traits< value_iterator >::value_type;
+    using index_t = typename std::iterator_traits< order_iterator >::value_type;
+    using diff_t  = typename std::iterator_traits< order_iterator >::difference_type;
+    diff_t remaining = order_end - 1 - order_begin;
+    for (index_t s = index_t {}, d; remaining > 0; ++s) {
+        for (d = order_begin[s]; d > s; d = order_begin[d]);
+        if (d == s) {
+            --remaining;
+            value_t temp = std::move(v[s]);
+            while (d = order_begin[d], d != s) {
+                std::swap(temp, v[d]);
+                --remaining;
+            }
+            v[s] = std::move(temp);
+        }
+    }
+}
+
+template <typename MappableType>
+void Genotype<MappableType>::reorder_alleles(const std::vector<unsigned>& order)
+{
+    assert(order.size() == elements_.size());
+    reorder(std::cbegin(order), std::cend(order), std::begin(elements_));
 }
 
 template <typename MappableType>
@@ -1184,6 +1216,32 @@ auto copy_unique(const Container& genotypes, const GenomicRegion& region)
     std::sort(std::begin(result), std::end(result), GenotypeLess {});
     result.erase(std::unique(std::begin(result), std::end(result)), std::end(result));
     return result;
+}
+
+template <typename AlleleType>
+void sort_alleles_in_haplotype_order(std::vector<Genotype<AlleleType>>& genotypes)
+{
+    if (!genotypes.empty()) {
+        const auto ploidy = genotypes.front().ploidy();
+        assert(std::all_of(std::cbegin(genotypes), std::cend(genotypes), [ploidy] (const auto& g) { return g.ploidy() == ploidy; }));
+        std::vector<unsigned> allele_order(ploidy);
+        std::iota(std::begin(allele_order), std::end(allele_order), 0);
+        const auto haplotype_order = [&genotypes] (const unsigned lhs, const unsigned rhs) -> bool {
+            const auto get_lhs = [lhs] (const Genotype<AlleleType>& genotype) { return genotype[lhs]; };
+            const auto get_rhs = [rhs] (const Genotype<AlleleType>& genotype) { return genotype[rhs]; };
+            using boost::make_transform_iterator;
+            return std::lexicographical_compare(make_transform_iterator(std::cbegin(genotypes), get_lhs),
+                                                make_transform_iterator(std::cend(genotypes), get_lhs),
+                                                make_transform_iterator(std::cbegin(genotypes), get_rhs),
+                                                make_transform_iterator(std::cend(genotypes), get_rhs));
+        };
+        std::sort(std::begin(allele_order), std::end(allele_order), haplotype_order);
+        if (!std::is_sorted(std::cbegin(allele_order), std::cend(allele_order))) {
+            for (auto& genotype : genotypes) {
+                genotype.reorder_alleles(allele_order);
+            }
+        }
+    }
 }
 
 template <typename MappableType>
