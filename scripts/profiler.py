@@ -222,10 +222,10 @@ def make_octopus_indel_error_model(profile_df):
         result['N'] = result['A']
     return result
 
-def write_error_model(error_model, out_path):
-    with open(out_path, 'w') as file:
+def write_error_model(error_model, output_filename):
+    with output_filename.open(mode='w') as output:
         for motif, model in error_model.items():
-            file.write(motif + ":" + ','.join([str(p) for p in model]) + '\n')
+            output.write(motif + ":" + ','.join([str(p) for p in model]) + '\n')
 
 def main(options):
     if options.labels is None:
