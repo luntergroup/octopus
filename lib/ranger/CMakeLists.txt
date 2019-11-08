@@ -2,10 +2,8 @@ set(RANGER_SOURCES
     Data.h
     Data.cpp
     DataChar.h
-    DataChar.cpp
     DataDouble.h
     DataFloat.h
-    DataFloat.cpp
     Forest.h
     Forest.cpp
     ForestClassification.h

@@ -2085,13 +2085,6 @@ make_call_filter_factory(const ReferenceGenome& reference, ReadPipe& read_pipe, 
                     logging::WarningLogger log {};
                     log << "Both germline and somatic forests must be provided for random forest cancer variant filtering";
                 }
-            } else if (caller == "trio") {
-                if (options.at("denovos-only").as<bool>()) {
-                    forest_types.front() = RandomForestFilterFactory::ForestType::denovo;
-                } else if (is_set("somatic-forest-file", options)) {
-                    forest_files.push_back(resolve_path(options.at("somatic-forest-file").as<fs::path>(), options));
-                    forest_types.push_back(RandomForestFilterFactory::ForestType::denovo);
-                }
             }
             result = std::make_unique<RandomForestFilterFactory>(std::move(forest_files), std::move(forest_types), *temp_directory, forest_options);
         } else {

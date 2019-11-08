@@ -84,6 +84,7 @@ RandomForestFilter::RandomForestFilter(FacetFactory facet_factory,
 , chooser_ {std::move(chooser)}
 , num_chooser_measures_ {chooser_measures.size()}
 , options_ {std::move(options)}
+, threading_ {threading}
 , num_records_ {0}
 , data_buffer_ {}
 {
@@ -95,8 +96,8 @@ std::string RandomForestFilter::do_name() const
     return "random forest";
 }
 
-const std::string RandomForestFilter::genotype_quality_name_ = "RFQUAL";
-const std::string RandomForestFilter::call_quality_name_ = "RFQUAL_ALL";
+const std::string RandomForestFilter::genotype_quality_name_ = "RFGQ";
+const std::string RandomForestFilter::call_quality_name_ = "RFGQ_ALL";
 
 std::unique_ptr<ranger::Forest> RandomForestFilter::make_forest() const
 {
@@ -115,7 +116,7 @@ boost::optional<std::string> RandomForestFilter::call_quality_name() const
 
 void RandomForestFilter::annotate(VcfHeader::Builder& header) const
 {
-    header.add_info(call_quality_name_, "1", "Float", "Combined quality score for call using product of sample RFQUAL");
+    header.add_info(call_quality_name_, "1", "Float", "Combined quality score for call using product of sample RFQQ");
     header.add_format(genotype_quality_name_, "1", "Float", "Empirical quality score from random forest classifier");
     header.add_filter("RF", "Random Forest filtered");
 }
@@ -319,17 +320,18 @@ void RandomForestFilter::prepare_for_classification(boost::optional<Log>& log) c
             if (forest_choice_itr != std::cend(choices_[sample_idx])) {
                 const auto& file = data_[forest_idx][sample_idx];
                 std::vector<std::string> tmp {}, cat_vars {};
+                const auto ranger_threads = threading_.max_threads ? *threading_.max_threads : 1u;
                 const auto forest = make_forest();
                 try {
-                    forest->initCpp("TP", ranger::MemoryMode::MEM_DOUBLE, file.path.string(), 0, ranger_prefix.string(),
-                                    1000, nullptr, 12, 1, forest_paths_[forest_idx].string(), ranger::ImportanceMode::IMP_GINI, 1, "",
+                    forest->initCpp("", ranger::MemoryMode::MEM_DOUBLE, file.path.string(), 0, ranger_prefix.string(),
+                                    1000, nullptr, 12, ranger_threads, forest_paths_[forest_idx].string(), ranger::ImportanceMode::IMP_GINI, 1, "",
                                     tmp, "", true, cat_vars, false, ranger::SplitRule::LOGRANK, "", false, 1.0,
                                     ranger::DEFAULT_ALPHA, ranger::DEFAULT_MINPROP, false,
-                                    ranger::PredictionType::RESPONSE, ranger::DEFAULT_NUM_RANDOM_SPLITS);
+                                    ranger::PredictionType::RESPONSE, ranger::DEFAULT_NUM_RANDOM_SPLITS, ranger::DEFAULT_MAXDEPTH);
                 } catch (const std::runtime_error& e) {
                     throw MalformedForestFile {forest_paths_[forest_idx]};
                 }
-                forest->run(false);
+                forest->run(false, false);
                 forest->writePredictionFile();
                 std::ifstream prediction_file {ranger_prediction_fname.string()};
                 const auto tp_first = read_header(prediction_file);

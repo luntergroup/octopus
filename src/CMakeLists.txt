@@ -402,6 +402,8 @@ set(CORE_SOURCES
     core/csr/measures/error_rate.cpp
     core/csr/measures/error_rate_stdev.hpp
     core/csr/measures/error_rate_stdev.cpp
+    core/csr/measures/is_transversion.hpp
+    core/csr/measures/is_transversion.cpp
 
     core/models/haplotype_likelihood_array.hpp
     core/models/haplotype_likelihood_array.cpp

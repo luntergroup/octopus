@@ -17,7 +17,7 @@
 
 namespace octopus { namespace csr {
 
-const std::string STRLength::name_ = "STR_LENGTH";
+const std::string STRLength::name_ = "STRL";
 
 std::unique_ptr<Measure> STRLength::do_clone() const
 {

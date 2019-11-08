@@ -31,7 +31,7 @@ Measure::ResultType DuplicateAlleleFraction::do_evaluate(const VcfRecord& call, 
     std::transform(std::cbegin(allele_depths), std::cend(allele_depths), std::cbegin(duplicate_allele_depths), std::begin(result),
                    [] (auto depth, auto duplicate_depth) -> boost::optional<double> {
         if (depth && duplicate_depth) {
-            return static_cast<double>(std::min(*duplicate_depth, *depth)) / *depth;
+            return *depth > 0 ? static_cast<double>(std::min(*duplicate_depth, *depth)) / *depth : 0;
         } else {
             return boost::none;
         }
@@ -51,7 +51,7 @@ const std::string& DuplicateAlleleFraction::do_name() const
 
 std::string DuplicateAlleleFraction::do_describe() const
 {
-    return "Concordance of allele support from duplicate reads";
+    return "Fraction of realigned reads supporting ALT alleles identified as duplicates";
 }
 
 std::vector<std::string> DuplicateAlleleFraction::do_requirements() const

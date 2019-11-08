@@ -23,7 +23,7 @@ public:
     {
         enum class Sex { male, female, hermaphroditic };
         SampleName name;
-        Sex sex;
+        Sex sex = Sex::hermaphroditic;
     };
     
     Pedigree() = default;
