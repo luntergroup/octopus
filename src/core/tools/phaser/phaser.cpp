@@ -143,7 +143,12 @@ Phaser::phase(const MappableBlock<Haplotype>& haplotypes,
                 }
                 PhaseSet::SamplePhaseRegions phases;
                 if (collapsed_genotype_posteriors) {
-                    phases = phase_sample(haplotype_region, partitions, genotypes, (*collapsed_genotype_posteriors)[sample]);
+                    const auto& collapsed_sample_genotype_posteriors = (*collapsed_genotype_posteriors)[sample];
+                    if (genotype_calls && config_.max_phase_score && min_phase_score(genotype_calls->at(sample), collapsed_sample_genotype_posteriors) >= *config_.max_phase_score) {
+                        result.phase_regions[sample].emplace_back(haplotype_region, *config_.max_phase_score);
+                    } else {
+                        phases = phase_sample(haplotype_region, partitions, genotypes, collapsed_sample_genotype_posteriors);
+                    }
                 } else {
                     phases = phase_sample(haplotype_region, partitions, genotypes, p.second);
                 }
