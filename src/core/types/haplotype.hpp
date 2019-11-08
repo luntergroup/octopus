@@ -213,7 +213,9 @@ public:
     ~Builder() = default;
     
     bool can_push_back(const ContigAllele& allele) const noexcept;
+    bool can_push_back(const Allele& allele) const noexcept;
     bool can_push_front(const ContigAllele& allele) const noexcept;
+    bool can_push_front(const Allele& allele) const noexcept;
     
     void push_back(const ContigAllele& allele);
     void push_front(const ContigAllele& allele);
