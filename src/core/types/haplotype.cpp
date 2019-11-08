@@ -387,9 +387,19 @@ bool Haplotype::Builder::can_push_back(const ContigAllele& allele) const noexcep
     return explicit_alleles_.empty() || is_after(allele, explicit_alleles_.back());
 }
 
+bool Haplotype::Builder::can_push_back(const Allele& allele) const noexcept
+{
+    return explicit_alleles_.empty() || (is_same_region(allele, region_) && is_after(contig_region(allele), explicit_alleles_.back()));
+}
+
 bool Haplotype::Builder::can_push_front(const ContigAllele& allele) const noexcept
 {
     return explicit_alleles_.empty() || is_after(explicit_alleles_.front(), allele);
+}
+
+bool Haplotype::Builder::can_push_front(const Allele& allele) const noexcept
+{
+    return explicit_alleles_.empty() || (is_same_region(allele, region_) && is_after(explicit_alleles_.front(), contig_region(allele)));
 }
 
 void Haplotype::Builder::push_back(const ContigAllele& allele)

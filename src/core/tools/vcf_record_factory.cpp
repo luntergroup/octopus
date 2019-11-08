@@ -248,7 +248,7 @@ std::vector<VcfRecord> VcfRecordFactory::make(std::vector<CallWrapper>&& calls) 
     // TODO: refactor this!!!
     assert(std::is_sorted(std::cbegin(calls), std::cend(calls)));
     resolve_indel_genotypes(calls, samples_, reference_);
-    sort_genotype_alleles_by_phase_set(calls, samples_);
+    sort_genotype_alleles_by_phase_set(calls, samples_, reference_);
     pad_indels(calls, samples_);
     std::vector<VcfRecord> result {};
     result.reserve(calls.size());
