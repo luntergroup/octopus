@@ -1218,32 +1218,6 @@ auto copy_unique(const Container& genotypes, const GenomicRegion& region)
     return result;
 }
 
-template <typename AlleleType>
-void sort_alleles_in_haplotype_order(std::vector<Genotype<AlleleType>>& genotypes)
-{
-    if (!genotypes.empty()) {
-        const auto ploidy = genotypes.front().ploidy();
-        assert(std::all_of(std::cbegin(genotypes), std::cend(genotypes), [ploidy] (const auto& g) { return g.ploidy() == ploidy; }));
-        std::vector<unsigned> allele_order(ploidy);
-        std::iota(std::begin(allele_order), std::end(allele_order), 0);
-        const auto haplotype_order = [&genotypes] (const unsigned lhs, const unsigned rhs) -> bool {
-            const auto get_lhs = [lhs] (const Genotype<AlleleType>& genotype) { return genotype[lhs]; };
-            const auto get_rhs = [rhs] (const Genotype<AlleleType>& genotype) { return genotype[rhs]; };
-            using boost::make_transform_iterator;
-            return std::lexicographical_compare(make_transform_iterator(std::cbegin(genotypes), get_lhs),
-                                                make_transform_iterator(std::cend(genotypes), get_lhs),
-                                                make_transform_iterator(std::cbegin(genotypes), get_rhs),
-                                                make_transform_iterator(std::cend(genotypes), get_rhs));
-        };
-        std::sort(std::begin(allele_order), std::end(allele_order), haplotype_order);
-        if (!std::is_sorted(std::cbegin(allele_order), std::cend(allele_order))) {
-            for (auto& genotype : genotypes) {
-                genotype.reorder_alleles(allele_order);
-            }
-        }
-    }
-}
-
 template <typename MappableType>
 std::ostream& operator<<(std::ostream& os, const Genotype<MappableType>& genotype)
 {
