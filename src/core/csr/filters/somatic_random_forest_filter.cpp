@@ -11,7 +11,6 @@
 namespace octopus { namespace csr {
 
 SomaticRandomForestVariantCallFilter::SomaticRandomForestVariantCallFilter(FacetFactory facet_factory,
-                                                                           std::vector<MeasureWrapper> measures,
                                                                            Path germline_forest, Path somatic_forest,
                                                                            OutputOptions output_config,
                                                                            ConcurrencyPolicy threading,
@@ -20,7 +19,6 @@ SomaticRandomForestVariantCallFilter::SomaticRandomForestVariantCallFilter(Facet
                                                                            boost::optional<ProgressMeter&> progress)
 : RandomForestFilter {
     std::move(facet_factory),
-    std::move(measures),
     {make_wrapped_measure<IsSomatic>(true), make_wrapped_measure<IsRefcall>(true)},
     [] (const MeasureVector& measures) -> std::int8_t {
         assert(measures.size() == 2);
@@ -40,7 +38,6 @@ SomaticRandomForestVariantCallFilter::SomaticRandomForestVariantCallFilter(Facet
 } {}
 
 SomaticRandomForestVariantCallFilter::SomaticRandomForestVariantCallFilter(FacetFactory facet_factory,
-                                                                           std::vector<MeasureWrapper> measures,
                                                                            Path somatic_forest,
                                                                            OutputOptions output_config,
                                                                            ConcurrencyPolicy threading,
@@ -49,7 +46,6 @@ SomaticRandomForestVariantCallFilter::SomaticRandomForestVariantCallFilter(Facet
                                                                            boost::optional<ProgressMeter&> progress)
 : RandomForestFilter {
     std::move(facet_factory),
-    std::move(measures),
     {make_wrapped_measure<IsSomatic>(false)},
     [] (const MeasureVector& measures) -> std::int8_t {
         assert(measures.size() == 1);

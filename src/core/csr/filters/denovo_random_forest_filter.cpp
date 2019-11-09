@@ -11,7 +11,6 @@
 namespace octopus { namespace csr {
 
 DeNovoRandomForestVariantCallFilter::DeNovoRandomForestVariantCallFilter(FacetFactory facet_factory,
-                                                                         std::vector<MeasureWrapper> measures,
                                                                          Path germline_forest, Path denovo_forest,
                                                                          OutputOptions output_config,
                                                                          ConcurrencyPolicy threading,
@@ -20,7 +19,6 @@ DeNovoRandomForestVariantCallFilter::DeNovoRandomForestVariantCallFilter(FacetFa
                                                                          boost::optional<ProgressMeter&> progress)
 : RandomForestFilter {
     std::move(facet_factory),
-    std::move(measures),
     {make_wrapped_measure<IsDenovo>(true)},
     [] (const MeasureVector& measures) -> std::int8_t { return !boost::get<bool>(measures.front()); },
     {std::move(germline_forest), std::move(denovo_forest)},
@@ -32,7 +30,6 @@ DeNovoRandomForestVariantCallFilter::DeNovoRandomForestVariantCallFilter(FacetFa
 } {}
 
 DeNovoRandomForestVariantCallFilter::DeNovoRandomForestVariantCallFilter(FacetFactory facet_factory,
-                                                                         std::vector<MeasureWrapper> measures,
                                                                          Path denovo_forest,
                                                                          OutputOptions output_config,
                                                                          ConcurrencyPolicy threading,
@@ -41,7 +38,6 @@ DeNovoRandomForestVariantCallFilter::DeNovoRandomForestVariantCallFilter(FacetFa
                                                                          boost::optional<ProgressMeter&> progress)
 : RandomForestFilter {
     std::move(facet_factory),
-    std::move(measures),
     {make_wrapped_measure<IsDenovo>(false)},
     [] (const MeasureVector& measures) -> std::int8_t { return !boost::get<bool>(measures.front()); },
     {std::move(denovo_forest)},

@@ -13,7 +13,6 @@
 
 #include "basics/phred.hpp"
 #include "logging/progress_meter.hpp"
-#include "../measures/measure.hpp"
 #include "variant_call_filter_factory.hpp"
 #include "variant_call_filter.hpp"
 #include "random_forest_filter.hpp"
@@ -44,10 +43,7 @@ public:
     
     ~RandomForestFilterFactory() = default;
     
-    std::vector<MeasureWrapper> measures() const;
-    
 private:
-    std::vector<MeasureWrapper> measures_;
     std::vector<Path> ranger_forests_;
     std::vector<ForestType> forest_types_;
     Path temp_directory_;
