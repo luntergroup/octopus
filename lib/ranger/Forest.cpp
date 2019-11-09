@@ -15,6 +15,7 @@
 #include <string>
 #include <ctime>
 #include <functional>
+#include <cassert>
 #ifndef OLD_WIN_R_BUILD
 #include <thread>
 #include <chrono>
