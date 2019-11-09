@@ -195,13 +195,13 @@ void ForestProbability::computePredictionErrorInternal() {
 }
 
 // #nocov start
-void ForestProbability::writeOutputInternal() {
+void ForestProbability::writeOutputInternal() const {
   if (verbose_out) {
     *verbose_out << "Tree type:                         " << "Probability estimation" << std::endl;
   }
 }
 
-void ForestProbability::writeConfusionFile() {
+void ForestProbability::writeConfusionFile() const {
 
 // Open confusion file for writing
   std::string filename = output_prefix + ".confusion";
@@ -219,7 +219,7 @@ void ForestProbability::writeConfusionFile() {
     *verbose_out << "Saved prediction error to file " << filename << "." << std::endl;
 }
 
-void ForestProbability::writePredictionFile() {
+void ForestProbability::writePredictionFile() const {
 
   // Open prediction file for writing
   std::string filename = output_prefix + ".prediction";
@@ -262,10 +262,7 @@ void ForestProbability::writePredictionFile() {
     *verbose_out << "Saved predictions to file " << filename << "." << std::endl;
 }
 
-void ForestProbability::saveToFileInternal(std::ofstream& outfile) {
-
-// Write num_variables
-  outfile.write((char*) &num_independent_variables, sizeof(num_independent_variables));
+void ForestProbability::saveToFileInternal(std::ofstream& outfile) const {
 
 // Write treetype
   TreeType treetype = TREE_PROBABILITY;
@@ -276,10 +273,6 @@ void ForestProbability::saveToFileInternal(std::ofstream& outfile) {
 }
 
 void ForestProbability::loadFromFileInternal(std::ifstream& infile) {
-
-// Read number of variables
-  size_t num_variables_saved;
-  infile.read((char*) &num_variables_saved, sizeof(num_variables_saved));
 
 // Read treetype
   TreeType treetype;
@@ -313,12 +306,7 @@ void ForestProbability::loadFromFileInternal(std::ifstream& infile) {
     for (size_t j = 0; j < terminal_nodes.size(); ++j) {
       terminal_class_counts[terminal_nodes[j]] = terminal_class_counts_vector[j];
     }
-
-    // If dependent variable not in test data, throw error
-    if (num_variables_saved != num_independent_variables) {
-      throw std::runtime_error("Number of independent variables in data does not match with the loaded forest.");
-    }
-
+    
     // Create tree
     trees.push_back(
         std::make_unique<TreeProbability>(child_nodeIDs, split_varIDs, split_values, &class_values, &response_classIDs,

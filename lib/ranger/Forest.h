@@ -32,6 +32,13 @@ namespace ranger {
 
 class Forest {
 public:
+  struct MetaInfo
+  {
+    std::vector<std::string> dependent_variable_names, independent_variable_names;
+    size_t num_trees;
+    std::vector<bool> ordered_variable_indicators;
+  };
+  
   Forest();
 
   Forest(const Forest&) = delete;
@@ -62,21 +69,17 @@ public:
       bool memory_saving_splitting, SplitRule splitrule, bool predict_all, std::vector<double>& sample_fraction,
       double alpha, double minprop, bool holdout, PredictionType prediction_type, uint num_random_splits,
       bool order_snps, uint max_depth);
-  virtual void initInternal() = 0;
 
   // Grow or predict
   void run(bool verbose, bool compute_oob_error);
 
   // Write results to output files
   void writeOutput();
-  virtual void writeOutputInternal() = 0;
-  virtual void writeConfusionFile() = 0;
-  virtual void writePredictionFile() = 0;
-  void writeImportanceFile();
+  void writeImportanceFile() const;
 
   // Save forest to file
-  void saveToFile();
-  virtual void saveToFileInternal(std::ofstream& outfile) = 0;
+  void saveToFile(std::ofstream& outfile) const;
+  void saveToFile() const;
 
   std::vector<std::vector<std::vector<size_t>>> getChildNodeIDs() {
     std::vector<std::vector<std::vector<size_t>>> result;
@@ -101,6 +104,9 @@ public:
   }
   const std::vector<double>& getVariableImportance() const {
     return variable_importance;
+  }
+  const std::vector<double>& getVariableImportanceCasewise() const {
+    return variable_importance_casewise;
   }
   double getOverallPredictionError() const {
     return overall_prediction_error;
@@ -136,18 +142,16 @@ public:
   const std::vector<std::vector<size_t>>& getSnpOrder() const {
     return data->getSnpOrder();
   }
+    
+    virtual void writePredictionFile() const = 0;
 
 protected:
   void grow();
-  virtual void growInternal() = 0;
 
   // Predict using existing tree from file and data as prediction data
   void predict();
-  virtual void allocatePredictMemory() = 0;
-  virtual void predictInternal(size_t sample_idx) = 0;
 
   void computePredictionError();
-  virtual void computePredictionErrorInternal() = 0;
 
   void computePermutationImportance();
 
@@ -156,12 +160,7 @@ protected:
   void predictTreesInThread(uint thread_idx, const Data* prediction_data, bool oob_prediction);
   void predictInternalInThread(uint thread_idx);
   void computeTreePermutationImportanceInThread(uint thread_idx, std::vector<double>& importance,
-      std::vector<double>& variance);
-
-  // Load forest from file
-  void loadFromFile(std::string filename);
-  virtual void loadFromFileInternal(std::ifstream& infile) = 0;
-  void loadDependentVariableNamesFromFile(std::string filename);
+      std::vector<double>& variance, std::vector<double>& importance_casewise);
 
   // Load data from file
   std::unique_ptr<Data> loadDataFromFile(const std::string& data_path);
@@ -239,13 +238,38 @@ protected:
   // Variable importance for all variables in forest
   std::vector<double> variable_importance;
 
+  // Casewise variable importance for all variables in forest
+  std::vector<double> variable_importance_casewise;
+
   // Computation progress (finished trees)
   size_t progress;
 #ifdef R_BUILD
   size_t aborted_threads;
   bool aborted;
 #endif
+  
+private:
+  virtual void initInternal() = 0;
+  virtual void growInternal() = 0;
+  virtual void allocatePredictMemory() = 0;
+  virtual void predictInternal(size_t sample_idx) = 0;
+  virtual void computePredictionErrorInternal() = 0;
+  virtual void writeOutputInternal() const = 0;
+  virtual void writeConfusionFile() const = 0;
+  virtual void saveToFileInternal(std::ofstream& outfile) const = 0;
+  virtual void loadFromFileInternal(std::ifstream& infile) = 0;
+  
+  void loadFromFile(std::ifstream& infile);
+  void loadFromFile(std::string filename);
+  void loadDependentVariablesFromFile(std::ifstream& infile);
+  void loadDependentVariableNamesFromFile(std::string filename);
+  void saveMetaInformation(std::ofstream& outfile) const; 
+  void loadMetaInformation(std::ifstream& infile);
 };
+
+void write_meta(std::ofstream& outfile, const Forest::MetaInfo& meta_info);
+void read_meta(std::ifstream& infile, Forest::MetaInfo& meta_info);
+Forest::MetaInfo read_meta(const std::string& forest_filename);
 
 } // namespace ranger
 

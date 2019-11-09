@@ -85,6 +85,9 @@ void Forest::initCpp(std::string dependent_variable_name, MemoryMode memory_mode
 
   if (prediction_mode) {
     loadFromFile(load_forest_filename);
+    if (data->getNumCols() != num_independent_variables) {
+       throw std::runtime_error("Number of independent variables in data does not match with the loaded forest.");
+    }
   }
   // Set variables to be always considered for splitting
   if (!always_split_variable_names.empty()) {
@@ -285,7 +288,8 @@ void Forest::run(bool verbose, bool compute_oob_error) {
       computePredictionError();
     }
 
-    if (importance_mode == IMP_PERM_BREIMAN || importance_mode == IMP_PERM_LIAW || importance_mode == IMP_PERM_RAW) {
+    if (importance_mode == IMP_PERM_BREIMAN || importance_mode == IMP_PERM_LIAW || 
+        importance_mode == IMP_PERM_RAW || importance_mode == IMP_PERM_CASEWISE) {
       if (verbose && verbose_out) {
         *verbose_out << "Computing permutation variable importance .." << std::endl;
       }
@@ -340,7 +344,7 @@ void Forest::writeOutput() {
   }
 }
 
-void Forest::writeImportanceFile() {
+void Forest::writeImportanceFile() const {
 
   // Open importance file for writing
   std::string filename = output_prefix + ".importance";
@@ -350,10 +354,29 @@ void Forest::writeImportanceFile() {
     throw std::runtime_error("Could not write to importance file: " + filename + ".");
   }
 
-  // Write importance to file
-  for (size_t i = 0; i < variable_importance.size(); ++i) {
-    std::string variable_name = data->getVariableNames()[i];
-    importance_file << variable_name << ": " << variable_importance[i] << std::endl;
+  if (importance_mode == IMP_PERM_CASEWISE) {
+    // Write variable names
+    for (auto& variable_name : data->getVariableNames()) {
+      importance_file << variable_name << " ";
+    }
+    importance_file << std::endl;
+
+    // Write importance values
+    for (size_t i = 0; i < num_samples; ++i) {
+      for (size_t j = 0; j < num_independent_variables; ++j) {
+        if (variable_importance_casewise.size() <= (j * num_samples + i)) {
+          throw std::runtime_error("Memory error in local variable importance.");
+        }
+        importance_file << variable_importance_casewise[j * num_samples + i] << " ";
+      }
+      importance_file << std::endl;
+    }
+  } else {
+    // Write importance to file
+    for (size_t i = 0; i < variable_importance.size(); ++i) {
+      std::string variable_name = data->getVariableNames()[i];
+      importance_file << variable_name << ": " << variable_importance[i] << std::endl;
+    }
   }
 
   importance_file.close();
@@ -361,42 +384,29 @@ void Forest::writeImportanceFile() {
     *verbose_out << "Saved variable importance to file " << filename << "." << std::endl;
 }
 
-void Forest::saveToFile() {
+void Forest::saveToFile(std::ofstream& outfile) const
+{
+    if (!outfile.good()) {
+      throw std::runtime_error("Could not write to output file.");
+    }
+    saveMetaInformation(outfile);
+    saveToFileInternal(outfile);
+    // Write tree data for each tree
+    for (auto& tree : trees) {
+      tree->appendToFile(outfile);
+    }
+}
+
+void Forest::saveToFile() const {
 
   // Open file for writing
   std::string filename = output_prefix + ".forest";
-  std::ofstream outfile;
-  outfile.open(filename, std::ios::binary);
-  if (!outfile.good()) {
-    throw std::runtime_error("Could not write to output file: " + filename + ".");
+  std::ofstream outfile {filename, std::ios::binary};
+  try {
+      saveToFile(outfile);
+  } catch (...) {
+      throw std::runtime_error("Could not write to output file: " + filename + ".");
   }
-
-  // Write dependent variable names
-  uint num_dependent_variables = dependent_variable_names.size();
-  if (num_dependent_variables >= 1) {
-    outfile.write((char*) &num_dependent_variables, sizeof(num_dependent_variables));
-    for (auto& var_name : dependent_variable_names) {
-      size_t length = var_name.size();
-      outfile.write((char*) &length, sizeof(length));
-      outfile.write((char*) var_name.c_str(), length * sizeof(char));
-    }
-  } else {
-    throw std::runtime_error("Missing dependent variable name.");
-  }
-
-  // Write num_trees
-  outfile.write((char*) &num_trees, sizeof(num_trees));
-
-  // Write is_ordered_variable
-  saveVector1D(data->getIsOrderedVariable(), outfile);
-
-  saveToFileInternal(outfile);
-
-  // Write tree data for each tree
-  for (auto& tree : trees) {
-    tree->appendToFile(outfile);
-  }
-
   // Close file
   outfile.close();
   if (verbose_out)
@@ -469,7 +479,7 @@ void Forest::grow() {
   std::vector<std::thread> threads;
   threads.reserve(num_threads);
 
-// Initailize importance per thread
+// Initialize importance per thread
   std::vector<std::vector<double>> variable_importance_threads(num_threads);
 
   for (uint i = 0; i < num_threads; ++i) {
@@ -615,20 +625,23 @@ void Forest::computePermutationImportance() {
   clock_t start_time = clock();
   clock_t lap_time = clock();
 
-// Initailize importance and variance
+// Initialize importance and variance
   variable_importance.resize(num_independent_variables, 0);
   std::vector<double> variance;
   if (importance_mode == IMP_PERM_BREIMAN || importance_mode == IMP_PERM_LIAW) {
     variance.resize(num_independent_variables, 0);
   }
+  if (importance_mode == IMP_PERM_CASEWISE) {
+    variable_importance_casewise.resize(num_independent_variables * num_samples, 0);
+  }
 
 // Compute importance
   for (size_t i = 0; i < num_trees; ++i) {
-    trees[i]->computePermutationImportance(variable_importance, variance);
+    trees[i]->computePermutationImportance(variable_importance, variance, variable_importance_casewise);
     progress++;
     showProgress("Computing permutation importance..", start_time, lap_time);
   }
-  // #nocov end
+
 #else
   progress = 0;
 #ifdef R_BUILD
@@ -639,9 +652,10 @@ void Forest::computePermutationImportance() {
   std::vector<std::thread> threads;
   threads.reserve(num_threads);
 
-// Initailize importance and variance
+// Initialize importance and variance
   std::vector<std::vector<double>> variable_importance_threads(num_threads);
   std::vector<std::vector<double>> variance_threads(num_threads);
+  std::vector<std::vector<double>> variable_importance_casewise_threads(num_threads);
 
 // Compute importance
   for (uint i = 0; i < num_threads; ++i) {
@@ -649,8 +663,15 @@ void Forest::computePermutationImportance() {
     if (importance_mode == IMP_PERM_BREIMAN || importance_mode == IMP_PERM_LIAW) {
       variance_threads[i].resize(num_independent_variables, 0);
     }
-    threads.emplace_back(&Forest::computeTreePermutationImportanceInThread, this, i,
-        std::ref(variable_importance_threads[i]), std::ref(variance_threads[i]));
+    if (importance_mode == IMP_PERM_CASEWISE) {
+      variable_importance_casewise_threads[i].resize(num_independent_variables * num_samples, 0);
+    }
+    threads.emplace_back(
+      &Forest::computeTreePermutationImportanceInThread, this, i,
+      std::ref(variable_importance_threads[i]),
+      std::ref(variance_threads[i]),
+      std::ref(variable_importance_casewise_threads[i])
+    );
   }
   showProgress("Computing permutation importance..", num_trees);
   for (auto &thread : threads) {
@@ -682,6 +703,17 @@ void Forest::computePermutationImportance() {
     }
     variance_threads.clear();
   }
+
+// Sum thread casewise importances
+  if (importance_mode == IMP_PERM_CASEWISE) {
+    variable_importance_casewise.resize(num_independent_variables * num_samples, 0);
+    for (size_t i = 0; i < variable_importance_casewise.size(); ++i) {
+      for (uint j = 0; j < num_threads; ++j) {
+        variable_importance_casewise[i] += variable_importance_casewise_threads[j][i];
+      }
+    }
+    variable_importance_casewise_threads.clear();
+  }
 #endif
 
   for (size_t i = 0; i < variable_importance.size(); ++i) {
@@ -693,6 +725,12 @@ void Forest::computePermutationImportance() {
         variance[i] = variance[i] / num_trees - variable_importance[i] * variable_importance[i];
         variable_importance[i] /= sqrt(variance[i] / num_trees);
       }
+    }
+  }
+  
+  if (importance_mode == IMP_PERM_CASEWISE) {
+    for (size_t i = 0; i < variable_importance_casewise.size(); ++i) {
+      variable_importance_casewise[i] /= num_trees;
     }
   }
 }
@@ -772,10 +810,10 @@ void Forest::predictInternalInThread(uint thread_idx) {
 }
 
 void Forest::computeTreePermutationImportanceInThread(uint thread_idx, std::vector<double>& importance,
-    std::vector<double>& variance) {
+    std::vector<double>& variance, std::vector<double>& importance_casewise) {
   if (thread_ranges.size() > thread_idx + 1) {
     for (size_t i = thread_ranges[thread_idx]; i < thread_ranges[thread_idx + 1]; ++i) {
-      trees[i]->computePermutationImportance(importance, variance);
+      trees[i]->computePermutationImportance(importance, variance, importance_casewise);
 
       // Check for user interrupt
 #ifdef R_BUILD
@@ -797,51 +835,117 @@ void Forest::computeTreePermutationImportanceInThread(uint thread_idx, std::vect
 #endif
 
 // #nocov start
-void Forest::loadFromFile(std::string filename) {
-  if (verbose_out)
-    *verbose_out << "Loading forest from file " << filename << "." << std::endl;
+void write_meta(std::ofstream& outfile, const Forest::MetaInfo& meta_info)
+{
+    // Write dependent variable names
+    uint num_dependent_variables = meta_info.dependent_variable_names.size();
+    if (num_dependent_variables >= 1) {
+      outfile.write((char*) &num_dependent_variables, sizeof(num_dependent_variables));
+      for (auto& var_name : meta_info.dependent_variable_names) {
+        size_t length = var_name.size();
+        outfile.write((char*) &length, sizeof(length));
+        outfile.write((char*) var_name.c_str(), length * sizeof(char));
+      }
+    } else {
+      throw std::runtime_error("Missing dependent variable name.");
+    }
+    uint num_independent_variables = meta_info.independent_variable_names.size();
+    if (num_independent_variables >= 1) {
+      outfile.write((char*) &num_independent_variables, sizeof(num_independent_variables));
+      for (auto& var_name : meta_info.independent_variable_names) {
+        size_t length = var_name.size();
+        outfile.write((char*) &length, sizeof(length));
+        outfile.write((char*) var_name.c_str(), length * sizeof(char));
+      }
+    } else {
+      throw std::runtime_error("Missing dependent variable name.");
+    }
+    // Write num_trees
+    outfile.write((char*) &meta_info.num_trees, sizeof(meta_info.num_trees));
+    // Write is_ordered_variable
+    saveVector1D(meta_info.ordered_variable_indicators, outfile);
+}
 
-  // Open file for reading
-  std::ifstream infile;
-  infile.open(filename, std::ios::binary);
-  if (!infile.good()) {
-    throw std::runtime_error("Could not read from input file: " + filename + ".");
-  }
+void read_meta(std::ifstream& infile, Forest::MetaInfo& meta_info)
+{
+    uint num_dependent_variables = 0;
+    infile.read((char*) &num_dependent_variables, sizeof(num_dependent_variables));
+    meta_info.dependent_variable_names.reserve(num_dependent_variables);
+    for (size_t i = 0; i < num_dependent_variables; ++i) {
+      size_t length;
+      infile.read((char*) &length, sizeof(size_t));
+      char* temp = new char[length + 1];
+      infile.read((char*) temp, length * sizeof(char));
+      temp[length] = '\0';
+      meta_info.dependent_variable_names.push_back(temp);
+      delete[] temp;
+    }
+    uint num_independent_variables = 0;
+    infile.read((char*) &num_independent_variables, sizeof(num_independent_variables));
+    meta_info.independent_variable_names.reserve(num_independent_variables);
+    for (size_t i = 0; i < num_independent_variables; ++i) {
+      size_t length;
+      infile.read((char*) &length, sizeof(size_t));
+      char* temp = new char[length + 1];
+      infile.read((char*) temp, length * sizeof(char));
+      temp[length] = '\0';
+      meta_info.independent_variable_names.push_back(temp);
+      delete[] temp;
+    }
+    // Read num_trees
+    infile.read((char*) &meta_info.num_trees, sizeof(meta_info.num_trees));
+    // Read is_ordered_variable
+    readVector1D(meta_info.ordered_variable_indicators, infile);
+}
 
-  // Skip dependent variable names (already read)
-  uint num_dependent_variables;
-  infile.read((char*) &num_dependent_variables, sizeof(num_dependent_variables));
-  for (size_t i = 0; i < num_dependent_variables; ++i) {
-    size_t length;
-    infile.read((char*) &length, sizeof(size_t));
-    infile.ignore(length);
-  }
+Forest::MetaInfo read_meta(const std::string& forest_filename)
+{
+    std::ifstream forest {forest_filename, std::ios::binary};
+    ranger::Forest::MetaInfo result {};
+    ranger::read_meta(forest, result);
+    return result;
+}
 
-  // Read num_trees
-  infile.read((char*) &num_trees, sizeof(num_trees));
+void Forest::saveMetaInformation(std::ofstream& outfile) const
+{
+  assert(outfile.good());
+  const MetaInfo meta {dependent_variable_names, data->getVariableNames(), num_trees, data->getIsOrderedVariable()};
+  write_meta(outfile, meta);
+}
 
-  // Read is_ordered_variable
-  readVector1D(data->getIsOrderedVariable(), infile);
+void Forest::loadMetaInformation(std::ifstream& infile)
+{
+  assert(infile.good());
+  MetaInfo meta {};
+  read_meta(infile, meta);  
+  dependent_variable_names = std::move(meta.dependent_variable_names);
+  num_trees = meta.num_trees;
+  data->getIsOrderedVariable() = std::move(meta.ordered_variable_indicators);
+  num_independent_variables = meta.independent_variable_names.size();
+}
 
-  // Read tree data. This is different for tree types -> virtual function
+void Forest::loadFromFile(std::ifstream& infile) {
+  if (!infile.good()) throw std::runtime_error("Could not read from input file.");
+  loadMetaInformation(infile);
   loadFromFileInternal(infile);
-
-  infile.close();
-
   // Create thread ranges
   equalSplit(thread_ranges, 0, num_trees - 1, num_threads);
 }
 
-void Forest::loadDependentVariableNamesFromFile(std::string filename) {
-
+void Forest::loadFromFile(std::string filename) {
+  if (verbose_out)
+    *verbose_out << "Loading forest from file " << filename << "." << std::endl;
   // Open file for reading
-  std::ifstream infile;
-  infile.open(filename, std::ios::binary);
-  if (!infile.good()) {
-    throw std::runtime_error("Could not read from input file: " + filename + ".");
-  }
+  std::ifstream infile {filename, std::ios::binary};
+  try {
+      loadFromFile(infile);
+  } catch (...) {
+      throw std::runtime_error("Could not read from input file: " + filename + ".");
+  }  
+}
 
-  // Read dependent variable names
+void Forest::loadDependentVariablesFromFile(std::ifstream& infile) {
+  assert(infile.good());
   uint num_dependent_variables = 0;
   infile.read((char*) &num_dependent_variables, sizeof(num_dependent_variables));
   for (size_t i = 0; i < num_dependent_variables; ++i) {
@@ -853,8 +957,14 @@ void Forest::loadDependentVariableNamesFromFile(std::string filename) {
     dependent_variable_names.push_back(temp);
     delete[] temp;
   }
+}
 
-  infile.close();
+void Forest::loadDependentVariableNamesFromFile(std::string filename) {
+  std::ifstream infile {filename, std::ios::binary};
+  if (!infile.good()) {
+    throw std::runtime_error("Could not read from input file: " + filename + ".");
+  }
+  loadDependentVariablesFromFile(infile);
 }
 
 std::unique_ptr<Data> Forest::loadDataFromFile(const std::string& data_path) {
