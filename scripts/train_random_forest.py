@@ -23,7 +23,8 @@ except ImportError as plot_import_exception:
 script_dir = Path(__file__).parent.parent.absolute()
 default_octopus_bin = script_dir / 'bin/octopus'
 
-default_measures = "AC AD ADP AF ARF BQ CC CRF DAD DAF DC DENOVO DP DPC ER ERS FRF GC GQ GQD ITV NC MC MF MP MRC MQ MQ0 MQD PP PPD QD QUAL REFCALL REB RSB RTB SB SD SF SHC SMQ SOMATIC STRL STRP VL".split()
+default_germline_measures = "AC AD ADP AF ARF BQ CC CRF DAD DAF DC DENOVO DP DPC ER ERS FRF GC GQ GQD ITV MC MF MP MRC MQ MQ0 MQD PP PPD QD QUAL REFCALL REB RSB RTB SB SD SF STRL STRP VL".split()
+default_somatic_measures = "AC AD ADP AF ARF BQ CC CRF DAD DAF DP DPC ER ERS FRF GC GQ GQD ITV NC MC MF MP MRC MQ MQ0 MQD PP PPD QD QUAL REB RSB RTB SB SD SF SHC SMQ SOMATIC STRL STRP VL".split()
 
 known_truth_set_urls = {
     "GIAB": {
@@ -218,10 +219,18 @@ def get_octopus_output_filename(reference_filename, bam_filenames, kind="germlin
     return get_bam_id(bam_filenames) + "." + get_reference_id(reference_filename) + ".Octopus." + kind + ".vcf.gz"
 
 def run_octopus(octopus, reference, reads, regions, threads, output,
-                config=None, octopus_vcf=None, kind="germline"):
-    octopus_cmd = [str(octopus), '-R', str(reference), '-I'] + [str(r) for r in reads] + ['-t', str(regions),
-                                                                                          '--ignore-unmapped-contigs', '--disable-call-filtering', '--annotations', 'forest',
-                                                                                          '--threads', str(threads), '-o', str(output)]
+                config=None, octopus_vcf=None, kind="germline", annotations="all"):
+    octopus_cmd = [str(octopus), '-R', str(reference), '-I'] + \
+                  [str(r) for r in reads] + \
+                  ['-t', str(regions), \
+                   '--ignore-unmapped-contigs', \
+                   '--disable-call-filtering', \
+                   '--threads', str(threads), \
+                   '-o', str(output)]
+    if annotations == "all":
+        octopus_cmd += ['--annotations', 'all']
+    else:
+        octopus_cmd += ['--annotations'] + annotations
     if config is not None:
         octopus_cmd += ['--config', str(config)]
     if octopus_vcf is not None:
@@ -337,12 +346,13 @@ def read_pedigree(vcf_filename):
         return Path(options[options.index('--pedigree') + 1])
     return None
 
-def eval_octopus(octopus, rtg, example, out_dir, threads, kind="germline", overwrite=False):
+def eval_octopus(octopus, rtg, example, out_dir, threads, kind="germline", measures=None, overwrite=False):
     if example.reads is not None:
         octopus_vcf = out_dir / get_octopus_output_filename(example.reference, example.reads, kind=kind)
         if overwrite or not octopus_vcf.exists():
             run_octopus(octopus, example.reference, example.reads, example.regions, threads, octopus_vcf,
-                        config=example.config, octopus_vcf=example.octopus_vcf, kind=kind)
+                        config=example.config, octopus_vcf=example.octopus_vcf, kind=kind,
+                        annotations="all" if measures is None else measures)
     else:
         assert example.octopus_vcf is not None
         octopus_vcf = example.octopus_vcf
@@ -483,16 +493,21 @@ def select_training_hypterparameters(master_data_filename, training_params, opti
         return optimal_params
 
 def main(options):
+    if options.kind not in ["germline", "somatic"]:
+        print('kind must be "germline" or "somatic"')
+        exit(1)
     examples, training_params = load_training_config(options)
     options.out.mkdir(parents=True, exist_ok=True)
     data_files, tmp_files = [], []
+    default_measures = default_germline_measures if options.kind == "germline" else default_somatic_measures
     for example in examples:
-        vcfeval_dirs = eval_octopus(options.octopus, options.rtg, example, options.out, options.threads, kind=options.kind, overwrite=options.overwrite)
+        vcfeval_dirs = eval_octopus(options.octopus, options.rtg, example, options.out, options.threads, kind=options.kind, measures=default_measures, overwrite=options.overwrite)
         for vcfeval_dir in vcfeval_dirs:
             tp_vcf_path = vcfeval_dir / "tp.vcf.gz"
             tp_train_vcf_path = Path(str(tp_vcf_path).replace("tp.vcf", "tp.train.vcf"))
             if not tp_train_vcf_path.exists(): subset(tp_vcf_path, tp_train_vcf_path, example.regions)
             tp_data_path = Path(str(tp_train_vcf_path).replace(".vcf.gz", ".dat"))
+
             if not tp_data_path.exists(): make_ranger_data(tp_train_vcf_path, tp_data_path, True, default_measures, options.missing_value, fraction=example.tp)
             data_files.append(tp_data_path)
             fp_vcf_path = vcfeval_dir / "fp.vcf.gz"
