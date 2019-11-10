@@ -373,7 +373,7 @@ def eval_octopus(octopus, rtg, example, out_dir, threads, kind="germline", measu
                 vcfeval_dir = out_dir / (octopus_vcf.stem + '.' + sample + '.eval')
                 if not vcfeval_dir.exists() or overwrite:
                     if vcfeval_dir.exists(): shutil.rmtree(vcfeval_dir)
-                    run_rtg(rtg, example.sdf, example.truth, example.confident, octopus_vcf, vcfeval_dir, bed_regions=example.regions, sample=sample, kind=kind)
+                    run_rtg(rtg, example.sdf, example.truth[sample], example.confident[sample], octopus_vcf, vcfeval_dir, bed_regions=example.regions, sample=sample, kind=kind)
                 result.append(vcfeval_dir)
     else:
         for sample in samples:
