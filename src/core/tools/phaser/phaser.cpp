@@ -103,6 +103,11 @@ Phaser::GenotypePosteriorMap marginalise_collapsed_genotypes(const Phaser::Genot
     return result;
 }
 
+void collapse_each(Phaser::GenotypeCallMap& genotypes)
+{
+    for (auto& p : genotypes) p.second = p.second.collapse();
+}
+
 } // namespace
 
 Phaser::PhaseSet
@@ -133,13 +138,14 @@ Phaser::phase(const MappableBlock<Haplotype>& haplotypes,
         boost::optional<GenotypePosteriorMap> collapsed_genotype_posteriors {};
         for (const auto& p : genotype_posteriors) {
             const SampleName& sample {p.first};
-            if (genotype_calls && config_.max_phase_score && min_phase_score(genotype_calls->at(sample), p.second) >= *config_.max_phase_score) {
+            if (!collapsed_genotype_posteriors && genotype_calls && config_.max_phase_score && min_phase_score(genotype_calls->at(sample), p.second) >= *config_.max_phase_score) {
                 result.phase_regions[sample].emplace_back(haplotype_region, *config_.max_phase_score);
             } else {
                 if (!collapsed_genotype_posteriors && (max_genotype_ploidy > 2 || min_genotype_ploidy != max_genotype_ploidy)) {
                     collapsed_genotype_posteriors = marginalise_collapsed_genotypes(genotype_posteriors);
                     genotypes = extract_genotypes(*collapsed_genotype_posteriors);
                     std::tie(min_genotype_ploidy, max_genotype_ploidy) = minmax_ploidy(genotypes);
+                    if (genotype_calls) collapse_each(*genotype_calls);
                 }
                 PhaseSet::SamplePhaseRegions phases;
                 if (collapsed_genotype_posteriors) {
