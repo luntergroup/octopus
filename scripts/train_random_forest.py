@@ -310,7 +310,7 @@ def filter_somatic(vcf_filename):
         print("Skipped " + str(num_skipped_records) + " bad records")
     in_vcf.close()
     out_vcf.close()
-    shutil.move(tmp_vcf_filename, vcf_filename)
+    shutil.move(str(tmp_vcf_filename), str(vcf_filename))
     index_vcf(vcf_filename)
 
 def read_octopus_header_info(vcf_filename):
