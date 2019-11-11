@@ -26,7 +26,6 @@ public:
     SomaticRandomForestVariantCallFilter() = delete;
     
     SomaticRandomForestVariantCallFilter(FacetFactory facet_factory,
-                                         std::vector<MeasureWrapper> measures,
                                          Path germline_forest, Path somatic_forest,
                                          OutputOptions output_config,
                                          ConcurrencyPolicy threading,
@@ -35,7 +34,6 @@ public:
                                          boost::optional<ProgressMeter&> progress = boost::none);
     // Somatics only
     SomaticRandomForestVariantCallFilter(FacetFactory facet_factory,
-                                         std::vector<MeasureWrapper> measures,
                                          Path somatic_forest,
                                          OutputOptions output_config,
                                          ConcurrencyPolicy threading,

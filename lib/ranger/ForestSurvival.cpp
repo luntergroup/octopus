@@ -177,11 +177,11 @@ void ForestSurvival::computePredictionErrorInternal() {
   }
 
   // Use all samples which are OOB at least once
-  overall_prediction_error = 1 - computeConcordanceIndex(*data, sum_chf, oob_sampleIDs);
+  overall_prediction_error = 1 - computeConcordanceIndex(*data, sum_chf, oob_sampleIDs, NULL);
 }
 
 // #nocov start
-void ForestSurvival::writeOutputInternal() {
+void ForestSurvival::writeOutputInternal() const {
   if (verbose_out) {
     *verbose_out << "Tree type:                         " << "Survival" << std::endl;
     if (dependent_variable_names.size() >= 2) {
@@ -190,7 +190,7 @@ void ForestSurvival::writeOutputInternal() {
   }
 }
 
-void ForestSurvival::writeConfusionFile() {
+void ForestSurvival::writeConfusionFile() const {
 
   // Open confusion file for writing
   std::string filename = output_prefix + ".confusion";
@@ -209,7 +209,7 @@ void ForestSurvival::writeConfusionFile() {
 
 }
 
-void ForestSurvival::writePredictionFile() {
+void ForestSurvival::writePredictionFile() const {
 
   // Open prediction file for writing
   std::string filename = output_prefix + ".prediction";
@@ -253,10 +253,7 @@ void ForestSurvival::writePredictionFile() {
     *verbose_out << "Saved predictions to file " << filename << "." << std::endl;
 }
 
-void ForestSurvival::saveToFileInternal(std::ofstream& outfile) {
-
-  // Write num_variables
-  outfile.write((char*) &num_independent_variables, sizeof(num_independent_variables));
+void ForestSurvival::saveToFileInternal(std::ofstream& outfile) const {
 
   // Write treetype
   TreeType treetype = TREE_SURVIVAL;
@@ -267,10 +264,6 @@ void ForestSurvival::saveToFileInternal(std::ofstream& outfile) {
 }
 
 void ForestSurvival::loadFromFileInternal(std::ifstream& infile) {
-
-  // Read number of variables
-  size_t num_variables_saved;
-  infile.read((char*) &num_variables_saved, sizeof(num_variables_saved));
 
   // Read treetype
   TreeType treetype;
@@ -307,11 +300,6 @@ void ForestSurvival::loadFromFileInternal(std::ifstream& infile) {
 //    }
     for (size_t j = 0; j < terminal_nodes.size(); ++j) {
       chf[terminal_nodes[j]] = chf_vector[j];
-    }
-
-    // If dependent variable not in test data, throw error
-    if (num_variables_saved != num_independent_variables) {
-      throw std::runtime_error("Number of independent variables in data does not match with the loaded forest.");
     }
 
     // Create tree

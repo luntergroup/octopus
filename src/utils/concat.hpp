@@ -7,6 +7,8 @@
 #include <vector>
 #include <iterator>
 
+namespace octopus {
+
 template <typename T>
 std::vector<T> concat(const std::vector<T>& lhs, const std::vector<T>& rhs)
 {
@@ -40,5 +42,7 @@ std::vector<T> concat(std::vector<T>&& lhs, std::vector<T>&& rhs)
     lhs.insert(lhs.cend(), std::make_move_iterator(rhs.begin()), std::make_move_iterator(rhs.end()));
     return std::move(lhs);
 }
+
+} // namespace octopus
 
 #endif

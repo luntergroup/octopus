@@ -42,21 +42,20 @@ public:
   }
 
 private:
+  std::vector<double> unique_timepoints;
+  std::vector<size_t> response_timepointIDs;
+  
   void initInternal() override;
   void growInternal() override;
   void allocatePredictMemory() override;
   void predictInternal(size_t sample_idx) override;
   void computePredictionErrorInternal() override;
-  void writeOutputInternal() override;
-  void writeConfusionFile() override;
-  void writePredictionFile() override;
-  void saveToFileInternal(std::ofstream& outfile) override;
+  void writeOutputInternal() const override;
+  void writeConfusionFile() const override;
+  void writePredictionFile() const override;
+  void saveToFileInternal(std::ofstream& outfile) const override;
   void loadFromFileInternal(std::ifstream& infile) override;
 
-  std::vector<double> unique_timepoints;
-  std::vector<size_t> response_timepointIDs;
-
-private:
   const std::vector<double>& getTreePrediction(size_t tree_idx, size_t sample_idx) const;
   size_t getTreePredictionTerminalNodeID(size_t tree_idx, size_t sample_idx) const;
 };

@@ -19,35 +19,16 @@
 #include "ranger/ForestProbability.h"
 
 #include "utils/concat.hpp"
+#include "utils/append.hpp"
 #include "utils/maths.hpp"
 #include "exceptions/missing_file_error.hpp"
 #include "exceptions/program_error.hpp"
 #include "exceptions/malformed_file_error.hpp"
+#include "../measures/measure_factory.hpp"
 
 namespace octopus { namespace csr {
 
-namespace {
-
-class MissingForestFile : public MissingFileError
-{
-    std::string do_where() const override { return "RandomForestFilter"; }
-public:
-    MissingForestFile(boost::filesystem::path p) : MissingFileError {std::move(p), ".forest"} {};
-};
-
-void check_all_exists(const std::vector<RandomForestFilter::Path>& forests)
-{
-    for (const auto& forest : forests) {
-        if (!boost::filesystem::exists(forest)) {
-            throw MissingForestFile {forest};
-        }
-    }
-}
-    
-} // namespace
-
 RandomForestFilter::RandomForestFilter(FacetFactory facet_factory,
-                                       std::vector<MeasureWrapper> measures,
                                        Path ranger_forest,
                                        OutputOptions output_config,
                                        ConcurrencyPolicy threading,
@@ -56,7 +37,6 @@ RandomForestFilter::RandomForestFilter(FacetFactory facet_factory,
                                        boost::optional<ProgressMeter&> progress)
 : RandomForestFilter {
 std::move(facet_factory),
-std::move(measures),
 {},
 [] (const auto&) noexcept { return 0; },
 {std::move(ranger_forest)},
@@ -68,8 +48,36 @@ progress
 }
 {}
 
+namespace {
+
+class MissingForestFile : public MissingFileError
+{
+    std::string do_where() const override { return "RandomForestFilter"; }
+public:
+    MissingForestFile(boost::filesystem::path p) : MissingFileError {std::move(p), ".forest"} {};
+};
+
+std::vector<MeasureWrapper>
+get_measures(const RandomForestFilter::Path& forest)
+{
+    if (!boost::filesystem::exists(forest)) throw MissingForestFile {forest};
+    return make_measures(ranger::read_meta(forest.string()).independent_variable_names);
+}
+
+std::vector<std::vector<MeasureWrapper>>
+get_measures(const std::vector<RandomForestFilter::Path>& forests)
+{
+    std::vector<std::vector<MeasureWrapper>> result {};
+    result.reserve(forests.size());
+    for (const auto& forest : forests) {
+        result.push_back(get_measures(forest));
+    }
+    return result;
+}
+
+} // namespace
+
 RandomForestFilter::RandomForestFilter(FacetFactory facet_factory,
-                                       std::vector<MeasureWrapper> measures,
                                        std::vector<MeasureWrapper> chooser_measures,
                                        std::function<std::int8_t(std::vector<Measure::ResultType>)> chooser,
                                        std::vector<Path> ranger_forests,
@@ -78,17 +86,61 @@ RandomForestFilter::RandomForestFilter(FacetFactory facet_factory,
                                        Path temp_directory,
                                        Options options,
                                        boost::optional<ProgressMeter&> progress)
-: DoublePassVariantCallFilter {std::move(facet_factory), concat(std::move(measures), chooser_measures),
+: RandomForestFilter {
+std::move(facet_factory),
+get_measures(ranger_forests),
+std::move(chooser_measures),
+std::move(chooser),
+{std::move(ranger_forests)},
+std::move(output_config),
+std::move(threading),
+std::move(temp_directory),
+std::move(options),
+progress
+}
+{}
+
+namespace {
+
+auto concat(const std::vector<std::vector<MeasureWrapper>>& measures)
+{
+    std::vector<MeasureWrapper> result {};
+    for (const auto& submeasures : measures) {
+        utils::append(submeasures, result);
+    }
+    return result;
+}
+
+} // namespace
+
+RandomForestFilter::RandomForestFilter(FacetFactory facet_factory,
+                                       std::vector<std::vector<MeasureWrapper>> forest_measures,
+                                       std::vector<MeasureWrapper> chooser_measures,
+                                       std::function<std::int8_t(std::vector<Measure::ResultType>)> chooser,
+                                       std::vector<Path> ranger_forests,
+                                       OutputOptions output_config,
+                                       ConcurrencyPolicy threading,
+                                       Path temp_directory,
+                                       Options options,
+                                       boost::optional<ProgressMeter&> progress)
+: DoublePassVariantCallFilter {std::move(facet_factory),
+                               concat(concat(forest_measures), chooser_measures),
                                std::move(output_config), threading, std::move(temp_directory), progress}
 , forest_paths_ {std::move(ranger_forests)}
 , chooser_ {std::move(chooser)}
+, forest_measure_info_ {}
 , num_chooser_measures_ {chooser_measures.size()}
 , options_ {std::move(options)}
 , threading_ {threading}
 , num_records_ {0}
 , data_buffer_ {}
 {
-    check_all_exists(forest_paths_);
+    forest_measure_info_.reserve(ranger_forests.size());
+    std::size_t index {0};
+    for (const auto& measures : forest_measures) {
+        forest_measure_info_.push_back({index, measures.size()});
+        index += measures.size();
+    }
 }
 
 std::string RandomForestFilter::do_name() const
@@ -246,7 +298,10 @@ void RandomForestFilter::record(const std::size_t call_idx, std::size_t sample_i
     const auto num_forests = static_cast<std::remove_const_t<decltype(forest_idx)>>(data_buffer_.size());
     if (forest_idx >= 0 && forest_idx < num_forests) {
         auto& buffer = data_buffer_[forest_idx][sample_idx];
-        std::transform(std::cbegin(measures), std::prev(std::cend(measures), num_chooser_measures_),
+        const auto& info = forest_measure_info_[forest_idx];
+        const auto first_measure = std::next(std::cbegin(measures), info.start_index);
+        buffer.reserve(info.number);
+        std::transform(first_measure, std::next(first_measure, info.number),
                        std::back_inserter(buffer), cast_to_double);
         buffer.push_back(0); // dummy TP value
         check_nan(buffer);

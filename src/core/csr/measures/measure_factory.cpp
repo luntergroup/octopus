@@ -141,6 +141,14 @@ MeasureWrapper make_measure(std::string name)
     return result;
 }
 
+std::vector<MeasureWrapper> make_measures(std::vector<std::string> names)
+{
+    std::vector<MeasureWrapper> result {};
+    result.reserve(names.size());
+    std::transform(std::cbegin(names), std::cend(names), std::back_inserter(result), make_measure);
+    return result;
+}
+
 std::vector<std::string> get_all_measure_names()
 {
     static MeasureMakerMap measure_makers {};
