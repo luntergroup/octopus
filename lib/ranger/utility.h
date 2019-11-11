@@ -304,10 +304,12 @@ double mostFrequentValue(const std::unordered_map<double, size_t>& class_count,
  * @param data Reference to Data object
  * @param sum_chf Summed chf over timepoints for each sample
  * @param sample_IDs IDs of samples, for example OOB samples
+ * @param prediction_error_casewise An optional output vector with casewise prediction errors.
+ *   If pointer is NULL, casewise prediction errors should not be computed.
  * @return concordance index
  */
 double computeConcordanceIndex(const Data& data, const std::vector<double>& sum_chf,
-    const std::vector<size_t>& sample_IDs);
+    const std::vector<size_t>& sample_IDs, std::vector<double>* prediction_error_casewise);
 
 /**
  * Convert a unsigned integer to string
@@ -536,6 +538,37 @@ inline bool checkInterrupt() {
   return (R_ToplevelExec(chkIntFn, NULL) == FALSE);
 }
 #endif
+
+// Provide make_unique (not available in C++11)
+namespace detail {
+
+template<class T> struct _Unique_if {
+  typedef std::unique_ptr<T> _Single_object;
+};
+
+template<class T> struct _Unique_if<T[]> {
+  typedef std::unique_ptr<T[]> _Unknown_bound;
+};
+
+template<class T, size_t N> struct _Unique_if<T[N]> {
+  typedef void _Known_bound;
+};
+
+} // namespace detail
+
+template<class T, class ... Args>
+typename detail::_Unique_if<T>::_Single_object make_unique(Args&&... args) {
+  return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
+}
+
+template<class T>
+typename detail::_Unique_if<T>::_Unknown_bound make_unique(size_t n) {
+  typedef typename std::remove_extent<T>::type U;
+  return std::unique_ptr<T>(new U[n]());
+}
+
+template<class T, class ... Args>
+typename detail::_Unique_if<T>::_Known_bound make_unique(Args&&...) = delete;
 
 }
 // namespace ranger

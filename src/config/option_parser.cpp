@@ -599,11 +599,11 @@ OptionMap parse_options(const int argc, const char** argv)
      "Expected INDEL somatic mutation rate, per megabase pair, for this sample")
     
     ("min-expected-somatic-frequency",
-     po::value<float>()->default_value(0.03, "0.03"),
+     po::value<float>()->default_value(0.01, "0.01"),
      "Minimum expected somatic allele frequency in the sample")
     
     ("min-credible-somatic-frequency",
-     po::value<float>()->default_value(0.01, "0.01"),
+     po::value<float>()->default_value(0.005, "0.005"),
      "Minimum credible somatic allele frequency that will be reported")
     
      ("tumour-germline-concentration",

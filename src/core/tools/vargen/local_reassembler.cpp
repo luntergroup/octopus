@@ -101,9 +101,9 @@ void LocalReassembler::Bin::add(const AlignedRead& read)
         read_region = contig_region(read);
     }
     if (is_forward_strand(read)) {
-        forward_read_sequences.emplace_back(read.sequence());
+        forward_read_sequences.push_back({read.sequence(), read.base_qualities()});
     } else {
-        reverse_read_sequences.emplace_back(read.sequence());
+        reverse_read_sequences.push_back({read.sequence(), read.base_qualities()});
     }
 }
 
@@ -115,9 +115,9 @@ void LocalReassembler::Bin::add(const AlignedRead& read, const NucleotideSequenc
         read_region = contig_region(read);
     }
     if (is_forward_strand(read)) {
-        forward_read_sequences.emplace_back(masked_sequence);
+        forward_read_sequences.push_back({masked_sequence, read.base_qualities()});
     } else {
-        reverse_read_sequences.emplace_back(masked_sequence);
+        reverse_read_sequences.push_back({masked_sequence, read.base_qualities()});
     }
 }
 
@@ -555,11 +555,11 @@ GenomicRegion LocalReassembler::propose_assembler_region(const GenomicRegion& in
 
 void LocalReassembler::load(const Bin& bin, Assembler& assembler) const
 {
-    for (const auto& sequence : bin.forward_read_sequences) {
-        assembler.insert_read(sequence, Assembler::Direction::forward);
+    for (const auto& read : bin.forward_read_sequences) {
+        assembler.insert_read(read.sequence, read.base_qualities, Assembler::Direction::forward);
     }
-    for (const auto& sequence : bin.reverse_read_sequences) {
-        assembler.insert_read(sequence, Assembler::Direction::reverse);
+    for (const auto& read : bin.reverse_read_sequences) {
+        assembler.insert_read(read.sequence, read.base_qualities, Assembler::Direction::reverse);
     }
 }
 
@@ -1040,7 +1040,7 @@ double DepthBasedBubbleScoreSetter::operator()(const GenomicRegion& region, cons
     auto result = min_score_;
     for (const auto& p : read_counts) {
         const auto mean_depth = p.second / size(region);
-        result = std::max(result, std::floor(min_allele_frequency_ * mean_depth));
+        result = std::max(result, min_allele_frequency_ * mean_depth);
     }
     return result;
 }

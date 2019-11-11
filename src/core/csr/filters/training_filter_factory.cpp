@@ -8,7 +8,6 @@
 
 #include "passing_filter.hpp"
 #include "../measures/measure_factory.hpp"
-#include "random_forest_filter_factory.hpp"
 
 namespace octopus { namespace csr {
 
@@ -16,14 +15,13 @@ namespace {
 
 bool is_named_measure_set(const std::string& name)
 {
-    return name == "forest";
+    return name == "all";
 }
 
 std::vector<MeasureWrapper> make_measure_set(const std::string& name)
 {
-    if (name == "forest") {
-        const RandomForestFilterFactory forest_factory {};
-        return forest_factory.measures();
+    if (name == "all") {
+        return make_measures(get_all_measure_names());
     } else {
         return {};
     }
