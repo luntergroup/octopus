@@ -36,6 +36,7 @@ class Assembler
 {
 public:
     using NucleotideSequence = std::string;
+    using BaseQualityVector = std::vector<std::uint8_t>;
     enum class Direction { forward, reverse };
     
     struct Variant;
@@ -68,7 +69,9 @@ public:
     void insert_reference(const NucleotideSequence& sequence);
     
     // Threads the given read sequence into the graph
-    void insert_read(const NucleotideSequence& sequence, Direction strand);
+    void insert_read(const NucleotideSequence& sequence,
+                     const BaseQualityVector& base_qualities,
+                     Direction strand);
     
     // Returns the current number of unique kmers in the graph
     std::size_t num_kmers() const noexcept;
@@ -142,6 +145,7 @@ private:
         using WeightType = unsigned;
         using ScoreType  = double;
         WeightType weight, forward_strand_weight;
+        int base_quality_sum = 0;
         bool is_reference = false, is_artificial = false;
         ScoreType transition_score = 0;
     };
@@ -197,12 +201,14 @@ private:
     void remove_vertex(Vertex v);
     void clear_and_remove_vertex(Vertex v);
     void clear_and_remove_all(const std::unordered_set<Vertex>& vertices);
-    Edge add_edge(Vertex u, Vertex v, GraphEdge::WeightType weight, GraphEdge::WeightType forward_weight,
+    Edge add_edge(Vertex u, Vertex v,
+                  GraphEdge::WeightType weight, GraphEdge::WeightType forward_weight,
+                  int base_quality_sum,
                   bool is_reference = false, bool is_artificial = false);
     Edge add_reference_edge(Vertex u, Vertex v);
     void remove_edge(Vertex u, Vertex v);
     void remove_edge(Edge e);
-    void increment_weight(Edge e, bool is_forward);
+    void increment_weight(Edge e, bool is_forward, int base_quality);
     void set_vertex_reference(Vertex v);
     void set_vertex_reference(const Kmer& kmer);
     void set_edge_reference(Edge e);
@@ -286,6 +292,9 @@ private:
     backtrack_until_nonreference(const PredecessorMap& predecessors, Vertex from) const;
     Path extract_nonreference_path(const PredecessorMap& predecessors, Vertex from) const;
     std::vector<EdgePath> extract_k_shortest_paths(Vertex src, Vertex dst, unsigned k) const;
+    Edge head_edge(const Path& path) const;
+    int head_mean_base_quality(const Path& path) const;
+    int tail_mean_base_quality(const Path& path) const;
     double bubble_score(const Path& path) const;
     std::deque<Variant> extract_bubble_paths(unsigned max_bubbles, double min_bubble_score);
     std::deque<SubGraph> find_independent_subgraphs() const;
@@ -299,7 +308,7 @@ private:
     void print_reference_path() const;
     void print(Edge e) const;
     void print(const Path& path) const;
-    void print_weighted(const Path& path) const;
+    void print_verbose(const Path& path) const;
     void print_dominator_tree() const;
     
     friend struct boost::property_map<KmerGraph, boost::vertex_index_t>;

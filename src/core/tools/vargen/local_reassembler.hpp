@@ -86,7 +86,12 @@ private:
     
     struct Bin : public Mappable<Bin>
     {
-        using ReadReferenceStash = std::deque<std::reference_wrapper<const NucleotideSequence>>;
+        struct ReadData
+        {
+            std::reference_wrapper<const NucleotideSequence> sequence;
+            std::reference_wrapper<const AlignedRead::BaseQualityVector> base_qualities;
+        };
+        using ReadDataStash = std::deque<ReadData>;
         
         Bin(GenomicRegion region);
         
@@ -101,7 +106,7 @@ private:
         
         GenomicRegion region;
         boost::optional<ContigRegion> read_region;
-        ReadReferenceStash forward_read_sequences, reverse_read_sequences;
+        ReadDataStash forward_read_sequences, reverse_read_sequences;
     };
     
     using BinList = std::deque<Bin>;

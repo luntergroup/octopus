@@ -104,12 +104,15 @@ void Assembler::insert_reference(const NucleotideSequence& sequence)
     }
 }
 
-void Assembler::insert_read(const NucleotideSequence& sequence, const Direction strand)
+void Assembler::insert_read(const NucleotideSequence& sequence,
+                            const BaseQualityVector& base_qualities,
+                            const Direction strand)
 {
     if (sequence.size() >= kmer_size()) {
         const bool is_forward_strand {strand == Direction::forward};
         auto kmer_begin = std::cbegin(sequence);
         auto kmer_end   = std::next(kmer_begin, kmer_size());
+        auto base_quality_itr = std::next(std::cbegin(base_qualities), kmer_size());
         Kmer prev_kmer {kmer_begin, kmer_end};
         bool prev_kmer_good {true};
         auto vertex_itr = vertex_cache_.find(prev_kmer);
@@ -127,10 +130,10 @@ void Assembler::insert_read(const NucleotideSequence& sequence, const Direction 
             auto ref_edge_itr = std::next(std::cbegin(reference_edges_), ref_offset);
             ++ref_kmer_itr;
             for (; next_kmer_end <= std::cend(sequence) && ref_kmer_itr < std::cend(reference_kmers_);
-                   ++next_kmer_begin, ++next_kmer_end, ++ref_kmer_itr, ++ref_vertex_itr, ++ref_edge_itr) {
+                   ++next_kmer_begin, ++next_kmer_end, ++ref_kmer_itr, ++ref_vertex_itr, ++ref_edge_itr, ++base_quality_itr) {
                 if (std::equal(next_kmer_begin, next_kmer_end, std::cbegin(*ref_kmer_itr))) {
                     assert(ref_edge_itr != std::cend(reference_edges_));
-                    increment_weight(*ref_edge_itr, is_forward_strand);
+                    increment_weight(*ref_edge_itr, is_forward_strand, *base_quality_itr);
                 } else {
                     break;
                 }
@@ -145,7 +148,7 @@ void Assembler::insert_read(const NucleotideSequence& sequence, const Direction 
         }
         ++kmer_begin;
         ++kmer_end;
-        for (; kmer_end <= std::cend(sequence); ++kmer_begin, ++kmer_end) {
+        for (; kmer_end <= std::cend(sequence); ++kmer_begin, ++kmer_end, ++base_quality_itr) {
             Kmer kmer {kmer_begin, kmer_end};
             const auto kmer_itr = vertex_cache_.find(kmer);
             if (kmer_itr == std::cend(vertex_cache_)) {
@@ -154,7 +157,7 @@ void Assembler::insert_read(const NucleotideSequence& sequence, const Direction 
                     if (prev_kmer_good) {
                         assert(vertex_cache_.count(prev_kmer) == 1);
                         const auto u = vertex_cache_.at(prev_kmer);
-                        add_edge(u, *v, 1, is_forward_strand);
+                        add_edge(u, *v, 1, is_forward_strand, *base_quality_itr);
                     }
                     prev_kmer_good = true;
                 } else {
@@ -167,9 +170,9 @@ void Assembler::insert_read(const NucleotideSequence& sequence, const Direction 
                     Edge e; bool e_in_graph;
                     std::tie(e, e_in_graph) = boost::edge(u, v, graph_);
                     if (e_in_graph) {
-                        increment_weight(e, is_forward_strand);
+                        increment_weight(e, is_forward_strand, *base_quality_itr);
                     } else {
-                        add_edge(u, v, 1, is_forward_strand);
+                        add_edge(u, v, 1, is_forward_strand, *base_quality_itr);
                     }
                 }
                 if (is_reference(kmer_itr->second)) {
@@ -185,7 +188,7 @@ void Assembler::insert_read(const NucleotideSequence& sequence, const Direction 
                                ++next_kmer_begin, ++next_kmer_end, ++ref_kmer_itr, ++ref_vertex_itr, ++ref_edge_itr) {
                             if (std::equal(next_kmer_begin, next_kmer_end, std::cbegin(*ref_kmer_itr))) {
                                 assert(ref_edge_itr != std::cend(reference_edges_));
-                                increment_weight(*ref_edge_itr, is_forward_strand);
+                                increment_weight(*ref_edge_itr, is_forward_strand, *base_quality_itr);
                             } else {
                                 break;
                             }
@@ -603,14 +606,15 @@ void Assembler::clear_and_remove_all(const std::unordered_set<Vertex>& vertices)
 
 Assembler::Edge Assembler::add_edge(const Vertex u, const Vertex v,
                                     const GraphEdge::WeightType weight, GraphEdge::WeightType forward_weight,
+                                    const int base_quality_sum,
                                     const bool is_reference, const bool is_artificial)
 {
-    return boost::add_edge(u, v, {weight, forward_weight, is_reference, is_artificial}, graph_).first;
+    return boost::add_edge(u, v, {weight, forward_weight, base_quality_sum, is_reference, is_artificial}, graph_).first;
 }
 
 Assembler::Edge Assembler::add_reference_edge(const Vertex u, const Vertex v)
 {
-    return add_edge(u, v, 0, 0, true);
+    return add_edge(u, v, 0, 0, 0, true);
 }
 
 void Assembler::remove_edge(const Vertex u, const Vertex v)
@@ -623,10 +627,11 @@ void Assembler::remove_edge(const Edge e)
     boost::remove_edge(e, graph_);
 }
 
-void Assembler::increment_weight(const Edge e, const bool is_forward)
+void Assembler::increment_weight(const Edge e, const bool is_forward, const int base_quality)
 {
     auto& edge = graph_[e];
     ++edge.weight;
+    edge.base_quality_sum += base_quality;
     if (is_forward) ++edge.forward_strand_weight;
 }
 
@@ -1670,6 +1675,37 @@ bool is_dominated_by_path(const V& vertex, const BidirectionalIt first, const Bi
     return std::find(rfirst, rlast, dominator) != rlast;
 }
 
+Assembler::Edge Assembler::head_edge(const Path& path) const
+{
+    assert(path.size() > 1);
+    Edge e; bool good;
+    std::tie(e, good) = boost::edge(path[0], path[1], graph_);
+    assert(good);
+    return e;
+}
+
+int Assembler::head_mean_base_quality(const Path& path) const
+{
+    const auto fork_edge = head_edge(path);
+    return graph_[fork_edge].base_quality_sum / graph_[fork_edge].weight;
+}
+int Assembler::tail_mean_base_quality(const Path& path) const
+{
+    if (path.size() < 3) return 0;
+    int base_quality_sum {0};
+    const auto add_edge = [&] (const auto& u, const auto& v) {
+        Edge e; bool good;
+        std::tie(e, good) = boost::edge(u, v, graph_);
+        assert(good);
+        base_quality_sum += graph_[e].base_quality_sum;
+        return graph_[e].weight;
+    };
+    auto total_weight = std::inner_product(std::next(std::cbegin(path)), std::prev(std::cend(path)),
+                       std::next(std::cbegin(path), 2), GraphEdge::WeightType {0},
+                       std::plus<> {}, add_edge);
+    return base_quality_sum / total_weight;
+}
+
 double Assembler::bubble_score(const Path& path) const
 {
     const auto path_weight = weight(path);
@@ -1684,6 +1720,10 @@ double Assembler::bubble_score(const Path& path) const
                                                             static_cast<double>(reverse_weight + 1),
                                                             *params_.strand_tail_mass);
         result *= (1.0 - tail_mass);
+    }
+    result *= maths::phred_to_probability<>(head_mean_base_quality(path));
+    if (path.size() > 2) {
+        result *= maths::phred_to_probability<>(tail_mean_base_quality(path));
     }
     return result;
 }
@@ -2018,7 +2058,7 @@ void Assembler::print(const Path& path) const
     std::cout << kmer_of(path.back());
 }
 
-void Assembler::print_weighted(const Path& path) const
+void Assembler::print_verbose(const Path& path) const
 {
     if (path.size() < 2) return;
     std::transform(std::cbegin(path), std::prev(std::cend(path)), std::next(std::cbegin(path)),
@@ -2027,7 +2067,13 @@ void Assembler::print_weighted(const Path& path) const
                        Edge e; bool good;
                        std::tie(e, good) = boost::edge(u, v, graph_);
                        assert(good);
-                       return static_cast<std::string>(this->kmer_of(v)) + "(" + std::to_string(graph_[e].weight) + ")";
+                       auto result = static_cast<std::string>(this->kmer_of(v));
+                       result += "(";
+                       result += std::to_string(graph_[e].weight);
+                       result += ", " + std::to_string(graph_[e].forward_strand_weight);
+                       result += ", " + std::to_string(graph_[e].base_quality_sum);
+                       result += ")";
+                       return result;
                    });
     std::cout << kmer_of(path.back());
 }
