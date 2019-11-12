@@ -2085,6 +2085,7 @@ make_call_filter_factory(const ReferenceGenome& reference, ReadPipe& read_pipe, 
                     logging::WarningLogger log {};
                     log << "Both germline and somatic forests must be provided for random forest cancer variant filtering";
                 }
+                forest_options.use_somatic_forest_for_refcalls = options.at("use-somatic-forest-for-refcalls").as<bool>();
             }
             result = std::make_unique<RandomForestFilterFactory>(std::move(forest_files), std::move(forest_types), *temp_directory, forest_options);
         } else {

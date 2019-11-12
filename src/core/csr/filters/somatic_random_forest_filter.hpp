@@ -21,7 +21,11 @@ namespace octopus { namespace csr {
 class SomaticRandomForestVariantCallFilter : public RandomForestFilter
 {
 public:
-    using RandomForestFilter::Options;
+    struct Options : public RandomForestFilter::Options
+    {
+        Options(RandomForestFilter::Options common, bool use_somatic_forest_for_refcalls);
+        bool use_somatic_forest_for_refcalls;
+    };
     
     SomaticRandomForestVariantCallFilter() = delete;
     
