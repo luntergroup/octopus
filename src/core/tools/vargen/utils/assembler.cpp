@@ -1686,8 +1686,8 @@ Assembler::Edge Assembler::head_edge(const Path& path) const
 
 int Assembler::head_mean_base_quality(const Path& path) const
 {
-    const auto fork_edge = head_edge(path);
-    return graph_[fork_edge].base_quality_sum / graph_[fork_edge].weight;
+    const auto& fork_edge = graph_[head_edge(path)];
+    return fork_edge.weight > 0 ? fork_edge.base_quality_sum / fork_edge.weight : 0;
 }
 int Assembler::tail_mean_base_quality(const Path& path) const
 {
