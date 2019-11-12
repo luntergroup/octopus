@@ -519,8 +519,9 @@ def main(options):
             tmp_files += [tp_train_vcf_path, fp_train_vcf_path]
     master_data_file = options.out / (str(options.prefix) + ".dat")
     concat(data_files, master_data_file)
-    for file in tmp_files + data_files:
-        file.unlink()
+    if not options.keep_example_data_files:
+        for file in tmp_files + data_files:
+            file.unlink()
     shuffle(master_data_file)
     ranger_header = ' '.join(default_measures + ['TP'])
     add_header(master_data_file, ranger_header)
@@ -574,7 +575,7 @@ if __name__ == '__main__':
                         type=int,
                         default=1,
                         help='Number of threads for octopus')
-    parser.add_argument('--missing_value',
+    parser.add_argument('--missing-value',
                         type=float,
                         default=-1,
                         help='Value for missing measures')
@@ -586,5 +587,12 @@ if __name__ == '__main__':
                         default=False,
                         help='Overwrite existing calls and evaluation files',
                         action='store_true')
+    parser.add_argument('--keep-example-data-files',
+                        default=False,
+                        help='Do not delete generated training data files for each example',
+                        action='store_true')
     parsed, unparsed = parser.parse_known_args()
-    main(parsed)
+    if len(unparsed) == 0:
+        main(parsed)
+    else:
+        print("Error: unparsed options", unparsed)
