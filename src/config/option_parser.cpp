@@ -714,17 +714,21 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<fs::path>(),
      "Filter the given Octopus VCF without calling")
     
-    ("forest-file",
+    ("forest-model",
      po::value<fs::path>(),
-     "Trained Ranger random forest file")
+     "Trained Ranger random forest model file")
     
-    ("somatic-forest-file",
+    ("somatic-forest-model",
      po::value<fs::path>(),
-     "Trained Ranger random forest file for somatic variants")
+     "Trained Ranger random forest model file for somatic variants")
     
     ("min-forest-quality",
      po::value<Phred<double>>()->default_value(Phred<double> {3}),
      "Minimum PASSing random forest probability (Phred scale)")
+
+    ("use-somatic-forest-for-refcalls",
+     po::bool_switch()->default_value(false),
+     "Use the somatic forest model for evaluating homozygous reference calls rather than the germline forest model")
     ;
     
     po::options_description all("Octopus command line options");

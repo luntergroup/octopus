@@ -27,7 +27,13 @@ public:
     using Path = RandomForestFilter::Path;
     enum class ForestType { germline, somatic, denovo };
     
-    using Options = RandomForestFilter::Options;
+    struct Options : public RandomForestFilter::Options
+    {
+        Options() = default;
+        Options(RandomForestFilter::Options common);
+        
+        bool use_somatic_forest_for_refcalls;
+    };
     
     RandomForestFilterFactory();
     
@@ -50,10 +56,11 @@ private:
     Options options_;
     
     std::unique_ptr<VariantCallFilterFactory> do_clone() const override;
-    std::unique_ptr<VariantCallFilter> do_make(FacetFactory facet_factory,
-                                               VariantCallFilter::OutputOptions output_config,
-                                               boost::optional<ProgressMeter&> progress,
-                                               VariantCallFilter::ConcurrencyPolicy threading) const override;
+    std::unique_ptr<VariantCallFilter>
+    do_make(FacetFactory facet_factory,
+            VariantCallFilter::OutputOptions output_config,
+            boost::optional<ProgressMeter&> progress,
+            VariantCallFilter::ConcurrencyPolicy threading) const override;
 };
 
 } // namespace csr

@@ -10,6 +10,11 @@
 
 namespace octopus { namespace csr {
 
+SomaticRandomForestVariantCallFilter::Options::Options(RandomForestFilter::Options common, bool use_somatic_forest_for_refcalls)
+: RandomForestFilter::Options {common}
+, use_somatic_forest_for_refcalls {use_somatic_forest_for_refcalls}
+{}
+
 SomaticRandomForestVariantCallFilter::SomaticRandomForestVariantCallFilter(FacetFactory facet_factory,
                                                                            Path germline_forest, Path somatic_forest,
                                                                            OutputOptions output_config,
@@ -20,12 +25,12 @@ SomaticRandomForestVariantCallFilter::SomaticRandomForestVariantCallFilter(Facet
 : RandomForestFilter {
     std::move(facet_factory),
     {make_wrapped_measure<IsSomatic>(true), make_wrapped_measure<IsRefcall>(true)},
-    [] (const MeasureVector& measures) -> std::int8_t {
+    [use_somatic_forest_for_refcalls = options.use_somatic_forest_for_refcalls] (const MeasureVector& measures) -> std::int8_t {
         assert(measures.size() == 2);
         if (boost::get<bool>(measures.front())) {
             return 1;
         } else if (boost::get<bool>(measures.back())) {
-            return 1;
+            return use_somatic_forest_for_refcalls;
         } else {
             return 0;
         }},
