@@ -2054,7 +2054,7 @@ std::set<std::string> get_requested_measure_annotations(const OptionMap& options
 
 bool is_random_forest_filtering(const OptionMap& options)
 {
-    return is_set("forest-file", options) || is_set("somatic-forest-file", options);
+    return is_set("forest-model", options) || is_set("somatic-forest-model", options);
 }
 
 auto get_caller_type(const OptionMap& options, const std::vector<SampleName>& samples)
@@ -2071,13 +2071,13 @@ make_call_filter_factory(const ReferenceGenome& reference, ReadPipe& read_pipe, 
     if (is_call_filtering_requested(options)) {
         const auto caller = get_caller_type(options, read_pipe.samples());
         if (is_random_forest_filtering(options)) {
-            std::vector<RandomForestFilterFactory::Path> forest_files {resolve_path(options.at("forest-file").as<fs::path>(), options)};
+            std::vector<RandomForestFilterFactory::Path> forest_files {resolve_path(options.at("forest-model").as<fs::path>(), options)};
             std::vector<RandomForestFilterFactory::ForestType> forest_types {RandomForestFilterFactory::ForestType::germline};
             RandomForestFilterFactory::Options forest_options {};
             if (is_set("min-forest-quality", options)) forest_options.min_forest_quality = options.at("min-forest-quality").as<Phred<double>>();
             if (caller == "cancer") {
-                if (is_set("somatic-forest-file", options)) {
-                    forest_files.push_back(resolve_path(options.at("somatic-forest-file").as<fs::path>(), options));
+                if (is_set("somatic-forest-model", options)) {
+                    forest_files.push_back(resolve_path(options.at("somatic-forest-model").as<fs::path>(), options));
                     forest_types.push_back(RandomForestFilterFactory::ForestType::somatic);
                 } else if (options.at("somatics-only").as<bool>()) {
                     forest_types.front() = RandomForestFilterFactory::ForestType::somatic;

@@ -714,13 +714,13 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<fs::path>(),
      "Filter the given Octopus VCF without calling")
     
-    ("forest-file",
+    ("forest-model",
      po::value<fs::path>(),
-     "Trained Ranger random forest file")
+     "Trained Ranger random forest model file")
     
-    ("somatic-forest-file",
+    ("somatic-forest-model",
      po::value<fs::path>(),
-     "Trained Ranger random forest file for somatic variants")
+     "Trained Ranger random forest model file for somatic variants")
     
     ("min-forest-quality",
      po::value<Phred<double>>()->default_value(Phred<double> {3}),
