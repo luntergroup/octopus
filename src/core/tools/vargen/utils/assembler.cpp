@@ -1706,6 +1706,16 @@ int Assembler::tail_mean_base_quality(const Path& path) const
     return base_quality_sum / total_weight;
 }
 
+namespace {
+
+double base_quality_probability(const int base_quality)
+{
+    // If the given base quality is zero then there were no observations so just report 1
+    return base_quality > 0 ? maths::phred_to_probability<>(base_quality) : 1.0;
+}
+
+} // namespace
+
 double Assembler::bubble_score(const Path& path) const
 {
     const auto path_weight = weight(path);
@@ -1722,9 +1732,9 @@ double Assembler::bubble_score(const Path& path) const
         result *= (1.0 - tail_mass);
     }
     if (path.size() > 1) {
-        result *= maths::phred_to_probability<>(head_mean_base_quality(path));
+        result *= base_quality_probability(head_mean_base_quality(path));
         if (path.size() > 2) {
-            result *= maths::phred_to_probability<>(tail_mean_base_quality(path));
+            result *= base_quality_probability(tail_mean_base_quality(path));
         }
     }
     return result;
