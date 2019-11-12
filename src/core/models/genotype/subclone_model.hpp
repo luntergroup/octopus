@@ -83,12 +83,16 @@ public:
     void unprime() noexcept;
     bool is_primed() const noexcept;
     
-    InferredLatents evaluate(const std::vector<Genotype_>& genotypes,
-                             const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
+    InferredLatents
+    evaluate(const std::vector<Genotype_>& genotypes,
+             const HaplotypeLikelihoodArray& haplotype_likelihoods,
+             std::vector<typename Latents::ProbabilityVector> hints = {}) const;
     
-    InferredLatents evaluate(const std::vector<Genotype_>& genotypes,
-                             const std::vector<GenotypeIndex_>& genotype_indices,
-                             const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
+    InferredLatents
+    evaluate(const std::vector<Genotype_>& genotypes,
+             const std::vector<GenotypeIndex_>& genotype_indices,
+             const HaplotypeLikelihoodArray& haplotype_likelihoods,
+             std::vector<typename Latents::ProbabilityVector> hints = {}) const;
     
 private:
     std::vector<SampleName> samples_;
@@ -167,6 +171,7 @@ generate_seeds(const std::vector<SampleName>& samples,
                const HaplotypeLikelihoodArray& haplotype_log_likelihoods,
                const SubcloneModel::Priors& priors,
                std::size_t max_seeds,
+               std::vector<LogProbabilityVector> hints,
                boost::optional<IndexData<GenotypeIndex>> index_data = boost::none);
 
 std::vector<LogProbabilityVector>
@@ -176,6 +181,7 @@ generate_seeds(const std::vector<SampleName>& samples,
                const HaplotypeLikelihoodArray& haplotype_log_likelihoods,
                const SomaticSubcloneModel::Priors& priors,
                std::size_t max_seeds,
+               std::vector<LogProbabilityVector> hints,
                boost::optional<IndexData<CancerGenotypeIndex>> index_data = boost::none);
 
 template <std::size_t K, typename G, typename GI, typename GPM>
@@ -361,11 +367,12 @@ run_variational_bayes(const std::vector<SampleName>& samples,
                       const typename SubcloneModelBase<G, GI, GPM>::Priors& priors,
                       const HaplotypeLikelihoodArray& haplotype_log_likelihoods,
                       const typename SubcloneModelBase<G, GI, GPM>::AlgorithmParameters& params,
+                      std::vector<typename SubcloneModelBase<G, GI, GPM>::Latents::ProbabilityVector> hints,
                       boost::optional<IndexData<GI>> index_data = boost::none)
 {
     constexpr auto max_ploidy = SubcloneModelBase<G, GI, GPM>::max_ploidy;
     auto genotype_log_priors = evaluate_genotype_priors<G, GI, GPM>(genotypes, priors, index_data);
-    auto seeds = generate_seeds(samples, genotypes, genotype_log_priors, haplotype_log_likelihoods, priors, params.max_seeds, index_data);
+    auto seeds = generate_seeds(samples, genotypes, genotype_log_priors, haplotype_log_likelihoods, priors, params.max_seeds, std::move(hints), index_data);
     return run_variational_bayes_helper<G, GI, GPM>(samples, genotypes, priors.alphas, std::move(genotype_log_priors),
                                                     haplotype_log_likelihoods, params, std::move(seeds),
                                                     make_index_range<1, max_ploidy + 1> {});
@@ -376,22 +383,24 @@ run_variational_bayes(const std::vector<SampleName>& samples,
 template <typename G, typename GI, typename GPM>
 typename SubcloneModelBase<G, GI, GPM>::InferredLatents
 SubcloneModelBase<G, GI, GPM>::evaluate(const std::vector<G>& genotypes,
-                                        const HaplotypeLikelihoodArray& haplotype_likelihoods) const
+                                        const HaplotypeLikelihoodArray& haplotype_likelihoods,
+                                        std::vector<typename Latents::ProbabilityVector> hints) const
 {
     assert(!genotypes.empty());
-    return detail::run_variational_bayes<G, GI, GPM>(samples_, genotypes, priors_, haplotype_likelihoods, parameters_);
+    return detail::run_variational_bayes<G, GI, GPM>(samples_, genotypes, priors_, haplotype_likelihoods, parameters_, std::move(hints));
 }
 
 template <typename G, typename GI, typename GPM>
 typename SubcloneModelBase<G, GI, GPM>::InferredLatents
 SubcloneModelBase<G, GI, GPM>::evaluate(const std::vector<G>& genotypes,
                                         const std::vector<GI>& genotype_indices,
-                                        const HaplotypeLikelihoodArray& haplotype_likelihoods) const
+                                        const HaplotypeLikelihoodArray& haplotype_likelihoods,
+                                        std::vector<typename Latents::ProbabilityVector> hints) const
 {
     assert(!genotypes.empty());
     assert(genotypes.size() == genotype_indices.size());
     const detail::IndexData<GI> index_data {genotype_indices, haplotypes_};
-    return detail::run_variational_bayes<G, GI, GPM>(samples_, genotypes, priors_, haplotype_likelihoods, parameters_, index_data);
+    return detail::run_variational_bayes<G, GI, GPM>(samples_, genotypes, priors_, haplotype_likelihoods, parameters_, std::move(hints), index_data);
 }
 
 } // namespace model

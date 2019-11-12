@@ -284,13 +284,16 @@ generate_seeds(const std::vector<SampleName>& samples,
                const HaplotypeLikelihoodArray& haplotype_log_likelihoods,
                const SubcloneModel::Priors& priors,
                std::size_t max_seeds,
+               std::vector<LogProbabilityVector> hints,
                boost::optional<IndexData<GenotypeIndex>> index_data)
 {
     if (genotypes.size() <= max_seeds) {
         return generate_exhaustive_seeds(genotypes.size());
     }
-    std::vector<LogProbabilityVector> result {};
-    result.reserve(1 + samples.size());
+    auto result = std::move(hints);
+    if (result.size() > max_seeds) return result;
+    max_seeds -= result.size();
+    result.reserve(max_seeds);
     result.push_back(genotype_log_priors);
     IndividualModel germline_model {priors.genotype_prior_model};
     for (const auto& sample : samples) {
@@ -313,12 +316,15 @@ generate_seeds(const std::vector<SampleName>& samples,
                const HaplotypeLikelihoodArray& haplotype_log_likelihoods,
                const SomaticSubcloneModel::Priors& priors,
                std::size_t max_seeds,
+               std::vector<LogProbabilityVector> hints,
                boost::optional<IndexData<CancerGenotypeIndex>> index_data)
 {
     if (genotypes.size() <= max_seeds) {
         return generate_exhaustive_seeds(genotypes.size());
     }
-    std::vector<LogProbabilityVector> result {};
+    auto result = std::move(hints);
+    if (result.size() > max_seeds) return result;
+    max_seeds -= result.size();
     result.reserve(max_seeds);
     if (max_seeds == 0) return result;
     auto sample_prior_mixture_likelihoods = compute_genotype_likelihoods_with_fixed_mixture_model(samples, genotypes, haplotype_log_likelihoods, priors.alphas, index_data);
