@@ -1721,9 +1721,11 @@ double Assembler::bubble_score(const Path& path) const
                                                             *params_.strand_tail_mass);
         result *= (1.0 - tail_mass);
     }
-    result *= maths::phred_to_probability<>(head_mean_base_quality(path));
-    if (path.size() > 2) {
-        result *= maths::phred_to_probability<>(tail_mean_base_quality(path));
+    if (path.size() > 1) {
+        result *= maths::phred_to_probability<>(head_mean_base_quality(path));
+        if (path.size() > 2) {
+            result *= maths::phred_to_probability<>(tail_mean_base_quality(path));
+        }
     }
     return result;
 }
