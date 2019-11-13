@@ -1686,8 +1686,8 @@ Assembler::Edge Assembler::head_edge(const Path& path) const
 
 int Assembler::head_mean_base_quality(const Path& path) const
 {
-    const auto fork_edge = head_edge(path);
-    return graph_[fork_edge].base_quality_sum / graph_[fork_edge].weight;
+    const auto& fork_edge = graph_[head_edge(path)];
+    return fork_edge.weight > 0 ? fork_edge.base_quality_sum / fork_edge.weight : 0;
 }
 int Assembler::tail_mean_base_quality(const Path& path) const
 {
@@ -1706,6 +1706,16 @@ int Assembler::tail_mean_base_quality(const Path& path) const
     return base_quality_sum / total_weight;
 }
 
+namespace {
+
+double base_quality_probability(const int base_quality)
+{
+    // If the given base quality is zero then there were no observations so just report 1
+    return base_quality > 0 ? maths::phred_to_probability<>(base_quality) : 1.0;
+}
+
+} // namespace
+
 double Assembler::bubble_score(const Path& path) const
 {
     const auto path_weight = weight(path);
@@ -1721,9 +1731,11 @@ double Assembler::bubble_score(const Path& path) const
                                                             *params_.strand_tail_mass);
         result *= (1.0 - tail_mass);
     }
-    result *= maths::phred_to_probability<>(head_mean_base_quality(path));
-    if (path.size() > 2) {
-        result *= maths::phred_to_probability<>(tail_mean_base_quality(path));
+    if (path.size() > 1) {
+        result *= base_quality_probability(head_mean_base_quality(path));
+        if (path.size() > 2) {
+            result *= base_quality_probability(tail_mean_base_quality(path));
+        }
     }
     return result;
 }
