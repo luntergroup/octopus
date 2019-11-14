@@ -28,6 +28,17 @@ GenomeWalker::GenomeWalker(unsigned max_included,
 namespace {
 
 template <typename BidirIt>
+BidirIt find_first_shared_helper(const ReadMap& reads, boost::optional<const TemplateMap&> read_templates,
+                                 BidirIt first, BidirIt last, const Allele& allele)
+{
+    if (read_templates) {
+        return find_first_shared(*read_templates, first, last, allele);
+    } else {
+        return find_first_shared(reads, first, last, allele);
+    }
+}
+
+template <typename BidirIt>
 bool is_sandwich_allele(BidirIt first, BidirIt allele, BidirIt last)
 {
     if (allele != first && allele != last && std::next(allele) != last) {
@@ -138,7 +149,7 @@ bool is_optimal_to_extend(const BidirIt first_included, const BidirIt proposed_i
            || is_close(proposed_included, first_excluded);
 }
 
-}
+} // namespace
 
 GenomicRegion
 GenomeWalker::walk(const GenomicRegion& previous_region,
@@ -171,7 +182,7 @@ GenomeWalker::walk(const GenomicRegion& previous_region,
         case IndicatorPolicy::includeIfSharedWithNovelRegion:
         {
             if (distance(first_previous_itr, included_itr) > 0) {
-                auto it = find_first_shared(reads, first_previous_itr, included_itr, *included_itr);
+                auto it = find_first_shared_helper(reads, read_templates, first_previous_itr, included_itr, *included_itr);
                 if (it != included_itr) {
                     auto expanded_leftmost = mapped_region(*it);
                     std::for_each(it, included_itr, [&] (const auto& allele) {
@@ -195,7 +206,7 @@ GenomeWalker::walk(const GenomicRegion& previous_region,
             if (distance(first_previous_itr, included_itr) > 0) {
                 auto it = included_itr;
                 while (true) {
-                    const auto it2 = find_first_shared(reads, first_previous_itr, it, *it);
+                    const auto it2 = find_first_shared_helper(reads, read_templates, first_previous_itr, it, *it);
                     if (it2 == it) {
                         it = it2;
                         break;
