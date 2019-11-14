@@ -598,12 +598,48 @@ bool ignore_unmapped_contigs(const OptionMap& options)
     return options.at("ignore-unmapped-contigs").as<bool>();
 }
 
+class MissingSamplesFile : public MissingFileError
+{
+    std::string do_where() const override
+    {
+        return "get_user_samples";
+    }
+public:
+    MissingSamplesFile(fs::path p) : MissingFileError {std::move(p), "samples file"} {};
+};
+
+std::vector<SampleName> read_user_samples(const fs::path& samples_filename)
+{
+    if (!fs::exists(samples_filename)) {
+        MissingSamplesFile e {samples_filename};
+        e.set_location_specified("the command line option '--samples-file'");
+        throw e;
+    }
+    std::ifstream samples_file {samples_filename.string()};
+    std::vector<SampleName> result {};
+    std::string sample {};
+    while (std::getline(samples_file, sample)) {
+        if (!sample.empty()) result.push_back(std::move(sample));
+    }
+    return result;
+}
+
 boost::optional<std::vector<SampleName>> get_user_samples(const OptionMap& options)
 {
+    boost::optional<std::vector<SampleName>> result {};
     if (is_set("samples", options)) {
-        return options.at("samples").as<std::vector<SampleName>>();
+        result = options.at("samples").as<std::vector<SampleName>>();
     }
-    return boost::none;
+    if (is_set("samples-file", options)) {
+        if (!result) result = std::vector<SampleName> {};
+        const auto samples_filename = resolve_path(options.at("samples-file").as<fs::path>(), options);
+        utils::append(read_user_samples(samples_filename), *result);
+    }
+    if (result) {
+        std::sort(std::begin(*result), std::end(*result));
+        result->erase(std::unique(std::begin(*result), std::end(*result)), std::end(*result));
+    }
+    return result;
 }
 
 class MissingReadPathFile : public MissingFileError
