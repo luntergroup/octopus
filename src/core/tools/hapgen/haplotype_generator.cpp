@@ -285,7 +285,7 @@ bool HaplotypeGenerator::removal_has_impact() const
 	if (done()) return false;
     if (in_holdout_mode() || is_backtracking_enabled()) return true;
     if (!is_lagging_enabled(active_region_) || contains(active_region_, rightmost_allele_)) return false;
-    const auto max_lagged_region = lagged_walker_->walk(active_region_, reads_, alleles_);
+    const auto max_lagged_region = walk_from_active_region(*lagged_walker_);
     return overlaps(max_lagged_region, active_region_);
 }
 
@@ -294,7 +294,7 @@ unsigned HaplotypeGenerator::max_removal_impact() const
 	if (done()) return 0;
     if (in_holdout_mode() || is_backtracking_enabled()) return tree_.num_haplotypes();
     if (!is_lagging_enabled(active_region_) || contains(active_region_, rightmost_allele_)) return 0;
-    const auto max_lagged_region = lagged_walker_->walk(active_region_, reads_, alleles_);
+    const auto max_lagged_region = walk_from_active_region(*lagged_walker_);
     if (!overlaps(max_lagged_region, active_region_)) return 0;
     const auto novel_region = right_overhang_region(max_lagged_region, active_region_);
     const auto num_novel_alleles = count_overlapped(alleles_, novel_region);
