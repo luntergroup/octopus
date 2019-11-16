@@ -274,12 +274,13 @@ std::size_t num_max_zygosity_genotypes(const unsigned num_elements, const unsign
     }
 }
 
-boost::optional<std::size_t> num_max_zygosity_genotypes_nothrow(unsigned num_elements, unsigned ploidy) noexcept
+boost::optional<std::size_t> num_max_zygosity_genotypes_noexcept(unsigned num_elements, unsigned ploidy) noexcept
 {
+    assert(num_elements >= ploidy);
     boost::optional<std::size_t> result {};
     try {
         result = num_max_zygosity_genotypes(num_elements, ploidy);
-    } catch (const std::overflow_error&) {}
+    } catch (...) {}
     return result;
 }
 

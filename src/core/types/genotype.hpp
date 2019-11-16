@@ -1028,7 +1028,7 @@ bool is_max_zygosity(const Genotype<MappableType>& genotype)
 }
 
 std::size_t num_max_zygosity_genotypes(unsigned num_elements, unsigned ploidy);
-boost::optional<std::size_t> num_max_zygosity_genotypes_nothrow(unsigned num_elements, unsigned ploidy) noexcept;
+boost::optional<std::size_t> num_max_zygosity_genotypes_noexcept(unsigned num_elements, unsigned ploidy) noexcept;
 
 template <typename Range>
 void

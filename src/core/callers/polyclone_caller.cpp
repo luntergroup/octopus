@@ -215,7 +215,7 @@ void fit_sublone_model(const MappableBlock<Haplotype>& haplotypes,
                        const HaplotypeLikelihoodArray& haplotype_likelihoods,
                        GenotypePriorModel& genotype_prior_model,
                        const SampleName& sample,
-                       const unsigned max_clones,
+                       unsigned max_clones,
                        const double haploid_model_evidence,
                        const std::function<double(unsigned)>& clonality_prior,
                        const std::size_t max_genotypes,
@@ -225,12 +225,13 @@ void fit_sublone_model(const MappableBlock<Haplotype>& haplotypes,
 {
     IndexedGenotypeVectorPair curr_genotypes {};
     const auto haploid_prior = std::log(clonality_prior(1));
+    max_clones = std::min(max_clones, static_cast<unsigned>(haplotypes.size()));
     for (unsigned clonality {2}; clonality <= max_clones; ++clonality) {
         const auto clonal_model_prior = clonality_prior(clonality);
         if (clonal_model_prior == 0.0) break;
         genotype_prior_model.unprime();
         genotype_prior_model.prime(haplotypes);
-        const auto max_possible_genotypes = num_max_zygosity_genotypes_nothrow(haplotypes.size(), clonality);
+        const auto max_possible_genotypes = num_max_zygosity_genotypes_noexcept(haplotypes.size(), clonality);
         if (prev_genotypes.raw.empty() || clonality <= 2 || (max_possible_genotypes && *max_possible_genotypes <= max_genotypes)) {
             curr_genotypes.indices.clear();
             curr_genotypes.raw = generate_all_max_zygosity_genotypes(haplotypes, clonality, curr_genotypes.indices);
