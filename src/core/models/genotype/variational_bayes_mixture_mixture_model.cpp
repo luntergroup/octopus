@@ -174,6 +174,22 @@ VariationalBayesMixtureMixtureModel::evaluate(const LogProbabilityVector& genoty
     return result;
 }
 
+namespace {
+
+template <typename ForwardIterator>
+std::size_t max_element_index(ForwardIterator first, ForwardIterator last)
+{
+    return std::distance(first, std::max_element(first, last));
+}
+
+template <typename Range>
+std::size_t max_element_index(const Range& values)
+{
+    return max_element_index(std::cbegin(values), std::cend(values));
+}
+
+} // namespace
+
 VariationalBayesMixtureMixtureModel::GroupResponsibilityVector
 VariationalBayesMixtureMixtureModel::init_responsibilities(const GroupConcentrationVector& group_concentrations,
                                                            const MixtureConcentrationArray& mixture_concentrations,
@@ -191,18 +207,30 @@ VariationalBayesMixtureMixtureModel::init_responsibilities(const GroupConcentrat
             max_K = std::max(max_K, mixture_concentrations[s][t].size());
         }
     }
+    const auto max_genotype_prior_idx = max_element_index(genotype_priors);
+    ComponentResponsibilityVector approx_taus(max_K);
     for (std::size_t s {0}; s < S; ++s) {
-        const auto N = log_likelihoods[s][0][0][0].size();
-        const auto tau = 1.0 / max_K;
-        const auto tau_sum = N * tau;
+        const auto N = log_likelihoods[s][0][0][0].size(); // num reads
+        for (auto& tau : approx_taus) tau.resize(N);
         for (std::size_t t {0}; t < T; ++t) {
             result[s][t] = ln_ex_psi[t];
             const auto ln_ex_pi = dirichlet_expectation_log(mixture_concentrations[s][t]);
             const auto K = mixture_concentrations[s][t].size();
+            // Approximate tau assuming p(t) = 1
+            Tau approx_tau(K);
+            for (std::size_t n {0}; n < N; ++n) {
+                for (std::size_t k {0}; k < K; ++k) {
+                    approx_tau[k] = ln_ex_pi[k] + log_likelihoods[s][max_genotype_prior_idx][t][k][n];
+                }
+                maths::normalise_exp(approx_tau);
+                for (std::size_t k {0}; k < K; ++k) {
+                    approx_taus[k][n] = approx_tau[k];
+                }
+            }
             for (std::size_t k {0}; k < K; ++k) {
-                result[s][t] += ln_ex_pi[k] * tau_sum;
+                result[s][t] += ln_ex_pi[k] * sum(approx_taus[k]);
                 for (std::size_t g {0}; g < G; ++g) {
-                    result[s][t] += genotype_priors[g] * tau * sum(log_likelihoods[s][g][t][k]);
+                    result[s][t] += genotype_priors[g] * inner_product(approx_taus[k], log_likelihoods[s][g][t][k]);
                 }
             }
         }
