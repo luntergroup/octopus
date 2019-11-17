@@ -21,6 +21,7 @@ namespace octopus { namespace io {
 ReadManager::ReadManager(std::vector<Path> read_file_paths, unsigned max_open_files)
 : max_open_files_ {max_open_files}
 , num_files_ {static_cast<unsigned>(read_file_paths.size())}
+, all_readers_single_sample_ {true}
 , closed_readers_ {
     std::make_move_iterator(std::begin(read_file_paths)),
     std::make_move_iterator(std::end(read_file_paths))}
@@ -32,8 +33,18 @@ ReadManager::ReadManager(std::vector<Path> read_file_paths, unsigned max_open_fi
     setup_reader_samples_and_regions();
     open_initial_files();
     samples_.reserve(reader_paths_containing_sample_.size());
+    std::unordered_set<Path, PathHash> found {};
     for (const auto& pair : reader_paths_containing_sample_) {
         samples_.emplace_back(pair.first);
+        if (all_readers_single_sample_) {
+            for (const auto& path : pair.second) {
+                if (found.count(path) == 1) {
+                    all_readers_single_sample_ = false;
+                    break;
+                }
+                found.insert(path);
+            }
+        }
     }
     std::sort(std::begin(samples_), std::end(samples_));
 }
@@ -118,6 +129,11 @@ std::vector<ReadManager::Path> ReadManager::paths() const
     }
     std::sort(std::begin(result), std::end(result));
     return result;
+}
+
+bool ReadManager::all_readers_have_one_sample() const
+{
+    return all_readers_single_sample_;
 }
 
 unsigned ReadManager::num_samples() const noexcept

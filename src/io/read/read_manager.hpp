@@ -56,6 +56,7 @@ public:
     bool good() const noexcept;
     unsigned num_files() const noexcept;
     std::vector<Path> paths() const; // Managed files
+    bool all_readers_have_one_sample() const;
     unsigned num_samples() const noexcept;
     const std::vector<SampleName>& samples() const;
     unsigned drop_samples(std::vector<SampleName> samples);
@@ -112,6 +113,7 @@ private:
     
     unsigned max_open_files_ = 200;
     unsigned num_files_;
+    bool all_readers_single_sample_;
     
     mutable ClosedReaderSet closed_readers_;
     mutable OpenReaderMap open_readers_;

@@ -1465,7 +1465,7 @@ bool is_stdout_final_output(const GenomeCallingComponents& components)
 bool check_bam_realign(const GenomeCallingComponents& components)
 {
     logging::WarningLogger warn_log {};
-    if (components.read_manager().num_files() != components.samples().size()) {
+    if (!components.read_manager().all_readers_have_one_sample()) {
         warn_log << "BAM realignment currently only supported for single sample BAMs";
         return false;
     }
