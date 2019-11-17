@@ -2013,6 +2013,7 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
         vc_builder.set_dropout_concentration(options.at("dropout-concentration").as<float>());
         vc_builder.set_somatic_snv_mutation_rate(options.at("somatic-snv-mutation-rate").as<float>());
         vc_builder.set_somatic_indel_mutation_rate(options.at("somatic-indel-mutation-rate").as<float>());
+        vc_builder.set_max_clones(as_unsigned("max-clones", options));
     }
     vc_builder.set_model_posterior_policy(get_model_posterior_policy(options));
     vc_builder.set_max_genotypes(as_unsigned("max-genotypes", options));
