@@ -8,6 +8,7 @@
 #include <iterator>
 #include <algorithm>
 #include <numeric>
+#include <limits>
 
 #include "utils/k_medoids.hpp"
 #include "utils/select_top_k.hpp"
@@ -134,6 +135,32 @@ auto symmetric_kl_divergence(const std::vector<double>& p, const std::vector<dou
     return kl_divergence(p, q) + kl_divergence(q, p);
 }
 
+template <typename ForwardIterator>
+ForwardIterator
+unique_stable(const ForwardIterator first, const ForwardIterator last)
+{
+    const auto n = static_cast<std::size_t>(std::distance(first, last));
+    using ValueTp = typename std::iterator_traits<ForwardIterator>::value_type;
+    std::vector<std::pair<ValueTp, std::size_t>> indexed_values(n);
+    std::size_t idx {0};
+    std::transform(std::make_move_iterator(first), std::make_move_iterator(last),
+                   std::begin(indexed_values),
+                   [&] (auto&& value) { return std::make_pair(std::move(value), idx++); });
+    std::sort(std::begin(indexed_values), std::end(indexed_values));
+    indexed_values.erase(std::unique(std::begin(indexed_values), std::end(indexed_values)), std::end(indexed_values));
+    const static auto index_less = [] (const auto& lhs, const auto& rhs) { return lhs.second < rhs.second; };
+    std::sort(std::begin(indexed_values), std::end(indexed_values), index_less);
+    return std::transform(std::make_move_iterator(std::begin(indexed_values)),
+                          std::make_move_iterator(std::end(indexed_values)),
+                          first, [] (auto&& p) { return std::move(p.first); });
+}
+
+template <typename Range>
+void unique_stable_erase(Range& values)
+{
+    values.erase(unique_stable(std::begin(values), std::end(values)), std::end(values));
+}
+
 } // namespace
 
 SingleCellModel::GenotypeCombinationVector
@@ -182,11 +209,29 @@ SingleCellModel::propose_genotype_combinations(const std::vector<Genotype<Haplot
                 for (auto idx : indices) ++counts[idx];
                 return std::any_of(std::cbegin(counts), std::cend(counts), [] (auto count) { return count > 1; });
             }), std::end(result));
+            unique_stable_erase(result);
+            // Reorder the combinations, keeping only the most probable one under the prior
+            std::vector<SingleCellPriorModel::GenotypeReference> combination_refs {};
+            combination_refs.reserve(num_groups);
+            for (GenotypeCombination& combination : result) {
+                GenotypeCombination best_combination;
+                auto max_prior = std::numeric_limits<double>::lowest();
+                do {
+                    for (auto idx : combination) combination_refs.emplace_back(genotypes[idx]);
+                    const auto prior = prior_model_.evaluate(combination_refs);
+                    combination_refs.clear();
+                    if (prior > max_prior) {
+                        best_combination = combination;
+                        max_prior = prior;
+                    }
+                } while (std::next_permutation(std::begin(combination), std::end(combination)));
+            }
             k *= 2;
         }
         if (result.size() > config_.max_genotype_combinations) {
             result.resize(config_.max_genotype_combinations);
         }
+        
         
         return result;
     }
