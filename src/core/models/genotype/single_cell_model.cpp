@@ -126,7 +126,15 @@ auto kl_divergence(const std::vector<double>& p, const std::vector<double>& q) n
 {
     return std::inner_product(std::cbegin(p), std::cend(p), std::cbegin(q), 0.0,
                               std::plus<> {}, [] (const auto a, const auto b) {
-        return (a > 0 && b > 0) ? a * std::log(a / b) : 0.0;
+        if (a == b || a == 0) {
+            return 0.0;
+        } else if (a > 0 && b > 0) {
+            return a * std::log(a / b);
+        } else {
+            assert(b == 0);
+            const static auto min_log = std::log(std::numeric_limits<double>::min());
+            return a * (std::log(a) - min_log);
+        }
     });
 }
 
