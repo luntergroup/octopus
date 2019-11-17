@@ -262,6 +262,31 @@ void log(const model::SingleCellModel::Inferences& inferences,
     }
 }
 
+std::vector<model::SingleCellPriorModel::CellPhylogeny>
+propose_next_phylogenies(const std::vector<std::vector<model::SingleCellModel::Inferences>>& prev_inferences)
+{
+    using CellPhylogeny = model::SingleCellPriorModel::CellPhylogeny;
+    if (prev_inferences.empty()) {
+        return {CellPhylogeny {CellPhylogeny::Group {0}}};
+    } else if (prev_inferences.size() == 1) {
+        CellPhylogeny two_group_phylogeny {CellPhylogeny::Group {0}};
+        two_group_phylogeny.add_descendant(CellPhylogeny::Group {1}, 0);
+        return {std::move(two_group_phylogeny)};
+    } else if (prev_inferences.size() == 2) {
+        CellPhylogeny flat_three_group_phylogeny {CellPhylogeny::Group {0}};
+        flat_three_group_phylogeny.add_descendant(CellPhylogeny::Group {1}, 0);
+        flat_three_group_phylogeny.add_descendant(CellPhylogeny::Group {2}, 1);
+    
+        CellPhylogeny forking_three_group_phylogeny {CellPhylogeny::Group {0}};
+        forking_three_group_phylogeny.add_descendant(CellPhylogeny::Group {1}, 0);
+        forking_three_group_phylogeny.add_descendant(CellPhylogeny::Group {2}, 0);
+        
+        return {std::move(flat_three_group_phylogeny), std::move(forking_three_group_phylogeny)};
+    } else {
+        return {};
+    }
+}
+
 std::unique_ptr<CellCaller::Caller::Latents>
 CellCaller::infer_latents(const HaplotypeBlock& haplotypes, const HaplotypeLikelihoodArray& haplotype_likelihoods) const
 {
@@ -279,23 +304,43 @@ CellCaller::infer_latents(const HaplotypeBlock& haplotypes, const HaplotypeLikel
     config.max_genotype_combinations = parameters_.max_joint_genotypes;
     if (parameters_.max_vb_seeds) config.max_seeds = *parameters_.max_vb_seeds;
     
-    using CellPhylogeny =  model::SingleCellPriorModel::CellPhylogeny;
-    CellPhylogeny single_group_phylogeny {CellPhylogeny::Group {0}};
-    model::SingleCellPriorModel single_group_prior_model {std::move(single_group_phylogeny), *genotype_prior_model, mutation_model, cell_prior_params};
-    model::SingleCellModel single_group_model {samples_, std::move(single_group_prior_model), model_parameters, config};
-    auto single_group_inferences = single_group_model.evaluate(genotypes, haplotype_likelihoods);
+    using SingleCellModelInferences = model::SingleCellModel::Inferences;
+    std::vector<std::vector<SingleCellModelInferences>> inferences {};
+    double max_log_evidence {};
     
-    CellPhylogeny two_group_phylogeny {CellPhylogeny::Group {0}};
-    two_group_phylogeny.add_descendant(CellPhylogeny::Group {1}, 0);
-    model::SingleCellPriorModel two_group_prior_model {std::move(two_group_phylogeny), *genotype_prior_model, mutation_model, cell_prior_params};
-    model::SingleCellModel two_group_model {samples_, std::move(two_group_prior_model), model_parameters, config};
-    auto two_group_inferences = two_group_model.evaluate(genotypes, haplotype_likelihoods);
+    for (unsigned clones {1}; clones <= parameters_.max_clones; ++clones) {
+        auto phylogenies = propose_next_phylogenies(inferences);
+        if (!phylogenies.empty()) {
+            std::vector<SingleCellModelInferences> clone_inferences {};
+            clone_inferences.reserve(phylogenies.size());
+            for (auto& phylogeny : phylogenies) {
+                model::SingleCellPriorModel phylogeny_prior_model {std::move(phylogeny), *genotype_prior_model, mutation_model, cell_prior_params};
+                model::SingleCellModel phylogeny_model {samples_, std::move(phylogeny_prior_model), model_parameters, config};
+                auto phylogeny_inferences = phylogeny_model.evaluate(genotypes, haplotype_likelihoods);
+                log(phylogeny_inferences, samples_, genotypes, debug_log_);
+                clone_inferences.push_back(std::move(phylogeny_inferences));
+            }
+            if (clones == 1) {
+                max_log_evidence = clone_inferences.front().log_evidence;
+            } else {
+                const static auto evidence_less = [] (const auto& lhs, const auto& rhs) { return lhs.log_evidence < rhs.log_evidence; };
+                const auto max_clone_log_evidence = std::max_element(std::cbegin(clone_inferences), std::cend(clone_inferences), evidence_less)->log_evidence;
+                if (max_clone_log_evidence < max_log_evidence) {
+                    inferences.push_back(std::move(clone_inferences));
+                    break;
+                } else {
+                    max_log_evidence = max_clone_log_evidence;
+                }
+            }
+            inferences.push_back(std::move(clone_inferences));
+        }
+    }
     
-    log(single_group_inferences, samples_, genotypes, debug_log_);
-    log(two_group_inferences, samples_, genotypes, debug_log_);
-    
-    std::vector<model::SingleCellModel::Inferences> inferences {std::move(single_group_inferences), std::move(two_group_inferences)};
-    return std::make_unique<Latents>(*this, haplotypes, std::move(genotypes), std::move(inferences));
+    std::vector<model::SingleCellModel::Inferences> flat_inferences {};
+    for (auto& clone_inferences : inferences) {
+        utils::append(std::move(clone_inferences), flat_inferences);
+    }
+    return std::make_unique<Latents>(*this, haplotypes, std::move(genotypes), std::move(flat_inferences));
 }
 
 boost::optional<double>
