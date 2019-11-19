@@ -8,6 +8,7 @@
 #include <memory>
 #include <cstddef>
 #include <stack>
+#include <type_traits>
 
 #include <boost/optional.hpp>
 
@@ -17,6 +18,9 @@ template <typename Label, typename T = boost::optional<int>>
 class Phylogeny
 {
 public:
+    using LabelType = Label;
+    using ValueType = T;
+    
     struct Group
     {
         Label id;
@@ -39,6 +43,8 @@ public:
     void clear() noexcept;
     void clear(const Label& id);
     
+    std::vector<Group> groups() const;
+    
     Group& set_founder(Group founder);
     Group& add_descendant(Group group, const Label& ancestor_id);
     
@@ -51,6 +57,10 @@ public:
     unsigned num_descendants(const Label& id) const noexcept;
     const Group& descendant1(const Label& id) const;
     const Group& descendant2(const Label& id) const;
+    
+    template <typename UnaryFunction>
+    Phylogeny<Label, std::result_of_t<UnaryFunction(T)>>
+    transform(UnaryFunction op) const;
 
 private:
     struct TreeNode
@@ -151,6 +161,17 @@ void Phylogeny<Label, T>::clear(const Label& id)
 }
 
 template <typename Label, typename T>
+std::vector<typename Phylogeny<Label, T>::Group> Phylogeny<Label, T>::groups() const
+{
+    std::vector<Group> result {};
+    result.reserve(size());
+    for (const auto& p : nodes_) {
+        result.push_back(p.second->group);
+    }
+    return result;
+}
+
+template <typename Label, typename T>
 typename Phylogeny<Label, T>::Group& Phylogeny<Label, T>::set_founder(Group founder)
 {
     if (!tree_) {
@@ -168,6 +189,9 @@ typename Phylogeny<Label, T>::Group& Phylogeny<Label, T>::add_descendant(Group g
 {
     TreeNode* ancestor {nodes_.at(ancestor_id)};
     if (ancestor->descendant1) {
+        if (ancestor->descendant2) {
+            throw std::runtime_error {"Cannot add descendant to node with two descendants"};
+        }
         TreeNode node {std::move(group), ancestor, nullptr, nullptr};
         ancestor->descendant2 = std::make_unique<TreeNode>(std::move(node));
         return nodes_.emplace(ancestor->descendant2->group.id, std::addressof(*ancestor->descendant2)).first->second->group;
@@ -225,6 +249,32 @@ template <typename Label, typename T>
 const typename Phylogeny<Label, T>::Group& Phylogeny<Label, T>::descendant2(const Label& id) const
 {
     return nodes_.at(id)->descendant2.group;
+}
+
+template <typename Label, typename T>
+template <typename UnaryFunction>
+Phylogeny<Label, std::result_of_t<UnaryFunction(T)>>
+Phylogeny<Label, T>::transform(UnaryFunction op) const
+{
+    using T2 = std::result_of_t<UnaryFunction(T)>;
+    Phylogeny<Label, T2> result {};
+    std::stack<TreeNode*> to_visit {};
+    to_visit.push(this->tree_->descendant2.get());
+    to_visit.push(this->tree_->descendant1.get());
+    const auto transformer = [&] (const Group& old) -> typename Phylogeny<Label, T2>::Group { return {old.id, op(old.value)}; };
+    result.set_founder(transformer(this->tree_->group));
+    while (!to_visit.empty()) {
+        if (to_visit.top() != nullptr) {
+            const TreeNode* visted {to_visit.top()};
+            to_visit.pop();
+            result.add_descendant(transformer(visted->group), visted->ancestor->group.id);
+            to_visit.push(visted->descendant2.get());
+            to_visit.push(visted->descendant1.get());
+        } else {
+            to_visit.pop();
+        }
+    }
+    return result;
 }
 
 } // namespace octopus
