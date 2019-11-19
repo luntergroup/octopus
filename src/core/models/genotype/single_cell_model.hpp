@@ -7,11 +7,15 @@
 #include <vector>
 #include <cstddef>
 
+#include <boost/optional.hpp>
+
 #include "core/types/haplotype.hpp"
 #include "core/types/genotype.hpp"
 #include "core/types/phylogeny.hpp"
 #include "core/models/haplotype_likelihood_array.hpp"
 #include "single_cell_prior_model.hpp"
+#include "population_prior_model.hpp"
+#include "uniform_population_prior_model.hpp"
 #include "variational_bayes_mixture_mixture_model.hpp"
 
 namespace octopus { namespace model {
@@ -48,7 +52,8 @@ public:
     SingleCellModel(std::vector<SampleName> samples,
                     SingleCellPriorModel prior_model,
                     Parameters parameters,
-                    AlgorithmParameters config);
+                    AlgorithmParameters config,
+                    boost::optional<const PopulationPriorModel&> population_prior_model = boost::none);
     
     SingleCellModel(const SingleCellModel&)            = default;
     SingleCellModel& operator=(const SingleCellModel&) = default;
@@ -65,11 +70,14 @@ public:
              const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
 
 private:
+    const static UniformPopulationPriorModel default_population_prior_model_;
+    
     std::vector<SampleName> samples_;
     SingleCellPriorModel prior_model_;
     VariationalBayesMixtureMixtureModel posterior_model_;
     Parameters parameters_;
     AlgorithmParameters config_;
+    const PopulationPriorModel* population_prior_model_;
     
     using GenotypeCombination = std::vector<std::size_t>;
     using GenotypeCombinationVector = std::vector<GenotypeCombination>;

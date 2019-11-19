@@ -15,17 +15,23 @@
 #include "utils/maths.hpp"
 #include "subclone_model.hpp"
 #include "population_model.hpp"
-#include "uniform_population_prior_model.hpp"
+#include "coalescent_population_prior_model.hpp"
 #include "individual_model.hpp"
 
 namespace octopus { namespace model {
 
-SingleCellModel::SingleCellModel(std::vector<SampleName> samples, SingleCellPriorModel prior_model,
-                                 Parameters parameters, AlgorithmParameters config)
+const UniformPopulationPriorModel SingleCellModel::default_population_prior_model_ {};
+
+SingleCellModel::SingleCellModel(std::vector<SampleName> samples,
+                                 SingleCellPriorModel prior_model,
+                                 Parameters parameters,
+                                 AlgorithmParameters config,
+                                 boost::optional<const PopulationPriorModel&> population_prior_model)
 : samples_ {std::move(samples)}
 , prior_model_ {std::move(prior_model)}
 , parameters_ {std::move(parameters)}
 , config_ {std::move(config)}
+, population_prior_model_ {std::addressof(population_prior_model ? *population_prior_model : default_population_prior_model_)}
 {}
 
 SingleCellModel::Inferences
@@ -88,6 +94,18 @@ SingleCellModel::evaluate(const std::vector<GenotypeIndex>& genotypes,
 
 namespace {
 
+auto get_unique_ploidies(const std::vector<Genotype<Haplotype>>& genotypes)
+{
+    std::vector<unsigned> result {};
+    for (const auto& genotype : genotypes) {
+        if (std::find(std::cbegin(result), std::cend(result), genotype.ploidy()) == std::cend(result)) {
+            result.push_back(genotype.ploidy());
+        }
+    }
+    std::sort(std::begin(result), std::end(result));
+    return result;
+}
+
 auto log(std::size_t base, std::size_t x)
 {
     return std::log2(x) / std::log2(base);
@@ -122,25 +140,39 @@ auto pool_likelihood(const std::vector<SampleName>& samples,
     return result;
 }
 
-auto kl_divergence(const std::vector<double>& p, const std::vector<double>& q) noexcept
+auto l1_norm(const std::vector<double>& p, const std::vector<double>& q) noexcept
 {
     return std::inner_product(std::cbegin(p), std::cend(p), std::cbegin(q), 0.0,
                               std::plus<> {}, [] (const auto a, const auto b) {
-        if (a == b || a == 0) {
-            return 0.0;
-        } else if (a > 0 && b > 0) {
-            return a * std::log(a / b);
-        } else {
-            assert(b == 0);
-            const static auto min_log = std::log(std::numeric_limits<double>::min());
-            return a * (std::log(a) - min_log);
-        }
+        return std::abs(a - b);
     });
 }
 
-auto symmetric_kl_divergence(const std::vector<double>& p, const std::vector<double>& q) noexcept
+ClusterVector
+cluster_samples(const std::vector<PopulationModel::Latents::ProbabilityVector>& genotype_posteriors,
+                const unsigned num_clusters)
 {
-    return kl_divergence(p, q) + kl_divergence(q, p);
+    ClusterVector result {};
+    KMediodsParameters params {};
+    params.initialisation = KMediodsParameters::InitialisationMode::max_distance;
+    auto best_fit = k_medoids(genotype_posteriors, num_clusters, result, l1_norm, params).second;
+    params.initialisation = KMediodsParameters::InitialisationMode::total_distance;
+    ClusterVector tmp {};
+    auto fit = k_medoids(genotype_posteriors, num_clusters, tmp, l1_norm, params).second;
+    if (fit < best_fit) {
+        result = std::move(tmp);
+        best_fit = fit;
+    }
+    params.initialisation = KMediodsParameters::InitialisationMode::random;
+    for (int i {0}; i < 3; ++i) {
+        tmp.clear();
+        fit = k_medoids(genotype_posteriors, num_clusters, tmp, l1_norm).second;
+        if (fit < best_fit) {
+            result = std::move(tmp);
+            best_fit = fit;
+        }
+    }
+    return result;
 }
 
 template <typename ForwardIterator>
@@ -185,15 +217,24 @@ SingleCellModel::propose_genotype_combinations(const std::vector<Genotype<Haplot
         // 3. Run individual model on merged reads
         // 4. Select top combinations using cluster marginal posteriors
         
-        UniformPopulationPriorModel population_prior_model {};
+        const auto ploidies = get_unique_ploidies(genotypes);
+        
         PopulationModel::Options population_model_options {};
         population_model_options.max_joint_genotypes = config_.max_genotype_combinations;
-        PopulationModel population_model {population_prior_model, population_model_options};
-        const auto population_inferences = population_model.evaluate(samples_, genotypes, haplotype_likelihoods);
-        const auto& population_genotype_posteriors = population_inferences.posteriors.marginal_genotype_probabilities;
+        PopulationModel population_model {*population_prior_model_, population_model_options};
+        std::vector<PopulationModel::Latents::ProbabilityVector> population_genotype_posteriors;
         
-        std::vector<std::vector<std::size_t>> clusters {};
-        k_medoids(population_genotype_posteriors, num_groups, clusters, symmetric_kl_divergence);
+        if (ploidies.size() == 1) {
+            auto population_inferences = population_model.evaluate(samples_, genotypes, haplotype_likelihoods);
+            population_genotype_posteriors = std::move(population_inferences.posteriors.marginal_genotype_probabilities);
+        } else {
+            // TODO: need a way to propose sample ploidies and compute posteriors
+            std::vector<unsigned> sample_ploidies(samples_.size(), ploidies.back());
+            auto population_inferences = population_model.evaluate(samples_, sample_ploidies, genotypes, haplotype_likelihoods);
+            population_genotype_posteriors = std::move(population_inferences.posteriors.marginal_genotype_probabilities);
+        }
+        
+        const auto clusters = cluster_samples(population_genotype_posteriors, num_groups);
         
         IndividualModel individual_model {prior_model_.germline_prior_model()};
         std::vector<ProbabilityVector> cluster_marginal_genotype_posteriors {};
@@ -350,6 +391,14 @@ void make_point_seeds(const std::size_t num_genotypes, const std::vector<std::si
                    [=] (auto idx) { return make_point_seed(num_genotypes, idx, p); });
 }
 
+auto make_range_seed(const std::size_t num_genotypes, const std::size_t begin, const std::size_t n,
+                     const double p = 0.9999999)
+{
+    LogProbabilityVector result(num_genotypes, std::log((1 - p) / (num_genotypes - n)));
+    std::fill_n(std::next(std::begin(result), begin), n, std::log(p / n));
+    return result;
+}
+
 } // namespace
 
 SingleCellModel::VBSeedVector
@@ -359,9 +408,12 @@ SingleCellModel::propose_seeds(const GenotypeCombinationVector& genotype_combina
                                const HaplotypeLikelihoodArray& haplotype_likelihoods) const
 {
     VBSeedVector result {};
-    result.push_back(log_uniform_dist(genotype_combinations.size()));
-    const auto k = std::min(std::size_t {config_.max_seeds}, genotype_combinations.size());
-    std::vector<std::size_t> top_indices(k);
+    const auto num_genotypes = genotype_combinations.size();
+    result.push_back(log_uniform_dist(num_genotypes));
+    if (num_genotypes > 100) result.push_back(make_range_seed(num_genotypes, 0, num_genotypes / 100));
+    if (num_genotypes > 10) result.push_back(make_range_seed(num_genotypes, 0, num_genotypes / 10));
+    const auto k = std::min(std::size_t {config_.max_seeds}, num_genotypes);
+    std::vector<std::size_t> top_indices(k - result.size());
     std::iota(std::begin(top_indices), std::end(top_indices), 0u);
     make_point_seeds(genotype_combinations.size(), top_indices, result);
     return result;
