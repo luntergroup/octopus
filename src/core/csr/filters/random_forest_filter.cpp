@@ -198,14 +198,16 @@ static void write_line(const std::vector<T>& data, std::ostream& out)
 
 void RandomForestFilter::prepare_for_registration(const SampleList& samples) const
 {
-    std::vector<std::string> data_header {};
-    data_header.reserve(measures_.size() - num_chooser_measures_);
-    std::transform(std::cbegin(measures_), std::prev(std::cend(measures_), num_chooser_measures_), std::back_inserter(data_header),
-                   [] (const auto& measure) { return measure.name(); });
-    data_header.push_back("TP");
     const auto num_forests = forest_paths_.size();
     data_.resize(num_forests);
     for (std::size_t forest_idx {0}; forest_idx < num_forests; ++forest_idx) {
+        const auto& info = forest_measure_info_[forest_idx];
+        std::vector<std::string> data_header {};
+        const auto first_measure = std::next(std::cbegin(measures_), info.start_index);
+        data_header.reserve(info.number + 1);
+        std::transform(first_measure, std::next(first_measure, info.number),
+                       std::back_inserter(data_header), [] (const auto& measure) { return measure.name(); });
+        data_header.push_back("TP");
         data_[forest_idx].reserve(samples.size());
         for (const auto& sample : samples) {
             auto data_path = temp_directory();
