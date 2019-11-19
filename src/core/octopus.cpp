@@ -1419,7 +1419,7 @@ void run_variant_calling(GenomeCallingComponents& components, UserCommandInfo in
         if (!components.filter_request()) {
             run_calling(components);
         }
-    } catch (const ProgramError& e) {
+    } catch (const Error& e) {
         try {
             if (debug_log) *debug_log << "Encountered an error whilst calling, attempting to cleanup";
             cleanup(components);
@@ -1441,6 +1441,18 @@ void run_variant_calling(GenomeCallingComponents& components, UserCommandInfo in
     components.output().close();
     try {
         run_csr(components);
+    } catch (const Error& e) {
+        try {
+            if (debug_log) *debug_log << "Encountered an error whilst filtering, attempting to cleanup";
+            cleanup(components);
+        } catch (...) {}
+        throw;
+    } catch (const std::exception& e) {
+        try {
+            if (debug_log) *debug_log << "Encountered an error whilst filtering, attempting to cleanup";
+            cleanup(components);
+        } catch (...) {}
+        throw CallingBug {e};
     } catch (...) {
         try {
             if (debug_log) *debug_log << "Encountered an error whilst filtering, attempting to cleanup";
