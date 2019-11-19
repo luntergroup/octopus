@@ -18,13 +18,13 @@ namespace octopus {
 
 struct KMediodsParameters
 {
-    enum class InitialisationMode { random, max_distance } initialisation = InitialisationMode::max_distance;
+    enum class InitialisationMode { random, max_distance, total_distance } initialisation = InitialisationMode::max_distance;
     std::size_t max_iterations = 100;
-    bool allow_empty_clusters = false;
 };
 
 using Cluster = std::vector<std::size_t>;
 using ClusterVector = std::vector<Cluster>;
+using MediodVector = std::vector<std::size_t>;
 
 namespace detail {
 
@@ -48,8 +48,6 @@ auto make_distance_matrix(const ForwardIterator first_data_itr, const ForwardIte
     }
     return result;
 }
-
-using MediodVector = std::vector<std::size_t>;
 
 inline auto initialise_mediods_random(const std::size_t k, const std::size_t N)
 {
@@ -115,6 +113,25 @@ initialise_mediods_max_distance(ForwardIterator first, ForwardIterator last,
 
 template <typename ForwardIterator, typename D>
 auto
+initialise_mediods_total_distance(ForwardIterator first, ForwardIterator last,
+                                  const DistanceMatrix<D>& distances,
+                                  const std::size_t k)
+{
+    assert(k > 1);
+    std::vector<std::pair<D, std::size_t>> total_distances(distances.size());
+    for (std::size_t s {0}; s < total_distances.size(); ++s) {
+        total_distances[s] = {std::accumulate(std::cbegin(distances[s]), std::cend(distances[s]), D {}), s};
+    }
+    std::sort(std::begin(total_distances), std::end(total_distances), std::greater<> {});
+    MediodVector result(k);
+    for (std::size_t i {0}; i < k; ++i) {
+        result[i] = total_distances[i].second;
+    }
+    return result;
+}
+
+template <typename ForwardIterator, typename D>
+auto
 initialise_mediods(ForwardIterator first, ForwardIterator last, const std::size_t k,
                    const DistanceMatrix<D>& distances,
                    const KMediodsParameters& params)
@@ -122,8 +139,10 @@ initialise_mediods(ForwardIterator first, ForwardIterator last, const std::size_
     const auto N = static_cast<std::size_t>(std::distance(first, last));
     if (params.initialisation == KMediodsParameters::InitialisationMode::random) {
         return initialise_mediods_random(k, N);
-    } else {
+    } else if (params.initialisation == KMediodsParameters::InitialisationMode::max_distance) {
         return initialise_mediods_max_distance(first, last, distances, k);
+    } else {
+        return initialise_mediods_total_distance(first, last, distances, k);
     }
 }
 
@@ -152,7 +171,7 @@ auto find_worst_clustered_point(const ClusterVector& clusters, const MediodVecto
     D max_distance {};
     for (std::size_t cluster_idx {0}; cluster_idx < clusters.size(); ++cluster_idx) {
         for (const auto point : clusters[cluster_idx]) {
-            if (worst_cluster == -1 || max_distance < distances[point][medoids[cluster_idx]]) {
+            if (clusters[cluster_idx].size() > 1 && (worst_cluster == -1 || max_distance < distances[point][medoids[cluster_idx]])) {
                 worst_cluster = cluster_idx;
                 worst_point = point;
                 max_distance = distances[point][medoids[cluster_idx]];
@@ -189,9 +208,6 @@ void initialise_clusters(ClusterVector& clusters,
         auto cluster_idx = choose_medoid(point_idx, medoids, distances);
         clusters[cluster_idx].push_back(point_idx);
     }
-    if (!params.allow_empty_clusters) {
-        assign_empty_clusters(clusters, medoids, distances);
-    }
 }
 
 template <typename D>
@@ -223,9 +239,6 @@ bool update_clusters(ClusterVector& clusters,
         }
         clusters[cluster_idx] = std::move(buffer);
         buffer.clear();
-    }
-    if (!params.allow_empty_clusters && assignments_changed) {
-        assign_empty_clusters(clusters, medoids, distances);
     }
     return assignments_changed;
 }
@@ -265,6 +278,30 @@ void update_mediods(MediodVector& medoids,
     }
 }
 
+template <typename D>
+D total_distance(const MediodVector& medoids,
+                 const ClusterVector& clusters,
+                 const DistanceMatrix<D>& distances)
+{
+    assert(medoids.size() == clusters.size());
+    D result {};
+    for (std::size_t cluster_idx {0}; cluster_idx < clusters.size(); ++cluster_idx) {
+        result += sum(distances, clusters[cluster_idx], medoids[cluster_idx]);
+    }
+    return result;
+}
+
+template <typename D>
+void print(const DistanceMatrix<D>& distances)
+{
+    for (const auto& row : distances) {
+        for (auto d : row) {
+            std::cout << d << ' ';
+        }
+        std::cout << std::endl;
+    }
+}
+
 } // namespace detail
 
 template <typename ForwardIterator, typename BinaryFunction>
@@ -288,7 +325,7 @@ k_medoids(const ForwardIterator first_data_itr, const ForwardIterator last_data_
         if (!assignments_changed) break;
     }
     for (auto& cluster : clusters) cluster.shrink_to_fit();
-    return medoids;
+    return std::make_pair(std::move(medoids), detail::total_distance(medoids, clusters, distances));
 }
 
 template <typename ForwardIterator>
