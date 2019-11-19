@@ -234,18 +234,19 @@ template <typename D>
 auto sum(const DistanceMatrix<D>& distances, const std::vector<std::size_t>& cluster, const std::size_t medoid)
 {
     return std::accumulate(std::cbegin(cluster), std::cend(cluster), D {},
-                           [&] (D curr, std::size_t point) { return curr + distances[point][medoid]; });
+                           [&] (D total, std::size_t point) { return total + distances[point][medoid]; });
 }
 
 template <typename D>
 auto choose_medoid(const std::vector<std::size_t>& cluster,
                    const DistanceMatrix<D>& distances)
 {
+    assert(!cluster.empty());
     std::size_t result {0};
     D min_distance_sum {};
     for (auto idx : cluster) {
         auto distance_sum = sum(distances, cluster, idx);
-        if (idx == 0 || distance_sum < min_distance_sum) {
+        if (idx == cluster.front() || distance_sum < min_distance_sum) {
             result = idx;
             min_distance_sum = std::move(distance_sum);
         }
