@@ -2108,8 +2108,12 @@ make_call_filter_factory(const ReferenceGenome& reference, ReadPipe& read_pipe, 
     if (is_call_filtering_requested(options)) {
         const auto caller = get_caller_type(options, read_pipe.samples());
         if (is_random_forest_filtering(options)) {
-            std::vector<RandomForestFilterFactory::Path> forest_files {resolve_path(options.at("forest-model").as<fs::path>(), options)};
-            std::vector<RandomForestFilterFactory::ForestType> forest_types {RandomForestFilterFactory::ForestType::germline};
+            std::vector<RandomForestFilterFactory::Path> forest_files {};
+            std::vector<RandomForestFilterFactory::ForestType> forest_types {};
+            if (is_set("forest-model", options)) {
+                forest_files.push_back(resolve_path(options.at("forest-model").as<fs::path>(), options));
+                forest_types.push_back(RandomForestFilterFactory::ForestType::germline);
+            }
             RandomForestFilterFactory::Options forest_options {};
             if (is_set("min-forest-quality", options)) forest_options.min_forest_quality = options.at("min-forest-quality").as<Phred<double>>();
             if (caller == "cancer") {
