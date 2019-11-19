@@ -5,6 +5,7 @@
 #define phylogeny_hpp
 
 #include <unordered_map>
+#include <vector>
 #include <memory>
 #include <cstddef>
 #include <stack>
