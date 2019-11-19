@@ -25,6 +25,7 @@
 #include "core/types/calls/reference_call.hpp"
 #include "core/models/genotype/uniform_genotype_prior_model.hpp"
 #include "core/models/genotype/coalescent_genotype_prior_model.hpp"
+#include "core/models/genotype/coalescent_population_prior_model.hpp"
 #include "core/models/mutation/denovo_model.hpp"
 #include "core/models/genotype/single_cell_prior_model.hpp"
 #include "utils/maths.hpp"
@@ -262,29 +263,49 @@ void log(const model::SingleCellModel::Inferences& inferences,
     }
 }
 
+struct SingleCellModelInferencesEvidenceLess
+{
+    bool operator()(const model::SingleCellModel::Inferences& lhs, const model::SingleCellModel::Inferences& rhs) const noexcept
+    {
+        return lhs.log_evidence < rhs.log_evidence;
+    }
+};
+
 std::vector<model::SingleCellPriorModel::CellPhylogeny>
 propose_next_phylogenies(const std::vector<std::vector<model::SingleCellModel::Inferences>>& prev_inferences)
 {
     using CellPhylogeny = model::SingleCellPriorModel::CellPhylogeny;
+    std::vector<CellPhylogeny> result {};
     if (prev_inferences.empty()) {
-        return {CellPhylogeny {CellPhylogeny::Group {0}}};
+        result = {CellPhylogeny {CellPhylogeny::Group {0}}};
     } else if (prev_inferences.size() == 1) {
-        CellPhylogeny two_group_phylogeny {CellPhylogeny::Group {0}};
-        two_group_phylogeny.add_descendant(CellPhylogeny::Group {1}, 0);
+        CellPhylogeny two_group_phylogeny {{0}};
+        two_group_phylogeny.add_descendant({1}, 0);
         return {std::move(two_group_phylogeny)};
     } else if (prev_inferences.size() == 2) {
-        CellPhylogeny flat_three_group_phylogeny {CellPhylogeny::Group {0}};
-        flat_three_group_phylogeny.add_descendant(CellPhylogeny::Group {1}, 0);
-        flat_three_group_phylogeny.add_descendant(CellPhylogeny::Group {2}, 1);
-    
-        CellPhylogeny forking_three_group_phylogeny {CellPhylogeny::Group {0}};
-        forking_three_group_phylogeny.add_descendant(CellPhylogeny::Group {1}, 0);
-        forking_three_group_phylogeny.add_descendant(CellPhylogeny::Group {2}, 0);
-        
-        return {std::move(flat_three_group_phylogeny), std::move(forking_three_group_phylogeny)};
+        CellPhylogeny flat_three_group_phylogeny{{0}};
+        flat_three_group_phylogeny.add_descendant({1}, 0);
+        flat_three_group_phylogeny.add_descendant({2}, 1);
+        CellPhylogeny forking_three_group_phylogeny{{0}};
+        forking_three_group_phylogeny.add_descendant({1}, 0);
+        forking_three_group_phylogeny.add_descendant({2}, 0);
+        result = {std::move(flat_three_group_phylogeny), std::move(forking_three_group_phylogeny)};
     } else {
-        return {};
+        using CellInferredPhylogeny = model::SingleCellModel::Inferences::InferedPhylogeny;
+        const auto best_prev_inferences_itr = std::max_element(std::cbegin(prev_inferences.back()), std::cend(prev_inferences.back()), SingleCellModelInferencesEvidenceLess {});
+        const CellInferredPhylogeny best_prev_phylogeny {best_prev_inferences_itr->phylogeny};
+        const CellPhylogeny template_phylogeny {best_prev_phylogeny.transform([] (const auto&) -> CellPhylogeny::ValueType { return {}; })};
+        result.reserve(best_prev_phylogeny.size());
+        const auto prev_groups = best_prev_phylogeny.groups();
+        for (const auto& group : prev_groups) {
+            if (template_phylogeny.num_descendants(group.id) < 2) {
+                auto extended_phylogeny = template_phylogeny;
+                extended_phylogeny.add_descendant({prev_groups.size()}, group.id);
+                result.push_back(std::move(extended_phylogeny));
+            }
+        }
     }
+    return result;
 }
 
 std::unique_ptr<CellCaller::Caller::Latents>
@@ -303,6 +324,7 @@ CellCaller::infer_latents(const HaplotypeBlock& haplotypes, const HaplotypeLikel
     model::SingleCellModel::AlgorithmParameters config {};
     config.max_genotype_combinations = parameters_.max_joint_genotypes;
     if (parameters_.max_vb_seeds) config.max_seeds = *parameters_.max_vb_seeds;
+    const CoalescentPopulationPriorModel population_prior_model {{Haplotype {mapped_region(haplotypes), reference_}, {}}};
     
     using SingleCellModelInferences = model::SingleCellModel::Inferences;
     std::vector<std::vector<SingleCellModelInferences>> inferences {};
@@ -315,7 +337,7 @@ CellCaller::infer_latents(const HaplotypeBlock& haplotypes, const HaplotypeLikel
             clone_inferences.reserve(phylogenies.size());
             for (auto& phylogeny : phylogenies) {
                 model::SingleCellPriorModel phylogeny_prior_model {std::move(phylogeny), *genotype_prior_model, mutation_model, cell_prior_params};
-                model::SingleCellModel phylogeny_model {samples_, std::move(phylogeny_prior_model), model_parameters, config};
+                model::SingleCellModel phylogeny_model {samples_, std::move(phylogeny_prior_model), model_parameters, config, population_prior_model};
                 auto phylogeny_inferences = phylogeny_model.evaluate(genotypes, haplotype_likelihoods);
                 log(phylogeny_inferences, samples_, genotypes, debug_log_);
                 clone_inferences.push_back(std::move(phylogeny_inferences));
