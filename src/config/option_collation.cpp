@@ -1105,6 +1105,8 @@ get_assembler_bubble_score_setter(const OptionMap& options) noexcept
     if (is_cancer_calling(options)) {
         return DepthBasedBubbleScoreSetter {options.at("min-bubble-score").as<double>(),
                                             options.at("min-expected-somatic-frequency").as<float>()};
+    } else if (is_single_cell_calling(options)) {
+        return DepthBasedBubbleScoreSetter {options.at("min-bubble-score").as<double>(), 0.25};
     } else {
         return DepthBasedBubbleScoreSetter {options.at("min-bubble-score").as<double>(), 0.05};
     }
