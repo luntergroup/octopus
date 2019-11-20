@@ -621,6 +621,12 @@ auto count_forward_strand_support(const CigarScanner::VariantObservation& candid
                            [&] (auto curr, const auto& observation) { return curr + observation.forward_strand_support; });
 }
 
+auto count_edge_support(const CigarScanner::VariantObservation& candidate)
+{
+    return std::accumulate(std::cbegin(candidate.sample_observations), std::cend(candidate.sample_observations), 0u,
+                           [&] (auto curr, const auto& observation) { return curr + observation.edge_support; });
+}
+
 auto concat_observed_base_qualities(const CigarScanner::VariantObservation& candidate)
 {
     std::size_t num_base_qualities {0};
@@ -646,6 +652,13 @@ bool is_good_somatic(const Variant& v, const CigarScanner::VariantObservation::S
 {
     return is_good_somatic(v, observation.depth, observation.forward_strand_depth, observation.forward_strand_support,
                            observation.edge_support, observation.observed_base_qualities, vaf_def);
+}
+
+bool is_good_somatic_pooled(const CigarScanner::VariantObservation& candidate, const UnknownExpectedVAFStats& vaf_def)
+{
+    return is_good_somatic(candidate.variant, candidate.total_depth, count_forward_strand_depth(candidate),
+                           count_forward_strand_support(candidate), count_edge_support(candidate),
+                           concat_observed_base_qualities(candidate), vaf_def);
 }
 
 bool is_good_pacbio(const Variant& variant, const unsigned depth, const unsigned forward_strand_depth,
@@ -732,7 +745,7 @@ bool UnknownCopyNumberInclusionPredicate::operator()(const CigarScanner::Variant
 
 bool is_good_cell(const Variant& v, const CigarScanner::VariantObservation::SampleObservationStats& observation)
 {
-    const UnknownExpectedVAFStats vaf_def {0.2, 0.5};
+    const UnknownExpectedVAFStats vaf_def {0.25, 0.75};
     return is_good_somatic(v, observation, vaf_def);
 }
 
@@ -744,10 +757,8 @@ bool any_good_cell_samples(const CigarScanner::VariantObservation& candidate)
 
 bool is_good_cell_pooled(const CigarScanner::VariantObservation& candidate)
 {
-    const auto observed_qualities = concat_observed_base_qualities(candidate);
-    if (observed_qualities.size() < 2) return false;
-    return is_good_germline(candidate.variant, candidate.total_depth, count_forward_strand_depth(candidate),
-                            count_forward_strand_support(candidate), observed_qualities);
+    const UnknownExpectedVAFStats vaf_def {0.2, 0.8};
+    return is_good_somatic_pooled(candidate, vaf_def);
 }
 
 bool CellInclusionPredicate::operator()(const CigarScanner::VariantObservation& candidate)
