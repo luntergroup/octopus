@@ -24,6 +24,7 @@
 #include "concepts/equitable.hpp"
 #include "concepts/mappable.hpp"
 #include "containers/mappable_block.hpp"
+#include "utils/reorder.hpp"
 #include "allele.hpp"
 #include "haplotype.hpp"
 
@@ -267,28 +268,6 @@ std::vector<MappableType> Genotype<MappableType>::copy_unique() const
     std::sort(std::begin(result), std::end(result));
     result.erase(std::unique(std::begin(result), std::end(result)), std::end(result));
     return result;
-}
-
-template <typename order_iterator, typename value_iterator>
-void reorder(order_iterator order_begin, order_iterator order_end, value_iterator v)
-{
-    // See https://stackoverflow.com/a/1267878/2970186
-    using value_t = typename std::iterator_traits< value_iterator >::value_type;
-    using index_t = typename std::iterator_traits< order_iterator >::value_type;
-    using diff_t  = typename std::iterator_traits< order_iterator >::difference_type;
-    diff_t remaining = order_end - 1 - order_begin;
-    for (index_t s = index_t {}, d; remaining > 0; ++s) {
-        for (d = order_begin[s]; d > s; d = order_begin[d]);
-        if (d == s) {
-            --remaining;
-            value_t temp = std::move(v[s]);
-            while (d = order_begin[d], d != s) {
-                std::swap(temp, v[d]);
-                --remaining;
-            }
-            v[s] = std::move(temp);
-        }
-    }
 }
 
 template <typename MappableType>

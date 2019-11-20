@@ -196,6 +196,7 @@ set(UTILS_SOURCES
     utils/read_duplicates.hpp
     utils/read_duplicates.cpp
     utils/array_tricks.hpp
+    utils/reorder.hpp
 )
 
 set(CORE_SOURCES
