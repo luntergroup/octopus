@@ -651,10 +651,10 @@ bool Caller::is_saturated(const HaplotypeBlock& haplotypes, const Latents& laten
 unsigned Caller::count_probable_haplotypes(const Caller::Latents::HaplotypeProbabilityMap& haplotype_posteriors) const
 {
     return std::count_if(std::cbegin(haplotype_posteriors), std::cend(haplotype_posteriors),
-                         [this] (const auto& p) { return p.second >= parameters_.saturation_limit.probability_true(); });
+                         [this] (const auto& p) { return p.second >= parameters_.saturation_limit; });
 }
 
-void Caller::filter_haplotypes(bool prefilter_had_removal_impact,
+void Caller::filter_haplotypes(const bool prefilter_had_removal_impact,
                                const HaplotypeBlock& haplotypes,
                                HaplotypeGenerator& haplotype_generator,
                                const HaplotypeLikelihoodArray& haplotype_likelihoods,
@@ -662,18 +662,22 @@ void Caller::filter_haplotypes(bool prefilter_had_removal_impact,
                                const std::deque<Haplotype>& protected_haplotypes) const
 {
     if (prefilter_had_removal_impact) { // if there was no impact before then there can't be now either
-        prefilter_had_removal_impact = haplotype_generator.removal_has_impact();
-    }
-    if (prefilter_had_removal_impact) {
-        const auto max_to_remove = haplotype_generator.max_removal_impact();
-        auto removable_haplotypes = get_removable_haplotypes(haplotypes, haplotype_likelihoods,
-                                                             *latents.haplotype_posteriors(),
-                                                             protected_haplotypes, max_to_remove);
-        if (debug_log_) {
-            stream(*debug_log_) << "Discarding " << removable_haplotypes.size()
-                                << " haplotypes with low posterior support";
+        if (haplotype_generator.removal_has_impact()) {
+            const auto max_to_remove = haplotype_generator.max_removal_impact();
+            auto removable_haplotypes = get_removable_haplotypes(haplotypes, haplotype_likelihoods,
+                                                                 *latents.haplotype_posteriors(),
+                                                                 protected_haplotypes,
+                                                                 max_to_remove);
+            if (debug_log_) {
+                stream(*debug_log_) << "Discarding " << removable_haplotypes.size() << " of "
+                                        << max_to_remove << " removable haplotypes with low posterior support";
+            }
+            haplotype_generator.remove(removable_haplotypes);
+        } else if (debug_log_) {
+            *debug_log_ << "No posterior haplotype filtering applied as there is no removal impact";
         }
-        haplotype_generator.remove(removable_haplotypes);
+    } else if (debug_log_) {
+        *debug_log_ << "No posterior haplotype filtering applied as prefilter had no removal impact";
     }
 }
 
@@ -1199,17 +1203,18 @@ std::vector<std::reference_wrapper<const Haplotype>>
 Caller::get_removable_haplotypes(const HaplotypeBlock& haplotypes,
                                  const HaplotypeLikelihoodArray& haplotype_likelihoods,
                                  const Caller::Latents::HaplotypeProbabilityMap& haplotype_posteriors,
-                                 const std::deque<Haplotype>& protected_haplotypes, const unsigned max_to_remove) const
+                                 const std::deque<Haplotype>& protected_haplotypes,
+                                 const unsigned max_to_remove) const
 {
     if (debug_log_) {
         stream(*debug_log_) << "Protecting " << protected_haplotypes.size() << " haplotypes from filtering";
     }
     if (protected_haplotypes.empty()) {
         return extract_removable(haplotypes, haplotype_posteriors, samples_, haplotype_likelihoods,
-                                 max_to_remove, parameters_.haplotype_extension_threshold.probability_false());
+                                 max_to_remove, parameters_.haplotype_extension_threshold);
     } else if (protected_haplotypes.size() == 1 && parameters_.protect_reference_haplotype && is_reference(protected_haplotypes.front())) {
         auto result = extract_removable(haplotypes, haplotype_posteriors, samples_, haplotype_likelihoods,
-                                        max_to_remove, parameters_.haplotype_extension_threshold.probability_false());
+                                        max_to_remove, parameters_.haplotype_extension_threshold);
         auto reference_itr = find_reference(result);
         if (reference_itr != std::cend(result)) result.erase(reference_itr);
         return result;
@@ -1222,7 +1227,7 @@ Caller::get_removable_haplotypes(const HaplotypeBlock& haplotypes,
                             std::cbegin(protected_haplotypes), std::cend(protected_haplotypes),
                             std::back_inserter(removable_haplotypes));
         return extract_removable(removable_haplotypes, haplotype_posteriors, samples_, haplotype_likelihoods,
-                                 max_to_remove, parameters_.haplotype_extension_threshold.probability_false());
+                                 max_to_remove, parameters_.haplotype_extension_threshold);
     }
 }
 

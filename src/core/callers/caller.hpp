@@ -65,7 +65,7 @@ public:
         boost::optional<Phred<double>> refcall_block_merge_threshold;
         bool call_sites_only;
         unsigned max_haplotypes;
-        Phred<double> haplotype_extension_threshold, saturation_limit;
+        double haplotype_extension_threshold, saturation_limit;
         ModelPosteriorPolicy model_posterior_policy;
         bool protect_reference_haplotype;
         boost::optional<MemoryFootprint> target_max_memory;

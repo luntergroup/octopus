@@ -469,7 +469,7 @@ OptionMap parse_options(const int argc, const char** argv)
      "Level of backtracking [NONE, MODERATE, AGGRESSIVE]")
     
     ("min-protected-haplotype-posterior",
-     po::value<Phred<double>>()->default_value(Phred<double> {100.0}, "100"),
+     po::value<double>()->default_value(1e-10, "1e-10"),
      "Haplotypes with posterior probability less than this may be pruned from the haplotype tree")
     
     ("dont-protect-reference-haplotype",

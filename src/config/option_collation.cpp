@@ -1982,7 +1982,7 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
     }
     vc_builder.set_ploidies(get_ploidy_map(options));
     vc_builder.set_max_haplotypes(get_max_haplotypes(options));
-    vc_builder.set_haplotype_extension_threshold(options.at("min-protected-haplotype-posterior").as<Phred<double>>());
+    vc_builder.set_haplotype_extension_threshold(options.at("min-protected-haplotype-posterior").as<double>());
     vc_builder.set_reference_haplotype_protection(protect_reference_haplotype(options));
     auto min_phase_score = options.at("min-phase-score").as<Phred<double>>();
     vc_builder.set_min_phase_score(min_phase_score);

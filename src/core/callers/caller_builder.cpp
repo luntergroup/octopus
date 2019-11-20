@@ -24,8 +24,8 @@ CallerBuilder::CallerBuilder(const ReferenceGenome& reference, const ReadPipe& r
     params_.general.refcall_block_merge_threshold = boost::none;
     params_.general.call_sites_only = false;
     params_.general.model_posterior_policy = Caller::ModelPosteriorPolicy::special;
-    params_.general.haplotype_extension_threshold = Phred<> {150.0};
-    params_.general.saturation_limit = Phred<> {10.0};
+    params_.general.haplotype_extension_threshold = 1e-10;
+    params_.general.saturation_limit = 0.9;
     params_.general.max_haplotypes = 200;
     factory_ = generate_factory();
 }
@@ -159,7 +159,7 @@ CallerBuilder& CallerBuilder::set_max_haplotypes(unsigned n) noexcept
     return *this;
 }
 
-CallerBuilder& CallerBuilder::set_haplotype_extension_threshold(Phred<double> p) noexcept
+CallerBuilder& CallerBuilder::set_haplotype_extension_threshold(double p) noexcept
 {
     params_.general.haplotype_extension_threshold = p;
     return *this;
