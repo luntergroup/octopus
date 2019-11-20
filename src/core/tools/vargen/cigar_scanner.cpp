@@ -745,7 +745,7 @@ bool UnknownCopyNumberInclusionPredicate::operator()(const CigarScanner::Variant
 
 bool is_good_cell(const Variant& v, const CigarScanner::VariantObservation::SampleObservationStats& observation)
 {
-    const UnknownExpectedVAFStats vaf_def {0.25, 0.75};
+    const UnknownExpectedVAFStats vaf_def {0.2, 0.5};
     return is_good_somatic(v, observation, vaf_def);
 }
 
