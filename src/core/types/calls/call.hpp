@@ -99,6 +99,8 @@ public:
     
     boost::optional<Phred<double>> model_posterior() const noexcept;
     
+    void reorder_genotype(const SampleName& sample, const std::vector<unsigned>& order);
+    
 protected:
     std::unordered_map<SampleName, GenotypeCall> genotype_calls_;
     
@@ -109,6 +111,7 @@ protected:
 private:
     virtual std::unique_ptr<Call> do_clone() const = 0;
     virtual void replace_called_alleles(const char old_base, const char replacement_base) = 0;
+    virtual void reorder_genotype_fields(const SampleName& sample, const std::vector<unsigned>& order) {};
 };
 
 template <typename T>

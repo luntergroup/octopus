@@ -3,7 +3,9 @@
 
 #include "somatic_call.hpp"
 
+#include "utils/concat.hpp"
 #include "utils/string_utils.hpp"
+#include "utils/reorder.hpp"
 
 namespace octopus {
 
@@ -14,19 +16,19 @@ SomaticCall::SomaticCall(Variant variant,
                          GenotypeStatsMap stats,
                          boost::optional<Phred<double>> classification_posterior)
 : VariantCall {std::move(variant), decltype(genotype_calls_) {}, quality, classification_posterior}
-, genotype_stats_ {std::move(stats)}
+, genotype_stats_ {}
 {
     if (variant_.ref_allele() == variant_.alt_allele()) {
         Allele::NucleotideSequence missing_sequence(ref_sequence_size(variant_), 'N');
         using octopus::mapped_region;
-        variant_ = Variant {
-        Allele {mapped_region(variant_), std::move(missing_sequence)},
-        variant_.alt_allele()
-        };
+        variant_ = Variant {Allele {mapped_region(variant_), std::move(missing_sequence)},variant_.alt_allele()};
     }
-    genotype_calls_.reserve(genotype_stats_.size()); // num samples
-    for (const auto& p : genotype_stats_) {
-        genotype_calls_.emplace(p.first, GenotypeCall {p.second.somatic.empty() ? genotype_call.germline() : demote(genotype_call), genotype_posterior});
+    genotype_calls_.reserve(stats.size()); // num samples
+    genotype_stats_.reserve(stats.size());
+    for (auto& p : stats) {
+        auto& sample_stats = p.second;
+        genotype_calls_.emplace(p.first, GenotypeCall {sample_stats.somatic.empty() ? genotype_call.germline() : demote(genotype_call), genotype_posterior});
+        genotype_stats_.emplace(p.first, concat(std::move(sample_stats.germline), std::move(sample_stats.somatic)));
     }
 }
 
@@ -45,16 +47,11 @@ void SomaticCall::decorate(VcfRecord::Builder& record) const
     for (const auto& p : genotype_stats_) {
         std::vector<std::string> hpcs {}, map_hfs {}, hf_crs {};
         const auto ploidy = this->genotype_calls_.at(p.first).genotype.ploidy();
-        assert(ploidy == p.second.germline.size() + p.second.somatic.size());
+        assert(ploidy == p.second.size());
         hpcs.reserve(ploidy);
         map_hfs.reserve(ploidy);
         hf_crs.reserve(2 * ploidy);
-        for (const auto& stats : p.second.germline) {
-            hpcs.push_back(to_string_sf(stats.pseudo_count));
-            map_hfs.push_back(to_string_sf(stats.map_vaf));
-            hf_crs.insert(std::cend(hf_crs), {to_string_sf(stats.vaf_credible_region.first), to_string_sf(stats.vaf_credible_region.second)});
-        }
-        for (const auto& stats : p.second.somatic) {
+        for (const auto& stats : p.second) {
             hpcs.push_back(to_string_sf(stats.pseudo_count));
             map_hfs.push_back(to_string_sf(stats.map_vaf));
             hf_crs.insert(std::cend(hf_crs), {to_string_sf(stats.vaf_credible_region.first), to_string_sf(stats.vaf_credible_region.second)});
@@ -68,6 +65,13 @@ void SomaticCall::decorate(VcfRecord::Builder& record) const
 std::unique_ptr<Call> SomaticCall::do_clone() const
 {
     return std::make_unique<SomaticCall>(*this);
+}
+
+void SomaticCall::reorder_genotype_fields(const SampleName& sample, const std::vector<unsigned>& order)
+{
+    auto& stats = genotype_stats_.at(sample);
+    assert(stats.size() == order.size());
+    reorder(std::cbegin(order), std::cend(order), std::begin(stats));
 }
 
 } // namespace octopus

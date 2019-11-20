@@ -56,10 +56,13 @@ public:
     virtual bool requires_model_evaluation() const noexcept override { return true; }
     
 protected:
-    GenotypeStatsMap genotype_stats_;
+    using SquashedGenotypeStatsMap = std::unordered_map<SampleName, std::vector<AlleleStats>>;
+    
+    SquashedGenotypeStatsMap genotype_stats_;
     
 private:
     virtual std::unique_ptr<Call> do_clone() const override;
+    virtual void reorder_genotype_fields(const SampleName& sample, const std::vector<unsigned>& order) override;
 };
 
 } // namespace octopus

@@ -27,7 +27,8 @@ private:
     unsigned index_;
 };
 
-void sort_alleles_in_haplotype_order(std::vector<Genotype<Allele>>& genotypes, const ReferenceGenome& reference)
+std::vector<unsigned>
+compute_haplotype_order(const std::vector<Genotype<Allele>>& genotypes, const ReferenceGenome& reference)
 {
     if (!genotypes.empty()) {
         const auto ploidy = genotypes.front().ploidy();
@@ -46,14 +47,12 @@ void sort_alleles_in_haplotype_order(std::vector<Genotype<Allele>>& genotypes, c
             haplotypes.push_back({haplotype.build(), haplotype_idx});
         }
         std::sort(std::begin(haplotypes), std::end(haplotypes));
-        std::vector<unsigned> allele_order(ploidy);
-        std::transform(std::cbegin(haplotypes), std::cend(haplotypes), std::begin(allele_order),
+        std::vector<unsigned> result(ploidy);
+        std::transform(std::cbegin(haplotypes), std::cend(haplotypes), std::begin(result),
                        [] (const auto& p) { return p.second; });
-        if (!std::is_sorted(std::cbegin(allele_order), std::cend(allele_order))) {
-            for (auto& genotype : genotypes) {
-                genotype.reorder_alleles(allele_order);
-            }
-        }
+        return result;
+    } else {
+        return {};
     }
 }
 
@@ -69,11 +68,12 @@ void sort_genotype_alleles(Iterator first_call, Iterator last_call, const Sample
         std::for_each(first_call, last_call, [&] (CallWrapper& call) {
             genotypes.push_back(call->get_genotype_call(sample).genotype);
         });
-        detail::sort_alleles_in_haplotype_order(genotypes, reference);
-        std::size_t g {0};
-        std::for_each(first_call, last_call, [&] (CallWrapper& call) {
-            call->get_genotype_call(sample).genotype = std::move(genotypes[g++]);
-        });
+        const auto new_allele_order = detail::compute_haplotype_order(genotypes, reference);
+        if (!std::is_sorted(std::cbegin(new_allele_order), std::cend(new_allele_order))) {
+            std::for_each(first_call, last_call, [&] (CallWrapper& call) {
+                call->reorder_genotype(sample, new_allele_order);
+            });
+        }
     }
 }
 
