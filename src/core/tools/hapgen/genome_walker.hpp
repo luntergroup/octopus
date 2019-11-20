@@ -38,11 +38,20 @@ public:
         noLimit
     };
     
+    enum class ReadTemplatePolicy
+    {
+        none,
+        indicators,
+        extension,
+        indicators_and_extension
+    };
+    
     GenomeWalker() = delete;
     
     GenomeWalker(unsigned max_included,
                  IndicatorPolicy indicator_policy = IndicatorPolicy::includeNone,
-                 ExtensionPolicy extension_policy = ExtensionPolicy::includeIfAnySampleSharedWithFrontier);
+                 ExtensionPolicy extension_policy = ExtensionPolicy::includeIfAnySampleSharedWithFrontier,
+                 ReadTemplatePolicy read_template_policy = ReadTemplatePolicy::indicators_and_extension);
     
     GenomeWalker(const GenomeWalker&)            = default;
     GenomeWalker& operator=(const GenomeWalker&) = default;
@@ -61,6 +70,7 @@ private:
     unsigned max_included_;
     IndicatorPolicy indicator_policy_;
     ExtensionPolicy extension_policy_;
+    ReadTemplatePolicy read_template_policy_;
     
     bool can_extend(const Allele& active, const Allele& novel,
                     const ReadMap& reads, boost::optional<const TemplateMap&> read_templates) const;

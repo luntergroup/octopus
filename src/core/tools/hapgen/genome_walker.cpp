@@ -19,13 +19,25 @@ namespace octopus { namespace coretools {
 
 GenomeWalker::GenomeWalker(unsigned max_included,
                            IndicatorPolicy indicator_policy,
-                           ExtensionPolicy extension_policy)
+                           ExtensionPolicy extension_policy,
+                           ReadTemplatePolicy read_template_policy)
 : max_included_ {max_included}
 , indicator_policy_ {indicator_policy}
 , extension_policy_ {extension_policy}
+, read_template_policy_ {read_template_policy}
 {}
 
 namespace {
+
+bool use_read_templates_for_lagging(const GenomeWalker::ReadTemplatePolicy policy) noexcept
+{
+    return policy == GenomeWalker::ReadTemplatePolicy::indicators || policy == GenomeWalker::ReadTemplatePolicy::indicators_and_extension;
+}
+
+bool use_read_templates_for_extension(const GenomeWalker::ReadTemplatePolicy policy) noexcept
+{
+    return policy == GenomeWalker::ReadTemplatePolicy::extension || policy == GenomeWalker::ReadTemplatePolicy::indicators_and_extension;
+}
 
 template <typename BidirIt>
 BidirIt find_first_shared_helper(const ReadMap& reads, boost::optional<const TemplateMap&> read_templates,
@@ -177,12 +189,16 @@ GenomeWalker::walk(const GenomicRegion& previous_region,
         }
     }
     unsigned num_indicators {0};
+    boost::optional<const TemplateMap&> indicator_read_templates {};
+    if (read_templates && use_read_templates_for_lagging(read_template_policy_)) {
+        indicator_read_templates = read_templates;
+    }
     switch (indicator_policy_) {
         case IndicatorPolicy::includeNone: break;
         case IndicatorPolicy::includeIfSharedWithNovelRegion:
         {
             if (distance(first_previous_itr, included_itr) > 0) {
-                auto it = find_first_shared_helper(reads, read_templates, first_previous_itr, included_itr, *included_itr);
+                auto it = find_first_shared_helper(reads, indicator_read_templates, first_previous_itr, included_itr, *included_itr);
                 if (it != included_itr) {
                     auto expanded_leftmost = mapped_region(*it);
                     std::for_each(it, included_itr, [&] (const auto& allele) {
@@ -206,7 +222,7 @@ GenomeWalker::walk(const GenomicRegion& previous_region,
             if (distance(first_previous_itr, included_itr) > 0) {
                 auto it = included_itr;
                 while (true) {
-                    const auto it2 = find_first_shared_helper(reads, read_templates, first_previous_itr, it, *it);
+                    const auto it2 = find_first_shared_helper(reads, indicator_read_templates, first_previous_itr, it, *it);
                     if (it2 == it) {
                         it = it2;
                         break;
@@ -233,11 +249,15 @@ GenomeWalker::walk(const GenomicRegion& previous_region,
     } else {
         num_included = min(num_included, num_remaining_alleles);
     }
+    boost::optional<const TemplateMap&> extension_read_templates {};
+    if (read_templates && use_read_templates_for_extension(read_template_policy_)) {
+        extension_read_templates = read_templates;
+    }
     assert(num_included > 0);
     auto first_excluded_itr = next(included_itr, num_included);
     while (--num_included > 0 && is_optimal_to_extend(first_included_itr, next(included_itr), first_excluded_itr,
                                                       last_allele_itr, reads, num_included + num_excluded_alleles)) {
-        if (!can_extend(*included_itr, *next(included_itr), reads, read_templates)) {
+        if (!can_extend(*included_itr, *next(included_itr), reads, extension_read_templates)) {
             break;
         }
         ++included_itr;
