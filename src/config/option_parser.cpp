@@ -457,16 +457,16 @@ OptionMap parse_options(const int argc, const char** argv)
      " is skipped")
     
     ("extension-level",
-     po::value<ExtensionLevel>()->default_value(ExtensionLevel::normal),
-     "Level of haplotype extension [MINIMAL, CONSERVATIVE, NORMAL, AGGRESSIVE, UNLIMITED]")
+     po::value<ExtensionLevel>()->default_value(ExtensionLevel::moderate),
+     "Level of haplotype extension [MINIMAL, CONSERVATIVE, MODERATE, AGGRESSIVE, UNLIMITED]")
      
     ("lagging-level",
-     po::value<LaggingLevel>()->default_value(LaggingLevel::normal),
-     "Level of haplotype lagging [NONE, NORMAL, AGGRESSIVE]")
+     po::value<LaggingLevel>()->default_value(LaggingLevel::moderate),
+     "Level of haplotype lagging [NONE, CONSERVATIVE, MODERATE, OPTIMISTIC, AGGRESSIVE]")
     
     ("backtrack-level",
      po::value<BacktrackLevel>()->default_value(BacktrackLevel::none),
-     "Level of backtracking [NONE, NORMAL, AGGRESSIVE]")
+     "Level of backtracking [NONE, MODERATE, AGGRESSIVE]")
     
     ("min-protected-haplotype-posterior",
      po::value<Phred<double>>()->default_value(Phred<double> {100.0}, "100"),
@@ -1255,8 +1255,8 @@ std::istream& operator>>(std::istream& in, ExtensionLevel& level)
         level = ExtensionLevel::minimal;
     else if (token == "CONSERVATIVE")
         level = ExtensionLevel::conservative;
-    else if (token == "NORMAL")
-        level = ExtensionLevel::normal;
+    else if (token == "MODERATE")
+        level = ExtensionLevel::moderate;
     else if (token == "AGGRESSIVE")
         level = ExtensionLevel::aggressive;
     else if (token == "UNLIMITED")
@@ -1274,8 +1274,8 @@ std::ostream& operator<<(std::ostream& out, const ExtensionLevel& level)
     case ExtensionLevel::conservative:
         out << "CONSERVATIVE";
         break;
-    case ExtensionLevel::normal:
-        out << "NORMAL";
+    case ExtensionLevel::moderate:
+        out << "MODERATE";
         break;
     case ExtensionLevel::aggressive:
         out << "AGGRESSIVE";
@@ -1293,8 +1293,8 @@ std::istream& operator>>(std::istream& in, BacktrackLevel& level)
     in >> token;
     if (token == "NONE")
         level = BacktrackLevel::none;
-    else if (token == "NORMAL")
-        level = BacktrackLevel::normal;
+    else if (token == "MODERATE")
+        level = BacktrackLevel::moderate;
     else if (token == "AGGRESSIVE")
         level = BacktrackLevel::aggressive;
     else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token, "backtrack-level"};
@@ -1307,8 +1307,8 @@ std::ostream& operator<<(std::ostream& out, const BacktrackLevel& level)
     case BacktrackLevel::none:
         out << "NONE";
         break;
-    case BacktrackLevel::normal:
-        out << "NORMAL";
+    case BacktrackLevel::moderate:
+        out << "MODERATE";
         break;
     case BacktrackLevel::aggressive:
         out << "AGGRESSIVE";
@@ -1323,8 +1323,12 @@ std::istream& operator>>(std::istream& in, LaggingLevel& level)
     in >> token;
     if (token == "NONE")
         level = LaggingLevel::none;
-    else if (token == "NORMAL")
-        level = LaggingLevel::normal;
+    else if (token == "CONSERVATIVE")
+        level = LaggingLevel::conservative;
+    else if (token == "MODERATE")
+        level = LaggingLevel::moderate;
+    else if (token == "OPTIMISTIC")
+        level = LaggingLevel::optimistic;
     else if (token == "AGGRESSIVE")
         level = LaggingLevel::aggressive;
     else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token, "lagging-level"};
@@ -1337,8 +1341,14 @@ std::ostream& operator<<(std::ostream& out, const LaggingLevel& level)
         case LaggingLevel::none:
             out << "NONE";
             break;
-        case LaggingLevel::normal:
-            out << "NORMAL";
+        case LaggingLevel::conservative:
+            out << "CONSERVATIVE";
+            break;
+        case LaggingLevel::moderate:
+            out << "MODERATE";
+            break;
+        case LaggingLevel::optimistic:
+            out << "OPTIMISTIC";
             break;
         case LaggingLevel::aggressive:
             out << "AGGRESSIVE";

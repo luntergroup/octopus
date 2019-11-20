@@ -41,9 +41,9 @@ class HaplotypeGenerator
 public:
     struct Policies
     {
-        enum class Lagging { none, conservative, moderate, normal, aggressive } lagging = Lagging::normal;
-        enum class Extension { minimal, conservative, normal, aggressive, unlimited } extension = Extension::normal;
-        enum class Backtrack { none, normal, aggressive } backtrack = Backtrack::normal;
+        enum class Lagging { none, conservative, moderate, optimistic, aggressive } lagging = Lagging::moderate;
+        enum class Extension { minimal, conservative, moderate, aggressive, unlimited } extension = Extension::moderate;
+        enum class Backtrack { none, moderate, aggressive } backtrack = Backtrack::moderate;
         struct HaplotypeLimits { unsigned target = 128, holdout = 2048, overflow = 8192; } haplotype_limits;
         unsigned max_holdout_depth = 2;
         Haplotype::MappingDomain::Size min_flank_pad = 30;

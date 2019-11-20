@@ -1438,10 +1438,10 @@ auto get_extension_policy(const OptionMap& options)
     switch (options.at("extension-level").as<ExtensionLevel>()) {
         case ExtensionLevel::minimal: return ExtensionPolicy::minimal;
         case ExtensionLevel::conservative: return ExtensionPolicy::conservative;
-        case ExtensionLevel::normal: return ExtensionPolicy::normal;
+        case ExtensionLevel::moderate: return ExtensionPolicy::moderate;
         case ExtensionLevel::aggressive: return ExtensionPolicy::aggressive;
         case ExtensionLevel::unlimited: return ExtensionPolicy::unlimited;
-        default: return ExtensionPolicy::normal; // to stop GCC warning
+        default: return ExtensionPolicy::moderate; // to stop GCC warning
     }
 }
 
@@ -1450,7 +1450,7 @@ auto get_backtrack_policy(const OptionMap& options)
     using BacktrackPolicy = HaplotypeGenerator::Builder::Policies::Backtrack;
     switch (options.at("backtrack-level").as<BacktrackLevel>()) {
         case BacktrackLevel::none: return BacktrackPolicy::none;
-        case BacktrackLevel::normal: return BacktrackPolicy::normal;
+        case BacktrackLevel::moderate: return BacktrackPolicy::moderate;
         case BacktrackLevel::aggressive: return BacktrackPolicy::aggressive;
         default: return BacktrackPolicy::none; // to stop GCC warning
     }
@@ -1462,7 +1462,9 @@ auto get_lagging_policy(const OptionMap& options)
     if (is_fast_mode(options)) return LaggingPolicy::none;
     switch (options.at("lagging-level").as<LaggingLevel>()) {
         case LaggingLevel::none: return LaggingPolicy::none;
-        case LaggingLevel::normal: return LaggingPolicy::normal;
+        case LaggingLevel::conservative: return LaggingPolicy::conservative;
+        case LaggingLevel::moderate: return LaggingPolicy::moderate;
+        case LaggingLevel::optimistic: return LaggingPolicy::optimistic;
         case LaggingLevel::aggressive: return LaggingPolicy::aggressive;
         default: return LaggingPolicy::none;
     }
