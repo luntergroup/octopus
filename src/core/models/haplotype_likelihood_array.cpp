@@ -269,6 +269,27 @@ merge_samples(const std::vector<SampleName>& samples,
         likelihoods.shrink_to_fit();
         result.insert(new_sample, haplotype, std::move(likelihoods));
     }
+    result.prime(new_sample);
+    return result;
+}
+
+HaplotypeLikelihoodArray
+merge_samples(const HaplotypeLikelihoodArray& haplotype_likelihoods)
+{
+    SampleName merged_sample_name {};
+    for (const auto& p : haplotype_likelihoods.sample_indices_) merged_sample_name += p.first;
+    HaplotypeLikelihoodArray result {static_cast<unsigned>(haplotype_likelihoods.cache_.size()), {merged_sample_name}};
+    for (const auto& p : haplotype_likelihoods.cache_) {
+        const auto& haplotype = p.first;
+        HaplotypeLikelihoodArray::LikelihoodVector likelihoods {};
+        for (const auto& s : haplotype_likelihoods.sample_indices_) {
+            const auto& m = haplotype_likelihoods(s.first, haplotype);
+            likelihoods.insert(std::end(likelihoods), std::cbegin(m), std::cend(m));
+        }
+        likelihoods.shrink_to_fit();
+        result.insert(merged_sample_name, haplotype, std::move(likelihoods));
+    }
+    result.prime(merged_sample_name);
     return result;
 }
 

@@ -84,6 +84,9 @@ private:
     using VBLikelihoodMatrix = VariationalBayesMixtureMixtureModel::HaplotypeLikelihoodMatrix;
     using VBSeedVector = std::vector<VariationalBayesMixtureMixtureModel::LogProbabilityVector>;
     
+    std::vector<std::size_t>
+    propose_genotypes(const std::vector<Genotype<Haplotype>>& genotypes,
+                      const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
     GenotypeCombinationVector
     propose_genotype_combinations(const std::vector<Genotype<Haplotype>>& genotypes,
                                   const HaplotypeLikelihoodArray& haplotype_likelihoods) const;

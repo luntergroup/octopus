@@ -20,19 +20,36 @@
 
 namespace octopus { namespace model {
 
-const UniformPopulationPriorModel SingleCellModel::default_population_prior_model_ {};
+const UniformPopulationPriorModel SingleCellModel::default_population_prior_model_{};
 
 SingleCellModel::SingleCellModel(std::vector<SampleName> samples,
                                  SingleCellPriorModel prior_model,
                                  Parameters parameters,
                                  AlgorithmParameters config,
                                  boost::optional<const PopulationPriorModel&> population_prior_model)
-: samples_ {std::move(samples)}
-, prior_model_ {std::move(prior_model)}
-, parameters_ {std::move(parameters)}
-, config_ {std::move(config)}
-, population_prior_model_ {std::addressof(population_prior_model ? *population_prior_model : default_population_prior_model_)}
+: samples_{std::move(samples)}
+, prior_model_{std::move(prior_model)}
+, parameters_{std::move(parameters)}
+, config_{std::move(config)}
+, population_prior_model_{std::addressof(population_prior_model ? *population_prior_model : default_population_prior_model_)}
 {}
+
+namespace {
+
+template <typename T>
+std::vector<T>
+copy(const std::vector<T>& values, const std::vector<std::size_t>& indices)
+{
+    std::vector<T> result {};
+    result.reserve(indices.size());
+    for (auto idx : indices) {
+        assert(idx < values.size());
+        result.push_back(values[idx]);
+    }
+    return result;
+}
+
+} // namespace
 
 SingleCellModel::Inferences
 SingleCellModel::evaluate(const std::vector<Genotype<Haplotype>>& genotypes,
@@ -43,12 +60,24 @@ SingleCellModel::evaluate(const std::vector<Genotype<Haplotype>>& genotypes,
         SubcloneModel::Priors subclone_priors {prior_model_.germline_prior_model(), {}};
         const auto ploidy = genotypes.front().ploidy();
         for (const auto& sample : samples_) {
-            subclone_priors.alphas.emplace(sample, SubcloneModel::Priors::GenotypeMixturesDirichletAlphas(ploidy, parameters_.dropout_concentration));
+            subclone_priors.alphas.emplace(sample, SubcloneModel::Priors::GenotypeMixturesDirichletAlphas(ploidy,parameters_.dropout_concentration));
         }
-        SubcloneModel helper_model {samples_, std::move(subclone_priors)};
-        auto subclone_inferences = helper_model.evaluate(genotypes, haplotype_likelihoods);
+        SubcloneModel helper_model{samples_, std::move(subclone_priors)};
+        SubcloneModel::InferredLatents subclone_inferences;
+        if (genotypes.size() <= config_.max_genotype_combinations) {
+            subclone_inferences = helper_model.evaluate(genotypes, haplotype_likelihoods);
+        } else {
+            const auto genotype_subset_indices = propose_genotypes(genotypes, haplotype_likelihoods);
+            const auto genotype_subset = copy(genotypes, genotype_subset_indices);
+            subclone_inferences = helper_model.evaluate(genotype_subset, haplotype_likelihoods);
+            SubcloneModel::Latents::ProbabilityVector weighted_genotype_posteriors(genotypes.size());
+            for (std::size_t g {0}; g < genotype_subset.size(); ++g) {
+                weighted_genotype_posteriors[genotype_subset_indices[g]] = subclone_inferences.weighted_genotype_posteriors[g];
+            }
+            subclone_inferences.weighted_genotype_posteriors = std::move(weighted_genotype_posteriors);
+        }
         Inferences::GroupInferences founder {};
-        founder.genotype_posteriors = std::move(subclone_inferences.max_evidence_params.genotype_probabilities);
+        founder.genotype_posteriors = std::move(subclone_inferences.weighted_genotype_posteriors);
         founder.sample_attachment_posteriors.assign(samples_.size(), 1.0);
         result.phylogeny.set_founder({0, std::move(founder)});
         result.log_evidence = subclone_inferences.approx_log_evidence;
@@ -58,7 +87,8 @@ SingleCellModel::evaluate(const std::vector<Genotype<Haplotype>>& genotypes,
         const auto vb_haplotype_likelihoods = make_likelihood_matrix(genotype_combinations, genotypes, haplotype_likelihoods);
         auto seeds = propose_seeds(genotype_combinations, genotypes, genotype_combination_priors, haplotype_likelihoods);
         auto vb_inferences = posterior_model_.evaluate(genotype_combination_priors, vb_haplotype_likelihoods,
-                                                       parameters_.group_concentration, parameters_.dropout_concentration,
+                                                       parameters_.group_concentration,
+                                                       parameters_.dropout_concentration,
                                                        std::move(seeds));
         for (std::size_t group_idx {0}; group_idx < prior_model_.phylogeny().size(); ++group_idx) {
             Inferences::GroupInferences group {};
@@ -68,7 +98,8 @@ SingleCellModel::evaluate(const std::vector<Genotype<Haplotype>>& genotypes,
             }
             // Marginalise over genotypes
             group.genotype_posteriors.resize(genotypes.size());
-            for (std::size_t genotype_combo_idx {0}; genotype_combo_idx < genotype_combinations.size(); ++genotype_combo_idx) {
+            for (std::size_t genotype_combo_idx {0};
+                 genotype_combo_idx < genotype_combinations.size(); ++genotype_combo_idx) {
                 group.genotype_posteriors[genotype_combinations[genotype_combo_idx][group_idx]] += vb_inferences.genotype_posteriors[genotype_combo_idx];
             }
             if (group_idx == 0) {
@@ -91,6 +122,41 @@ SingleCellModel::evaluate(const std::vector<GenotypeIndex>& genotypes,
 }
 
 // private methods
+
+namespace {
+
+template <typename T, typename BinaryPredicate = std::less<T>>
+std::vector<std::size_t>
+select_top_k_indices(const std::vector<T>& values, const std::size_t k, const BinaryPredicate comp_less = std::less<T> {})
+{
+    std::vector<std::size_t> result(k);
+    if (k < values.size() && k > 0) {
+        std::vector<std::pair<std::reference_wrapper<const T>, std::size_t>> indexed_values {};
+        indexed_values.reserve(values.size());
+        for (std::size_t idx {0}; idx < values.size(); ++idx) {
+            indexed_values.emplace_back(values[idx], idx);
+        }
+        const auto ref_greater = [&comp_less] (const auto& lhs, const auto& rhs) { return comp_less(rhs.first.get(), lhs.first.get()); };
+        const auto kth = std::next(std::begin(indexed_values), k);
+        std::partial_sort(std::begin(indexed_values), kth, std::end(indexed_values), ref_greater);
+        std::transform(std::begin(indexed_values), kth, std::rbegin(result), [] (const auto& p) { return p.second; });
+    } else if (!values.empty() && k > 0) {
+        std::iota(std::begin(result), std::end(result), std::size_t {0});
+    }
+    return result;
+}
+
+} // namespace
+
+std::vector<std::size_t>
+SingleCellModel::propose_genotypes(const std::vector<Genotype<Haplotype>>& genotypes,
+                                   const HaplotypeLikelihoodArray& haplotype_likelihoods) const
+{
+    const auto merged_likelihoods = merge_samples(haplotype_likelihoods);
+    const IndividualModel pooled_model {prior_model_.germline_prior_model()};
+    const auto pooled_model_inferences = pooled_model.evaluate(genotypes, merged_likelihoods);
+    return select_top_k_indices(pooled_model_inferences.posteriors.genotype_log_probabilities, config_.max_genotype_combinations);
+}
 
 namespace {
 

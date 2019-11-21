@@ -85,6 +85,9 @@ public:
     void prime(const SampleName& sample) const;
     void unprime() const noexcept;
     
+    friend HaplotypeLikelihoodArray
+    merge_samples(const HaplotypeLikelihoodArray& haplotype_likelihoods);
+    
 private:
     static constexpr unsigned char mapperKmerSize {6};
     static constexpr std::size_t maxMappingPositions {10};
@@ -143,6 +146,8 @@ merge_samples(const std::vector<SampleName>& samples,
               const SampleName& new_sample,
               const MappableBlock<Haplotype>& haplotypes,
               const HaplotypeLikelihoodArray& haplotype_likelihoods);
+HaplotypeLikelihoodArray
+merge_samples(const HaplotypeLikelihoodArray& haplotype_likelihoods);
 
 namespace debug {
 
