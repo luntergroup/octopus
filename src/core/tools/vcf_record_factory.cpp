@@ -560,9 +560,13 @@ void set_vcf_genotype(const SampleName& sample, const Call::GenotypeCall& call, 
     record.set_genotype(sample, std::move(genotyped_alleles), VcfRecord::Builder::Phasing::phased);
 }
 
+bool is_missing(const Allele::NucleotideSequence& sequence) noexcept
+{
+    return sequence == vcfspec::missingValue;
+}
 bool is_missing(const Allele& a) noexcept
 {
-    return a.sequence() == vcfspec::missingValue;
+    return is_missing(a.sequence());
 }
 
 bool is_delete_masked(const Allele& a) noexcept
@@ -571,43 +575,32 @@ bool is_delete_masked(const Allele& a) noexcept
     return itr != std::cend(a.sequence());
 }
 
-auto get_allele_counts(const Call& call, const std::vector<SampleName>& samples)
+auto get_allele_counts(const std::vector<VcfRecord::NucleotideSequence>& alt_alleles,
+                       const Call& call, const std::vector<SampleName>& samples)
 {
-    const auto& ref = call.reference();
-    unsigned ac {0}, ad {0}, an {0};
+    std::vector<unsigned> ac(alt_alleles.size(), 0);
+    unsigned an {0};
     for (const auto& sample : samples) {
-        const auto& genotype_call = call.get_genotype_call(sample);
-        for (const auto& allele : genotype_call.genotype) {
+        for (const auto& allele : call.get_genotype_call(sample).genotype) {
             if (!is_missing(allele)) {
                 ++an;
-                if (allele != ref) {
-                    if (is_delete_masked(allele)) {
-                        ++ad;
-                    } else {
-                        ++ac;
-                    }
+                const auto itr = std::find(std::cbegin(alt_alleles), std::cend(alt_alleles), allele.sequence());
+                if (itr != std::cend(alt_alleles)) {
+                    ++ac[std::distance(std::cbegin(alt_alleles), itr)];
                 }
             }
         }
     }
-    if (ac == 0 && ad > 0) {
-        std::swap(ac, ad); // single ALT deletion with deleted REF base
-    }
-    return std::make_tuple(ac, ad, an);
+    return std::make_pair(std::move(ac), an);
 }
 
-void set_allele_counts(const Call& call, const std::vector<SampleName>& samples, VcfRecord::Builder& result)
+void set_allele_counts(const Call& call, const std::vector<SampleName>& samples,
+                       const std::vector<VcfRecord::NucleotideSequence>& alt_alleles,
+                       VcfRecord::Builder& result)
 {
-    auto t = get_allele_counts(call, samples);
-    if (std::get<1>(t) == 0) {
-        result.set_info("AC", std::get<0>(t));
-    } else {
-        // It's safe to put ac before ad as there can only be one canonical alt allele, which is always listed
-        // before the deleted allele.
-        result.set_info("AC", {std::to_string(std::get<0>(t)), std::to_string(std::get<1>(t))});
-    }
-    
-    result.set_info("AN", std::get<2>(t));
+    auto p = get_allele_counts(alt_alleles, call, samples);
+    result.set_info("AC", utils::to_strings(p.first));
+    result.set_info("AN", p.second);
 }
 
 VcfRecord VcfRecordFactory::make(std::unique_ptr<Call> call) const
@@ -627,6 +620,7 @@ VcfRecord VcfRecordFactory::make(std::unique_ptr<Call> call) const
     result.set_chrom(contig_name(region));
     result.set_pos(mapped_begin(region) + 1);
     result.set_ref(call->reference().sequence());
+    set_allele_counts(*call, samples_, alts, result);
     result.set_alt(std::move(alts));
     result.set_qual(std::min(max_qual, maths::round(call->quality().score(), 2)));
     if (has_non_ref) {
@@ -636,7 +630,6 @@ VcfRecord VcfRecordFactory::make(std::unique_ptr<Call> call) const
     result.set_info("NS",  count_samples_with_coverage(call_reads));
     result.set_info("DP",  sum_max_coverages(call_reads));
     result.set_info("MQ",  static_cast<unsigned>(rmq_mapping_quality(call_reads)));
-    set_allele_counts(*call, samples_, result);
     
     if (call->model_posterior()) {
         result.set_info("MP",  maths::round(call->model_posterior()->score(), 2));
@@ -693,7 +686,7 @@ auto get_allele_counts(const std::vector<VcfRecord::NucleotideSequence>& alt_all
     unsigned an {0};
     for (const auto& genotype : genotypes) {
         for (const auto& allele : genotype) {
-            if (allele != vcfspec::missingValue) {
+            if (!is_missing(allele)) {
                 ++an;
                 const auto itr = std::find(std::cbegin(alt_alleles), std::cend(alt_alleles), allele);
                 if (itr != std::cend(alt_alleles)) {
