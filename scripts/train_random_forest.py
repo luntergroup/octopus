@@ -24,7 +24,7 @@ script_dir = Path(__file__).parent.parent.absolute()
 default_octopus_bin = script_dir / 'bin/octopus'
 
 default_germline_measures = "AC AD ADP AF ARF BQ CC CRF DAD DAF DC DENOVO DP DPC ER ERS FRF GC GQ GQD ITV MC MF MP MRC MQ MQ0 MQD PP PPD QD QUAL REFCALL REB RSB RTB SB SD SF STRL STRP VL".split()
-default_somatic_measures = "AC AD ADP AF ARF BQ CC CRF DAD DAF DP DPC ER ERS FRF GC GQ GQD ITV NC MC MF MP MRC MQ MQ0 MQD PP PPD QD QUAL REB RSB RTB SB SD SF SHC SMQ SOMATIC STRL STRP VL".split()
+default_somatic_measures = "AC AD ADP AF ARF BQ CC CRF DAD DAF DP DPC ER ERS FRF GC GQ GQD ITV NC MC MF MP MRC MQ MQ0 MQD PP PPD QD QUAL REFCALL REB RSB RTB SB SD SF SHC SMQ SOMATIC STRL STRP VL".split()
 
 known_truth_set_urls = {
     "GIAB": {
@@ -239,12 +239,100 @@ def run_octopus(octopus, reference, reads, regions, threads, output,
         octopus_cmd += ['--caller', 'cancer', '--somatics-only']
     sp.call(octopus_cmd)
 
-def get_vcf_samples(vcf_filename):
+def read_vcf_samples(vcf_filename):
     vcf = ps.VariantFile(str(vcf_filename))
     return vcf.header.samples
 
-def run_rtg(rtg, rtg_ref_path, truth_vcf_path, confident_bed_path, octopus_vcf_path, out_dir,
-            bed_regions=None, sample=None, kind="germline"):
+def is_homref(vcf_rec, sample):
+    return all(allele == vcf_rec.ref for allele in vcf_rec.samples[sample].alleles)
+
+def has_homref_calls(vcf_filename, sample=None):
+    vcf = ps.VariantFile(str(vcf_filename))
+    if sample is None:
+        assert len(vcf.header.samples) == 1
+        sample = vcf.header.samples[0]
+    for rec in vcf:
+        if is_homref(rec, sample): return True
+    return False
+
+def subset_samples(vcf_in_filename, samples, vcf_out_filename=None, drop_uncalled=False, drop_homref=False):
+    inplace = False
+    if vcf_out_filename is None:
+        vcf_out_filename = vcf_in_filename.with_suffix('.gz.tmp')
+        inplace = True
+    subset_cmd = ['bcftools', 'view', '-s', ','.join(samples), '-Oz', '-o', str(vcf_out_filename)]
+    if drop_uncalled:
+        subset_cmd.append('-U')
+    if drop_homref:
+        subset_cmd.append('-c1')
+    subset_cmd.append(str(vcf_in_filename))
+    sp.call(subset_cmd)
+    if inplace:
+        shutil.move(str(vcf_out_filename), str(vcf_in_filename))
+        index_vcf(vcf_in_filename)
+    else:
+        index_vcf(vcf_out_filename)
+
+def complement_vcf(src_vcf_filename, tagret_vcf_filenames, dst_vcf_filename):
+    sp.call(['bcftools', 'isec', '-C', str(src_vcf_filename)] + [str(f) for f in tagret_vcf_filenames]
+            + ['-n1', '-w1', '-Oz', '-o', str(dst_vcf_filename)])
+    index_vcf(dst_vcf_filename)
+
+def intersect_vcfs(src_vcf_filenames, dst_vcf_filename):
+    sp.call(['bcftools', 'isec'] + [str(f) for f in src_vcf_filenames]
+            + ['-n', str(len(src_vcf_filenames)), '-w1', '-Oz', '-o', str(dst_vcf_filename)])
+    index_vcf(dst_vcf_filename)
+
+def concat_vcfs(vcfs, out, remove_duplicates=True):
+    assert len(vcfs) > 1
+    cmd = ['bcftools', 'concat', '-a', '-Oz', '-o', str(out)]
+    if remove_duplicates:
+        cmd.append('-D')
+    cmd += [str(vcf) for vcf in vcfs]
+    sp.call(cmd)
+    index_vcf(out)
+
+def remove_vcf_index(vcf_filename):
+    vcf_index_filename = vcf_filename.with_suffix(vcf_filename.suffix + '.tbi')
+    if vcf_index_filename.exists(): vcf_index_filename.unlink()
+
+def remove_vcf(vcf_filename, remove_index=True):
+    vcf_filename.unlink()
+    if remove_index: remove_vcf_index(vcf_filename)
+
+def add_vcfeval_missing_homrefs(vcfeval_dir, octopus_vcf, sample=None):
+    subsetted = False
+    if sample is not None:
+        sample_octopus_vcf = vcfeval_dir / (octopus_vcf.stem + '.' + sample + '.vcf.gz')
+        subset_samples(octopus_vcf, [sample], sample_octopus_vcf)
+        octopus_vcf = sample_octopus_vcf
+        subsetted = True
+
+    # Missing TP homref calls should be any calls not in the vcfeval TP or FP sets, but in the source VCF
+    vcfeval_tp_vcf_filename, vcfeval_fp_vcf_filename = vcfeval_dir / "tp.vcf.gz", vcfeval_dir / "fp.vcf.gz"
+    tp_homref_vcf_filename = vcfeval_dir / 'tp.homref.vcf.gz'
+    complement_vcf(octopus_vcf, [vcfeval_tp_vcf_filename, vcfeval_fp_vcf_filename], tp_homref_vcf_filename)
+    new_tp_vcf_filename = vcfeval_dir / "tp.with_hom_ref.vcf.gz"
+    concat_vcfs([vcfeval_tp_vcf_filename, tp_homref_vcf_filename], new_tp_vcf_filename)
+    shutil.move(str(new_tp_vcf_filename), str(vcfeval_tp_vcf_filename))
+    remove_vcf_index(new_tp_vcf_filename)
+    index_vcf(vcfeval_tp_vcf_filename)
+    remove_vcf(tp_homref_vcf_filename)
+
+    # Missing TF homref calls should be any calls in the vcfeval FN and the source set, but not already in the FP set
+    fp_homref_vcf_filename = vcfeval_dir / "fp.homref.vcf.gz"
+    intersect_vcfs([octopus_vcf, vcfeval_dir / "fn.vcf.gz"], fp_homref_vcf_filename)
+    new_fp_vcf_filename = vcfeval_dir / "fp.with_hom_ref.vcf.gz"
+    concat_vcfs([vcfeval_fp_vcf_filename, fp_homref_vcf_filename], new_fp_vcf_filename) # removes duplicates already in FP set
+    shutil.move(str(new_fp_vcf_filename), str(vcfeval_fp_vcf_filename))
+    remove_vcf_index(new_fp_vcf_filename)
+    index_vcf(vcfeval_fp_vcf_filename)
+    remove_vcf(fp_homref_vcf_filename)
+
+    if subsetted: remove_vcf(octopus_vcf)
+
+def run_vcfeval(rtg, rtg_ref_path, truth_vcf_path, confident_bed_path, octopus_vcf_path, out_dir,
+                bed_regions=None, sample=None, kind="germline", include_homref=True):
     cmd = [str(rtg), 'vcfeval', \
            '-t', str(rtg_ref_path), \
            '-b', str(truth_vcf_path), \
@@ -256,7 +344,7 @@ def run_rtg(rtg, rtg_ref_path, truth_vcf_path, confident_bed_path, octopus_vcf_p
     if kind == "somatic":
         cmd += ['--squash-ploidy', '--sample', 'ALT']
     elif sample is not None:
-        truth_samples = get_vcf_samples(truth_vcf_path)
+        truth_samples = read_vcf_samples(truth_vcf_path)
         if len(truth_samples) > 1:
             raise Exception("More than one sample in truth " + str(truth_vcf_path))
         if sample == truth_samples[0]:
@@ -264,16 +352,17 @@ def run_rtg(rtg, rtg_ref_path, truth_vcf_path, confident_bed_path, octopus_vcf_p
         else:
             cmd += ['--sample', truth_samples[0] + "," + sample]
     sp.call(cmd)
-
-def read_vcf_samples(vcf_filename):
-    vcf = ps.VariantFile(str(vcf_filename))
-    return vcf.header.samples
+    if sample is not None:
+        subset_vcfeval_result_samples(out_dir, sample)
+    if include_homref and has_homref_calls(octopus_vcf_path, sample):
+        add_vcfeval_missing_homrefs(out_dir, octopus_vcf_path, sample)
 
 def get_annotation(field, rec, sample=None):
     if field == 'QUAL':
         return rec.qual
     elif field in rec.format:
         if sample is None:
+            assert len(rec.samples) == 1
             res = rec.samples[list(rec.samples)[0]][field]
         else:
             res = rec.samples[sample][field]
@@ -333,6 +422,10 @@ def read_normal_samples(vcf_filename):
 def is_normal_sample(sample, vcf_filename):
     return sample in read_normal_samples(vcf_filename)
 
+def subset_vcfeval_result_samples(vcfeval_dir, sample):
+    subset_samples(vcfeval_dir / 'tp.vcf.gz', [sample])
+    subset_samples(vcfeval_dir / 'fp.vcf.gz', [sample])
+
 def read_pedigree(vcf_filename):
     options = read_octopus_header_info(vcf_filename)['options'].split(' ')
     maternal_sample, paternal_sample = None, None
@@ -365,23 +458,19 @@ def eval_octopus(octopus, rtg, example, out_dir, threads, kind="germline", measu
         vcfeval_dir = out_dir / (octopus_vcf.stem + '.eval')
         if not vcfeval_dir.exists() or overwrite:
             if vcfeval_dir.exists(): shutil.rmtree(vcfeval_dir)
-            run_rtg(rtg, example.sdf, example.truth, example.confident, octopus_vcf, vcfeval_dir, bed_regions=example.regions, kind=kind)
+            run_vcfeval(rtg, example.sdf, example.truth, example.confident, octopus_vcf, vcfeval_dir, bed_regions=example.regions, kind=kind)
         result.append(vcfeval_dir)
-    elif kind == "somatic":
-        for sample in samples:
-            if not is_normal_sample(sample, octopus_vcf):
-                vcfeval_dir = out_dir / (octopus_vcf.stem + '.' + sample + '.eval')
-                if not vcfeval_dir.exists() or overwrite:
-                    if vcfeval_dir.exists(): shutil.rmtree(vcfeval_dir)
-                    run_rtg(rtg, example.sdf, example.truth[sample], example.confident[sample], octopus_vcf, vcfeval_dir, bed_regions=example.regions, sample=sample, kind=kind)
-                result.append(vcfeval_dir)
     else:
         for sample in samples:
             if sample in example.truth:
                 vcfeval_dir = out_dir / (octopus_vcf.stem + '.' + sample + '.eval')
                 if not vcfeval_dir.exists() or overwrite:
                     if vcfeval_dir.exists(): shutil.rmtree(vcfeval_dir)
-                    run_rtg(rtg, example.sdf, example.truth[sample], example.confident[sample], octopus_vcf, vcfeval_dir, bed_regions=example.regions, sample=sample, kind=kind)
+                    sample_kind = kind
+                    if kind == "somatic" and is_normal_sample(sample, octopus_vcf):
+                        sample_kind = "germline"
+                    run_vcfeval(rtg, example.sdf, example.truth[sample], example.confident[sample], octopus_vcf, vcfeval_dir,
+                                bed_regions=example.regions, sample=sample, kind=sample_kind)
                 result.append(vcfeval_dir)
     return result
 
