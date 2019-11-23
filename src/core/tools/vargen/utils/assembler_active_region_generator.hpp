@@ -36,7 +36,7 @@ public:
         AlignedRead::BaseQuality trigger_quality = 10;
         AlignedRead::MappingDomain::Size trigger_clip_size = 2;
         double min_expected_mutation_frequency = 0.1;
-        boost::optional<ReadSetProfile> read_profile = boost::none;
+        boost::optional<const ReadSetProfile&> read_profile = boost::none;
     };
     
     AssemblerActiveRegionGenerator() = delete;
@@ -69,7 +69,7 @@ private:
     AlignedRead::MappingDomain::Size trigger_clip_size_ = 2;
     double min_expected_mutation_frequency_;
     CoverageTrackerMap coverage_tracker_, interesting_read_coverages_, clipped_coverage_tracker_;
-    boost::optional<ReadSetProfile> read_profile_;
+    boost::optional<const ReadSetProfile&> read_profile_;
     
     bool is_interesting(const AlignedRead& read) const;
 };

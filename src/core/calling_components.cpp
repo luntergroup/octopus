@@ -173,9 +173,13 @@ BAMRealigner::Config GenomeCallingComponents::bamout_config() const noexcept
     return components_.bamout_config;
 }
 
-boost::optional<ReadSetProfile> GenomeCallingComponents::reads_profile() const noexcept
+boost::optional<const ReadSetProfile&> GenomeCallingComponents::reads_profile() const noexcept
 {
-    return components_.reads_profile;
+    if (components_.reads_profile) {
+        return *components_.reads_profile;
+    } else {
+        return boost::none;
+    }
 }
 
 boost::optional<GenomeCallingComponents::Path> GenomeCallingComponents::data_profile() const
@@ -547,6 +551,16 @@ public:
     virtual ~InputVCFError() override = default;
 };
 
+template <typename T>
+boost::optional<const T&> optional_cref(const boost::optional<T>& v)
+{
+    if (v) {
+        return *v;
+    } else {
+        return boost::none;
+    }
+}
+
 } // namespace
 
 GenomeCallingComponents::Components::Components(ReferenceGenome&& reference, ReadManager&& read_manager,
@@ -559,8 +573,8 @@ GenomeCallingComponents::Components::Components(ReferenceGenome&& reference, Rea
 , ploidies {options::get_ploidy_map(options)}
 , reads_profile {profile_reads_helper(this->samples, this->regions, this->read_manager, this->ploidies, options)}
 , read_pipe {options::make_read_pipe(this->read_manager, this->reference, this->samples, options)}
-, haplotype_likelihood_model {options::make_haplotype_likelihood_model(options, this->reads_profile)}
-, caller_factory {options::make_caller_factory(this->reference, this->read_pipe, this->regions, options, this->reads_profile)}
+, haplotype_likelihood_model {options::make_haplotype_likelihood_model(options, optional_cref(this->reads_profile))}
+, caller_factory {options::make_caller_factory(this->reference, this->read_pipe, this->regions, options, optional_cref(this->reads_profile))}
 , filter_read_pipe {}
 , output {std::move(output)}
 , filtered_output {}

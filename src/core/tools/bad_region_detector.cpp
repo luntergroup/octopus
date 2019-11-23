@@ -27,9 +27,9 @@
 
 namespace octopus { namespace coretools {
 
-BadRegionDetector::BadRegionDetector(Parameters params, boost::optional<ReadSetProfile> reads_profile)
+BadRegionDetector::BadRegionDetector(Parameters params, boost::optional<const ReadSetProfile&> reads_profile)
 : params_ {params}
-, reads_profile_ {std::move(reads_profile)}
+, reads_profile_ {reads_profile}
 {}
 
 std::vector<BadRegionDetector::BadRegion>

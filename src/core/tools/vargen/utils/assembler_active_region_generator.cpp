@@ -181,7 +181,7 @@ auto expand_each(const Container& regions, const GenomicRegion::Distance n)
 }
 
 auto get_deletion_hotspots(const GenomicRegion& region, const CoverageTracker<GenomicRegion>& tracker,
-                           const boost::optional<ReadSetProfile>& read_profile = boost::none)
+                           const boost::optional<const ReadSetProfile&>& read_profile = boost::none)
 {
     const auto coverages = tracker.get(region);
     const auto mean_coverage = read_profile ? read_profile->depth_stats.combined.genome.all.mean : tracker.mean(region);

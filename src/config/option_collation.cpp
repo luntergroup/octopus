@@ -1169,7 +1169,7 @@ auto get_max_expected_heterozygosity(const OptionMap& options)
     return std::min(static_cast<double>(heterozygosity + 2 * heterozygosity_stdev), 0.9999);
 }
 
-auto make_variant_generator_builder(const OptionMap& options, const boost::optional<ReadSetProfile>& read_profile)
+auto make_variant_generator_builder(const OptionMap& options, const boost::optional<const ReadSetProfile&> read_profile)
 {
     using namespace coretools;
     
@@ -1480,7 +1480,7 @@ auto get_max_haplotypes(const OptionMap& options)
 }
 
 boost::optional<coretools::BadRegionDetector>
-make_bad_region_detector(const OptionMap& options, const boost::optional<ReadSetProfile>& input_reads_profile)
+make_bad_region_detector(const OptionMap& options, const boost::optional<const ReadSetProfile&>& input_reads_profile)
 {
     auto snp_heterozygosity = options.at("snp-heterozygosity").as<float>();
     auto indel_heterozygosity = options.at("indel-heterozygosity").as<float>();
@@ -1528,7 +1528,7 @@ auto make_error_model(const OptionMap& options)
     }
 }
 
-AlignedRead::MappingQuality calculate_mapping_quality_cap(const OptionMap& options, const boost::optional<ReadSetProfile>& read_profile)
+AlignedRead::MappingQuality calculate_mapping_quality_cap(const OptionMap& options, const boost::optional<const ReadSetProfile&>& read_profile)
 {
     constexpr AlignedRead::MappingQuality minimum {60u}; // BWA cap
     if (read_profile) {
@@ -1542,7 +1542,7 @@ AlignedRead::MappingQuality calculate_mapping_quality_cap(const OptionMap& optio
     }
 }
 
-AlignedRead::MappingQuality calculate_mapping_quality_cap_trigger(const OptionMap& options, const boost::optional<ReadSetProfile>& read_profile)
+AlignedRead::MappingQuality calculate_mapping_quality_cap_trigger(const OptionMap& options, const boost::optional<const ReadSetProfile&>& read_profile)
 {
     constexpr AlignedRead::MappingQuality minimum {60u}; // BWA cap
     if (read_profile) {
@@ -1557,7 +1557,7 @@ bool model_mapping_quality(const OptionMap& options)
     return !options.at("dont-model-mapping-quality").as<bool>();;
 }
 
-HaplotypeLikelihoodModel make_haplotype_likelihood_model(const OptionMap& options, const boost::optional<ReadSetProfile>& read_profile)
+HaplotypeLikelihoodModel make_haplotype_likelihood_model(const OptionMap& options, const boost::optional<const ReadSetProfile&> read_profile)
 {
     auto error_model = make_error_model(options);
     HaplotypeLikelihoodModel::Config config {};
@@ -1571,13 +1571,13 @@ HaplotypeLikelihoodModel make_haplotype_likelihood_model(const OptionMap& option
     return HaplotypeLikelihoodModel {std::move(error_model.snv), std::move(error_model.indel), config};
 }
 
-auto get_min_haplotype_flank_pad(const OptionMap& options, const boost::optional<ReadSetProfile>& input_reads_profile)
+auto get_min_haplotype_flank_pad(const OptionMap& options, const boost::optional<const ReadSetProfile&>& input_reads_profile)
 {
     auto model = make_haplotype_likelihood_model(options, input_reads_profile);
     return 2 * model.pad_requirement();
 }
 
-auto make_haplotype_generator_builder(const OptionMap& options, const boost::optional<ReadSetProfile>& input_reads_profile)
+auto make_haplotype_generator_builder(const OptionMap& options, const boost::optional<const ReadSetProfile&> input_reads_profile)
 {
     const auto lagging_policy    = get_lagging_policy(options);
     const auto max_haplotypes    = get_max_haplotypes(options);
@@ -1937,7 +1937,7 @@ bool protect_reference_haplotype(const OptionMap& options)
 
 CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& read_pipe,
                                   const InputRegionMap& regions, const OptionMap& options,
-                                  const boost::optional<ReadSetProfile> read_profile)
+                                  const boost::optional<const ReadSetProfile&> read_profile)
 {
     CallerBuilder vc_builder {reference, read_pipe,
                               make_variant_generator_builder(options, read_profile),

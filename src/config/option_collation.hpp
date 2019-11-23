@@ -63,11 +63,11 @@ PloidyMap get_ploidy_map(const OptionMap& options);
 
 boost::optional<Pedigree> get_pedigree(const OptionMap& options, const std::vector<SampleName>& samples);
 
-HaplotypeLikelihoodModel make_haplotype_likelihood_model(const OptionMap& options, const boost::optional<ReadSetProfile>& read_profile);
+HaplotypeLikelihoodModel make_haplotype_likelihood_model(const OptionMap& options, boost::optional<const ReadSetProfile&> read_profile);
 
 CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& read_pipe,
                                   const InputRegionMap& regions, const OptionMap& options,
-                                  boost::optional<ReadSetProfile> input_reads_profile = boost::none);
+                                  boost::optional<const ReadSetProfile&> input_reads_profile = boost::none);
 
 bool is_call_filtering_requested(const OptionMap& options) noexcept;
 

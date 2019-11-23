@@ -37,7 +37,7 @@ public:
     
     BadRegionDetector() = default;
     
-    BadRegionDetector(Parameters params, boost::optional<ReadSetProfile> = boost::none);
+    BadRegionDetector(Parameters params, boost::optional<const ReadSetProfile&> = boost::none);
     
     BadRegionDetector(const BadRegionDetector&)            = default;
     BadRegionDetector& operator=(const BadRegionDetector&) = default;
@@ -82,7 +82,7 @@ private:
     };
     
     Parameters params_;
-    boost::optional<ReadSetProfile> reads_profile_;
+    boost::optional<const ReadSetProfile&> reads_profile_;
     
     std::vector<BadRegion>
     detect(const InputData& data,
