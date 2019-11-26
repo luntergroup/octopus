@@ -61,7 +61,7 @@ public:
         boost::optional<CoalescentModel::Parameters> germline_prior_model_params;
         SomaticMutationModel::Parameters somatic_mutation_model_params;
         double min_expected_somatic_frequency, credible_mass, min_credible_somatic_frequency;
-        std::size_t max_genotypes = 20000;
+        boost::optional<std::size_t> max_genotypes = 20000;
         unsigned max_somatic_haplotypes = 1;
         NormalContaminationRisk normal_contamination_risk = NormalContaminationRisk::low;
         bool deduplicate_haplotypes_with_germline_model = true;

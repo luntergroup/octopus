@@ -64,7 +64,7 @@ SingleCellModel::evaluate(const std::vector<Genotype<Haplotype>>& genotypes,
         }
         SubcloneModel helper_model{samples_, std::move(subclone_priors)};
         SubcloneModel::InferredLatents subclone_inferences;
-        if (genotypes.size() <= config_.max_genotype_combinations) {
+        if (!config_.max_genotype_combinations || genotypes.size() <= *config_.max_genotype_combinations) {
             subclone_inferences = helper_model.evaluate(genotypes, haplotype_likelihoods);
         } else {
             const auto genotype_subset_indices = propose_genotypes(genotypes, haplotype_likelihoods);
@@ -152,10 +152,11 @@ std::vector<std::size_t>
 SingleCellModel::propose_genotypes(const std::vector<Genotype<Haplotype>>& genotypes,
                                    const HaplotypeLikelihoodArray& haplotype_likelihoods) const
 {
+    assert(config_.max_genotype_combinations);
     const auto merged_likelihoods = merge_samples(haplotype_likelihoods);
     const IndividualModel pooled_model {prior_model_.germline_prior_model()};
     const auto pooled_model_inferences = pooled_model.evaluate(genotypes, merged_likelihoods);
-    return select_top_k_indices(pooled_model_inferences.posteriors.genotype_log_probabilities, config_.max_genotype_combinations);
+    return select_top_k_indices(pooled_model_inferences.posteriors.genotype_log_probabilities, *config_.max_genotype_combinations);
 }
 
 namespace {
@@ -188,7 +189,7 @@ auto num_combinations(const std::size_t num_genotypes, const std::size_t num_sam
 }
 
 template <typename T>
-auto select(const std::vector<std::size_t> indices, const std::vector<T>& data)
+auto select(const std::vector<std::size_t>& indices, const std::vector<T>& data)
 {
     std::vector<T> result {};
     result.reserve(indices.size());
@@ -275,7 +276,7 @@ SingleCellModel::propose_genotype_combinations(const std::vector<Genotype<Haplot
 {
     const auto num_groups = prior_model_.phylogeny().size();
     const auto max_possible_combinations = num_combinations(genotypes.size(), num_groups);
-    if (max_possible_combinations <= config_.max_genotype_combinations) {
+    if (!config_.max_genotype_combinations || max_possible_combinations <= *config_.max_genotype_combinations) {
         return propose_all_genotype_combinations(genotypes);
     } else {
         // 1. Run population model
@@ -286,7 +287,7 @@ SingleCellModel::propose_genotype_combinations(const std::vector<Genotype<Haplot
         const auto ploidies = get_unique_ploidies(genotypes);
         
         PopulationModel::Options population_model_options {};
-        population_model_options.max_joint_genotypes = config_.max_genotype_combinations;
+        population_model_options.max_joint_genotypes = *config_.max_genotype_combinations;
         PopulationModel population_model {*population_prior_model_, population_model_options};
         std::vector<PopulationModel::Latents::ProbabilityVector> population_genotype_posteriors;
         
@@ -314,7 +315,7 @@ SingleCellModel::propose_genotype_combinations(const std::vector<Genotype<Haplot
         }
         
         GenotypeCombinationVector result {};
-        auto k = config_.max_genotype_combinations;
+        auto k = *config_.max_genotype_combinations;
         while (result.empty()) {
             result = select_top_k_tuples(cluster_marginal_genotype_posteriors, k);
             // Remove combinations with duplicate genotypes as these are redundant according to model.
@@ -343,8 +344,8 @@ SingleCellModel::propose_genotype_combinations(const std::vector<Genotype<Haplot
             }
             k *= 2;
         }
-        if (result.size() > config_.max_genotype_combinations) {
-            result.resize(config_.max_genotype_combinations);
+        if (result.size() > *config_.max_genotype_combinations) {
+            result.resize(*config_.max_genotype_combinations);
         }
         
         

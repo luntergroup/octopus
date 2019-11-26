@@ -218,7 +218,7 @@ void fit_sublone_model(const MappableBlock<Haplotype>& haplotypes,
                        unsigned max_clones,
                        const double haploid_model_evidence,
                        const std::function<double(unsigned)>& clonality_prior,
-                       const std::size_t max_genotypes,
+                       const boost::optional<std::size_t> max_genotypes,
                        IndexedGenotypeVectorPair& prev_genotypes,
                        model::SubcloneModel::InferredLatents& sublonal_inferences,
                        boost::optional<logging::DebugLogger>& debug_log)
@@ -232,21 +232,21 @@ void fit_sublone_model(const MappableBlock<Haplotype>& haplotypes,
         genotype_prior_model.unprime();
         genotype_prior_model.prime(haplotypes);
         const auto max_possible_genotypes = num_max_zygosity_genotypes_noexcept(haplotypes.size(), clonality);
-        if (prev_genotypes.raw.empty() || clonality <= 2 || (max_possible_genotypes && *max_possible_genotypes <= max_genotypes)) {
+        if (prev_genotypes.raw.empty() || clonality <= 2 || max_genotypes || (max_possible_genotypes && *max_possible_genotypes <= *max_genotypes)) {
             curr_genotypes.indices.clear();
             curr_genotypes.raw = generate_all_max_zygosity_genotypes(haplotypes, clonality, curr_genotypes.indices);
         } else {
             const static auto not_included = [] (const auto& genotype, const auto& haplotype) -> bool {
                 return !genotype.contains(haplotype); };
-            if (prev_genotypes.raw.size() * (haplotypes.size() / 2) > max_genotypes) {
+            if (prev_genotypes.raw.size() * (haplotypes.size() / 2) > *max_genotypes) {
                 auto probable_prev_genotypes = prev_genotypes;
-                reduce(probable_prev_genotypes, sublonal_inferences.max_evidence_params.genotype_log_probabilities, max_genotypes / (haplotypes.size() / 2));
+                reduce(probable_prev_genotypes, sublonal_inferences.max_evidence_params.genotype_log_probabilities, *max_genotypes / (haplotypes.size() / 2));
                 std::tie(curr_genotypes.raw, curr_genotypes.indices) = extend_genotypes(probable_prev_genotypes.raw, probable_prev_genotypes.indices, haplotypes, not_included);
             } else {
                 std::tie(curr_genotypes.raw, curr_genotypes.indices) = extend_genotypes(prev_genotypes.raw, prev_genotypes.indices, haplotypes, not_included);
             }
         }
-        reduce(curr_genotypes, haplotypes, genotype_prior_model, haplotype_likelihoods, max_genotypes);
+        if (max_genotypes) reduce(curr_genotypes, haplotypes, genotype_prior_model, haplotype_likelihoods, *max_genotypes);
         if (debug_log) stream(*debug_log) << "Generated " << curr_genotypes.raw.size() << " genotypes with clonality " << clonality;
         if (curr_genotypes.raw.empty()) break;
         model::SubcloneModel::Priors priors {genotype_prior_model, make_sublone_model_mixture_prior_map(sample, clonality)};

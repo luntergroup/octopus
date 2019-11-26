@@ -535,11 +535,11 @@ OptionMap parse_options(const int argc, const char** argv)
     "Use a uniform prior model when calculating genotype posteriors")
     
     ("max-genotypes",
-     po::value<int>()->default_value(5000),
+     po::value<int>(),
      "Maximum number of genotypes that must be evaluated")
     
     ("max-joint-genotypes",
-     po::value<int>()->default_value(1000000),
+     po::value<int>(),
      "Maximum number of joint genotype vectors that must be considered when computing joint"
      " genotype posterior probabilities")
     

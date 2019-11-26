@@ -38,6 +38,7 @@ public:
         boost::optional<CoalescentModel::Parameters> prior_model_params;
         Phred<double> min_variant_posterior, min_refcall_posterior;
         bool deduplicate_haplotypes_with_germline_model = false;
+        boost::optional<std::size_t> max_genotypes = boost::none;
     };
     
     IndividualCaller() = delete;
@@ -55,6 +56,12 @@ public:
     
 private:
     class Latents;
+    
+    struct GenotypeVectorPair
+    {
+        std::vector<Genotype<Haplotype>> genotypes;
+        std::vector<GenotypeIndex> indices;
+    };
     
     Parameters parameters_;
     
@@ -95,6 +102,7 @@ private:
     const SampleName& sample() const noexcept;
     
     std::unique_ptr<GenotypePriorModel> make_prior_model(const HaplotypeBlock& haplotypes) const;
+    GenotypeVectorPair propose_genotypes(const HaplotypeBlock& haplotypes, const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
 };
 
 class IndividualCaller::Latents : public Caller::Latents

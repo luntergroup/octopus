@@ -51,7 +51,7 @@ CancerCaller::CancerCaller(Caller::Components&& components,
     if (parameters_.ploidy == 0) {
         throw std::logic_error {"CancerCaller: ploidy must be > 0"};
     }
-    if (parameters_.max_genotypes == 0) {
+    if (parameters_.max_genotypes && *parameters_.max_genotypes == 0) {
         throw std::logic_error {"CancerCaller: max genotypes must be > 0"};
     }
     if (has_normal_sample()) {
@@ -420,8 +420,7 @@ void CancerCaller::generate_cancer_genotypes(Latents& latents, const HaplotypeLi
     const auto& germline_genotypes = latents.germline_genotypes_;
     const auto num_germline_genotypes = germline_genotypes.size();
     const auto max_possible_cancer_genotypes = num_haplotypes * num_germline_genotypes;
-    const auto max_allowed_cancer_genotypes = parameters_.max_genotypes;
-    if (max_possible_cancer_genotypes <= max_allowed_cancer_genotypes) {
+    if (!parameters_.max_genotypes || max_possible_cancer_genotypes <= *parameters_.max_genotypes) {
         generate_cancer_genotypes(latents, latents.germline_genotypes_);
     } else if (has_normal_sample()) {
         if (has_high_normal_contamination_risk(latents)) {
@@ -443,9 +442,10 @@ auto calculate_max_germline_genotype_bases(const unsigned max_genotypes, const u
 
 void CancerCaller::generate_cancer_genotypes_with_clean_normal(Latents& latents, const HaplotypeLikelihoodArray& haplotype_likelihoods) const
 {
+    assert(parameters_.max_genotypes);
     const auto& haplotypes = latents.haplotypes_.get();
     const auto& germline_genotypes = latents.germline_genotypes_;
-    const auto max_allowed_cancer_genotypes = parameters_.max_genotypes;
+    const auto max_allowed_cancer_genotypes = *parameters_.max_genotypes;
     if (!latents.cancer_genotypes_.empty()) {
         const auto max_old_cancer_genotype_bases = std::max(max_allowed_cancer_genotypes / haplotypes.size(), std::size_t {1});
         const auto& cancer_genotype_posteriors = latents.somatic_model_inferences_.max_evidence_params.genotype_probabilities;
@@ -530,9 +530,10 @@ BidirIt binary_find(BidirIt first, BidirIt last, const T& value, Compare cmp)
 
 void CancerCaller::generate_cancer_genotypes_with_no_normal(Latents& latents, const HaplotypeLikelihoodArray& haplotype_likelihoods) const
 {
+    assert(parameters_.max_genotypes);
     const auto& haplotypes = latents.haplotypes_.get();
     const auto& germline_genotypes = latents.germline_genotypes_;
-    const auto max_allowed_cancer_genotypes = parameters_.max_genotypes;
+    const auto max_allowed_cancer_genotypes = *parameters_.max_genotypes;
     if (!latents.cancer_genotypes_.empty()) {
         const auto max_old_cancer_genotype_bases = std::max(max_allowed_cancer_genotypes / haplotypes.size(), std::size_t {1});
         const auto& cancer_genotype_posteriors = latents.somatic_model_inferences_.max_evidence_params.genotype_probabilities;

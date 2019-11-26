@@ -40,7 +40,7 @@ public:
         Phred<double> min_variant_posterior, min_refcall_posterior;
         bool deduplicate_haplotypes_with_prior_model = false;
         unsigned max_clones;
-        unsigned max_genotypes, max_joint_genotypes;
+        boost::optional<std::size_t> max_genotypes, max_joint_genotypes;
         double dropout_concentration;
         DeNovoModel::Parameters mutation_model_parameters;
         boost::optional<unsigned> max_vb_seeds = boost::none; // Use default if none

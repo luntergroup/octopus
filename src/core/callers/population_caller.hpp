@@ -38,7 +38,7 @@ public:
         Phred<double> min_variant_posterior, min_refcall_posterior;
         std::vector<unsigned> ploidies;
         boost::optional<CoalescentModel::Parameters> prior_model_params;
-        std::size_t max_joint_genotypes;
+        boost::optional<std::size_t> max_joint_genotypes;
         bool use_independent_genotype_priors = false;
         bool deduplicate_haplotypes_with_germline_model = true;
     };

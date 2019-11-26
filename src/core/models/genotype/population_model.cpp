@@ -676,13 +676,13 @@ PopulationModel::evaluate(const SampleVector& samples, const GenotypeVector& gen
     const auto genotype_log_likelihoods = compute_genotype_log_likelihoods(samples, genotypes, haplotype_likelihoods);
     const auto num_joint_genotypes = num_combinations(genotypes.size(), samples.size());
     InferredLatents result;
-    if (num_joint_genotypes <= options_.max_joint_genotypes) {
+    if (!options_.max_joint_genotypes || num_joint_genotypes <= *options_.max_joint_genotypes) {
         const auto joint_genotypes = generate_all_genotype_combinations(genotypes.size(), samples.size());
         calculate_posterior_marginals(genotypes, joint_genotypes, genotype_log_likelihoods, prior_model_, result);
     } else {
         const EMOptions em_options {options_.max_em_iterations, options_.em_epsilon};
         const auto em_genotype_marginals = compute_approx_genotype_marginal_posteriors(genotypes, genotype_log_likelihoods, em_options);
-        const auto joint_genotypes = propose_joint_genotypes(genotypes, em_genotype_marginals, options_.max_joint_genotypes);
+        const auto joint_genotypes = propose_joint_genotypes(genotypes, em_genotype_marginals, *options_.max_joint_genotypes);
         calculate_posterior_marginals(genotypes, joint_genotypes, genotype_log_likelihoods, prior_model_, result);
     }
     return result;
@@ -699,14 +699,14 @@ PopulationModel::evaluate(const SampleVector& samples,
     const auto genotype_log_likelihoods = compute_genotype_log_likelihoods(samples, genotypes, haplotype_likelihoods);
     const auto num_joint_genotypes = num_combinations(genotypes.size(), samples.size());
     InferredLatents result;
-    if (num_joint_genotypes <= options_.max_joint_genotypes) {
+    if (!options_.max_joint_genotypes || num_joint_genotypes <= *options_.max_joint_genotypes) {
         const auto joint_genotypes = generate_all_genotype_combinations(genotypes.size(), samples.size());
         calculate_posterior_marginals(genotypes, joint_genotypes, genotype_log_likelihoods, prior_model_, result);
     } else {
         const EMOptions em_options {options_.max_em_iterations, options_.em_epsilon};
         const auto em_genotype_marginals = compute_approx_genotype_marginal_posteriors(haplotypes, genotypes, genotype_indices,
                                                                                        genotype_log_likelihoods, em_options);
-        const auto joint_genotypes = propose_joint_genotypes(genotypes, em_genotype_marginals, options_.max_joint_genotypes);
+        const auto joint_genotypes = propose_joint_genotypes(genotypes, em_genotype_marginals, *options_.max_joint_genotypes);
         calculate_posterior_marginals(genotype_indices, joint_genotypes, genotype_log_likelihoods, prior_model_, result);
     }
     return result;
@@ -779,13 +779,13 @@ PopulationModel::evaluate(const SampleVector& samples,
     std::tie(sample_genotype_set_ids, genotype_set_sizes) = get_genotype_sets(sample_ploidies, genotypes);
     const auto num_possible_joint_genotypes = num_combinations(sample_genotype_set_ids, genotype_set_sizes);
     InferredLatents result {};
-    if (num_possible_joint_genotypes <= options_.max_joint_genotypes) {
+    if (!options_.max_joint_genotypes || num_possible_joint_genotypes <= *options_.max_joint_genotypes) {
         const auto joint_genotypes = generate_all_genotype_combinations(sample_genotype_set_ids, genotype_set_sizes);
         calculate_posterior_marginals(genotypes, joint_genotypes, genotype_log_likelihoods, prior_model_, result);
     } else {
         const EMOptions em_options {options_.max_em_iterations, options_.em_epsilon};
         const auto em_genotype_marginals = compute_approx_genotype_marginal_posteriors(genotypes, genotype_log_likelihoods, sample_ploidies, em_options);
-        const auto joint_genotypes = propose_joint_genotypes(genotypes, em_genotype_marginals, options_.max_joint_genotypes);
+        const auto joint_genotypes = propose_joint_genotypes(genotypes, em_genotype_marginals, *options_.max_joint_genotypes);
         calculate_posterior_marginals(genotypes, joint_genotypes, genotype_log_likelihoods, prior_model_, result);
     }
     return result;

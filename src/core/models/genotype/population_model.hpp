@@ -25,7 +25,7 @@ class PopulationModel
 public:
     struct Options
     {
-        std::size_t max_joint_genotypes = 1'000'000;
+        boost::optional<std::size_t> max_joint_genotypes = boost::none;
         unsigned max_em_iterations = 100;
         double em_epsilon = 0.001;
     };

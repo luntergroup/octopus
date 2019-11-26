@@ -43,7 +43,7 @@ public:
     
     struct AlgorithmParameters
     {
-        std::size_t max_genotype_combinations;
+        boost::optional<std::size_t> max_genotype_combinations;
         unsigned max_seeds = 5;
     };
     

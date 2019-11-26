@@ -1935,6 +1935,36 @@ bool protect_reference_haplotype(const OptionMap& options)
     return !options.at("dont-protect-reference-haplotype").as<bool>();
 }
 
+boost::optional<std::size_t> get_max_genotypes(const OptionMap& options, const std::string& caller)
+{
+    if (options.count("max-genotypes") == 1) {
+        return as_unsigned("max-genotypes", options);
+    } else if (is_fast_mode(options)) {
+        return 1'000'000;
+    } else if (caller == "cancer") {
+        return 5'000;
+    } else {
+        return boost::none;
+    }
+}
+
+boost::optional<std::size_t> get_max_joint_genotypes(const OptionMap& options, const std::string& caller)
+{
+    if (options.count("max-joint-genotypes") == 1) {
+        return as_unsigned("max-joint-genotypes", options);
+    } else if (is_fast_mode(options)) {
+        return 10'000;
+    } else if (caller == "cell") {
+        return 1'000;
+    } else if (caller == "trio") {
+        return 1'000'000;
+    } else if (caller == "population") {
+        return 500'000;
+    } else {
+        return boost::none;
+    }
+}
+
 CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& read_pipe,
                                   const InputRegionMap& regions, const OptionMap& options,
                                   const boost::optional<const ReadSetProfile&> read_profile)
@@ -1980,10 +2010,14 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
     } else {
         vc_builder.set_min_variant_posterior(min_variant_posterior);
     }
+    vc_builder.set_read_linkage(get_read_linkage_type(options));
     vc_builder.set_ploidies(get_ploidy_map(options));
     vc_builder.set_max_haplotypes(get_max_haplotypes(options));
+    vc_builder.set_max_genotypes(get_max_genotypes(options, caller));
+    vc_builder.set_max_joint_genotypes(get_max_joint_genotypes(options, caller));
     vc_builder.set_haplotype_extension_threshold(options.at("min-protected-haplotype-posterior").as<double>());
     vc_builder.set_reference_haplotype_protection(protect_reference_haplotype(options));
+    vc_builder.set_likelihood_model(make_haplotype_likelihood_model(options, read_profile));
     auto min_phase_score = options.at("min-phase-score").as<Phred<double>>();
     vc_builder.set_min_phase_score(min_phase_score);
     if (!options.at("use-uniform-genotype-priors").as<bool>()) {
@@ -2020,21 +2054,13 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
         vc_builder.set_max_clones(as_unsigned("max-clones", options));
     }
     vc_builder.set_model_posterior_policy(get_model_posterior_policy(options));
-    vc_builder.set_max_genotypes(as_unsigned("max-genotypes", options));
     if (is_set("max-vb-seeds", options)) vc_builder.set_max_vb_seeds(as_unsigned("max-vb-seeds", options));
-    if (is_fast_mode(options)) {
-        vc_builder.set_max_joint_genotypes(10'000);
-    } else {
-        vc_builder.set_max_joint_genotypes(as_unsigned("max-joint-genotypes", options));
-    }
     if (call_sites_only(options) && !is_call_filtering_requested(options)) {
         vc_builder.set_sites_only();
     }
-    vc_builder.set_likelihood_model(make_haplotype_likelihood_model(options, read_profile));
     const auto target_working_memory = get_target_working_memory(options);
     if (target_working_memory) vc_builder.set_target_memory_footprint(*target_working_memory);
     vc_builder.set_execution_policy(get_thread_execution_policy(options));
-    vc_builder.set_read_linkage(get_read_linkage_type(options));
     auto bad_region_detector = make_bad_region_detector(options, read_profile);
     if (bad_region_detector) {
         vc_builder.set_bad_region_detector(std::move(*bad_region_detector));

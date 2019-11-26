@@ -189,13 +189,13 @@ CallerBuilder& CallerBuilder::set_indel_heterozygosity(double heterozygosity) no
     return *this;
 }
 
-CallerBuilder& CallerBuilder::set_max_genotypes(unsigned max) noexcept
+CallerBuilder& CallerBuilder::set_max_genotypes(boost::optional<std::size_t> max) noexcept
 {
     params_.max_genotypes = max;
     return *this;
 }
 
-CallerBuilder& CallerBuilder::set_max_joint_genotypes(unsigned max) noexcept
+CallerBuilder& CallerBuilder::set_max_joint_genotypes(boost::optional<std::size_t> max) noexcept
 {
     params_.max_joint_genotypes = max;
     return *this;
@@ -403,7 +403,8 @@ CallerBuilder::CallerFactoryMap CallerBuilder::generate_factory() const
                                                           make_individual_prior_model(params_.snp_heterozygosity, params_.indel_heterozygosity),
                                                           params_.min_variant_posterior,
                                                           params_.min_refcall_posterior,
-                                                          params_.deduplicate_haplotypes_with_caller_model
+                                                          params_.deduplicate_haplotypes_with_caller_model,
+                                                          params_.max_genotypes
                                                       });
         }},
         {"population", [this, &samples] () {

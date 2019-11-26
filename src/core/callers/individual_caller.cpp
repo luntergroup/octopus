@@ -126,16 +126,15 @@ std::unique_ptr<IndividualCaller::Caller::Latents>
 IndividualCaller::infer_latents(const HaplotypeBlock& haplotypes,
                                 const HaplotypeLikelihoodArray& haplotype_likelihoods) const
 {
-    std::vector<GenotypeIndex> genotype_indices {};
-    auto genotypes = generate_all_genotypes(haplotypes, parameters_.ploidy, genotype_indices);
-    if (debug_log_) stream(*debug_log_) << "There are " << genotypes.size() << " candidate genotypes";
+    auto indexed_genotypes = propose_genotypes(haplotypes, haplotype_likelihoods);
+    if (debug_log_) stream(*debug_log_) << "There are " << indexed_genotypes.genotypes.size() << " candidate genotypes";
     auto prior_model = make_prior_model(haplotypes);
     prior_model->prime(haplotypes);
     model::IndividualModel model {*prior_model, debug_log_, trace_log_};
     model.prime(haplotypes);
     haplotype_likelihoods.prime(sample());
-    auto inferences = model.evaluate(genotypes, genotype_indices, haplotype_likelihoods);
-    return std::make_unique<Latents>(sample(), haplotypes, std::move(genotypes), std::move(inferences));
+    auto inferences = model.evaluate(indexed_genotypes.genotypes, indexed_genotypes.indices, haplotype_likelihoods);
+    return std::make_unique<Latents>(sample(), haplotypes, std::move(indexed_genotypes.genotypes), std::move(inferences));
 }
 
 boost::optional<double>
@@ -531,6 +530,157 @@ std::unique_ptr<GenotypePriorModel> IndividualCaller::make_prior_model(const Hap
     } else {
         return std::make_unique<UniformGenotypePriorModel>();
     }
+}
+
+namespace {
+
+template <typename T, typename BinaryPredicate = std::less<T>>
+std::vector<std::size_t>
+select_top_k_indices(const std::vector<T>& values,
+                     const std::size_t k,
+                     const BinaryPredicate comp_less = std::less<T> {})
+{
+    std::vector<std::size_t> result(k);
+    if (k < values.size() && k > 0) {
+        std::vector<std::pair<std::reference_wrapper<const T>, std::size_t>> indexed_values {};
+        indexed_values.reserve(values.size());
+        for (std::size_t idx {0}; idx < values.size(); ++idx) {
+            indexed_values.emplace_back(values[idx], idx);
+        }
+        const auto ref_greater = [&comp_less] (const auto& lhs, const auto& rhs) { return comp_less(rhs.first.get(), lhs.first.get()); };
+        const auto kth = std::next(std::begin(indexed_values), k);
+        std::partial_sort(std::begin(indexed_values), kth, std::end(indexed_values), ref_greater);
+        std::transform(std::begin(indexed_values), kth, std::rbegin(result), [] (const auto& p) { return p.second; });
+    } else if (!values.empty() && k > 0) {
+        std::iota(std::begin(result), std::end(result), std::size_t {0});
+    }
+    return result;
+}
+
+template <typename T>
+void erase_complement_indices(std::vector<T>& values, const std::vector<std::size_t>& indices)
+{
+    std::vector<bool> keep(values.size(), true);
+    for (auto idx : indices) keep[idx] = false;
+    if (!indices.empty()) {
+        std::size_t idx {0};
+        const auto is_not_index = [&] (const auto& v) { return keep[idx++]; };
+        values.erase(std::remove_if(std::begin(values), std::end(values), is_not_index), std::end(values));
+    } else {
+        values.clear();
+    }
+}
+
+void
+select_top_k(std::vector<Genotype<Haplotype>>& genotypes, std::vector<GenotypeIndex>& genotype_indices,
+             const model::IndividualModel::Latents::ProbabilityVector& genotype_posteriors,
+             const std::size_t k)
+{
+    const auto best_indices = select_top_k_indices(genotype_posteriors, k);
+    erase_complement_indices(genotypes, best_indices);
+    erase_complement_indices(genotype_indices, best_indices);
+}
+
+template <typename T1, typename T2>
+auto zip(std::vector<T1>&& lhs, std::vector<T2>&& rhs)
+{
+    assert(lhs.size() == rhs.size());
+    std::vector<std::pair<T1, T2>> result {};
+    result.reserve(lhs.size());
+    std::transform(std::make_move_iterator(std::begin(lhs)), std::make_move_iterator(std::end(lhs)),
+                   std::make_move_iterator(std::begin(rhs)), std::back_inserter(result),
+                   [] (T1&& a, T2&& b) noexcept { return std::make_pair(std::move(a), std::move(b)); });
+    return result;
+}
+
+template <typename T1, typename T2>
+auto unzip(std::vector<std::pair<T1, T2>>&& zipped)
+{
+    std::vector<T1> lhs {}; std::vector<T2> rhs {};
+    lhs.reserve(zipped.size()); rhs.reserve(zipped.size());
+    for (auto& p : zipped) {
+        lhs.push_back(std::move(p.first));
+        rhs.push_back(std::move(p.second));
+    }
+    return std::make_pair(std::move(lhs), std::move(rhs));
+}
+
+template <typename ForwardIterator,
+          typename BinaryPredicate1,
+          typename BinaryPredicate2>
+ForwardIterator
+stable_unique(const ForwardIterator first, const ForwardIterator last,
+              const BinaryPredicate1 less, const BinaryPredicate2 equal)
+{
+    const auto n = static_cast<std::size_t>(std::distance(first, last));
+    using ValueTp = typename std::iterator_traits<ForwardIterator>::value_type;
+    std::vector<std::pair<ValueTp, std::size_t>> indexed_values(n);
+    std::size_t idx {0};
+    std::transform(std::make_move_iterator(first), std::make_move_iterator(last), std::begin(indexed_values),
+                   [&] (auto&& value) { return std::make_pair(std::move(value), idx++); });
+    const auto value_less = [&less] (const auto& lhs, const auto& rhs) { return less(lhs.first, rhs.first); };
+    std::sort(std::begin(indexed_values), std::end(indexed_values), value_less);
+    const auto value_equal = [&equal] (const auto& lhs, const auto& rhs) { return equal(lhs.first, rhs.first); };
+    indexed_values.erase(std::unique(std::begin(indexed_values), std::end(indexed_values), value_equal), std::end(indexed_values));
+    const static auto index_less = [] (const auto& lhs, const auto& rhs) { return lhs.second < rhs.second; };
+    std::sort(std::begin(indexed_values), std::end(indexed_values), index_less);
+    return std::transform(std::make_move_iterator(std::begin(indexed_values)),
+                          std::make_move_iterator(std::end(indexed_values)),
+                          first, [] (auto&& p) { return std::move(p.first); });
+}
+
+void erase_duplicates(std::vector<Genotype<Haplotype>>& genotypes, std::vector<GenotypeIndex>& genotype_indices)
+{
+    auto zipped = zip(std::move(genotypes), std::move(genotype_indices));
+    const static auto zipped_less = [] (const auto& lhs, const auto& rhs) { return GenotypeLess{}(lhs.first, rhs.first); };
+    const static auto zipped_equal = [] (const auto& lhs, const auto& rhs) { return lhs.first ==rhs.first; };
+    zipped.erase(stable_unique(std::begin(zipped), std::end(zipped), zipped_less, zipped_equal), std::end(zipped));
+    std::tie(genotypes, genotype_indices) = unzip(std::move(zipped));
+}
+
+} // namespace
+
+IndividualCaller::GenotypeVectorPair
+IndividualCaller::propose_genotypes(const HaplotypeBlock& haplotypes, const HaplotypeLikelihoodArray& haplotype_likelihoods) const
+{
+    const auto num_possible_genotypes = num_genotypes_noexcept(haplotypes.size(), parameters_.ploidy);
+    GenotypeVectorPair result {};
+    if (!parameters_.max_genotypes || (num_possible_genotypes && *num_possible_genotypes <= *parameters_.max_genotypes)) {
+        result.genotypes = generate_all_genotypes(haplotypes, parameters_.ploidy, result.indices);
+    } else {
+        if (debug_log_) {
+            if (num_possible_genotypes) {
+                stream(*debug_log_) << "Applying genotype reduction as there are " << *num_possible_genotypes << " possible genotypes";
+            } else {
+                *debug_log_ << "Applying genotype reduction as the number of possible genotypes calculation overflowed";
+            }
+        }
+        auto ploidy = parameters_.ploidy - 1;
+        for (; ploidy > 1; --ploidy) {
+            const auto num_ploidy_genotypes = num_genotypes_noexcept(haplotypes.size(), ploidy);
+            if (num_ploidy_genotypes && *num_ploidy_genotypes <= *parameters_.max_genotypes) break;
+        }
+        if (debug_log_) stream(*debug_log_) << "Starting genotype reduction with ploidy " << ploidy;
+        result.genotypes = generate_all_genotypes(haplotypes, ploidy, result.indices);
+        auto prior_model = make_prior_model(haplotypes);
+        prior_model->prime(haplotypes);
+        model::IndividualModel model {*prior_model};
+        model.prime(haplotypes);
+        haplotype_likelihoods.prime(sample());
+        for (; ploidy < parameters_.ploidy; ++ploidy) {
+            if (debug_log_) stream(*debug_log_) << "Finding good genotypes with ploidy " << ploidy << " from " << result.genotypes.size();
+            const auto ploidy_inferences = model.evaluate(result.genotypes, result.indices, haplotype_likelihoods);
+            const std::size_t max_seeds {2 * std::max(*parameters_.max_genotypes / haplotypes.size(), std::size_t {1})};
+            select_top_k(result.genotypes, result.indices, ploidy_inferences.posteriors.genotype_log_probabilities, max_seeds);
+            std::tie(result.genotypes, result.indices) = extend_genotypes(result.genotypes, result.indices, haplotypes);
+            erase_duplicates(result.genotypes, result.indices);
+            if (result.genotypes.size() > *parameters_.max_genotypes) {
+                result.genotypes.resize(*parameters_.max_genotypes);
+                result.indices.resize(*parameters_.max_genotypes);
+            }
+        }
+    }
+    return result;
 }
 
 namespace debug {
