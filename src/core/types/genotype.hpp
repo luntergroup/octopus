@@ -593,6 +593,7 @@ struct GenotypeHash
 };
 
 std::size_t num_genotypes(unsigned num_elements, unsigned ploidy);
+boost::optional<std::size_t> num_genotypes_noexcept(unsigned num_elements, unsigned ploidy) noexcept;
 std::size_t max_num_elements(std::size_t num_genotypes, unsigned ploidy);
 std::size_t element_cardinality_in_genotypes(unsigned num_elements, unsigned ploidy);
 
@@ -1115,6 +1116,16 @@ extend_genotypes(const std::vector<Genotype<Haplotype>>& genotypes,
         }
     }
     return std::make_pair(std::move(extended_genotypes), std::move(extended_indices));
+}
+
+inline
+std::pair<std::vector<Genotype<Haplotype>>, std::vector<GenotypeIndex>>
+extend_genotypes(const std::vector<Genotype<Haplotype>>& genotypes,
+                 const std::vector<GenotypeIndex>& indices,
+                 const std::vector<Haplotype>& haplotypes)
+{
+    const static auto default_selector = [] (const auto&, const auto&) noexcept { return true; };
+    return extend_genotypes(genotypes, indices, haplotypes, default_selector);
 }
 
 namespace detail {

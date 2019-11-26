@@ -237,6 +237,16 @@ std::size_t num_genotypes(const unsigned num_elements, const unsigned ploidy)
     return boost::math::binomial_coefficient<double>(num_elements + ploidy - 1, num_elements - 1);
 }
 
+boost::optional<std::size_t> num_genotypes_noexcept(const unsigned num_elements, const unsigned ploidy) noexcept
+{
+    assert(num_elements >= ploidy);
+    boost::optional<std::size_t> result {};
+    try {
+        result = num_genotypes(num_elements, ploidy);
+    } catch (...) {}
+    return result;
+}
+
 std::size_t max_num_elements(const std::size_t num_genotypes, const unsigned ploidy)
 {
     if (num_genotypes == 0 || ploidy == 0) return 0;
