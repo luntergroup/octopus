@@ -37,8 +37,10 @@ CellCaller::CellCaller(Caller::Components&& components,
                        Caller::Parameters general_parameters,
                        Parameters specific_parameters)
 : Caller {std::move(components), std::move(general_parameters)}
-, parameters_{std::move(specific_parameters)}
-{}
+, parameters_ {std::move(specific_parameters)}
+{
+    std::sort(std::begin(parameters_.normal_samples), std::end(parameters_.normal_samples));
+}
 
 std::string CellCaller::do_name() const
 {
@@ -308,6 +310,15 @@ propose_next_phylogenies(const std::vector<std::vector<model::SingleCellModel::I
     return result;
 }
 
+namespace {
+
+bool includes(const std::vector<SampleName>& samples, const SampleName& sample)
+{
+    return std::binary_search(std::cbegin(samples), std::cend(samples), sample);
+}
+
+} // namespace
+
 std::unique_ptr<CellCaller::Caller::Latents>
 CellCaller::infer_latents(const HaplotypeBlock& haplotypes, const HaplotypeLikelihoodArray& haplotype_likelihoods) const
 {
@@ -336,6 +347,21 @@ CellCaller::infer_latents(const HaplotypeBlock& haplotypes, const HaplotypeLikel
             std::vector<SingleCellModelInferences> clone_inferences {};
             clone_inferences.reserve(phylogenies.size());
             for (auto& phylogeny : phylogenies) {
+                if (parameters_.normal_samples.empty()) {
+                    model_parameters.group_priors = boost::none;
+                } else {
+                    std::vector<double> normal_group_priors(phylogeny.size());
+                    normal_group_priors[0] = 1;
+                    model_parameters.group_priors = model::SingleCellModel::Parameters::GroupOptionalPriorArray {};
+                    model_parameters.group_priors->reserve(samples_.size());
+                    for (const auto& sample : samples_) {
+                        if (includes(parameters_.normal_samples, sample)) {
+                            model_parameters.group_priors->push_back(normal_group_priors);
+                        } else {
+                            model_parameters.group_priors->push_back(boost::none);
+                        }
+                    }
+                }
                 model::SingleCellPriorModel phylogeny_prior_model {std::move(phylogeny), *genotype_prior_model, mutation_model, cell_prior_params};
                 model::SingleCellModel phylogeny_model {samples_, std::move(phylogeny_prior_model), model_parameters, config, population_prior_model};
                 auto phylogeny_inferences = phylogeny_model.evaluate(genotypes, haplotype_likelihoods);

@@ -992,19 +992,20 @@ auto get_default_germline_inclusion_predicate(const OptionMap& options)
     return coretools::KnownCopyNumberInclusionPredicate {static_cast<unsigned>(options.at("organism-ploidy").as<int>())};
 }
 
+bool is_single_cell_calling(const OptionMap& options)
+{
+    return options.at("caller").as<std::string>() == "cell";
+}
+
 bool is_cancer_calling(const OptionMap& options)
 {
-    return options.at("caller").as<std::string>() == "cancer" || options.count("normal-sample") == 1;
+    return options.at("caller").as<std::string>() == "cancer"
+        || (!is_single_cell_calling(options) && options.count("normal-samples") == 1);
 }
 
 bool is_polyclone_calling(const OptionMap& options)
 {
     return options.at("caller").as<std::string>() == "polyclone";
-}
-
-bool is_single_cell_calling(const OptionMap& options)
-{
-    return options.at("caller").as<std::string>() == "cell";
 }
 
 auto get_min_credible_vaf_probability(const OptionMap& options)
@@ -1044,8 +1045,8 @@ coretools::CigarScanner::Options::InclusionPredicate get_candidate_variant_inclu
 {
     if (is_cancer_calling(options)) {
         boost::optional<SampleName> normal{};
-        if (is_set("normal-sample", options)) {
-            normal = options.at("normal-sample").as<SampleName>();
+        if (is_set("normal-samples", options)) {
+            normal = options.at("normal-samples").as<std::vector<SampleName>>().front();
         }
         return get_default_somatic_inclusion_predicate(options, normal);
     } else if (is_polyclone_calling(options)) {
@@ -1704,7 +1705,7 @@ auto get_caller_type(const OptionMap& options, const std::vector<SampleName>& sa
 		|| (pedigree && is_trio(samples, *pedigree))) {
         result = "trio";
     }
-    if (is_set("normal-sample", options)) {
+    if (is_cancer_calling(options)) {
         result = "cancer";
     }
     return result;
@@ -1769,10 +1770,12 @@ public:
     {}
 };
 
-void check_normal_sample(const SampleName& normal, const std::vector<SampleName>& samples)
+void check_normal_samples(const std::vector<SampleName>& normals, const std::vector<SampleName>& samples)
 {
-    if (std::find(std::cbegin(samples), std::cend(samples), normal) == std::cend(samples)) {
-        throw BadNormalSample {normal, samples};
+    for (const auto& normal : normals) {
+        if (std::find(std::cbegin(samples), std::cend(samples), normal) == std::cend(samples)) {
+            throw BadNormalSample {normal, samples};
+        }
     }
 }
 
@@ -1782,9 +1785,9 @@ void check_caller(const std::string& caller, const std::vector<SampleName>& samp
         if (samples.size() != 1) {
             throw BadSampleCount {};
         }
-    } else if (caller == "cancer") {
-        if (is_set("normal-sample", options)) {
-            check_normal_sample(options.at("normal-sample").as<std::string>(), samples);
+    } else if (caller == "cancer" || caller == "cell") {
+        if (is_set("normal-samples", options)) {
+            check_normal_samples(options.at("normal-samples").as<std::vector<std::string>>(), samples);
         }
     }
 }
@@ -1965,6 +1968,22 @@ boost::optional<std::size_t> get_max_joint_genotypes(const OptionMap& options, c
     }
 }
 
+class TooManyNormalsError : public UserError
+{
+    std::string do_where() const override
+    {
+        return "make_caller_factory";
+    }
+    std::string do_why() const override
+    {
+        return "Only one normal sample is allowed by the cancer calling model";
+    }
+    std::string do_help() const override
+    {
+        return "Only specify one arguement for --normal-sample";
+    }
+};
+
 CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& read_pipe,
                                   const InputRegionMap& regions, const OptionMap& options,
                                   const boost::optional<const ReadSetProfile&> read_profile)
@@ -2027,8 +2046,12 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
     vc_builder.set_model_based_haplotype_dedup(true);
     vc_builder.set_independent_genotype_prior_flag(options.at("use-independent-genotype-priors").as<bool>());
     if (caller == "cancer") {
-        if (is_set("normal-sample", options)) {
-            vc_builder.set_normal_sample(options.at("normal-sample").as<std::string>());
+        if (is_set("normal-samples", options)) {
+            const auto& normals = options.at("normal-samples").as<std::vector<std::string>>();
+            if (normals.size() > 1) {
+                throw TooManyNormalsError {};
+            }
+            vc_builder.set_normal_sample(normals.front());
         }
         vc_builder.set_max_somatic_haplotypes(as_unsigned("max-somatic-haplotypes", options));
         vc_builder.set_somatic_snv_mutation_rate(options.at("somatic-snv-mutation-rate").as<float>());
@@ -2048,6 +2071,11 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
     } else if (caller == "polyclone") {
         vc_builder.set_max_clones(as_unsigned("max-clones", options));
     } else if (caller == "cell") {
+        if (is_set("normal-samples", options)) {
+            for (auto sample : options.at("normal-samples").as<std::vector<std::string>>()) {
+                vc_builder.add_normal_sample(std::move(sample));
+            }
+        }
         vc_builder.set_dropout_concentration(options.at("dropout-concentration").as<float>());
         vc_builder.set_somatic_snv_mutation_rate(options.at("somatic-snv-mutation-rate").as<float>());
         vc_builder.set_somatic_indel_mutation_rate(options.at("somatic-indel-mutation-rate").as<float>());

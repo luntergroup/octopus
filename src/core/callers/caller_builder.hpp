@@ -73,6 +73,7 @@ public:
     CallerBuilder& set_max_vb_seeds(unsigned n) noexcept;
     
     // cancer
+    CallerBuilder& add_normal_sample(SampleName normal_sample);
     CallerBuilder& set_normal_sample(SampleName normal_sample);
     CallerBuilder& set_max_somatic_haplotypes(unsigned n) noexcept;
     CallerBuilder& set_somatic_snv_mutation_rate(double rate) noexcept;
@@ -127,7 +128,7 @@ private:
         boost::optional<unsigned> max_vb_seeds;
         
         // cancer
-        boost::optional<SampleName> normal_sample;
+        std::vector<SampleName> normal_samples;
         unsigned max_somatic_haplotypes;
         double somatic_snv_mutation_rate, somatic_indel_mutation_rate;
         double min_expected_somatic_frequency;

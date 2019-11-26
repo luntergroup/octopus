@@ -227,9 +227,15 @@ CallerBuilder& CallerBuilder::set_max_vb_seeds(unsigned n) noexcept
 
 // cancer
 
+CallerBuilder& CallerBuilder::add_normal_sample(SampleName normal_sample)
+{
+    params_.normal_samples.push_back(std::move(normal_sample));
+    return *this;
+}
+
 CallerBuilder& CallerBuilder::set_normal_sample(SampleName normal_sample)
 {
-    params_.normal_sample = std::move(normal_sample);
+    params_.normal_samples = {std::move(normal_sample)};
     return *this;
 }
 
@@ -421,12 +427,16 @@ CallerBuilder::CallerFactoryMap CallerBuilder::generate_factory() const
                                                       });
         }},
         {"cancer", [this, &samples] () {
+            boost::optional<SampleName> normal {};
+            if (!params_.normal_samples.empty()) {
+                normal = params_.normal_samples.front();
+            }
             CancerCaller::Parameters cancer_params {
                 params_.min_variant_posterior,
                 params_.min_somatic_posterior,
                 params_.min_refcall_posterior,
                 params_.ploidies.of(samples.front(), *requested_contig_),
-                params_.normal_sample,
+                std::move(normal),
                 make_cancer_prior_model(params_.snp_heterozygosity, params_.indel_heterozygosity),
                 {params_.somatic_snv_mutation_rate, params_.somatic_indel_mutation_rate},
                 params_.min_expected_somatic_frequency,
@@ -484,7 +494,9 @@ CallerBuilder::CallerFactoryMap CallerBuilder::generate_factory() const
                                                     params_.max_joint_genotypes,
                                                     params_.dropout_concentration,
                                                     {params_.somatic_snv_mutation_rate, params_.somatic_indel_mutation_rate},
-                                                    params_.max_vb_seeds});
+                                                    params_.max_vb_seeds,
+                                                    params_.normal_samples
+                                                });
         }}
     };
 }

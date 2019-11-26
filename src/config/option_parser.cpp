@@ -582,8 +582,8 @@ OptionMap parse_options(const int argc, const char** argv)
     
     po::options_description cancer("Cancer calling model");
     cancer.add_options()
-    ("normal-sample,N",
-     po::value<std::string>(),
+    ("normal-samples,N",
+     po::value<std::vector<std::string>>()->multitoken(),
      "Normal sample - all other samples are considered tumour")
     
     ("max-somatic-haplotypes",
