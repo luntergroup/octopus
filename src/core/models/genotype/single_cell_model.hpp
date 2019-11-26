@@ -25,6 +25,8 @@ class SingleCellModel
 public:
     struct Parameters
     {
+        using GroupOptionalPriorArray = VariationalBayesMixtureMixtureModel::GroupOptionalPriorArray;
+        boost::optional<GroupOptionalPriorArray> group_priors = boost::none;
         double dropout_concentration = 1.5;
         double group_concentration = 1.0;
     };
@@ -104,6 +106,10 @@ private:
                   const std::vector<Genotype<Haplotype>>& genotypes,
                   const VariationalBayesMixtureMixtureModel::LogProbabilityVector& genotype_combination_priors,
                   const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
+    VariationalBayesMixtureMixtureModel::Inferences
+    evaluate_model(const VariationalBayesMixtureMixtureModel::LogProbabilityVector& genotype_combination_priors,
+                   const VBLikelihoodMatrix& haplotype_likelihoods,
+                   VBSeedVector seeds) const;
 };
 
 } // namespace model

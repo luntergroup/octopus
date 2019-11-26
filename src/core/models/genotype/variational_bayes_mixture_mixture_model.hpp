@@ -6,6 +6,8 @@
 
 #include <vector>
 
+#include <boost/optional.hpp>
+
 #include "core/models/haplotype_likelihood_array.hpp"
 #include "variational_bayes_mixture_model.hpp"
 
@@ -40,6 +42,9 @@ public:
     using Sigma = std::vector<double>; // One element per group
     using GroupResponsibilityVector = std::vector<Sigma>; // One element per sample
     
+    using GroupOptionalPriorVector = boost::optional<ProbabilityVector>; // One element per group
+    using GroupOptionalPriorArray = std::vector<GroupOptionalPriorVector>; // One element per sample
+    
     struct Inferences
     {
         ProbabilityVector genotype_posteriors;
@@ -63,6 +68,7 @@ public:
     Inferences
     evaluate(const LogProbabilityVector& genotype_log_priors,
              const HaplotypeLikelihoodMatrix& log_likelihoods,
+             const GroupOptionalPriorArray& group_priors,
              const GroupConcentrationVector& group_concentrations,
              const MixtureConcentrationArray& mixture_concentrations,
              std::vector<LogProbabilityVector> seeds) const;
@@ -70,7 +76,23 @@ public:
     Inferences
     evaluate(const LogProbabilityVector& genotype_log_priors,
              const HaplotypeLikelihoodMatrix& log_likelihoods,
-             double group_concentration, double mixture_concentration,
+             const GroupConcentrationVector& group_concentrations,
+             const MixtureConcentrationArray& mixture_concentrations,
+             std::vector<LogProbabilityVector> seeds) const;
+    
+    Inferences
+    evaluate(const LogProbabilityVector& genotype_log_priors,
+             const HaplotypeLikelihoodMatrix& log_likelihoods,
+             const GroupOptionalPriorArray& group_priors,
+             double group_concentration,
+             double mixture_concentration,
+             std::vector<LogProbabilityVector> seeds) const;
+    
+    Inferences
+    evaluate(const LogProbabilityVector& genotype_log_priors,
+             const HaplotypeLikelihoodMatrix& log_likelihoods,
+             double group_concentration,
+             double mixture_concentration,
              std::vector<LogProbabilityVector> seeds) const;
     
 private:
@@ -78,21 +100,29 @@ private:
     using ComponentResponsibilityVector = std::vector<Tau>; // One element per haplotype in genotype (max)
     using ComponentResponsibilityMatrix = std::vector<ComponentResponsibilityVector>; // One element per sample
     
+    using GroupOptionalLogPriorVector = boost::optional<LogProbabilityVector>; // One element per group
+    using GroupOptionalLogPriorArray = std::vector<GroupOptionalLogPriorVector>; // One element per sample
+    
     Options options_;
     
+    GroupOptionalLogPriorVector to_logs(const GroupOptionalPriorVector& prior) const;
+    GroupOptionalLogPriorArray to_logs(const GroupOptionalPriorArray& priors) const;
     Inferences
     evaluate(const LogProbabilityVector& genotype_log_priors,
              const HaplotypeLikelihoodMatrix& log_likelihoods,
+             const GroupOptionalLogPriorArray& group_log_priors,
              const GroupConcentrationVector& group_concentrations,
              const MixtureConcentrationArray& mixture_concentrations,
              LogProbabilityVector& genotype_log_posteriors) const;
     GroupResponsibilityVector
-    init_responsibilities(const GroupConcentrationVector& group_concentrations,
+    init_responsibilities(const GroupOptionalLogPriorArray& group_log_priors,
+                          const GroupConcentrationVector& group_concentrations,
                           const MixtureConcentrationArray& mixture_concentrations,
                           const ProbabilityVector& genotype_priors,
                           const HaplotypeLikelihoodMatrix& log_likelihoods) const;
     void
     update_responsibilities(GroupResponsibilityVector& result,
+                            const GroupOptionalLogPriorArray& group_log_priors,
                             const GroupConcentrationVector& group_concentrations,
                             const MixtureConcentrationArray& mixture_concentrations,
                             const ProbabilityVector& genotype_posteriors,

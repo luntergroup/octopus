@@ -86,10 +86,7 @@ SingleCellModel::evaluate(const std::vector<Genotype<Haplotype>>& genotypes,
         const auto genotype_combination_priors = calculate_genotype_priors(genotype_combinations, genotypes);
         const auto vb_haplotype_likelihoods = make_likelihood_matrix(genotype_combinations, genotypes, haplotype_likelihoods);
         auto seeds = propose_seeds(genotype_combinations, genotypes, genotype_combination_priors, haplotype_likelihoods);
-        auto vb_inferences = posterior_model_.evaluate(genotype_combination_priors, vb_haplotype_likelihoods,
-                                                       parameters_.group_concentration,
-                                                       parameters_.dropout_concentration,
-                                                       std::move(seeds));
+        auto vb_inferences = evaluate_model(genotype_combination_priors, vb_haplotype_likelihoods, std::move(seeds));
         for (std::size_t group_idx {0}; group_idx < prior_model_.phylogeny().size(); ++group_idx) {
             Inferences::GroupInferences group {};
             group.sample_attachment_posteriors.resize(samples_.size());
@@ -484,6 +481,27 @@ SingleCellModel::propose_seeds(const GenotypeCombinationVector& genotype_combina
     std::iota(std::begin(top_indices), std::end(top_indices), 0u);
     make_point_seeds(genotype_combinations.size(), top_indices, result);
     return result;
+}
+
+VariationalBayesMixtureMixtureModel::Inferences
+SingleCellModel::evaluate_model(const VariationalBayesMixtureMixtureModel::LogProbabilityVector& genotype_combination_priors,
+                                const VBLikelihoodMatrix& haplotype_likelihoods,
+                                VBSeedVector seeds) const
+{
+    if (parameters_.group_priors) {
+        return posterior_model_.evaluate(genotype_combination_priors,
+                                         haplotype_likelihoods,
+                                         *parameters_.group_priors,
+                                         parameters_.group_concentration,
+                                         parameters_.dropout_concentration,
+                                         std::move(seeds));
+    } else {
+        return posterior_model_.evaluate(genotype_combination_priors,
+                                         haplotype_likelihoods,
+                                         parameters_.group_concentration,
+                                         parameters_.dropout_concentration,
+                                         std::move(seeds));
+    }
 }
 
 } // namespace model
