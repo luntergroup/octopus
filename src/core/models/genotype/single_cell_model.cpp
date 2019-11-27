@@ -265,6 +265,40 @@ void unique_stable_erase(Range& values)
     values.erase(unique_stable(std::begin(values), std::end(values)), std::end(values));
 }
 
+template <typename T1, typename T2>
+auto zip(std::vector<T1>&& lhs, std::vector<T2>&& rhs)
+{
+    assert(lhs.size() == rhs.size());
+    std::vector<std::pair<T1, T2>> result {};
+    result.reserve(lhs.size());
+    std::transform(std::make_move_iterator(std::begin(lhs)), std::make_move_iterator(std::end(lhs)),
+                   std::make_move_iterator(std::begin(rhs)), std::back_inserter(result),
+                   [] (T1&& a, T2&& b) noexcept { return std::make_pair(std::move(a), std::move(b)); });
+    return result;
+}
+
+template <typename T1, typename T2>
+auto unzip(std::vector<std::pair<T1, T2>>&& zipped)
+{
+    std::vector<T1> lhs {}; std::vector<T2> rhs {};
+    lhs.reserve(zipped.size()); rhs.reserve(zipped.size());
+    for (auto& p : zipped) {
+        lhs.push_back(std::move(p.first));
+        rhs.push_back(std::move(p.second));
+    }
+    return std::make_pair(std::move(lhs), std::move(rhs));
+}
+
+void combine(const IndividualModel::Latents::ProbabilityVector& src, IndividualModel::Latents::ProbabilityVector& dst,
+             const double src_weight = 1, const double dst_weight = 1) noexcept
+{
+    assert(src.size() == dst.size());
+    const auto lhs_prob = src_weight / (src_weight + dst_weight);
+    const auto rhs_prob = dst_weight / (src_weight + dst_weight);
+    const auto combine_probs = [=] (auto lhs, auto rhs) noexcept { return lhs_prob * lhs + rhs_prob * rhs; };
+    std::transform(std::cbegin(src), std::cend(src), std::cbegin(dst), std::begin(dst), combine_probs);
+}
+
 } // namespace
 
 SingleCellModel::GenotypeCombinationVector
@@ -298,11 +332,11 @@ SingleCellModel::propose_genotype_combinations(const std::vector<Genotype<Haplot
             population_genotype_posteriors = std::move(population_inferences.posteriors.marginal_genotype_probabilities);
         }
         
-        const auto clusters = cluster_samples(population_genotype_posteriors, num_groups);
+        auto clusters = cluster_samples(population_genotype_posteriors, std::min(2 * num_groups, samples_.size() - 1));
         
         IndividualModel individual_model {prior_model_.germline_prior_model()};
         std::vector<ProbabilityVector> cluster_marginal_genotype_posteriors {};
-        cluster_marginal_genotype_posteriors.reserve(num_groups);
+        cluster_marginal_genotype_posteriors.reserve(clusters.size());
         const auto haplotypes = extract_unique_elements(genotypes);
         for (const auto& cluster : clusters) {
             const auto cluster_samples = select(cluster, samples_);
@@ -310,6 +344,19 @@ SingleCellModel::propose_genotype_combinations(const std::vector<Genotype<Haplot
             auto cluster_inferences = individual_model.evaluate(genotypes, pooled_likelihoods);
             cluster_marginal_genotype_posteriors.push_back(std::move(cluster_inferences.posteriors.genotype_probabilities));
         }
+        
+        auto cluster_marginals = zip(std::move(clusters), std::move(cluster_marginal_genotype_posteriors));
+        for (auto k = cluster_marginals.size(); k > num_groups; --k) {
+            assert(cluster_marginals.size() > 1);
+            const static auto cluster_size_greater = [] (const auto& lhs, const auto& rhs) { return lhs.first.size() > rhs.first.size(); };
+            std::sort(std::begin(cluster_marginals), std::end(cluster_marginals), cluster_size_greater);
+            const auto n = cluster_marginals.size() - 1;
+            combine(cluster_marginals[n].second, cluster_marginals[n - 1].second,
+                    cluster_marginals[n].first.size(), cluster_marginals[n - 1].first.size());
+            utils::append(std::move(cluster_marginals[n].first), cluster_marginals[n - 1].first);
+            cluster_marginals.pop_back();
+        }
+        std::tie(clusters, cluster_marginal_genotype_posteriors) = unzip(std::move(cluster_marginals));
         
         GenotypeCombinationVector result {};
         auto k = *config_.max_genotype_combinations;
@@ -344,7 +391,6 @@ SingleCellModel::propose_genotype_combinations(const std::vector<Genotype<Haplot
         if (result.size() > *config_.max_genotype_combinations) {
             result.resize(*config_.max_genotype_combinations);
         }
-        
         
         return result;
     }
