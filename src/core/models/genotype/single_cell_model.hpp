@@ -27,6 +27,7 @@ public:
     {
         using GroupOptionalPriorArray = VariationalBayesMixtureMixtureModel::GroupOptionalPriorArray;
         boost::optional<GroupOptionalPriorArray> group_priors = boost::none;
+        std::vector<double> sample_dropout_concentrations = {};
         double dropout_concentration = 1.5;
         double group_concentration = 1.0;
     };

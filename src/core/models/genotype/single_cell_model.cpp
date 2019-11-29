@@ -535,18 +535,35 @@ SingleCellModel::evaluate_model(const VariationalBayesMixtureMixtureModel::LogPr
                                 VBSeedVector seeds) const
 {
     if (parameters_.group_priors) {
-        return posterior_model_.evaluate(genotype_combination_priors,
-                                         haplotype_likelihoods,
-                                         *parameters_.group_priors,
-                                         parameters_.group_concentration,
-                                         parameters_.dropout_concentration,
-                                         std::move(seeds));
+        if (parameters_.sample_dropout_concentrations.size() == samples_.size()) {
+            return posterior_model_.evaluate(genotype_combination_priors,
+                                             haplotype_likelihoods,
+                                             *parameters_.group_priors,
+                                             parameters_.group_concentration,
+                                             parameters_.sample_dropout_concentrations,
+                                             std::move(seeds));
+        } else {
+            return posterior_model_.evaluate(genotype_combination_priors,
+                                             haplotype_likelihoods,
+                                             *parameters_.group_priors,
+                                             parameters_.group_concentration,
+                                             parameters_.dropout_concentration,
+                                             std::move(seeds));
+        }
     } else {
-        return posterior_model_.evaluate(genotype_combination_priors,
-                                         haplotype_likelihoods,
-                                         parameters_.group_concentration,
-                                         parameters_.dropout_concentration,
-                                         std::move(seeds));
+        if (parameters_.sample_dropout_concentrations.size() == samples_.size()) {
+            return posterior_model_.evaluate(genotype_combination_priors,
+                                             haplotype_likelihoods,
+                                             parameters_.group_concentration,
+                                             parameters_.sample_dropout_concentrations,
+                                             std::move(seeds));
+        } else {
+            return posterior_model_.evaluate(genotype_combination_priors,
+                                             haplotype_likelihoods,
+                                             parameters_.group_concentration,
+                                             parameters_.dropout_concentration,
+                                             std::move(seeds));
+        }
     }
 }
 

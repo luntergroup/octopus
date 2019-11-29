@@ -329,6 +329,12 @@ CallerBuilder& CallerBuilder::set_dropout_concentration(double concentration) no
     return *this;
 }
 
+CallerBuilder& CallerBuilder::set_dropout_concentration(const SampleName& sample, double concentration) noexcept
+{
+    params_.sample_dropout_concentrations[sample] = concentration;
+    return *this;
+}
+
 std::unique_ptr<Caller> CallerBuilder::build(const ContigName& contig) const
 {
     if (factory_.count(caller_) == 0) {
@@ -493,6 +499,7 @@ CallerBuilder::CallerFactoryMap CallerBuilder::generate_factory() const
                                                     params_.max_genotypes,
                                                     params_.max_joint_genotypes,
                                                     params_.dropout_concentration,
+                                                    params_.sample_dropout_concentrations,
                                                     {params_.somatic_snv_mutation_rate, params_.somatic_indel_mutation_rate},
                                                     params_.max_vb_seeds,
                                                     params_.normal_samples

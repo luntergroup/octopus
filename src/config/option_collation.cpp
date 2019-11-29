@@ -1984,6 +1984,15 @@ class TooManyNormalsError : public UserError
     }
 };
 
+auto get_sample_dropout_concentrations(const OptionMap& options)
+{
+    std::vector<SampleDropoutConcentrationPair> result {};
+    if (is_set("sample-dropout-concentrations", options)) {
+        result = options.at("sample-dropout-concentrations").as<std::vector<SampleDropoutConcentrationPair>>();
+    }
+    return result;
+}
+
 CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& read_pipe,
                                   const InputRegionMap& regions, const OptionMap& options,
                                   const boost::optional<const ReadSetProfile&> read_profile)
@@ -2077,6 +2086,9 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
             }
         }
         vc_builder.set_dropout_concentration(options.at("dropout-concentration").as<float>());
+        for (const SampleDropoutConcentrationPair& p : get_sample_dropout_concentrations(options)) {
+            vc_builder.set_dropout_concentration(p.sample, p.concentration);
+        }
         vc_builder.set_somatic_snv_mutation_rate(options.at("somatic-snv-mutation-rate").as<float>());
         vc_builder.set_somatic_indel_mutation_rate(options.at("somatic-indel-mutation-rate").as<float>());
         vc_builder.set_max_clones(as_unsigned("max-clones", options));

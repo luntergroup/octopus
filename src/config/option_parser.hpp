@@ -43,6 +43,12 @@ enum class RealignedBAMType { full, mini };
 enum class ReadDeduplicationDetectionPolicy { relaxed, aggressive };
 enum class ModelPosteriorPolicy { all, off, special };
 
+struct SampleDropoutConcentrationPair
+{
+    std::string sample;
+    float concentration;
+};
+
 std::istream& operator>>(std::istream& in, ContigOutputOrder& order);
 std::ostream& operator<<(std::ostream& os, const ContigOutputOrder& order);
 std::istream& operator>>(std::istream& in, ContigPloidy& plodies);
@@ -69,6 +75,8 @@ std::istream& operator>>(std::istream& in, ReadDeduplicationDetectionPolicy& typ
 std::ostream& operator<<(std::ostream& os, const ReadDeduplicationDetectionPolicy& type);
 std::istream& operator>>(std::istream& in, ModelPosteriorPolicy& policy);
 std::ostream& operator<<(std::ostream& os, const ModelPosteriorPolicy& policy);
+std::istream& operator>>(std::istream& in, SampleDropoutConcentrationPair& concentration);
+std::ostream& operator<<(std::ostream& os, const SampleDropoutConcentrationPair& concentration);
 
 std::ostream& operator<<(std::ostream& os, const OptionMap& options);
 std::string to_string(const OptionMap& options, bool one_line = false, bool mark_modified = true);

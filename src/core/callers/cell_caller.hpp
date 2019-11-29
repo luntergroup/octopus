@@ -42,6 +42,7 @@ public:
         unsigned max_clones;
         boost::optional<std::size_t> max_genotypes, max_joint_genotypes;
         double dropout_concentration;
+        std::unordered_map<SampleName, double> sample_dropout_concentrations;
         DeNovoModel::Parameters mutation_model_parameters;
         boost::optional<unsigned> max_vb_seeds = boost::none; // Use default if none
         std::vector<SampleName> normal_samples = {};

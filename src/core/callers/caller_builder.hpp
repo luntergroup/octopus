@@ -96,6 +96,7 @@ public:
     
     // cell
     CallerBuilder& set_dropout_concentration(double concentration) noexcept;
+    CallerBuilder& set_dropout_concentration(const SampleName& sample, double concentration) noexcept;
     
     // pedigree
     CallerBuilder& set_pedigree(Pedigree pedigree);
@@ -148,6 +149,7 @@ private:
         unsigned max_clones;
         
         // cell
+        std::unordered_map<SampleName, double> sample_dropout_concentrations;
         double dropout_concentration;
         
         // pedigree

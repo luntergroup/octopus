@@ -85,6 +85,21 @@ public:
              const HaplotypeLikelihoodMatrix& log_likelihoods,
              const GroupOptionalPriorArray& group_priors,
              double group_concentration,
+             const std::vector<double>& mixture_concentrations,
+             std::vector<LogProbabilityVector> seeds) const;
+    
+    Inferences
+    evaluate(const LogProbabilityVector& genotype_log_priors,
+             const HaplotypeLikelihoodMatrix& log_likelihoods,
+             double group_concentration,
+             const std::vector<double>& mixture_concentrations,
+             std::vector<LogProbabilityVector> seeds) const;
+    
+    Inferences
+    evaluate(const LogProbabilityVector& genotype_log_priors,
+             const HaplotypeLikelihoodMatrix& log_likelihoods,
+             const GroupOptionalPriorArray& group_priors,
+             double group_concentration,
              double mixture_concentration,
              std::vector<LogProbabilityVector> seeds) const;
     

@@ -331,6 +331,14 @@ CellCaller::infer_latents(const HaplotypeBlock& haplotypes, const HaplotypeLikel
     cell_prior_params.copy_number_log_probability = std::log(1e-6);
     model::SingleCellModel::Parameters model_parameters {};
     model_parameters.dropout_concentration = parameters_.dropout_concentration;
+    if (!parameters_.sample_dropout_concentrations.empty()) {
+        model_parameters.sample_dropout_concentrations.resize(samples_.size(), parameters_.dropout_concentration);
+        for (std::size_t s {0}; s < samples_.size(); ++s) {
+            if (parameters_.sample_dropout_concentrations.count(samples_[s]) == 1) {
+                model_parameters.sample_dropout_concentrations[s] = parameters_.sample_dropout_concentrations.at(samples_[s]);
+            }
+        }
+    }
     model_parameters.group_concentration = 1.0;
     model::SingleCellModel::AlgorithmParameters config {};
     if (parameters_.max_joint_genotypes) config.max_genotype_combinations = *parameters_.max_joint_genotypes;

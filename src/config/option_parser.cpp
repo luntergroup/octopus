@@ -13,6 +13,7 @@
 
 #include <boost/filesystem/path.hpp>
 #include <boost/filesystem/operations.hpp>
+#include <boost/lexical_cast.hpp>
 
 #include "utils/path_utils.hpp"
 #include "utils/memory_footprint.hpp"
@@ -672,8 +673,12 @@ OptionMap parse_options(const int argc, const char** argv)
     "Maximum number of nodes in cell phylogeny to consider")
     
     ("dropout-concentration",
-    po::value<float>()->default_value(2, "2"),
-    "Allelic dropout concentration parameter")
+    po::value<float>()->default_value(8, "8"),
+    "Allelic dropout concentration parameter (default for all samples)")
+    
+    ("sample-dropout-concentrations",
+     po::value<std::vector<SampleDropoutConcentrationPair>>()->multitoken(),
+     "Sample allelic dropout concentration parameter (format SAMPLE=CONCENTRATION")
     ;
     
     po::options_description call_filtering("Call filtering and annotation");
@@ -1552,6 +1557,24 @@ std::ostream& operator<<(std::ostream& out, const ModelPosteriorPolicy& policy)
     return out;
 }
 
+std::istream& operator>>(std::istream& in, SampleDropoutConcentrationPair& result)
+{
+    std::string token;
+    in >> token;
+    const auto equal_pos = token.find_last_of("=");
+    const auto concentration = token.substr(equal_pos + 1);
+    token.erase(equal_pos);
+    result.sample = std::move(token);
+    result.concentration = boost::lexical_cast<float>(concentration);
+    return in;
+}
+
+std::ostream& operator<<(std::ostream& os, const SampleDropoutConcentrationPair& concentration)
+{
+    os << concentration.sample << '=' << concentration.concentration;
+    return os;
+}
+
 namespace {
 
 template <typename T>
@@ -1674,6 +1697,10 @@ std::ostream& operator<<(std::ostream& os, const OptionMap& options)
             os << options[label].as<RealignedBAMType>();
         } else if (is_type<ReadDeduplicationDetectionPolicy>(value)) {
             os << options[label].as<ReadDeduplicationDetectionPolicy>();
+        } else if (is_vector_type<SampleDropoutConcentrationPair>(value)) {
+            write_vector<SampleDropoutConcentrationPair>(options, label, os, bullet);
+        } else if (is_type<ModelPosteriorPolicy>(value)) {
+            os << options[label].as<ModelPosteriorPolicy>();
         } else {
             os << "UnknownType(" << ((boost::any)value.value()).type().name() << ")";
         }
