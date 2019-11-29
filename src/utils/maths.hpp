@@ -400,20 +400,7 @@ template <typename RealType, typename IntegerType,
           typename = std::enable_if_t<std::is_integral<IntegerType>::value>>
 RealType log_factorial(IntegerType x)
 {
-    if (x == 0 || x == 1) return 0;
-    if (x == 2) return std::log(2);
-    if (x == 3) return std::log(6);
-    if (x == 4) return std::log(24);
-    if (x > 100) {
-        return x * std::log(x) - x; // Stirling's approximation
-    } else {
-        std::vector<IntegerType> lx(x);
-        std::iota(std::begin(lx), std::end(lx), 1);
-        std::vector<RealType> tx(x);
-        std::transform(std::cbegin(lx), std::cend(lx), std::begin(tx),
-                       [] (IntegerType a) { return std::log(static_cast<RealType>(a)); });
-        return std::accumulate(std::cbegin(tx), std::cend(tx), RealType {0});
-    }
+    return std::lgamma(x + 1);
 }
 
 template <typename InputIt>
