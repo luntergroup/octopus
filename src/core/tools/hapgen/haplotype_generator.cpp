@@ -65,9 +65,9 @@ auto get_walker_policy(const HaplotypeGenerator::Policies::Extension policy) noe
         case HGP::minimal:
             return GWP::includeIfWithinReadLengthOfFirstIncluded;
         case HGP::conservative:
-            // fall through
-        case HGP::moderate:
             return GWP::includeIfAllSamplesSharedWithFrontier;
+        case HGP::moderate:
+            // fall through
         case HGP::aggressive:
             return GWP::includeIfAnySampleSharedWithFrontier;
         case HGP::unlimited:
