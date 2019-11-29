@@ -435,6 +435,11 @@ CigarScanner::get_novel_likely_misaligned_candidates(const std::vector<Variant>&
 
 namespace {
 
+struct StrandSupportStats
+{
+    unsigned forward_support, forward_depth, reverse_support, reverse_depth;
+};
+
 auto sum(const std::vector<unsigned>& observed_qualities) noexcept
 {
     return std::accumulate(std::cbegin(observed_qualities), std::cend(observed_qualities), 0);
@@ -453,38 +458,22 @@ void partial_sort(std::vector<unsigned>& observed_qualities, const unsigned n)
                       std::end(observed_qualities), std::greater<> {});
 }
 
-bool is_completely_strand_biased(const unsigned forward_strand_depth, const unsigned reverse_strand_support) noexcept
+double compute_strand_bias(const StrandSupportStats& strand_depths)
 {
-    const auto support = forward_strand_depth + reverse_strand_support;
-    return support > 0 && (forward_strand_depth == 0 || forward_strand_depth == support);
+    return 1 - maths::fisher_exact_test(strand_depths.forward_support, strand_depths.forward_depth - strand_depths.forward_support,
+                                        strand_depths.reverse_support, strand_depths.reverse_depth - strand_depths.reverse_support);
 }
 
-bool is_almost_completely_strand_biased(const unsigned forward_strand_depth, const unsigned reverse_strand_support) noexcept
+bool only_observed_on_one_strand(const StrandSupportStats& strand_depths) noexcept
 {
-    const auto support = forward_strand_depth + reverse_strand_support;
-    return support > 0 && (forward_strand_depth <= 1 || forward_strand_depth >= (support - 1));
+    const auto support = strand_depths.forward_support + strand_depths.reverse_support;
+    return support > 0 && (strand_depths.forward_support == 0 || strand_depths.reverse_support == support);
 }
 
-bool is_strand_biased(const unsigned forward_strand_depth, const unsigned reverse_strand_support, const double tail_mass) noexcept
+bool is_likely_runthrough_artifact(const StrandSupportStats& strand_depths, std::vector<unsigned>& observed_qualities)
 {
-    return maths::beta_tail_probability(forward_strand_depth + 0.5, reverse_strand_support + 0.5, tail_mass) >= 0.99;
-}
-
-bool is_strongly_strand_biased(const unsigned forward_strand_support, const unsigned reverse_strand_support) noexcept
-{
-    return is_strand_biased(forward_strand_support, reverse_strand_support, 0.01);
-}
-
-bool is_weakly_strand_biased(const unsigned forward_strand_support, const unsigned reverse_strand_support) noexcept
-{
-    return is_strand_biased(forward_strand_support, reverse_strand_support, 0.05);
-}
-
-bool is_likely_runthrough_artifact(const unsigned forward_strand_depth, const unsigned reverse_strand_support,
-                                   std::vector<unsigned>& observed_qualities)
-{
-    const auto num_observations = forward_strand_depth + reverse_strand_support;
-    if (num_observations < 10 || !is_completely_strand_biased(forward_strand_depth, reverse_strand_support)) return false;
+    const auto num_observations = strand_depths.forward_support + strand_depths.reverse_support;
+    if (num_observations < 10 || !only_observed_on_one_strand(strand_depths)) return false;
     assert(!observed_qualities.empty());
     const auto median_bq = maths::median(observed_qualities);
     return median_bq < 15;
@@ -506,14 +495,14 @@ bool is_good_germline(const Variant& variant, const unsigned depth, const unsign
     if (depth < 4) {
         return support > 1 || sum(observed_qualities) >= 30 || is_deletion(variant);
     }
-    const auto reverse_strand_depth = depth - forward_strand_depth;
-    const auto reverse_strand_support = support - forward_strand_support;
-    if (support > 20 && std::min(forward_strand_depth, reverse_strand_depth) > 1
-        && is_completely_strand_biased(forward_strand_support, reverse_strand_support)) {
-        return false;
-    }
+    const StrandSupportStats strand_depths {forward_strand_support,
+                                            forward_strand_depth,
+                                            static_cast<unsigned>(support) - forward_strand_support,
+                                            depth - forward_strand_depth};
+    const auto strand_bias = compute_strand_bias(strand_depths);
+    if (strand_bias > 0.99) return false;
     if (is_snv(variant)) {
-        if (is_likely_runthrough_artifact(forward_strand_support, reverse_strand_support, observed_qualities)) return false;
+        if (is_likely_runthrough_artifact(strand_depths, observed_qualities)) return false;
         erase_below(observed_qualities, 20);
         if (depth <= 10) return observed_qualities.size() > 1;
         return observed_qualities.size() > 2 && static_cast<double>(observed_qualities.size()) / depth > 0.1;
@@ -566,22 +555,21 @@ bool is_good_somatic(const Variant& variant, const unsigned depth, const unsigne
 {
     assert(depth > 0);
     const auto support = observed_qualities.size();
-    const auto reverse_strand_support = support - forward_strand_support;
-    if ((support > 15 && is_completely_strand_biased(forward_strand_support, reverse_strand_support))
-        || (support > 25 && is_almost_completely_strand_biased(forward_strand_support, reverse_strand_support))
-        || (support > 50 && is_strongly_strand_biased(forward_strand_support, reverse_strand_support))){
-        return false;
-    }
+    const StrandSupportStats strand_depths {forward_strand_support,
+                                            forward_strand_depth,
+                                            static_cast<unsigned>(support) - forward_strand_support,
+                                            depth - forward_strand_depth};
+    const auto strand_bias = compute_strand_bias(strand_depths);
+    if (strand_bias > 0.99) return false;
     if (is_snv(variant)) {
-        if (is_likely_runthrough_artifact(forward_strand_support, reverse_strand_support, observed_qualities)) return false;
+        if (is_likely_runthrough_artifact(strand_depths, observed_qualities)) return false;
         erase_below(observed_qualities, 20);
         if (observed_qualities.size() <= num_edge_observations) return false;
         const auto good_support = observed_qualities.size() - num_edge_observations;
         const auto probability_vaf_greater_than_min_vaf = beta_sf(good_support, depth - good_support, vaf_def.min_vaf);
         return good_support > 1
             && probability_vaf_greater_than_min_vaf >= vaf_def.min_probability
-            && num_edge_observations < support
-            && !is_completely_strand_biased(forward_strand_support, reverse_strand_support);
+            && num_edge_observations < support;
     } else if (is_insertion(variant)) {
         if (support == 1 && alt_sequence_size(variant) > 8) return false;
         erase_below(observed_qualities, 20);
