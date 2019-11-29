@@ -448,6 +448,32 @@ auto entropy10(const Container& values)
     return entropy10(std::cbegin(values), std::cend(values));
 }
 
+template <typename RealType, typename IntegerType,
+          typename = std::enable_if_t<std::is_integral<IntegerType>::value>,
+          typename = std::enable_if_t<std::is_floating_point<RealType>::value>>
+RealType log_binomial_coefficient(const IntegerType n, const IntegerType k)
+{
+    return log_factorial<RealType>(n) - (log_factorial<RealType>(k) + log_factorial<RealType>(n - k));
+}
+
+template <typename IntegerType, typename RealType = double,
+          typename = std::enable_if_t<std::is_integral<IntegerType>::value>,
+          typename = std::enable_if_t<std::is_floating_point<RealType>::value>>
+RealType log_fisher_exact_test(const IntegerType a, const IntegerType b, const IntegerType c, const IntegerType d)
+{
+    return log_binomial_coefficient<RealType>(a + b, b) + log_binomial_coefficient<RealType>(c + d, d)
+                - log_binomial_coefficient<RealType>(a + b + c + d, b + d);
+}
+
+template <typename IntegerType, typename RealType = double,
+          typename = std::enable_if_t<std::is_integral<IntegerType>::value>,
+          typename = std::enable_if_t<std::is_floating_point<RealType>::value>>
+RealType fisher_exact_test(const IntegerType a, const IntegerType b, const IntegerType c, const IntegerType d)
+{
+    return std::exp(log_fisher_exact_test<IntegerType, RealType>(a, b, c, d));
+}
+
+
 template <typename IntegerType, typename RealType,
           typename = std::enable_if_t<std::is_integral<IntegerType>::value>,
           typename = std::enable_if_t<std::is_floating_point<RealType>::value>>
