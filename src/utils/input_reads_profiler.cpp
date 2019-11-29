@@ -124,12 +124,13 @@ void cut(const GenomicRegion& region, MappableFlatSet<GenomicRegion>& regions)
 template <typename Range, typename T>
 void fill_summary_stats(const Range& values, ReadSetProfile::SummaryStats<T>& result)
 {
-    assert(!values.empty());
-    result.min = *std::min_element(std::cbegin(values), std::cend(values));
-    result.max = *std::max_element(std::cbegin(values), std::cend(values));
-    result.mean = maths::mean(values);
-    result.median = maths::median(values);
-    result.stdev = maths::stdev(values);
+    if (!values.empty()) {
+        result.min = *std::min_element(std::cbegin(values), std::cend(values));
+        result.max = *std::max_element(std::cbegin(values), std::cend(values));
+        result.mean = maths::mean(values);
+        result.median = maths::median(values);
+        result.stdev = maths::stdev(values);
+    }
 }
 
 void fill_summary_stats(const std::deque<MemoryFootprint>& footprints, ReadSetProfile::ReadMemoryStats& result)
