@@ -140,9 +140,11 @@ VariationalBayesMixtureMixtureModel::to_logs(const GroupOptionalPriorVector& pri
     GroupOptionalLogPriorVector result {};
     if (prior) {
         result = LogProbabilityVector(prior->size());
-        const static auto min_log_prior = std::log(std::numeric_limits<LogProbability>::min());
-        std::transform(std::cbegin(*prior), std::cend(*prior), std::begin(*result),
-                       [] (auto p) noexcept { return p > 0 ? std::log(p) : min_log_prior; });
+        const static auto to_log = [] (auto p) noexcept {
+            const static auto min_log_prior = std::log(std::numeric_limits<LogProbability>::min());
+            return p > 0 ? std::log(p) : min_log_prior;
+        };
+        std::transform(std::cbegin(*prior), std::cend(*prior), std::begin(*result), to_log);
     }
     return result;
 }
