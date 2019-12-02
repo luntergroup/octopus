@@ -163,14 +163,18 @@ def install_homebrew(build_dir):
     return os.path.join(brew_bin_dir, 'brew') # brew binary
 
 def get_required_dependencies():
-    result = ['cmake']
+    compiled, recompile = ['cmake'], []
     if is_osx():
-        result.append(latest_llvm)
+        compiled.append(latest_llvm)
     else:
-        result.append(latest_gcc)
-        result += ['binutils', 'openssl']
-    result += ['boost', 'htslib', 'gmp']
-    return result
+        compiled.append(latest_gcc)
+        compiled += ['binutils']
+    compiled += ['boost', 'gmp']
+    if is_osx():
+        compiled += ['htslib']
+    else:
+        recompile += ['htslib']
+    return compiled, recompile
 
 def get_brewed_compiler_binaries(homebrew_dir):
     cellar_dir = os.path.join(homebrew_dir, 'Cellar')
@@ -189,9 +193,9 @@ def get_brewed_compiler_binaries(homebrew_dir):
 
 def install_dependencies(build_dir):
     brew_bin = install_homebrew(build_dir)
-    dependencies = get_required_dependencies()
-    brew_command = [brew_bin, 'install'] + dependencies
-    if call(brew_command) == 0:
+    compiled_dependencies, recompile_dependencies = get_required_dependencies()
+    if call([brew_bin, 'install'] + compiled_dependencies) == 0 and \
+            call([brew_bin, 'install', '--build-from-source'] + recompile_dependencies) == 0:
         dependencies_dir = os.path.join(build_dir, get_homebrew_name())
         cc, cxx = get_brewed_compiler_binaries(dependencies_dir)
         binaries = {'cmake': os.path.join(dependencies_dir, 'bin/cmake'),
