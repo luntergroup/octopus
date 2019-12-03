@@ -4,28 +4,22 @@
 #ifndef reorder_hpp
 #define reorder_hpp
 
+#include <vector>
+#include <iterator>
+#include <algorithm>
+#include <utility>
+
 namespace octopus {
 
-template <typename order_iterator, typename value_iterator>
-void reorder(order_iterator order_begin, order_iterator order_end, value_iterator v)
+template <typename OrderIterator, typename ValueIterator>
+ValueIterator reorder(OrderIterator order_begin, OrderIterator order_end, ValueIterator v)
 {
-    // See https://stackoverflow.com/a/1267878/2970186
-    using value_t = typename std::iterator_traits< value_iterator >::value_type;
-    using index_t = typename std::iterator_traits< order_iterator >::value_type;
-    using diff_t  = typename std::iterator_traits< order_iterator >::difference_type;
-    diff_t remaining = order_end - 1 - order_begin;
-    for (index_t s = index_t {}, d; remaining > 0; ++s) {
-        for (d = order_begin[s]; d > s; d = order_begin[d]);
-        if (d == s) {
-            --remaining;
-            value_t temp = std::move(v[s]);
-            while (d = order_begin[d], d != s) {
-                std::swap(temp, v[d]);
-                --remaining;
-            }
-            v[s] = std::move(temp);
-        }
-    }
+    using ValueType = typename std::iterator_traits<ValueIterator>::value_type;
+    const auto n = std::distance(order_begin, order_end);
+    std::vector<ValueType> buffer {};
+    buffer.reserve(n);
+    std::transform(order_begin, order_end, std::back_inserter(buffer), [&] (auto idx) { return std::move(*std::next(v, idx)); });
+    return std::copy_n(std::make_move_iterator(std::begin(buffer)), n, v);
 }
 
 } // namespace octopus
