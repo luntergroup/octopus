@@ -160,6 +160,7 @@ void RepeatScanner::add_read(const AlignedRead& read, const unsigned sample_inde
         }
     }
     reset_buffer(contig_name(read), sample_index);
+    read_coverage_tracker_[samples_[sample_index]].add(read);
 }
 
 void RepeatScanner::add_match_range(const GenomicRegion& region, const AlignedRead& read, std::size_t read_index, const unsigned sample_index) const
@@ -372,14 +373,18 @@ std::vector<Variant> RepeatScanner::get_candidate_mnvs(const GenomicRegion& regi
                                                          [&candidate] (const auto& v) { return v == candidate; });
         const auto num_observations = static_cast<unsigned>(std::distance(std::cbegin(viable_candidates), next_candidate_itr));
         if (num_observations >= options_.min_observations) {
-            if (samples_.size() > 1) {
-                std::vector<unsigned> sample_observations(samples_.size());
-                std::for_each(std::cbegin(viable_candidates), next_candidate_itr, [&] (const auto& v) { ++sample_observations[v.sample_index]; });
-                const auto sufficient_sample_observations = [this] (auto obs) { return obs >= options_.min_sample_observations; };
-                if (std::any_of(std::cbegin(sample_observations), std::cend(sample_observations), sufficient_sample_observations)) {
-                    result.push_back(candidate.variant);
-                }
-            } else {
+            std::vector<unsigned> sample_observations(samples_.size());
+            std::for_each(std::cbegin(viable_candidates), next_candidate_itr, [&] (const auto& v) { ++sample_observations[v.sample_index]; });
+            std::vector<unsigned> sample_depths(samples_.size());
+            const auto get_depth = [&] (const SampleName& sample) { return read_coverage_tracker_.at(sample).mean(candidate.mapped_region()); };
+            std::transform(std::cbegin(samples_), std::cend(samples_), std::begin(sample_depths), get_depth);
+            std::vector<double> sample_vafs(samples_.size());
+            const auto get_vaf = [] (auto count, auto depth) { return static_cast<double>(count) / depth;};
+            std::transform(std::cbegin(sample_observations), std::cend(sample_observations), std::cbegin(sample_depths), std::begin(sample_vafs), get_vaf);
+            const auto sufficient_sample_observations = [this] (auto obs) { return obs >= options_.min_sample_observations; };
+            const auto sufficient_sample_vaf = [this] (auto vaf) { return vaf >= options_.min_vaf; };
+            if (std::any_of(std::cbegin(sample_observations), std::cend(sample_observations), sufficient_sample_observations)
+                && std::any_of(std::cbegin(sample_vafs), std::cend(sample_vafs), sufficient_sample_vaf)) {
                 result.push_back(candidate.variant);
             }
         }

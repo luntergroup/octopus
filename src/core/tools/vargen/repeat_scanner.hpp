@@ -36,6 +36,7 @@ public:
         unsigned max_period = 6;
         unsigned min_observations = 2;
         unsigned min_sample_observations = 2;
+        double min_vaf = 0.01;
         AlignedRead::BaseQuality min_base_quality = 10;
     };
     
@@ -81,6 +82,7 @@ private:
     std::reference_wrapper<const ReferenceGenome> reference_;
     Options options_;
     std::vector<SampleName> samples_;
+    std::unordered_map<SampleName, CoverageTracker<GenomicRegion>> read_coverage_tracker_;
     
     mutable std::vector<SNV> snv_buffer_;
     mutable std::deque<Candidate> candidates_;

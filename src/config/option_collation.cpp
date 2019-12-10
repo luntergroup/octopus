@@ -1116,6 +1116,20 @@ get_assembler_bubble_score_setter(const OptionMap& options) noexcept
     }
 }
 
+double get_repeat_scanner_min_vaf(const OptionMap& options)
+{
+    using namespace octopus::coretools;
+    if (is_cancer_calling(options)) {
+        return options.at("min-credible-somatic-frequency").as<float>();
+    } else if (is_polyclone_calling(options)) {
+        return options.at("min-clone-frequency").as<float>();
+    } else if (is_single_cell_calling(options)) {
+        return 0.01;
+    } else {
+        return 0.05;
+    }
+}
+
 class MissingSourceVariantFile : public MissingFileError
 {
     std::string do_where() const override
@@ -1209,7 +1223,9 @@ auto make_variant_generator_builder(const OptionMap& options, const boost::optio
         result.set_cigar_scanner(std::move(scanner_options));
     }
     if (repeat_candidate_variant_generator_enabled(options)) {
-        result.set_repeat_scanner(RepeatScanner::Options {});
+        RepeatScanner::Options repeat_scanner_options {};
+        repeat_scanner_options.min_vaf = get_repeat_scanner_min_vaf(options);
+        result.set_repeat_scanner(repeat_scanner_options);
     }
     if (use_assembler) {
         LocalReassembler::Options reassembler_options {};
