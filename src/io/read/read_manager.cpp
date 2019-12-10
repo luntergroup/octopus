@@ -60,6 +60,7 @@ ReadManager::ReadManager(ReadManager&& other)
     using std::move;
     max_open_files_                 = move(other.max_open_files_);
     num_files_                      = move(other.num_files_);
+    all_readers_single_sample_      = move(other.all_readers_single_sample_);
     closed_readers_                 = move(other.closed_readers_);
     open_readers_                   = move(other.open_readers_);
     reader_paths_containing_sample_ = move(other.reader_paths_containing_sample_);
@@ -75,6 +76,7 @@ ReadManager& ReadManager::operator=(ReadManager&& other)
         using std::move;
         max_open_files_                 = move(other.max_open_files_);
         num_files_                      = move(other.num_files_);
+        all_readers_single_sample_      = move(other.all_readers_single_sample_);
         closed_readers_                 = move(other.closed_readers_);
         open_readers_                   = move(other.open_readers_);
         reader_paths_containing_sample_ = move(other.reader_paths_containing_sample_);
@@ -92,6 +94,7 @@ void swap(ReadManager& lhs, ReadManager& rhs) noexcept
     using std::swap;
     swap(lhs.max_open_files_,                 rhs.max_open_files_);
     swap(lhs.num_files_,                      rhs.num_files_);
+    swap(lhs.all_readers_single_sample_,             rhs.all_readers_single_sample_);
     swap(lhs.closed_readers_,                 rhs.closed_readers_);
     swap(lhs.open_readers_,                   rhs.open_readers_);
     swap(lhs.reader_paths_containing_sample_, rhs.reader_paths_containing_sample_);
