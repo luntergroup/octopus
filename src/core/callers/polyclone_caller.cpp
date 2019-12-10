@@ -232,7 +232,7 @@ void fit_sublone_model(const MappableBlock<Haplotype>& haplotypes,
         genotype_prior_model.unprime();
         genotype_prior_model.prime(haplotypes);
         const auto max_possible_genotypes = num_max_zygosity_genotypes_noexcept(haplotypes.size(), clonality);
-        if (prev_genotypes.raw.empty() || clonality <= 2 || max_genotypes || (max_possible_genotypes && *max_possible_genotypes <= *max_genotypes)) {
+        if (prev_genotypes.raw.empty() || clonality <= 2 || !max_genotypes || (max_possible_genotypes && *max_possible_genotypes <= *max_genotypes)) {
             curr_genotypes.indices.clear();
             curr_genotypes.raw = generate_all_max_zygosity_genotypes(haplotypes, clonality, curr_genotypes.indices);
         } else {
