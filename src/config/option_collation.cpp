@@ -1945,10 +1945,12 @@ boost::optional<std::size_t> get_max_genotypes(const OptionMap& options, const s
 {
     if (options.count("max-genotypes") == 1) {
         return as_unsigned("max-genotypes", options);
-    } else if (is_fast_mode(options)) {
-        return 1'000'000;
     } else if (caller == "cancer") {
         return 5'000;
+    } else if (caller == "polyclone") {
+        return 100'000;
+    } else if (is_fast_mode(options)) {
+        return 1'000'000;
     } else {
         return boost::none;
     }
