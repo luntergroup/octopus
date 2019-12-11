@@ -9,6 +9,7 @@
 #include <boost/optional.hpp>
 
 #include "core/models/haplotype_likelihood_array.hpp"
+#include "utils/parallel_transform.hpp"
 #include "variational_bayes_mixture_model.hpp"
 
 namespace octopus { namespace model {
@@ -21,6 +22,7 @@ public:
         double epsilon = 0.05;
         unsigned max_iterations = 1000;
         double save_memory = false;
+        bool parallel_execution = false;
     };
     
     using Probability = double;
@@ -128,7 +130,7 @@ private:
              const GroupOptionalLogPriorArray& group_log_priors,
              const GroupConcentrationVector& group_concentrations,
              const MixtureConcentrationArray& mixture_concentrations,
-             LogProbabilityVector& genotype_log_posteriors) const;
+             LogProbabilityVector genotype_log_posteriors) const;
     GroupResponsibilityVector
     init_responsibilities(const GroupOptionalLogPriorArray& group_log_priors,
                           const GroupConcentrationVector& group_concentrations,

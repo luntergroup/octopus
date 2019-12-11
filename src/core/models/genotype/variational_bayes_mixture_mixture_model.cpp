@@ -29,16 +29,17 @@ VariationalBayesMixtureMixtureModel::evaluate(const LogProbabilityVector& genoty
                                               const MixtureConcentrationArray& mixture_concentrations,
                                               std::vector<LogProbabilityVector> seeds) const
 {
-    Inferences result {};
-    result.approx_log_evidence = std::numeric_limits<double>::lowest();
     const static auto group_log_priors = to_logs(group_priors);
-    for (auto& seed : seeds) {
-        auto inferences = evaluate(genotype_log_priors, log_likelihoods, group_log_priors, group_concentrations, mixture_concentrations, seed);
-        if (inferences.approx_log_evidence > result.approx_log_evidence) {
-            result = std::move(inferences);
-        }
+    const auto evaluate_seed = [&] (auto&& seed) {
+        return this->evaluate(genotype_log_priors, log_likelihoods, group_log_priors, group_concentrations, mixture_concentrations, std::move(seed)); };
+    std::vector<Inferences> seed_results(seeds.size());
+    if (options_.parallel_execution) {
+        parallel_transform(std::make_move_iterator(std::begin(seeds)), std::make_move_iterator(std::end(seeds)), std::begin(seed_results), evaluate_seed);
+    } else {
+        std::transform(std::make_move_iterator(std::begin(seeds)), std::make_move_iterator(std::end(seeds)), std::begin(seed_results), evaluate_seed);
     }
-    return result;
+    const static auto evidence_less = [] (const auto& lhs, const auto& rhs) { return lhs.approx_log_evidence < rhs.approx_log_evidence; };
+    return *std::max_element(std::begin(seed_results), std::end(seed_results), evidence_less);
 }
 
 VariationalBayesMixtureMixtureModel::Inferences
@@ -226,7 +227,7 @@ VariationalBayesMixtureMixtureModel::evaluate(const LogProbabilityVector& genoty
                                               const GroupOptionalLogPriorArray& group_log_priors,
                                               const GroupConcentrationVector& prior_group_concentrations,
                                               const MixtureConcentrationArray& prior_mixture_concentrations,
-                                              LogProbabilityVector& genotype_log_posteriors) const
+                                              LogProbabilityVector genotype_log_posteriors) const
 {
     auto genotype_posteriors = exp(genotype_log_posteriors);
     auto posterior_group_concentrations = prior_group_concentrations;

@@ -22,6 +22,17 @@ namespace octopus { namespace model {
 
 const UniformPopulationPriorModel SingleCellModel::default_population_prior_model_{};
 
+namespace {
+
+auto get_vb_model_options(const SingleCellModel::AlgorithmParameters& config)
+{
+    VariationalBayesMixtureMixtureModel::Options result {};
+    result.parallel_execution = config.execution_policy == ExecutionPolicy::par;
+    return result;
+}
+
+} // namespace
+
 SingleCellModel::SingleCellModel(std::vector<SampleName> samples,
                                  SingleCellPriorModel prior_model,
                                  Parameters parameters,
@@ -29,6 +40,7 @@ SingleCellModel::SingleCellModel(std::vector<SampleName> samples,
                                  boost::optional<const PopulationPriorModel&> population_prior_model)
 : samples_{std::move(samples)}
 , prior_model_{std::move(prior_model)}
+, posterior_model_ {get_vb_model_options(config)}
 , parameters_{std::move(parameters)}
 , config_{std::move(config)}
 , population_prior_model_{std::addressof(population_prior_model ? *population_prior_model : default_population_prior_model_)}
@@ -62,7 +74,10 @@ SingleCellModel::evaluate(const std::vector<Genotype<Haplotype>>& genotypes,
         for (const auto& sample : samples_) {
             subclone_priors.alphas.emplace(sample, SubcloneModel::Priors::GenotypeMixturesDirichletAlphas(ploidy,parameters_.dropout_concentration));
         }
-        SubcloneModel helper_model{samples_, std::move(subclone_priors)};
+        SubcloneModel::AlgorithmParameters algo_params {};
+        algo_params.max_seeds = config_.max_seeds;
+        algo_params.execution_policy = config_.execution_policy;
+        SubcloneModel helper_model {samples_, std::move(subclone_priors)};
         SubcloneModel::InferredLatents subclone_inferences;
         if (!config_.max_genotype_combinations || genotypes.size() <= *config_.max_genotype_combinations) {
             subclone_inferences = helper_model.evaluate(genotypes, haplotype_likelihoods);

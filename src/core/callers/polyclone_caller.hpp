@@ -42,6 +42,7 @@ public:
         bool deduplicate_haplotypes_with_germline_model = false;
         unsigned max_clones = 3;
         boost::optional<std::size_t> max_genotypes = 10'000;
+        boost::optional<unsigned> max_vb_seeds = boost::none; // Use default if none
         std::function<double(unsigned)> clonality_prior = [] (unsigned clonality) { return maths::geometric_pdf(clonality, 0.5); };
     };
     

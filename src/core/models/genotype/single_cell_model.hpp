@@ -9,6 +9,7 @@
 
 #include <boost/optional.hpp>
 
+#include "config/common.hpp"
 #include "core/types/haplotype.hpp"
 #include "core/types/genotype.hpp"
 #include "core/types/phylogeny.hpp"
@@ -48,6 +49,7 @@ public:
     {
         boost::optional<std::size_t> max_genotype_combinations;
         unsigned max_seeds = 5;
+        ExecutionPolicy execution_policy = ExecutionPolicy::seq;
     };
     
     SingleCellModel() = delete;
