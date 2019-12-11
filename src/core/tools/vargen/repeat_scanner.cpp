@@ -376,7 +376,7 @@ std::vector<Variant> RepeatScanner::get_candidate_mnvs(const GenomicRegion& regi
             std::vector<unsigned> sample_observations(samples_.size());
             std::for_each(std::cbegin(viable_candidates), next_candidate_itr, [&] (const auto& v) { ++sample_observations[v.sample_index]; });
             std::vector<unsigned> sample_depths(samples_.size());
-            const auto get_depth = [&] (const SampleName& sample) { return read_coverage_tracker_.at(sample).mean(candidate.mapped_region()); };
+            const auto get_depth = [&] (const SampleName& sample) -> unsigned { return read_coverage_tracker_.count(sample) == 1 ? read_coverage_tracker_.at(sample).mean(candidate.mapped_region()) : 0; };
             std::transform(std::cbegin(samples_), std::cend(samples_), std::begin(sample_depths), get_depth);
             std::vector<double> sample_vafs(samples_.size());
             const auto get_vaf = [] (auto count, auto depth) { return static_cast<double>(count) / depth;};
