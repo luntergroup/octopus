@@ -1188,9 +1188,10 @@ Assembler::PathWeightStats Assembler::compute_weight_stats(const Path& path) con
             }
             weights[u] = weight;
         }
-        for (auto& w : result.distribution) w /= (path.size() - 1);
-        result.mean = static_cast<double>(result.total) / path.size();
-        result.median = maths::median<double>(weights);
+        for (auto& w : result.distribution) w /= weights.size();
+        result.mean = static_cast<double>(result.total) / weights.size();
+        result.median = maths::median(weights);
+        result.stdev = maths::stdev(weights);
     }
     return result;
 }
@@ -1740,10 +1741,7 @@ double Assembler::bubble_score(const Path& path) const
 {
     if (path.size() < 2) return 0;
     const auto weight_stats = compute_weight_stats(path);
-    const auto low_weight = std::max(1u, weight_stats.max / 10);
-    const auto high_weight_density = std::accumulate(std::next(std::cbegin(weight_stats.distribution), low_weight), std::cend(weight_stats.distribution), 0.0);
-    const auto num_low_weight_flanks = count_low_weight_flanks(path, low_weight);
-    auto result = std::min(weight_stats.mean, weight_stats.median) * high_weight_density / std::max(2 * num_low_weight_flanks, 1u);
+    auto result = weight_stats.stdev > weight_stats.mean ? std::min(weight_stats.mean, weight_stats.median) : std::max(weight_stats.mean, weight_stats.median);
     if (params_.strand_tail_mass) {
         const auto tail_mass = maths::beta_tail_probability(static_cast<double>(weight_stats.total_forward + 1),
                                                             static_cast<double>(weight_stats.total_reverse + 1),

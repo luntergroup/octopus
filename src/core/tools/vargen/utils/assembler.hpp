@@ -182,7 +182,7 @@ private:
     {
         PathWeightDistribution distribution;
         unsigned total, total_forward, total_reverse, min, max;
-        double mean, median;
+        double mean, median, stdev;
     };
     
     Parameters params_;
