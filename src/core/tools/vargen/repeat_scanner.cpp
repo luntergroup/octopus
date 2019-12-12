@@ -382,7 +382,7 @@ std::vector<Variant> RepeatScanner::get_candidate_mnvs(const GenomicRegion& regi
             const auto get_vaf = [] (auto count, auto depth) { return static_cast<double>(count) / depth;};
             std::transform(std::cbegin(sample_observations), std::cend(sample_observations), std::cbegin(sample_depths), std::begin(sample_vafs), get_vaf);
             const auto sufficient_sample_observations = [this] (auto obs) { return obs >= options_.min_sample_observations; };
-            const auto sufficient_sample_vaf = [this] (auto vaf) { return vaf >= options_.min_vaf; };
+            const auto sufficient_sample_vaf = [this] (auto vaf) { return !options_.min_vaf || vaf >= *options_.min_vaf; };
             if (std::any_of(std::cbegin(sample_observations), std::cend(sample_observations), sufficient_sample_observations)
                 && std::any_of(std::cbegin(sample_vafs), std::cend(sample_vafs), sufficient_sample_vaf)) {
                 result.push_back(candidate.variant);

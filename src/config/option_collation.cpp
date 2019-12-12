@@ -1116,17 +1116,17 @@ get_assembler_bubble_score_setter(const OptionMap& options) noexcept
     }
 }
 
-double get_repeat_scanner_min_vaf(const OptionMap& options)
+boost::optional<double> get_repeat_scanner_min_vaf(const OptionMap& options)
 {
     using namespace octopus::coretools;
     if (is_cancer_calling(options)) {
-        return options.at("min-credible-somatic-frequency").as<float>();
+        return options.at("min-credible-somatic-frequency").as<float>() / 2;
     } else if (is_polyclone_calling(options)) {
-        return options.at("min-clone-frequency").as<float>();
+        return options.at("min-clone-frequency").as<float>() / 2;
     } else if (is_single_cell_calling(options)) {
-        return 0.01;
+        return 0.005;
     } else {
-        return 0.05;
+        return boost::none;
     }
 }
 

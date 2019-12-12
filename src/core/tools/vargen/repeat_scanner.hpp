@@ -36,7 +36,7 @@ public:
         unsigned max_period = 6;
         unsigned min_observations = 2;
         unsigned min_sample_observations = 2;
-        double min_vaf = 0.01;
+        boost::optional<double> min_vaf = boost::none;
         AlignedRead::BaseQuality min_base_quality = 10;
     };
     
