@@ -79,6 +79,23 @@ int count_leading_zeros(const T x)
     return -std::ceil(std::log10(std::abs(x - std::numeric_limits<T>::epsilon())));
 }
 
+template <typename IntegerType,
+          typename = std::enable_if_t<std::is_integral<IntegerType>::value>>
+constexpr IntegerType ipow(const IntegerType base, const IntegerType exponent) noexcept
+{
+    if (exponent == 0) return 1;
+    if (exponent == 1) return base;
+    const auto y = ipow(base, exponent / 2);
+    return exponent % 2 == 0 ? y * y : base * y * y;
+}
+
+template <typename IntegerType,
+          typename = std::enable_if_t<std::is_integral<IntegerType>::value>>
+bool is_safe_ipow(const IntegerType base, const IntegerType exponent) noexcept
+{
+    return exponent * std::log(base) <= std::log(std::numeric_limits<IntegerType>::max());
+}
+
 template <typename RealType>
 constexpr RealType exp_maclaurin(const RealType x)
 {
