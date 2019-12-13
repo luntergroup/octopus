@@ -132,6 +132,8 @@ private:
     std::vector<Genotype<Haplotype>> genotypes_;
     std::vector<model::SingleCellModel::Inferences> phylogeny_inferences_;
     std::vector<double> phylogeny_posteriors_;
+    std::vector<double> phylogeny_size_posteriors_;
+    std::size_t map_phylogeny_idx_;
     
     friend CellCaller;
 };

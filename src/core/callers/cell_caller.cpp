@@ -93,6 +93,12 @@ CellCaller::Latents::Latents(const CellCaller& caller,
     std::transform(std::cbegin(phylogeny_inferences_), std::cend(phylogeny_inferences_), std::begin(phylogeny_posteriors_),
                    [] (const auto& inferences) { return inferences.log_evidence; });
     maths::normalise_exp(phylogeny_posteriors_);
+    auto map_phylogeny_posteriors_itr = std::max_element(std::cbegin(phylogeny_posteriors_), std::cend(phylogeny_posteriors_));
+    map_phylogeny_idx_ = std::distance(std::cbegin(phylogeny_posteriors_), map_phylogeny_posteriors_itr);
+    phylogeny_size_posteriors_.resize(phylogeny_inferences_.back().phylogeny.size() + 1);
+    for (std::size_t idx {0}; idx < phylogeny_inferences_.size(); ++idx) {
+        phylogeny_size_posteriors_[phylogeny_inferences_[idx].phylogeny.size()] += phylogeny_posteriors_[idx];
+    }
 }
 
 namespace {
@@ -695,6 +701,8 @@ auto call_genotypes(const std::vector<SampleName>& samples,
 
 // output
 
+using PhylogenyInferenceSummary = CellVariantCall::PhylogenyInferenceSummary;
+
 octopus::VariantCall::GenotypeCall convert(GenotypeCall&& call)
 {
     return octopus::VariantCall::GenotypeCall {std::move(call.genotype), call.posterior};
@@ -703,7 +711,8 @@ octopus::VariantCall::GenotypeCall convert(GenotypeCall&& call)
 std::unique_ptr<octopus::VariantCall>
 transform_call(const std::vector<SampleName>& samples,
                VariantCall&& variant_call,
-               std::vector<GenotypeCall>&& sample_genotype_calls)
+               std::vector<GenotypeCall>&& sample_genotype_calls,
+               PhylogenyInferenceSummary phylogeny_summary)
 {
     std::vector<std::pair<SampleName, Call::GenotypeCall>> tmp {};
     tmp.reserve(samples.size());
@@ -714,19 +723,20 @@ transform_call(const std::vector<SampleName>& samples,
                        return std::make_pair(sample, convert(std::move(genotype)));
                    });
     auto quality = *std::max_element(std::cbegin(variant_call.posteriors), std::cend(variant_call.posteriors));
-    return std::make_unique<CellVariantCall>(variant_call.variant.get(), std::move(tmp), quality);
+    return std::make_unique<CellVariantCall>(variant_call.variant.get(), std::move(tmp), quality, std::move(phylogeny_summary));
 }
 
 auto transform_calls(const std::vector<SampleName>& samples,
                      VariantCalls&& variant_calls,
-                     GenotypeCalls&& genotype_calls)
+                     GenotypeCalls&& genotype_calls,
+                     PhylogenyInferenceSummary phylogeny_summary)
 {
     std::vector<std::unique_ptr<octopus::VariantCall>> result {};
     result.reserve(variant_calls.size());
     std::transform(std::make_move_iterator(std::begin(variant_calls)), std::make_move_iterator(std::end(variant_calls)),
                    std::make_move_iterator(std::begin(genotype_calls)), std::back_inserter(result),
-                   [&samples] (auto&& variant_call, auto&& genotype_call) {
-                       return transform_call(samples, std::move(variant_call), std::move(genotype_call));
+                   [&] (auto&& variant_call, auto&& genotype_call) {
+                       return transform_call(samples, std::move(variant_call), std::move(genotype_call), phylogeny_summary);
                    });
     return result;
 }
@@ -742,7 +752,14 @@ CellCaller::call_variants(const std::vector<Variant>& candidates, const Latents&
     auto variant_calls = call_candidates(sample_candidate_posteriors, genotype_calls, parameters_.min_variant_posterior);
     const auto called_regions = extract_regions(variant_calls);
     auto allele_genotype_calls = call_genotypes(samples_, genotype_calls, genotype_posteriors, called_regions);
-    return transform_calls(samples_, std::move(variant_calls), std::move(allele_genotype_calls));
+    PhylogenyInferenceSummary summary {};
+    using SummaryPhylogeny = decltype(summary.map);
+    summary.map = latents.phylogeny_inferences_[latents.map_phylogeny_idx_].phylogeny.transform([] (const auto&) -> SummaryPhylogeny::ValueType { return {}; });
+    const static auto prob_true_to_phred = [] (double p) { return probability_false_to_phred(1 - p); };
+    summary.map_posterior = prob_true_to_phred(latents.phylogeny_posteriors_[latents.map_phylogeny_idx_]);
+    summary.size_posteriors.resize(latents.phylogeny_size_posteriors_.size());
+    std::transform(std::cbegin(latents.phylogeny_size_posteriors_), std::cend(latents.phylogeny_size_posteriors_), std::begin(summary.size_posteriors), prob_true_to_phred);
+    return transform_calls(samples_, std::move(variant_calls), std::move(allele_genotype_calls), std::move(summary));
 }
 
 std::vector<std::unique_ptr<ReferenceCall>>

@@ -37,6 +37,8 @@ VcfHeaderFactory::AnnotatorMap VcfHeaderFactory::annotators_ =
     }},
     {std::type_index(typeid(CellVariantCall)), [] (auto& hb) {
         hb.add_info("SOMATIC", "0", "Flag", "Indicates that the record is a somatic mutation, for cancer genomics");
+        hb.add_info("PPP", "1", "Float", "Posterior probability of the inferred phylogenetic tree");
+        hb.add_info("PSPP", ".", "Integer", "Posterior probabilities of phylogenetic tree sizes");
     }}
 };
 
