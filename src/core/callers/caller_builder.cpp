@@ -483,7 +483,8 @@ CallerBuilder::CallerFactoryMap CallerBuilder::generate_factory() const
                                                          params_.min_refcall_posterior,
                                                          params_.deduplicate_haplotypes_with_caller_model,
                                                          params_.max_clones,
-                                                         params_.max_genotypes
+                                                         params_.max_genotypes,
+                                                         params_.max_vb_seeds
                                                      });
         }},
         {"cell", [this, &samples] () {

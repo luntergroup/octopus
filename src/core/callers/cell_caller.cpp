@@ -343,6 +343,7 @@ CellCaller::infer_latents(const HaplotypeBlock& haplotypes, const HaplotypeLikel
     model::SingleCellModel::AlgorithmParameters config {};
     if (parameters_.max_joint_genotypes) config.max_genotype_combinations = *parameters_.max_joint_genotypes;
     if (parameters_.max_vb_seeds) config.max_seeds = *parameters_.max_vb_seeds;
+    config.execution_policy = this->exucution_policy();
     const CoalescentPopulationPriorModel population_prior_model {{Haplotype {mapped_region(haplotypes), reference_}, {}}};
     
     using SingleCellModelInferences = model::SingleCellModel::Inferences;

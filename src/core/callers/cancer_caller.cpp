@@ -666,6 +666,7 @@ void CancerCaller::evaluate_cnv_model(Latents& latents, const HaplotypeLikelihoo
     CNVModel::AlgorithmParameters params {};
     if (parameters_.max_vb_seeds) params.max_seeds = *parameters_.max_vb_seeds;
     params.target_max_memory = this->target_max_memory();
+    params.execution_policy = this->exucution_policy();
     CNVModel cnv_model {samples_, cnv_model_priors, params};
     if (latents.germline_genotype_indices_) {
         cnv_model.prime(latents.haplotypes_);
@@ -684,6 +685,7 @@ void CancerCaller::evaluate_somatic_model(Latents& latents, const HaplotypeLikel
     SomaticModel::AlgorithmParameters params {};
     if (parameters_.max_vb_seeds) params.max_seeds = *parameters_.max_vb_seeds;
     params.target_max_memory = this->target_max_memory();
+    params.execution_policy = this->exucution_policy();
     SomaticModel model {samples_, somatic_model_priors, params};
     if (latents.cancer_genotype_indices_) {
         assert(latents.cancer_genotype_prior_model_->germline_model().is_primed());

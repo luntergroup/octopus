@@ -221,6 +221,7 @@ void fit_sublone_model(const MappableBlock<Haplotype>& haplotypes,
                        const boost::optional<std::size_t> max_genotypes,
                        IndexedGenotypeVectorPair& prev_genotypes,
                        model::SubcloneModel::InferredLatents& sublonal_inferences,
+                       const model::SubcloneModel::AlgorithmParameters& model_params,
                        boost::optional<logging::DebugLogger>& debug_log)
 {
     IndexedGenotypeVectorPair curr_genotypes {};
@@ -250,7 +251,7 @@ void fit_sublone_model(const MappableBlock<Haplotype>& haplotypes,
         if (debug_log) stream(*debug_log) << "Generated " << curr_genotypes.raw.size() << " genotypes with clonality " << clonality;
         if (curr_genotypes.raw.empty()) break;
         model::SubcloneModel::Priors priors {genotype_prior_model, make_sublone_model_mixture_prior_map(sample, clonality)};
-        model::SubcloneModel model {{sample}, priors};
+        model::SubcloneModel model {{sample}, priors, model_params};
         model.prime(haplotypes);
         auto inferences = model.evaluate(curr_genotypes.raw, curr_genotypes.indices, haplotype_likelihoods);
         if (debug_log) stream(*debug_log) << "Evidence for model with clonality " << clonality << " is " << inferences.approx_log_evidence;
@@ -282,9 +283,13 @@ PolycloneCaller::infer_latents(const HaplotypeBlock& haplotypes, const Haplotype
     if (debug_log_) stream(*debug_log_) << "Evidence for haploid model is " << haploid_inferences.log_evidence;
     IndexedGenotypeVectorPair polyploid_genotypes {};
     model::SubcloneModel::InferredLatents sublonal_inferences;
+    model::SubcloneModel::AlgorithmParameters model_params {};
+    if (parameters_.max_vb_seeds) model_params.max_seeds = *parameters_.max_vb_seeds;
+    model_params.target_max_memory = this->target_max_memory();
+    model_params.execution_policy = this->exucution_policy();
     fit_sublone_model(haplotypes, haplotype_likelihoods, *genotype_prior_model, sample(), parameters_.max_clones,
                       haploid_inferences.log_evidence, parameters_.clonality_prior, parameters_.max_genotypes, polyploid_genotypes,
-                      sublonal_inferences, debug_log_);
+                      sublonal_inferences, model_params, debug_log_);
     if (debug_log_) stream(*debug_log_) << "There are " << polyploid_genotypes.raw.size() << " candidate polyploid genotypes";
     using std::move;
     return std::make_unique<Latents>(move(haploid_genotypes), move(polyploid_genotypes.raw),
