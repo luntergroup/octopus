@@ -82,8 +82,8 @@ SingleCellPriorModel::log_probability(const Genotype<Haplotype>& ancestor, const
         const auto p = std::minmax({ancestor.ploidy(), descendant.ploidy()});
         const auto copy_change = p.second - p.first;
         result += parameters_.copy_number_log_probability * copy_change;
-        if (ancestor.ploidy() > descendant.ploidy()) {
-            // Copy loss
+        if (ancestor.ploidy() < descendant.ploidy()) {
+            // Copy gain
             for (unsigned i {0}; i < ancestor.ploidy(); ++i) {
                 ancestor_haplotype_indices.insert(std::cend(ancestor_haplotype_indices), copy_change, i);
             }
