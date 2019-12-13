@@ -34,7 +34,14 @@ public:
     
     Phylogeny(const Phylogeny&);
     Phylogeny& operator=(Phylogeny);
-    Phylogeny(Phylogeny&&) = default;
+    Phylogeny(Phylogeny&&);
+    
+    friend void swap(Phylogeny& lhs, Phylogeny& rhs) noexcept
+    {
+        using std::swap;
+        swap(lhs.tree_, rhs.tree_);
+        swap(lhs.nodes_, rhs.nodes_);
+    }
     
     ~Phylogeny() = default;
     
@@ -82,7 +89,7 @@ Phylogeny<Label, T>::Phylogeny(Group founder)
 }
 
 template <typename Label, typename T>
-Phylogeny<Label, T>::Phylogeny(const Phylogeny& other)
+Phylogeny<Label, T>::Phylogeny(const Phylogeny<Label, T>& other)
 {
     if (other.tree_) {
         std::stack<TreeNode*> to_visit {};
@@ -104,9 +111,15 @@ Phylogeny<Label, T>::Phylogeny(const Phylogeny& other)
 }
 
 template <typename Label, typename T>
-Phylogeny<Label, T>& Phylogeny<Label, T>::operator=(Phylogeny other)
+Phylogeny<Label, T>::Phylogeny(Phylogeny<Label, T>&& other) : Phylogeny {}
 {
-    std::swap(*this, other);
+    swap(*this, other);
+}
+
+template <typename Label, typename T>
+Phylogeny<Label, T>& Phylogeny<Label, T>::operator=(Phylogeny<Label, T> other)
+{
+    swap(*this, other);
     return *this;
 }
 
