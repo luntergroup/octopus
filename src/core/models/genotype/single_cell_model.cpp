@@ -16,6 +16,7 @@
 #include "subclone_model.hpp"
 #include "population_model.hpp"
 #include "coalescent_population_prior_model.hpp"
+#include "genotype_prior_model.hpp"
 #include "individual_model.hpp"
 
 namespace octopus { namespace model {
@@ -46,7 +47,19 @@ SingleCellModel::SingleCellModel(std::vector<SampleName> samples,
 , population_prior_model_{std::addressof(population_prior_model ? *population_prior_model : default_population_prior_model_)}
 {}
 
+const SingleCellPriorModel& SingleCellModel::prior_model() const
+{
+    return prior_model_;
+}
+
 namespace {
+
+template <typename Range>
+bool all_same_ploidy(const Range& genotypes)
+{
+    const static auto ploidy_not_equal = [] (const auto& lhs, const auto& rhs) { return lhs.ploidy() != rhs.ploidy(); };
+    return std::adjacent_find(std::cbegin(genotypes), std::cend(genotypes), ploidy_not_equal) == std::cend(genotypes);
+}
 
 template <typename T>
 std::vector<T>
@@ -64,64 +77,16 @@ copy(const std::vector<T>& values, const std::vector<std::size_t>& indices)
 } // namespace
 
 SingleCellModel::Inferences
-SingleCellModel::evaluate(const std::vector<Genotype<Haplotype>>& genotypes,
+SingleCellModel::evaluate(const GenotypeVector& genotypes,
                           const HaplotypeLikelihoodArray& haplotype_likelihoods) const
 {
+    assert(all_same_ploidy(genotypes));
     Inferences result {};
     if (prior_model_.phylogeny().size() == 1) {
-        SubcloneModel::Priors subclone_priors {prior_model_.germline_prior_model(), {}};
-        const auto ploidy = genotypes.front().ploidy();
-        for (const auto& sample : samples_) {
-            subclone_priors.alphas.emplace(sample, SubcloneModel::Priors::GenotypeMixturesDirichletAlphas(ploidy,parameters_.dropout_concentration));
-        }
-        SubcloneModel::AlgorithmParameters algo_params {};
-        algo_params.max_seeds = config_.max_seeds;
-        algo_params.execution_policy = config_.execution_policy;
-        SubcloneModel helper_model {samples_, std::move(subclone_priors)};
-        SubcloneModel::InferredLatents subclone_inferences;
-        if (!config_.max_genotype_combinations || genotypes.size() <= *config_.max_genotype_combinations) {
-            subclone_inferences = helper_model.evaluate(genotypes, haplotype_likelihoods);
-        } else {
-            const auto genotype_subset_indices = propose_genotypes(genotypes, haplotype_likelihoods);
-            const auto genotype_subset = copy(genotypes, genotype_subset_indices);
-            subclone_inferences = helper_model.evaluate(genotype_subset, haplotype_likelihoods);
-            SubcloneModel::Latents::ProbabilityVector weighted_genotype_posteriors(genotypes.size());
-            for (std::size_t g {0}; g < genotype_subset.size(); ++g) {
-                weighted_genotype_posteriors[genotype_subset_indices[g]] = subclone_inferences.weighted_genotype_posteriors[g];
-            }
-            subclone_inferences.weighted_genotype_posteriors = std::move(weighted_genotype_posteriors);
-        }
-        Inferences::GroupInferences founder {};
-        founder.genotype_posteriors = std::move(subclone_inferences.weighted_genotype_posteriors);
-        founder.sample_attachment_posteriors.assign(samples_.size(), 1.0);
-        result.phylogeny.set_founder({0, std::move(founder)});
-        result.log_evidence = subclone_inferences.approx_log_evidence;
+        evaluate(result, genotypes, haplotype_likelihoods);
     } else {
         const auto genotype_combinations = propose_genotype_combinations(genotypes, haplotype_likelihoods);
-        const auto genotype_combination_priors = calculate_genotype_priors(genotype_combinations, genotypes);
-        const auto vb_haplotype_likelihoods = make_likelihood_matrix(genotype_combinations, genotypes, haplotype_likelihoods);
-        auto seeds = propose_seeds(genotype_combinations, genotypes, genotype_combination_priors, haplotype_likelihoods);
-        auto vb_inferences = evaluate_model(genotype_combination_priors, vb_haplotype_likelihoods, std::move(seeds));
-        for (std::size_t group_idx {0}; group_idx < prior_model_.phylogeny().size(); ++group_idx) {
-            Inferences::GroupInferences group {};
-            group.sample_attachment_posteriors.resize(samples_.size());
-            for (std::size_t sample_idx {0}; sample_idx < samples_.size(); ++sample_idx) {
-                group.sample_attachment_posteriors[sample_idx] = vb_inferences.group_responsibilities[sample_idx][group_idx];
-            }
-            // Marginalise over genotypes
-            group.genotype_posteriors.resize(genotypes.size());
-            for (std::size_t genotype_combo_idx {0};
-                 genotype_combo_idx < genotype_combinations.size(); ++genotype_combo_idx) {
-                group.genotype_posteriors[genotype_combinations[genotype_combo_idx][group_idx]] += vb_inferences.genotype_posteriors[genotype_combo_idx];
-            }
-            if (group_idx == 0) {
-                result.phylogeny.set_founder({group_idx, std::move(group)});
-            } else {
-                const auto ancestor_idx = prior_model_.phylogeny().ancestor(group_idx).id;
-                result.phylogeny.add_descendant({group_idx, std::move(group)}, ancestor_idx);
-            }
-        }
-        result.log_evidence = vb_inferences.approx_log_evidence;
+        evaluate(result, genotypes, genotype_combinations, haplotype_likelihoods);
     }
     return result;
 }
@@ -131,6 +96,22 @@ SingleCellModel::evaluate(const std::vector<GenotypeIndex>& genotypes,
                           const HaplotypeLikelihoodArray& haplotype_likelihoods) const
 {
     return {};
+}
+
+SingleCellModel::Inferences
+SingleCellModel::evaluate(const PhylogenyNodePloidyMap& phylogeny_ploidies,
+                          const GenotypeVector& genotypes,
+                          const HaplotypeLikelihoodArray& haplotype_likelihoods) const
+{
+    assert(phylogeny_ploidies.size() == prior_model_.phylogeny().size());
+    if (prior_model_.phylogeny().size() == 1) {
+        return evaluate(genotypes, haplotype_likelihoods);
+    } else {
+        Inferences result {};
+        const auto genotype_combinations = propose_genotype_combinations(phylogeny_ploidies, genotypes, haplotype_likelihoods);
+        evaluate(result, genotypes, genotype_combinations, haplotype_likelihoods);
+        return result;
+    }
 }
 
 // private methods
@@ -161,7 +142,7 @@ select_top_k_indices(const std::vector<T>& values, const std::size_t k, const Bi
 } // namespace
 
 std::vector<std::size_t>
-SingleCellModel::propose_genotypes(const std::vector<Genotype<Haplotype>>& genotypes,
+SingleCellModel::propose_genotypes(const GenotypeVector& genotypes,
                                    const HaplotypeLikelihoodArray& haplotype_likelihoods) const
 {
     assert(config_.max_genotype_combinations);
@@ -172,18 +153,6 @@ SingleCellModel::propose_genotypes(const std::vector<Genotype<Haplotype>>& genot
 }
 
 namespace {
-
-auto get_unique_ploidies(const std::vector<Genotype<Haplotype>>& genotypes)
-{
-    std::vector<unsigned> result {};
-    for (const auto& genotype : genotypes) {
-        if (std::find(std::cbegin(result), std::cend(result), genotype.ploidy()) == std::cend(result)) {
-            result.push_back(genotype.ploidy());
-        }
-    }
-    std::sort(std::begin(result), std::end(result));
-    return result;
-}
 
 auto log(std::size_t base, std::size_t x)
 {
@@ -266,7 +235,8 @@ unique_stable(const ForwardIterator first, const ForwardIterator last)
                    std::begin(indexed_values),
                    [&] (auto&& value) { return std::make_pair(std::move(value), idx++); });
     std::sort(std::begin(indexed_values), std::end(indexed_values));
-    indexed_values.erase(std::unique(std::begin(indexed_values), std::end(indexed_values)), std::end(indexed_values));
+    const static auto first_equal = [] (const auto& lhs, const auto& rhs) { return lhs.first == rhs.first; };
+    indexed_values.erase(std::unique(std::begin(indexed_values), std::end(indexed_values), first_equal), std::end(indexed_values));
     const static auto index_less = [] (const auto& lhs, const auto& rhs) { return lhs.second < rhs.second; };
     std::sort(std::begin(indexed_values), std::end(indexed_values), index_less);
     return std::transform(std::make_move_iterator(std::begin(indexed_values)),
@@ -317,7 +287,7 @@ void combine(const IndividualModel::Latents::ProbabilityVector& src, IndividualM
 } // namespace
 
 SingleCellModel::GenotypeCombinationVector
-SingleCellModel::propose_genotype_combinations(const std::vector<Genotype<Haplotype>>& genotypes,
+SingleCellModel::propose_genotype_combinations(const GenotypeVector& genotypes,
                                                const HaplotypeLikelihoodArray& haplotype_likelihoods) const
 {
     const auto num_groups = prior_model_.phylogeny().size();
@@ -329,22 +299,12 @@ SingleCellModel::propose_genotype_combinations(const std::vector<Genotype<Haplot
     // 3. Run individual model on merged reads
     // 4. Select top combinations using cluster marginal posteriors
     
-    const auto ploidies = get_unique_ploidies(genotypes);
-    
     PopulationModel::Options population_model_options {};
     population_model_options.max_joint_genotypes = max_genotype_combinations;
     PopulationModel population_model {*population_prior_model_, population_model_options};
     std::vector<PopulationModel::Latents::ProbabilityVector> population_genotype_posteriors;
-    
-    if (ploidies.size() == 1) {
-        auto population_inferences = population_model.evaluate(samples_, genotypes, haplotype_likelihoods);
-        population_genotype_posteriors = std::move(population_inferences.posteriors.marginal_genotype_probabilities);
-    } else {
-        // TODO: need a way to propose sample ploidies and compute posteriors
-        std::vector<unsigned> sample_ploidies(samples_.size(), ploidies.back());
-        auto population_inferences = population_model.evaluate(samples_, sample_ploidies, genotypes, haplotype_likelihoods);
-        population_genotype_posteriors = std::move(population_inferences.posteriors.marginal_genotype_probabilities);
-    }
+    auto population_inferences = population_model.evaluate(samples_, genotypes, haplotype_likelihoods);
+    population_genotype_posteriors = std::move(population_inferences.posteriors.marginal_genotype_probabilities);
     
     auto clusters = cluster_samples(population_genotype_posteriors, std::min(2 * num_groups, samples_.size() - 1));
     
@@ -410,7 +370,7 @@ SingleCellModel::propose_genotype_combinations(const std::vector<Genotype<Haplot
 }
 
 SingleCellModel::GenotypeCombinationVector
-SingleCellModel::propose_all_genotype_combinations(const std::vector<Genotype<Haplotype>>& genotypes) const
+SingleCellModel::propose_all_genotype_combinations(const GenotypeVector& genotypes) const
 {
     const auto num_groups = prior_model_.phylogeny().size();
     GenotypeCombinationVector result {};
@@ -446,9 +406,227 @@ SingleCellModel::propose_all_genotype_combinations(const std::vector<Genotype<Ha
     return result;
 }
 
+namespace {
+
+auto max_ploidy(const SingleCellModel::GenotypeVector& genotypes)
+{
+    const static auto ploidy_less = [] (const auto& lhs, const auto& rhs) { return lhs.ploidy() < rhs.ploidy(); };
+    return std::max_element(std::cbegin(genotypes), std::cend(genotypes), ploidy_less)->ploidy();
+}
+
+auto segment_by_ploidy(const SingleCellModel::GenotypeVector& genotypes)
+{
+    std::vector<SingleCellModel::GenotypeVector> result(max_ploidy(genotypes) + 1);
+    for (auto& g : result) g.reserve(genotypes.size());
+    for (const auto& genotype : genotypes) result[genotype.ploidy()].push_back(genotype);
+    return result;
+}
+
+bool valid_ploidies(const std::vector<std::size_t>& combination,
+                    const SingleCellModel::GenotypeVector& genotypes,
+                    const std::vector<unsigned>& required_ploidies) noexcept
+{
+    assert(combination.size() == required_ploidies.size());
+    std::size_t idx {0};
+    const auto ploidy_equal = [&] (auto g) noexcept { return genotypes[g].ploidy() == required_ploidies[idx++]; };
+    return std::all_of(std::cbegin(combination), std::cend(combination), ploidy_equal);
+}
+
+} // namespace
+
+class ZygosityGenotypePriorModel : public GenotypePriorModel
+{
+public:
+    using GenotypePriorModel::LogProbability;
+    
+    virtual ~ZygosityGenotypePriorModel() = default;
+
+private:
+    virtual LogProbability do_evaluate(const Genotype<Haplotype>& genotype) const override
+    {
+        return (genotype.ploidy() - genotype.zygosity()) * std::log(0.5);
+    }
+    virtual LogProbability do_evaluate(const GenotypeIndex& genotype) const override { return 1.0; } // TODO
+    bool check_is_primed() const noexcept override { return true; }
+};
+
+SingleCellModel::GenotypeCombinationVector
+SingleCellModel::propose_genotype_combinations(const PhylogenyNodePloidyMap& phylogeny_ploidies,
+                                               const GenotypeVector& genotypes,
+                                               const HaplotypeLikelihoodArray& haplotype_likelihoods) const
+{
+    // First assign each sample to a ploidy
+    const auto genotypes_by_ploidy = segment_by_ploidy(genotypes);
+    std::vector<unsigned> sample_ploidies {};
+    sample_ploidies.reserve(samples_.size());
+    const ZygosityGenotypePriorModel zygosity_prior {};
+    const IndividualModel zygosity_individual_model {zygosity_prior};
+    for (const auto& sample : samples_) {
+        haplotype_likelihoods.prime(sample);
+        unsigned best_ploidy {1};
+        double max_log_evidence {};
+        for (unsigned ploidy {1}; ploidy < genotypes_by_ploidy.size(); ++ploidy) {
+            const auto inferences = zygosity_individual_model.evaluate(genotypes_by_ploidy[ploidy], haplotype_likelihoods);
+            if (ploidy == 1 || max_log_evidence < inferences.log_evidence) {
+                best_ploidy = ploidy;
+                max_log_evidence = inferences.log_evidence;
+            }
+        }
+        sample_ploidies.push_back(best_ploidy);
+    }
+    
+    PopulationModel::Options population_model_options {};
+    population_model_options.max_joint_genotypes = config_.max_genotype_combinations;
+    PopulationModel population_model {*population_prior_model_, population_model_options};
+    std::vector<PopulationModel::Latents::ProbabilityVector> population_genotype_posteriors;
+    auto population_inferences = population_model.evaluate(samples_, sample_ploidies, genotypes, haplotype_likelihoods);
+    population_genotype_posteriors = std::move(population_inferences.posteriors.marginal_genotype_probabilities);
+    
+    const auto num_groups = prior_model_.phylogeny().size();
+    auto clusters = cluster_samples(population_genotype_posteriors, std::min(2 * num_groups, samples_.size() - 1));
+    
+    IndividualModel individual_model {prior_model_.germline_prior_model()};
+    std::vector<ProbabilityVector> cluster_marginal_genotype_posteriors {};
+    cluster_marginal_genotype_posteriors.reserve(clusters.size());
+    const auto haplotypes = extract_unique_elements(genotypes);
+    for (const auto& cluster : clusters) {
+        const auto cluster_samples = select(cluster, samples_);
+        const auto pooled_likelihoods = pool_likelihood(cluster_samples, haplotypes, haplotype_likelihoods);
+        auto cluster_inferences = individual_model.evaluate(genotypes, pooled_likelihoods);
+        cluster_marginal_genotype_posteriors.push_back(std::move(cluster_inferences.posteriors.genotype_probabilities));
+    }
+    
+    auto cluster_marginals = zip(std::move(clusters), std::move(cluster_marginal_genotype_posteriors));
+    for (auto k = cluster_marginals.size(); k > num_groups; --k) {
+        assert(cluster_marginals.size() > 1);
+        const static auto cluster_size_greater = [] (const auto& lhs, const auto& rhs) { return lhs.first.size() > rhs.first.size(); };
+        std::sort(std::begin(cluster_marginals), std::end(cluster_marginals), cluster_size_greater);
+        const auto n = cluster_marginals.size() - 1;
+        combine(cluster_marginals[n].second, cluster_marginals[n - 1].second,
+                cluster_marginals[n].first.size(), cluster_marginals[n - 1].first.size());
+        utils::append(std::move(cluster_marginals[n].first), cluster_marginals[n - 1].first);
+        cluster_marginals.pop_back();
+    }
+    std::tie(clusters, cluster_marginal_genotype_posteriors) = unzip(std::move(cluster_marginals));
+    
+    
+    std::vector<unsigned> required_ploidies(num_groups);
+    for (std::size_t id {0}; id < num_groups; ++id) required_ploidies[id] = phylogeny_ploidies.at(id);
+    GenotypeCombinationVector result {};
+    auto k = config_.max_genotype_combinations ? *config_.max_genotype_combinations : std::numeric_limits<std::size_t>::max();
+    while (result.empty()) {
+        result = select_top_k_tuples(cluster_marginal_genotype_posteriors, k);
+        // Remove combinations with duplicate genotypes as these are redundant according to model.
+        std::vector<int> counts(genotypes.size());
+        result.erase(std::remove_if(std::begin(result), std::end(result), [&counts] (const auto& indices) {
+            std::fill(std::begin(counts), std::end(counts), 0);
+            for (auto idx : indices) ++counts[idx];
+            return std::any_of(std::cbegin(counts), std::cend(counts), [] (auto count) { return count > 1; });
+        }), std::end(result));
+        // Reorder the combinations, keeping only the most probable one under the prior
+        std::vector<SingleCellPriorModel::GenotypeReference> combination_refs {};
+        combination_refs.reserve(num_groups);
+        GenotypeCombinationVector buffer {};
+        buffer.reserve(result.size());
+        for (GenotypeCombination& combination : result) {
+            GenotypeCombination best_combination;
+            auto max_prior = std::numeric_limits<double>::lowest();
+            bool has_valid_combination {false};
+            do {
+                if (valid_ploidies(combination, genotypes, required_ploidies)) {
+                    for (auto idx : combination) combination_refs.emplace_back(genotypes[idx]);
+                    const auto prior = prior_model_.evaluate(combination_refs);
+                    combination_refs.clear();
+                    if (prior > max_prior) {
+                        best_combination = combination;
+                        max_prior = prior;
+                    }
+                    has_valid_combination = true;
+                }
+            } while (std::next_permutation(std::begin(combination), std::end(combination)));
+            if (has_valid_combination) {
+                buffer.push_back(std::move(best_combination));
+            }
+        }
+        result = std::move(buffer);
+        unique_stable_erase(result);
+        k *= 2;
+    }
+    if (config_.max_genotype_combinations && result.size() > *config_.max_genotype_combinations) {
+        result.resize(*config_.max_genotype_combinations);
+    }
+    return result;
+}
+
+void
+SingleCellModel::evaluate(Inferences& result,
+                          const GenotypeVector& genotypes,
+                          const HaplotypeLikelihoodArray& haplotype_likelihoods) const
+{
+    SubcloneModel::Priors subclone_priors {prior_model_.germline_prior_model(), {}};
+    const auto ploidy = genotypes.front().ploidy();
+    for (const auto& sample : samples_) {
+        subclone_priors.alphas.emplace(sample, SubcloneModel::Priors::GenotypeMixturesDirichletAlphas(ploidy,parameters_.dropout_concentration));
+    }
+    SubcloneModel::AlgorithmParameters algo_params {};
+    algo_params.max_seeds = config_.max_seeds;
+    algo_params.execution_policy = config_.execution_policy;
+    SubcloneModel helper_model {samples_, std::move(subclone_priors)};
+    SubcloneModel::InferredLatents subclone_inferences;
+    if (!config_.max_genotype_combinations || genotypes.size() <= *config_.max_genotype_combinations) {
+        subclone_inferences = helper_model.evaluate(genotypes, haplotype_likelihoods);
+    } else {
+        const auto genotype_subset_indices = propose_genotypes(genotypes, haplotype_likelihoods);
+        const auto genotype_subset = copy(genotypes, genotype_subset_indices);
+        subclone_inferences = helper_model.evaluate(genotype_subset, haplotype_likelihoods);
+        SubcloneModel::Latents::ProbabilityVector weighted_genotype_posteriors(genotypes.size());
+        for (std::size_t g {0}; g < genotype_subset.size(); ++g) {
+            weighted_genotype_posteriors[genotype_subset_indices[g]] = subclone_inferences.weighted_genotype_posteriors[g];
+        }
+        subclone_inferences.weighted_genotype_posteriors = std::move(weighted_genotype_posteriors);
+    }
+    Inferences::GroupInferences founder {};
+    founder.genotype_posteriors = std::move(subclone_inferences.weighted_genotype_posteriors);
+    founder.sample_attachment_posteriors.assign(samples_.size(), 1.0);
+    result.phylogeny.set_founder({0, std::move(founder)});
+    result.log_evidence = subclone_inferences.approx_log_evidence;
+}
+
+void
+SingleCellModel::evaluate(Inferences& result,
+                          const GenotypeVector& genotypes,
+                          const GenotypeCombinationVector& genotype_combinations,
+                          const HaplotypeLikelihoodArray& haplotype_likelihoods) const
+{
+    const auto genotype_combination_priors = calculate_genotype_priors(genotype_combinations, genotypes);
+    const auto vb_haplotype_likelihoods = make_likelihood_matrix(genotype_combinations, genotypes, haplotype_likelihoods);
+    auto seeds = propose_seeds(genotype_combinations, genotypes, genotype_combination_priors, haplotype_likelihoods);
+    auto vb_inferences = evaluate_model(genotype_combination_priors, vb_haplotype_likelihoods, std::move(seeds));
+    for (std::size_t group_idx {0}; group_idx < prior_model_.phylogeny().size(); ++group_idx) {
+        Inferences::GroupInferences group {};
+        group.sample_attachment_posteriors.resize(samples_.size());
+        for (std::size_t sample_idx {0}; sample_idx < samples_.size(); ++sample_idx) {
+            group.sample_attachment_posteriors[sample_idx] = vb_inferences.group_responsibilities[sample_idx][group_idx];
+        }
+        // Marginalise over genotypes
+        group.genotype_posteriors.resize(genotypes.size());
+        for (std::size_t genotype_combo_idx {0};
+             genotype_combo_idx < genotype_combinations.size(); ++genotype_combo_idx) {
+            group.genotype_posteriors[genotype_combinations[genotype_combo_idx][group_idx]] += vb_inferences.genotype_posteriors[genotype_combo_idx];
+        }
+        if (group_idx == 0) {
+            result.phylogeny.set_founder({group_idx, std::move(group)});
+        } else {
+            const auto ancestor_idx = prior_model_.phylogeny().ancestor(group_idx).id;
+            result.phylogeny.add_descendant({group_idx, std::move(group)}, ancestor_idx);
+        }
+    }
+    result.log_evidence = vb_inferences.approx_log_evidence;
+}
+
 VariationalBayesMixtureMixtureModel::LogProbabilityVector
 SingleCellModel::calculate_genotype_priors(const GenotypeCombinationVector& genotype_combinations,
-                                           const std::vector<Genotype<Haplotype>>& genotypes) const
+                                           const GenotypeVector& genotypes) const
 {
     LogProbabilityVector result(genotype_combinations.size());
     std::transform(std::cbegin(genotype_combinations), std::cend(genotype_combinations), std::begin(result),
@@ -465,7 +643,7 @@ SingleCellModel::calculate_genotype_priors(const GenotypeCombinationVector& geno
 
 SingleCellModel::VBLikelihoodMatrix
 SingleCellModel::make_likelihood_matrix(const GenotypeCombinationVector& genotype_combinations,
-                                        const std::vector<Genotype<Haplotype>>& genotypes,
+                                        const GenotypeVector& genotypes,
                                         const HaplotypeLikelihoodArray& haplotype_likelihoods) const
 {
     VBLikelihoodMatrix result {};
@@ -526,7 +704,7 @@ auto make_range_seed(const std::size_t num_genotypes, const std::size_t begin, c
 
 SingleCellModel::VBSeedVector
 SingleCellModel::propose_seeds(const GenotypeCombinationVector& genotype_combinations,
-                               const std::vector<Genotype<Haplotype>>& genotypes,
+                               const GenotypeVector& genotypes,
                                const VariationalBayesMixtureMixtureModel::LogProbabilityVector& genotype_combination_priors,
                                const HaplotypeLikelihoodArray& haplotype_likelihoods) const
 {

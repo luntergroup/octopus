@@ -5,6 +5,7 @@
 #define single_cell_model_hpp
 
 #include <vector>
+#include <unordered_map>
 #include <cstddef>
 
 #include <boost/optional.hpp>
@@ -52,6 +53,9 @@ public:
         ExecutionPolicy execution_policy = ExecutionPolicy::seq;
     };
     
+    using GenotypeVector = std::vector<Genotype<Haplotype>>;
+    using PhylogenyNodePloidyMap = std::unordered_map<SingleCellPriorModel::CellPhylogeny::LabelType, unsigned>;
+    
     SingleCellModel() = delete;
     
     SingleCellModel(std::vector<SampleName> samples,
@@ -67,11 +71,18 @@ public:
     
     ~SingleCellModel() = default;
     
+    const SingleCellPriorModel& prior_model() const;
+    
     Inferences
-    evaluate(const std::vector<Genotype<Haplotype>>& genotypes,
+    evaluate(const GenotypeVector& genotypes,
              const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
     Inferences
     evaluate(const std::vector<GenotypeIndex>& genotypes,
+             const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
+    
+    Inferences
+    evaluate(const PhylogenyNodePloidyMap& phylogeny_ploidies,
+             const GenotypeVector& genotypes,
              const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
 
 private:
@@ -90,23 +101,36 @@ private:
     using VBSeedVector = std::vector<VariationalBayesMixtureMixtureModel::LogProbabilityVector>;
     
     std::vector<std::size_t>
-    propose_genotypes(const std::vector<Genotype<Haplotype>>& genotypes,
+    propose_genotypes(const GenotypeVector& genotypes,
                       const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
     GenotypeCombinationVector
-    propose_genotype_combinations(const std::vector<Genotype<Haplotype>>& genotypes,
+    propose_genotype_combinations(const GenotypeVector& genotypes,
                                   const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
     GenotypeCombinationVector
-    propose_all_genotype_combinations(const std::vector<Genotype<Haplotype>>& genotypes) const;
+    propose_all_genotype_combinations(const GenotypeVector& genotypes) const;
+    GenotypeCombinationVector
+    propose_genotype_combinations(const PhylogenyNodePloidyMap& phylogeny_ploidies,
+                                  const GenotypeVector& genotypes,
+                                  const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
+    void
+    evaluate(Inferences& result,
+             const GenotypeVector& genotypes,
+             const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
+    void
+    evaluate(Inferences& result,
+             const GenotypeVector& genotypes,
+             const GenotypeCombinationVector& genotype_combinations,
+             const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
     VariationalBayesMixtureMixtureModel::LogProbabilityVector
     calculate_genotype_priors(const GenotypeCombinationVector& genotype_combinations,
-                              const std::vector<Genotype<Haplotype>>& genotypes) const;
+                              const GenotypeVector& genotypes) const;
     VBLikelihoodMatrix
     make_likelihood_matrix(const GenotypeCombinationVector& genotype_combinations,
-                           const std::vector<Genotype<Haplotype>>& genotypes,
+                           const GenotypeVector& genotypes,
                            const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
     VBSeedVector
     propose_seeds(const GenotypeCombinationVector& genotype_combinations,
-                  const std::vector<Genotype<Haplotype>>& genotypes,
+                  const GenotypeVector& genotypes,
                   const VariationalBayesMixtureMixtureModel::LogProbabilityVector& genotype_combination_priors,
                   const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
     VariationalBayesMixtureMixtureModel::Inferences
