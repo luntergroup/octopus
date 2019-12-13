@@ -672,8 +672,20 @@ OptionMap parse_options(const int argc, const char** argv)
     po::value<int>()->default_value(3),
     "Maximum number of nodes in cell phylogeny to consider")
     
+    ("max-copy-loss",
+     po::value<int>()->default_value(1),
+     "Maximum number of haplotype losses in the phylogeny")
+    
+    ("max-copy-gain",
+     po::value<int>()->default_value(0),
+     "Maximum number of haplotype gains in the phylogeny")
+    
+    ("somatic-cnv-rate",
+     po::value<float>()->default_value(1e-4, "1e-4"),
+     "Expected CNV somatic mutation rate, per megabase pair, for this sample")
+     
     ("dropout-concentration",
-    po::value<float>()->default_value(8, "8"),
+    po::value<float>()->default_value(10, "10"),
     "Allelic dropout concentration parameter (default for all samples)")
     
     ("sample-dropout-concentrations",
@@ -1117,19 +1129,20 @@ void validate(const OptionMap& vm)
         "min-mapping-quality", "good-base-quality", "min-good-bases", "min-read-length",
         "max-read-length", "min-base-quality", "max-variant-size",
         "num-fallback-kmers", "max-assemble-region-overlap", "assembler-mask-base-quality",
-        "min-kmer-prune", "max-bubbles", "max-holdout-depth"
+        "min-kmer-prune", "max-bubbles", "max-holdout-depth", "max-copy-loss", "max-copy-gain"
     };
     const std::vector<std::string> strictly_positive_int_options {
         "max-open-read-files", "downsample-above", "downsample-target", "min-supporting-reads",
         "max-region-to-assemble", "fallback-kmer-gap", "organism-ploidy",
         "max-haplotypes", "haplotype-holdout-threshold", "haplotype-overflow",
         "max-genotypes", "max-joint-genotypes", "max-somatic-haplotypes", "max-clones",
-        "max-vb-seeds", "max-indel-errors", "max-base-quality"
+        "max-vb-seeds", "max-indel-errors", "max-base-quality", "max-phylogeny-size"
     };
     const std::vector<std::string> probability_options {
         "snp-heterozygosity", "snp-heterozygosity-stdev", "indel-heterozygosity",
         "somatic-mutation-rate", "min-expected-somatic-frequency", "min-credible-somatic-frequency", "somatic-credible-mass",
-        "denovo-snv-mutation-rate", "denovo-indel-mutation-rate", "min-candidate-credible-vaf-probability"
+        "denovo-snv-mutation-rate", "denovo-indel-mutation-rate", "min-candidate-credible-vaf-probability",
+        "somatic-cnv-rate"
     };
     conflicting_options(vm, "maternal-sample", "normal-sample");
     conflicting_options(vm, "paternal-sample", "normal-sample");

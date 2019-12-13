@@ -39,6 +39,7 @@ CellCaller::CellCaller(Caller::Components&& components,
 : Caller {std::move(components), std::move(general_parameters)}
 , parameters_ {std::move(specific_parameters)}
 {
+    parameters_.max_copy_loss = std::min(parameters_.max_copy_loss, parameters_.ploidy - 1);
     std::sort(std::begin(parameters_.normal_samples), std::end(parameters_.normal_samples));
 }
 
@@ -324,11 +325,30 @@ CellCaller::infer_latents(const HaplotypeBlock& haplotypes, const HaplotypeLikel
 {
     std::vector<GenotypeIndex> genotype_indices {};
     auto genotypes = generate_all_genotypes(haplotypes, parameters_.ploidy, genotype_indices);
+    
     if (debug_log_) stream(*debug_log_) << "There are " << genotypes.size() << " candidate genotypes";
+    
+    std::vector<Genotype<Haplotype>> copy_change_genotypes {};
+    std::size_t default_ploidy_idx {0};
+    bool copy_number_change_detection_enabled {false};
+    if (parameters_.max_copy_loss > 0 || parameters_.max_copy_gain > 0) {
+        copy_number_change_detection_enabled = true;
+        for (unsigned loss {1}; loss <= parameters_.max_copy_loss; ++loss) {
+            auto copy_loss_genotypes = generate_all_genotypes(haplotypes, parameters_.ploidy - loss);
+            default_ploidy_idx += copy_loss_genotypes.size();
+            utils::append(std::move(copy_loss_genotypes), copy_change_genotypes);
+        }
+        utils::append(genotypes, copy_change_genotypes);
+        for (unsigned gain {1}; gain <= parameters_.max_copy_gain; ++gain) {
+            auto copy_gain_genotypes = generate_all_genotypes(haplotypes, parameters_.ploidy + gain);
+            utils::append(std::move(copy_gain_genotypes), copy_change_genotypes);
+        }
+    }
+    
     const auto genotype_prior_model = make_prior_model(haplotypes);
     DeNovoModel mutation_model {parameters_.mutation_model_parameters};
     model::SingleCellPriorModel::Parameters cell_prior_params {};
-    cell_prior_params.copy_number_log_probability = std::log(1e-6);
+    cell_prior_params.copy_number_log_probability = std::log(parameters_.somatic_cnv_mutation_rate);
     model::SingleCellModel::Parameters model_parameters {};
     model_parameters.dropout_concentration = parameters_.dropout_concentration;
     if (!parameters_.sample_dropout_concentrations.empty()) {
@@ -349,6 +369,7 @@ CellCaller::infer_latents(const HaplotypeBlock& haplotypes, const HaplotypeLikel
     using SingleCellModelInferences = model::SingleCellModel::Inferences;
     std::vector<std::vector<SingleCellModelInferences>> inferences {};
     double max_log_evidence {};
+    bool copy_change_predicted {false};
     
     for (unsigned clones {1}; clones <= parameters_.max_clones; ++clones) {
         auto phylogenies = propose_next_phylogenies(inferences);
@@ -375,6 +396,29 @@ CellCaller::infer_latents(const HaplotypeBlock& haplotypes, const HaplotypeLikel
                 model::SingleCellModel phylogeny_model {samples_, std::move(phylogeny_prior_model), model_parameters, config, population_prior_model};
                 auto phylogeny_inferences = phylogeny_model.evaluate(genotypes, haplotype_likelihoods);
                 log(phylogeny_inferences, samples_, genotypes, debug_log_);
+                
+                if (clones > 1 && copy_number_change_detection_enabled && phylogeny_inferences.log_evidence > max_log_evidence) {
+                    std::vector<unsigned> phylogeny_ploidy_assignments((1 + parameters_.max_copy_loss + parameters_.max_copy_gain) * (clones - 1));
+                    auto assignment_itr = std::begin(phylogeny_ploidy_assignments);
+                    for (auto ploidy = parameters_.ploidy - parameters_.max_copy_loss; ploidy <= parameters_.ploidy + parameters_.max_copy_gain; ++ploidy) {
+                        assignment_itr = std::fill_n(assignment_itr, clones - 1, ploidy);
+                    }
+                    std::unordered_map<std::size_t, unsigned> phylogeny_ploidies {};
+                    phylogeny_ploidies.reserve(clones);
+                    do {
+                        if (phylogeny_ploidy_assignments[0] == parameters_.ploidy) {
+                            for (std::size_t id {0}; id < clones; ++id) {
+                                phylogeny_ploidies[id] = phylogeny_ploidy_assignments[id];
+                            }
+                            auto phylogeny_copy_inferences = phylogeny_model.evaluate(phylogeny_ploidies, copy_change_genotypes, haplotype_likelihoods);
+                            if (phylogeny_copy_inferences.log_evidence > phylogeny_inferences.log_evidence) {
+                                phylogeny_inferences = std::move(phylogeny_copy_inferences);
+                                copy_change_predicted = true;
+                            }
+                            phylogeny_ploidies.clear();
+                        }
+                    } while (std::next_permutation(std::begin(phylogeny_ploidy_assignments), std::end(phylogeny_ploidy_assignments)));
+                }
                 clone_inferences.push_back(std::move(phylogeny_inferences));
             }
             if (clones == 1) {
@@ -392,10 +436,21 @@ CellCaller::infer_latents(const HaplotypeBlock& haplotypes, const HaplotypeLikel
             inferences.push_back(std::move(clone_inferences));
         }
     }
-    
-    std::vector<model::SingleCellModel::Inferences> flat_inferences {};
+    std::vector<SingleCellModelInferences> flat_inferences {};
     for (auto& clone_inferences : inferences) {
         utils::append(std::move(clone_inferences), flat_inferences);
+    }
+    if (copy_change_predicted) {
+        for (SingleCellModelInferences& phylogeny_inferences : flat_inferences) {
+            for (std::size_t id {0}; id < phylogeny_inferences.phylogeny.size(); ++id) {
+                auto& genotype_posteriors = phylogeny_inferences.phylogeny.group(id).value.genotype_posteriors;
+                if (genotype_posteriors.size() < copy_change_genotypes.size()) {
+                    genotype_posteriors.resize(copy_change_genotypes.size());
+                    std::rotate(std::rbegin(genotype_posteriors), std::next(std::rbegin(genotype_posteriors), default_ploidy_idx), std::rend(genotype_posteriors));
+                }
+            }
+        }
+        genotypes = std::move(copy_change_genotypes);
     }
     return std::make_unique<Latents>(*this, haplotypes, std::move(genotypes), std::move(flat_inferences));
 }

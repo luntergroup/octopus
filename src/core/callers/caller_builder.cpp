@@ -335,6 +335,24 @@ CallerBuilder& CallerBuilder::set_dropout_concentration(const SampleName& sample
     return *this;
 }
 
+CallerBuilder& CallerBuilder::set_max_copy_losses(unsigned losses) noexcept
+{
+    params_.max_copy_loss = losses;
+    return *this;
+}
+
+CallerBuilder& CallerBuilder::set_max_copy_gains(unsigned gains) noexcept
+{
+    params_.max_copy_gain = gains;
+    return *this;
+}
+
+CallerBuilder& CallerBuilder::set_somatic_cnv_mutation_rate(double rate) noexcept
+{
+    params_.somatic_cnv_mutation_rate = rate;
+    return *this;
+}
+
 std::unique_ptr<Caller> CallerBuilder::build(const ContigName& contig) const
 {
     if (factory_.count(caller_) == 0) {
@@ -497,13 +515,16 @@ CallerBuilder::CallerFactoryMap CallerBuilder::generate_factory() const
                                                     params_.min_refcall_posterior,
                                                     params_.deduplicate_haplotypes_with_caller_model,
                                                     params_.max_clones,
+                                                    params_.max_copy_loss,
+                                                    params_.max_copy_gain,
                                                     params_.max_genotypes,
                                                     params_.max_joint_genotypes,
                                                     params_.dropout_concentration,
                                                     params_.sample_dropout_concentrations,
                                                     {params_.somatic_snv_mutation_rate, params_.somatic_indel_mutation_rate},
                                                     params_.max_vb_seeds,
-                                                    params_.normal_samples
+                                                    params_.normal_samples,
+                                                    params_.somatic_cnv_mutation_rate
                                                 });
         }}
     };

@@ -97,6 +97,9 @@ public:
     // cell
     CallerBuilder& set_dropout_concentration(double concentration) noexcept;
     CallerBuilder& set_dropout_concentration(const SampleName& sample, double concentration) noexcept;
+    CallerBuilder& set_max_copy_losses(unsigned losses) noexcept;
+    CallerBuilder& set_max_copy_gains(unsigned gains) noexcept;
+    CallerBuilder& set_somatic_cnv_mutation_rate(double rate) noexcept;
     
     // pedigree
     CallerBuilder& set_pedigree(Pedigree pedigree);
@@ -151,6 +154,8 @@ private:
         // cell
         std::unordered_map<SampleName, double> sample_dropout_concentrations;
         double dropout_concentration;
+        unsigned max_copy_loss, max_copy_gain;
+        double somatic_cnv_mutation_rate;
         
         // pedigree
         boost::optional<Pedigree> pedigree;
