@@ -680,7 +680,7 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<int>()->default_value(0),
      "Maximum number of haplotype gains in the phylogeny")
     
-    ("somatic-cnv-rate",
+    ("somatic-cnv-mutation-rate",
      po::value<float>()->default_value(1e-4, "1e-4"),
      "Expected CNV somatic mutation rate, per megabase pair, for this sample")
      

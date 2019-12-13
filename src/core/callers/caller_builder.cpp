@@ -517,7 +517,6 @@ CallerBuilder::CallerFactoryMap CallerBuilder::generate_factory() const
                                                     params_.max_clones,
                                                     params_.max_copy_loss,
                                                     params_.max_copy_gain,
-                                                    params_.max_genotypes,
                                                     params_.max_joint_genotypes,
                                                     params_.dropout_concentration,
                                                     params_.sample_dropout_concentrations,

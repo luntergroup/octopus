@@ -41,7 +41,7 @@ public:
         bool deduplicate_haplotypes_with_prior_model = false;
         unsigned max_clones;
         unsigned max_copy_loss = 1, max_copy_gain = 0;
-        boost::optional<std::size_t> max_genotypes, max_joint_genotypes;
+        boost::optional<std::size_t> max_genotype_combinations;
         double dropout_concentration;
         std::unordered_map<SampleName, double> sample_dropout_concentrations;
         DeNovoModel::Parameters mutation_model_parameters;
