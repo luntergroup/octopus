@@ -19,6 +19,7 @@ class VariationalBayesMixtureMixtureModel
 public:
     struct Options
     {
+        double null_log_probability = -10'000;
         double epsilon = 0.05;
         unsigned max_iterations = 1000;
         double save_memory = false;

@@ -430,12 +430,14 @@ VariationalBayesMixtureMixtureModel::update_responsibilities(ComponentResponsibi
         for (std::size_t t {0}; t < T; ++t) {
             const auto ln_exp_pi = dirichlet_expectation_log(mixture_concentrations[s][t]);
             const auto K = ln_exp_pi.size();
-            for (std::size_t k {0}; k < K; ++k) {
+            for (std::size_t k {0}; k < max_K; ++k) {
                 for (std::size_t n {0}; n < N; ++n) {
                     if (t == 0) result[s][k][n] = 0;
-                    result[s][k][n] += group_responsibilities[s][t] * (ln_exp_pi[k] + inner_product(genotype_posteriors, log_likelihoods[s], t, k, n));
+                    auto w = k < K ? ln_exp_pi[k] + inner_product(genotype_posteriors, log_likelihoods[s], t, k, n) : options_.null_log_probability;
+                    result[s][k][n] += group_responsibilities[s][t] * w;
                 }
             }
+            
         }
         std::vector<double> ln_rho(max_K);
         for (std::size_t n {0}; n < N; ++n) {
