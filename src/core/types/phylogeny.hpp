@@ -10,6 +10,7 @@
 #include <cstddef>
 #include <stack>
 #include <type_traits>
+#include <iostream>
 
 #include <boost/optional.hpp>
 
@@ -69,6 +70,10 @@ public:
     template <typename UnaryFunction>
     Phylogeny<Label, std::result_of_t<UnaryFunction(T)>>
     transform(UnaryFunction op) const;
+    
+    template <typename GroupSerialiser>
+    void serialise(std::ostream& os, GroupSerialiser serialiser) const;
+    void serialise(std::ostream& os) const;
 
 private:
     struct TreeNode
@@ -80,6 +85,9 @@ private:
     
     std::unique_ptr<TreeNode> tree_;
     std::unordered_map<Label, TreeNode*> nodes_;
+    
+    template <typename GroupSerialiser>
+    void serialise(std::ostream& os, GroupSerialiser serialiser, TreeNode* node) const;
 };
 
 template <typename Label, typename T>
@@ -289,6 +297,43 @@ Phylogeny<Label, T>::transform(UnaryFunction op) const
         }
     }
     return result;
+}
+
+template <typename Label, typename T>
+template <typename GroupSerialiser>
+void Phylogeny<Label, T>::serialise(std::ostream& os, const GroupSerialiser serialiser) const
+{
+    serialise(os, serialiser, tree_.get());
+}
+
+template <typename Label, typename T>
+void Phylogeny<Label, T>::serialise(std::ostream& os) const
+{
+    serialise(os, [] (std::ostream& os, const Group& group) { os << group.id << ":" << group.value; });
+}
+
+template <typename Label, typename T>
+template <typename GroupSerialiser>
+void Phylogeny<Label, T>::serialise(std::ostream& os, const GroupSerialiser serialiser, TreeNode* node) const
+{
+    if (node == nullptr) {
+        os << ".";
+    } else {
+        os << "(";
+        serialise(os, serialiser, node->descendant1.get());
+        os << "<";
+        serialiser(os, node->group);
+        os << ">";
+        serialise(os, serialiser, node->descendant2.get());
+        os << ")";
+    }
+}
+
+template <typename Label, typename T>
+std::ostream& operator<<(std::ostream& os, const Phylogeny<Label, T>& phylogeny)
+{
+    phylogeny.serialise(os);
+    return os;
 }
 
 } // namespace octopus
