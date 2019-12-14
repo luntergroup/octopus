@@ -8,9 +8,11 @@
 
 #include <vector>
 #include <utility>
+#include <unordered_map>
 
 #include <boost/optional.hpp>
 
+#include "basics/phred.hpp"
 #include "core/types/allele.hpp"
 #include "core/types/phylogeny.hpp"
 
@@ -27,6 +29,7 @@ public:
         Phylogeny<std::size_t> map;
         Phred<double> map_posterior;
         std::vector<Phred<double>> size_posteriors;
+        std::unordered_map<SampleName, std::vector<Phred<double>>> sample_node_posteriors;
     };
     
     CellVariantCall() = delete;

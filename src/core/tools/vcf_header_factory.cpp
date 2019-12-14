@@ -39,6 +39,8 @@ VcfHeaderFactory::AnnotatorMap VcfHeaderFactory::annotators_ =
         hb.add_info("SOMATIC", "0", "Flag", "Indicates that the record is a somatic mutation, for cancer genomics");
         hb.add_info("PPP", "1", "Float", "Posterior probability of the inferred phylogenetic tree");
         hb.add_info("PSPP", ".", "Integer", "Posterior probabilities of phylogenetic tree sizes");
+        hb.add_info("PY", "1", "String", "MAP phylogeny for this loci");
+        hb.add_format("PNAP", ".", "Float", "Posterior probability of the sample being assigned to each node in the MAP phylogeny");
     }}
 };
 

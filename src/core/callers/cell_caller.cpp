@@ -417,6 +417,7 @@ CellCaller::infer_latents(const HaplotypeBlock& haplotypes, const HaplotypeLikel
                                 phylogeny_ploidies[id] = phylogeny_ploidy_assignments[id];
                             }
                             auto phylogeny_copy_inferences = phylogeny_model.evaluate(phylogeny_ploidies, copy_change_genotypes, haplotype_likelihoods);
+                            log(phylogeny_copy_inferences, samples_, copy_change_genotypes, debug_log_);
                             if (phylogeny_copy_inferences.log_evidence > phylogeny_inferences.log_evidence) {
                                 phylogeny_inferences = std::move(phylogeny_copy_inferences);
                                 copy_change_predicted = true;
@@ -754,11 +755,23 @@ CellCaller::call_variants(const std::vector<Variant>& candidates, const Latents&
     auto allele_genotype_calls = call_genotypes(samples_, genotype_calls, genotype_posteriors, called_regions);
     PhylogenyInferenceSummary summary {};
     using SummaryPhylogeny = decltype(summary.map);
-    summary.map = latents.phylogeny_inferences_[latents.map_phylogeny_idx_].phylogeny.transform([] (const auto&) -> SummaryPhylogeny::ValueType { return {}; });
-    const static auto prob_true_to_phred = [] (double p) { return probability_false_to_phred(1 - p); };
+    const auto& map_phylogeny = latents.phylogeny_inferences_[latents.map_phylogeny_idx_].phylogeny;
+    summary.map = map_phylogeny.transform([] (const auto&) -> SummaryPhylogeny::ValueType { return {}; });
+    const static auto prob_true_to_phred = [] (double p) { return probability_false_to_phred(std::max(1 - p, 0.0)); };
     summary.map_posterior = prob_true_to_phred(latents.phylogeny_posteriors_[latents.map_phylogeny_idx_]);
     summary.size_posteriors.resize(latents.phylogeny_size_posteriors_.size());
-    std::transform(std::cbegin(latents.phylogeny_size_posteriors_), std::cend(latents.phylogeny_size_posteriors_), std::begin(summary.size_posteriors), prob_true_to_phred);
+    summary.sample_node_posteriors.reserve(samples_.size());
+    for (const auto& sample : samples_) {
+        summary.sample_node_posteriors[sample].resize(map_phylogeny.size());
+    }
+    for (std::size_t id {0}; id < map_phylogeny.size(); ++id) {
+        const auto& group = map_phylogeny.group(id);
+        for (std::size_t sample_idx {0}; sample_idx < samples_.size(); ++sample_idx) {
+            summary.sample_node_posteriors[samples_[sample_idx]][id] = prob_true_to_phred(group.value.sample_attachment_posteriors[sample_idx]);
+        }
+    }
+    std::transform(std::cbegin(latents.phylogeny_size_posteriors_), std::cend(latents.phylogeny_size_posteriors_),
+                   std::begin(summary.size_posteriors), prob_true_to_phred);
     return transform_calls(samples_, std::move(variant_calls), std::move(allele_genotype_calls), std::move(summary));
 }
 

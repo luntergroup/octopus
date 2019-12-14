@@ -5,6 +5,9 @@
 
 #include <iterator>
 #include <algorithm>
+#include <string>
+#include <sstream>
+#include <iostream>
 
 #include "utils/string_utils.hpp"
 
@@ -12,9 +15,7 @@ namespace octopus {
 
 void CellVariantCall::decorate(VcfRecord::Builder& record) const
 {
-    if (is_somatic()) {
-        record.set_somatic();
-    }
+    if (is_somatic()) record.set_somatic();
     record.set_info("PPP", utils::to_string(phylogeny_summary_.map_posterior.score()));
     std::vector<std::string> size_posteriors {};
     size_posteriors.reserve(phylogeny_summary_.size_posteriors.size());
@@ -22,6 +23,19 @@ void CellVariantCall::decorate(VcfRecord::Builder& record) const
         size_posteriors.push_back(std::to_string(static_cast<unsigned>(p.score())));
     }
     record.set_info("PSPP", std::move(size_posteriors));
+    if (phylogeny_summary_.map.size() > 1) {
+        std::ostringstream ss {};
+        phylogeny_summary_.map.serialise(ss, [] (std::ostream& os, const auto& group) { os << group.id; });
+        record.set_info("PY", ss.str());
+        record.add_format("PNAP");
+        for (const auto& p : phylogeny_summary_.sample_node_posteriors) {
+            assert(p.second.size() == phylogeny_summary_.map.size());
+            std::vector<std::string> posteriors {};
+            posteriors.reserve(p.second.size());
+            for (auto posterior : p.second) posteriors.push_back(utils::to_string(std::min(posterior.score(), 20.0)));
+            record.set_format(p.first, "PNAP", std::move(posteriors));
+        }
+    }
 }
 
 std::unique_ptr<Call> CellVariantCall::do_clone() const
