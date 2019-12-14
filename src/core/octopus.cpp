@@ -279,19 +279,25 @@ void write_calls(std::deque<VcfRecord>&& calls, VcfWriter& out)
     calls.shrink_to_fit();
 }
 
+struct WindowConfig
+{
+    boost::optional<GenomicRegion::Size> min_size = boost::none, max_size = boost::none;
+};
+
+static const WindowConfig default_window_config {5'000, 25'000'000};
+
 auto find_max_window(const ContigCallingComponents& components,
-                     const GenomicRegion& remaining_call_region)
+                     const GenomicRegion& target_region)
 {
     const auto& rm = components.read_manager.get();
-    if (!rm.has_reads(components.samples.get(), remaining_call_region)) {
-        return remaining_call_region;
+    if (!rm.has_reads(components.samples.get(), target_region)) {
+        return target_region;
     }
-    auto result = rm.find_covered_subregion(components.samples, remaining_call_region,
-                                            components.read_buffer_size);
-    if (ends_before(result, remaining_call_region)) {
-        auto rest = right_overhang_region(remaining_call_region, result);
+    auto result = rm.find_covered_subregion(components.samples, target_region, components.read_buffer_size);
+    if (ends_before(result, target_region)) {
+        auto rest = right_overhang_region(target_region, result);
         if (!rm.has_reads(components.samples.get(), rest)) {
-            result = remaining_call_region;
+            result = target_region;
         }
     }
     return result;
@@ -299,20 +305,24 @@ auto find_max_window(const ContigCallingComponents& components,
 
 auto propose_call_subregion(const ContigCallingComponents& components,
                             const GenomicRegion& remaining_call_region,
-                            boost::optional<GenomicRegion::Size> min_size = boost::none)
+                            const WindowConfig& config)
 {
     if (is_empty(remaining_call_region)) {
         return remaining_call_region;
     }
-    const auto max_window = find_max_window(components, remaining_call_region);
+    auto target = remaining_call_region;
+    if (config.max_size && size(target) > *config.max_size) {
+        target = head_region(target, *config.max_size);
+    }
+    const auto max_window = find_max_window(components, target);
     if (ends_before(remaining_call_region, max_window)) {
         return remaining_call_region;
     }
-    if (min_size && size(max_window) < *min_size) {
-        if (size(remaining_call_region) < *min_size) {
+    if (config.min_size && size(max_window) < *config.min_size) {
+        if (size(remaining_call_region) < *config.min_size) {
             return remaining_call_region;
         }
-        return expand_rhs(head_region(max_window), *min_size);
+        return expand_rhs(head_region(max_window), *config.min_size);
     }
     return max_window;
 }
@@ -320,10 +330,10 @@ auto propose_call_subregion(const ContigCallingComponents& components,
 auto propose_call_subregion(const ContigCallingComponents& components,
                             const GenomicRegion& current_subregion,
                             const GenomicRegion& input_region,
-                            boost::optional<GenomicRegion::Size> min_size = boost::none)
+                            const WindowConfig& config)
 {
     assert(contains(input_region, current_subregion));
-    return propose_call_subregion(components, right_overhang_region(input_region, current_subregion), min_size);
+    return propose_call_subregion(components, right_overhang_region(input_region, current_subregion), config);
 }
 
 void buffer_connecting_calls(std::deque<VcfRecord>& calls,
@@ -403,10 +413,12 @@ void run_octopus_on_contig(ContigCallingComponents&& components)
     
     assert(!components.regions.empty());
     
+    const auto window_config = default_window_config;
+    
     std::deque<VcfRecord> calls;
     std::vector<VcfRecord> connecting_calls {};
     auto input_region = components.regions.front();
-    auto subregion    = propose_call_subregion(components, input_region);
+    auto subregion    = propose_call_subregion(components, input_region, window_config);
     auto first_input_region      = std::cbegin(components.regions);
     const auto last_input_region = std::cend(components.regions);
     
@@ -421,13 +433,13 @@ void run_octopus_on_contig(ContigCallingComponents&& components)
         }
         resolve_connecting_calls(connecting_calls, calls, components);
         
-        auto next_subregion = propose_call_subregion(components, subregion, input_region);
+        auto next_subregion = propose_call_subregion(components, subregion, input_region, window_config);
         
         if (is_empty(next_subregion)) {
             ++first_input_region;
             if (first_input_region != last_input_region) {
                 input_region = *first_input_region;
-                next_subregion = propose_call_subregion(components, input_region);
+                next_subregion = propose_call_subregion(components, input_region, window_config);
             }
         }
         assert(connecting_calls.empty());
@@ -581,12 +593,17 @@ struct TaskMakerSyncPacket
     std::atomic_bool all_done;
 };
 
-void make_region_tasks(const GenomicRegion& region, const ContigCallingComponents& components, const ExecutionPolicy policy,
-                       TaskQueue& result, TaskMakerSyncPacket& sync, const bool last_region_in_contig, const bool last_contig)
+void make_region_tasks(const GenomicRegion& region,
+                       const ContigCallingComponents& components,
+                       const ExecutionPolicy policy,
+                       TaskQueue& result,
+                       TaskMakerSyncPacket& sync,
+                       const bool last_region_in_contig,
+                       const bool last_contig,
+                       const WindowConfig& window_config)
 {
-    static constexpr GenomicRegion::Size minTaskSize {5'000};
     std::unique_lock<std::mutex> lock {sync.mutex, std::defer_lock};
-    auto subregion = propose_call_subregion(components, region, minTaskSize);
+    auto subregion = propose_call_subregion(components, region, window_config);
     if (ends_equal(subregion, region)) {
         lock.lock();
         sync.cv.wait(lock, [&] () { return sync.ready; });
@@ -604,7 +621,7 @@ void make_region_tasks(const GenomicRegion& region, const ContigCallingComponent
         bool done {false};
         while (true) {
             while (batch.size() < std::max(sync.batch_size_hint.load(), 1u) || !sync.waiting) {
-                subregion = propose_call_subregion(components, subregion, region, minTaskSize);
+                subregion = propose_call_subregion(components, subregion, region, window_config);
                 batch.push_back(subregion);
                 assert(!ends_before(region, subregion));
                 if (ends_equal(subregion, region)) {
@@ -637,14 +654,18 @@ void make_region_tasks(const GenomicRegion& region, const ContigCallingComponent
     }
 }
 
-void make_contig_tasks(const ContigCallingComponents& components, const ExecutionPolicy policy,
-                       TaskQueue& result, TaskMakerSyncPacket& sync, const bool last_contig)
+void make_contig_tasks(const ContigCallingComponents& components,
+                       const ExecutionPolicy policy,
+                       TaskQueue& result,
+                       TaskMakerSyncPacket& sync,
+                       const bool last_contig,
+                       const WindowConfig& window_config)
 {
     if (components.regions.empty()) return;
     std::for_each(std::cbegin(components.regions), std::prev(std::cend(components.regions)), [&] (const auto& region) {
-        make_region_tasks(region, components, policy, result, sync, false, last_contig);
+        make_region_tasks(region, components, policy, result, sync, false, last_contig, window_config);
     });
-    make_region_tasks(components.regions.back(), components, policy, result, sync, true, last_contig);
+    make_region_tasks(components.regions.back(), components, policy, result, sync, true, last_contig, window_config);
 }
 
 ExecutionPolicy make_execution_policy(const GenomeCallingComponents& components)
@@ -662,9 +683,14 @@ auto make_contig_components(const ContigName& contig, GenomeCallingComponents& c
     return result;
 }
 
-void make_tasks_helper(TaskMap& tasks, std::vector<ContigName> contigs, GenomeCallingComponents& components,
-                       const unsigned num_threads, ExecutionPolicy execution_policy, TaskMakerSyncPacket& sync)
+void make_tasks_helper(TaskMap& tasks,
+                       std::vector<ContigName> contigs,
+                       GenomeCallingComponents& components,
+                       const unsigned num_threads,
+                       ExecutionPolicy execution_policy,
+                       TaskMakerSyncPacket& sync)
 {
+    const auto window_config = default_window_config;
     try {
         static auto debug_log = get_debug_log();
         if (debug_log) stream(*debug_log) << "Making tasks for " << contigs.size() << " contigs";
@@ -672,7 +698,7 @@ void make_tasks_helper(TaskMap& tasks, std::vector<ContigName> contigs, GenomeCa
             const auto& contig = contigs[i];
             if (debug_log) stream(*debug_log) << "Making tasks for contig " << contig;
             auto contig_components = make_contig_components(contig, components, num_threads);
-            make_contig_tasks(contig_components, execution_policy, tasks[contig], sync, i == contigs.size() - 1);
+            make_contig_tasks(contig_components, execution_policy, tasks[contig], sync, i == contigs.size() - 1, window_config);
             if (debug_log) stream(*debug_log) << "Finished making tasks for contig " << contig;
         }
         if (debug_log) *debug_log << "Finished making tasks";
@@ -693,8 +719,11 @@ void make_tasks_helper(TaskMap& tasks, std::vector<ContigName> contigs, GenomeCa
     }
 }
 
-std::thread make_task_maker_thread(TaskMap& tasks, GenomeCallingComponents& components, const unsigned num_threads,
-                                   TaskMakerSyncPacket& sync)
+std::thread
+make_task_maker_thread(TaskMap& tasks,
+                       GenomeCallingComponents& components,
+                       const unsigned num_threads,
+                       TaskMakerSyncPacket& sync)
 {
     auto contigs = components.contigs();
     if (contigs.empty()) {
