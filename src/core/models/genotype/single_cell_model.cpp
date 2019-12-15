@@ -711,10 +711,9 @@ SingleCellModel::propose_seeds(const GenotypeCombinationVector& genotype_combina
     VBSeedVector result {};
     const auto num_genotypes = genotype_combinations.size();
     result.push_back(log_uniform_dist(num_genotypes));
-    if (num_genotypes > 100) result.push_back(make_range_seed(num_genotypes, 0, num_genotypes / 100));
-    if (num_genotypes > 10) result.push_back(make_range_seed(num_genotypes, 0, num_genotypes / 10));
-    const auto k = std::min(std::size_t {config_.max_seeds}, num_genotypes);
-    std::vector<std::size_t> top_indices(k - result.size());
+    if (config_.max_seeds > 1 && num_genotypes > 100) result.push_back(make_range_seed(num_genotypes, 0, num_genotypes / 100));
+    if (config_.max_seeds > 2 && num_genotypes > 10) result.push_back(make_range_seed(num_genotypes, 0, num_genotypes / 10));
+    std::vector<std::size_t> top_indices(std::min(config_.max_seeds - result.size(), num_genotypes));
     std::iota(std::begin(top_indices), std::end(top_indices), 0u);
     make_point_seeds(genotype_combinations.size(), top_indices, result);
     return result;
