@@ -8,14 +8,14 @@
 
 Octopus is a mapping-based variant caller that implements several calling models within a unified haplotype-aware framework. Octopus takes inspiration from particle filtering by constructing a tree of haplotypes and dynamically pruning and extending the tree based on haplotype posterior probabilities in a sequential manner. This allows octopus to implicitly consider all possible haplotypes at a given loci in reasonable time.
 
-There are currently five calling models implemented:
+There are currently six calling models implemented:
 
-- **individual**: call germline variants in a single healthy individual.
-- **population**: jointly call germline variants in small cohorts.
-- **cancer**: call germline and somatic mutations tumour samples.
-- **trio**: call germline and _de novo_ mutations in a parent-offspring trio.
-- **polyclone**: call variants in samples with an unknown mixture of haploid clones, such a bacteria or viral samples.
-- **cell**: call variants in a set of single cell samples from the same individual.
+- [individual](https://github.com/luntergroup/octopus/wiki/Calling-models:-Individual): call germline variants in a single healthy individual.
+- [population](https://github.com/luntergroup/octopus/wiki/Calling-models:-Population): jointly call germline variants in small cohorts.
+- [trio](https://github.com/luntergroup/octopus/wiki/Calling-models:-Trio): call germline and _de novo_ mutations in a parent-offspring trio.
+- [cancer](https://github.com/luntergroup/octopus/wiki/Calling-models:-Cancer): call germline and somatic mutations tumour samples.
+- [polyclone](https://github.com/luntergroup/octopus/wiki/Calling-models:-Polyclone): call variants in samples with an unknown mixture of haploid clones, such a bacteria or viral samples.
+- [cell](https://github.com/luntergroup/octopus/wiki/Calling-models:-Cell): call variants in a set of single cell samples from the same individual.
 
 Octopus is currently able to call SNVs, small-medium sized indels, small complex rearrangements, and micro-inversions.
 
@@ -253,7 +253,7 @@ $ octopus -R hs37d5.fa -I normal.bam tumourA.bam tumourB.bam --normal-sample NOR
 If a normal sample is not present the cancer calling model must be invoked explicitly:
 
 ```shell
-$ octopus -R hs37d5.fa -I tumour1.bam tumour2.bam -C cancer
+$ octopus -C cancer -R hs37d5.fa -I tumour1.bam tumour2.bam
 ```
 
 Be aware that without a normal sample, somatic mutation classification power is significantly reduced.
@@ -273,7 +273,7 @@ Joint calling samples may increase calling power, especially for low coverage se
 If your sample contains an unknown mix of haploid clones (e.g. some bacteria or viral samples), use the `polyclone` calling model:
 
 ```shell
-$ octopus -R H37Rv.fa -I mycobacterium_tuberculosis.bam -C polyclone
+$ octopus -C polyclone -R H37Rv.fa -I mycobacterium_tuberculosis.bam
 ```
 
 This model will automatically detect the number of subclones in your sample (up to the maximum given by `--max-clones`).
@@ -283,7 +283,19 @@ This model will automatically detect the number of subclones in your sample (up 
 Single cell samples can be called with the `cell` calling model. Allelic dropout and cell phylogeny are considered by the model to improve variant calls. 
 
 ```shell
-$ octopus -R H37Rv.fa -I cellA.bam cellB.bam cellC.bam -C cell
+$ octopus -C cell -R H37Rv.fa -I cellA.bam cellB.bam cellC.bam
+```
+
+Control samples are specified using the `--normal-samples` option:
+
+```shell
+$ octopus -C cell -R H37Rv.fa -I cellA.bam cellB.bam cellC.bam --normal-samples NORMAL1 NORMAL2
+```
+
+Samples derived from cell bataches can be given high dropout concentrations:
+
+```shell
+$ octopus -C cell -R H37Rv.fa -I cellA.bam cellB.bam cellC.bam --normal-sample NORMAL --sample-dropout NORMAL=100
 ```
 
 #### HLA genotyping
