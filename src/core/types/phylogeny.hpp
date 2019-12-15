@@ -316,16 +316,12 @@ template <typename Label, typename T>
 template <typename GroupSerialiser>
 void Phylogeny<Label, T>::serialise(std::ostream& os, const GroupSerialiser serialiser, TreeNode* node) const
 {
-    if (node == nullptr) {
-        os << ".";
-    } else {
-        os << "(";
-        serialise(os, serialiser, node->descendant1.get());
-        os << "<";
+    if (node != nullptr) {
+        os << '(';
         serialiser(os, node->group);
-        os << ">";
+        serialise(os, serialiser, node->descendant1.get());
         serialise(os, serialiser, node->descendant2.get());
-        os << ")";
+        os << ')';
     }
 }
 
