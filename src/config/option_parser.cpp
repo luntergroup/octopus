@@ -668,10 +668,6 @@ OptionMap parse_options(const int argc, const char** argv)
     
     po::options_description cell("Cell calling model");
     cell.add_options()
-    ("max-phylogeny-size",
-    po::value<int>()->default_value(3),
-    "Maximum number of nodes in cell phylogeny to consider")
-    
     ("max-copy-loss",
      po::value<int>()->default_value(1),
      "Maximum number of haplotype losses in the phylogeny")
