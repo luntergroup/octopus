@@ -31,8 +31,8 @@ std::int8_t probability_to_penalty(const double probability) noexcept
 DeNovoModel::DeNovoModel(Parameters parameters, std::size_t num_haplotypes_hint, CachingStrategy caching)
 : params_ {parameters}
 , pad_penalty_ {60}
-, snv_penalty_ {probability_to_penalty(params_.snv_mutation_rate)}
-, indel_model_ {{params_.indel_mutation_rate}}
+, snv_penalty_ {probability_to_penalty(params_.snv_prior)}
+, indel_model_ {{params_.indel_prior}}
 , min_ln_probability_ {}
 , num_haplotypes_hint_ {num_haplotypes_hint}
 , haplotypes_ {}
@@ -276,15 +276,15 @@ DeNovoModel::evaluate_uncached(const Haplotype& target, const Haplotype& given, 
         try {
             align_with_hmm(target, given);
             if (is_valid_alignment(alignment_, hmm_.band_size())) {
-                result = recalculate_log_probability(alignment_.cigar, params_.snv_mutation_rate, local_indel_model_->indel);
+                result = recalculate_log_probability(alignment_.cigar, params_.snv_prior, local_indel_model_->indel);
             } else {
-                result = calculate_approx_log_probability(target, given, params_.snv_mutation_rate, local_indel_model_->indel);
+                result = calculate_approx_log_probability(target, given, params_.snv_prior, local_indel_model_->indel);
             }
         } catch (const hmm::HMMOverflow&) {
-            result = calculate_approx_log_probability(target, given, params_.snv_mutation_rate, local_indel_model_->indel);
+            result = calculate_approx_log_probability(target, given, params_.snv_prior, local_indel_model_->indel);
         }
     } else {
-        result = calculate_approx_log_probability(target, given, params_.snv_mutation_rate, local_indel_model_->indel);
+        result = calculate_approx_log_probability(target, given, params_.snv_prior, local_indel_model_->indel);
     }
     return min_ln_probability_ ? std::max(result, *min_ln_probability_) : result;
 }

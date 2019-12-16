@@ -47,7 +47,7 @@ public:
         DeNovoModel::Parameters mutation_model_parameters;
         boost::optional<unsigned> max_vb_seeds = boost::none; // Use default if none
         std::vector<SampleName> normal_samples = {};
-        double somatic_cnv_mutation_rate = 1e-4;
+        double somatic_cnv_prior = 1e-4;
     };
     
     CellCaller() = delete;

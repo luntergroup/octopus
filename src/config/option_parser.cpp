@@ -591,13 +591,13 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<int>()->default_value(2),
      "Maximum number of somatic haplotypes that may be considered")
     
-    ("somatic-snv-mutation-rate",
+    ("somatic-snv-prior",
      po::value<float>()->default_value(1e-04, "0.0001"),
-     "Expected SNV somatic mutation rate, per megabase pair, for this sample")
+     "Prior probability for an SNV somatic mutation at a given base for this sample")
     
-    ("somatic-indel-mutation-rate",
+    ("somatic-indel-prior",
      po::value<float>()->default_value(1e-06, "0.000001"),
-     "Expected INDEL somatic mutation rate, per megabase pair, for this sample")
+     "Prior probability for an INDEL somatic mutation at a given position for this sample")
     
     ("min-expected-somatic-frequency",
      po::value<float>()->default_value(0.01, "0.01"),
@@ -638,13 +638,13 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<std::string>(),
      "Paternal sample")
     
-    ("denovo-snv-mutation-rate",
+    ("denovo-snv-prior",
      po::value<float>()->default_value(1.3e-8, "1.3e-8"),
-     "SNV de novo mutation rate, per base per generation")
+     "Prior probability for an SNV de novo mutation at a given base in the offspring")
     
-    ("denovo-indel-mutation-rate",
+    ("denovo-indel-prior",
      po::value<float>()->default_value(1e-9, "1e-9"),
-     "INDEL de novo mutation rate, per base per generation")
+     "Prior probability for an INDEL de novo mutation at a given position in the offspring")
     
     ("min-denovo-posterior",
      po::value<Phred<double>>()->default_value(Phred<double> {3}),
@@ -676,9 +676,9 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<int>()->default_value(0),
      "Maximum number of haplotype gains in the phylogeny")
     
-    ("somatic-cnv-mutation-rate",
-     po::value<float>()->default_value(1e-4, "1e-4"),
-     "Expected CNV somatic mutation rate, per megabase pair, for this sample")
+    ("somatic-cnv-prior",
+     po::value<float>()->default_value(1e-3, "1e-3"),
+     "Prior probability of a given base in a sample being affected by a CNV")
      
     ("dropout-concentration",
     po::value<float>()->default_value(10, "10"),
@@ -1136,9 +1136,9 @@ void validate(const OptionMap& vm)
     };
     const std::vector<std::string> probability_options {
         "snp-heterozygosity", "snp-heterozygosity-stdev", "indel-heterozygosity",
-        "somatic-mutation-rate", "min-expected-somatic-frequency", "min-credible-somatic-frequency", "somatic-credible-mass",
-        "denovo-snv-mutation-rate", "denovo-indel-mutation-rate", "min-candidate-credible-vaf-probability",
-        "somatic-cnv-rate"
+        "somatic-snv-prior", "somatic-indel-prior", "min-expected-somatic-frequency", "min-credible-somatic-frequency", "somatic-credible-mass",
+        "denovo-snv-prior", "denovo-indel-prior", "min-candidate-credible-vaf-probability",
+        "somatic-cnv-prior"
     };
     conflicting_options(vm, "maternal-sample", "normal-sample");
     conflicting_options(vm, "paternal-sample", "normal-sample");

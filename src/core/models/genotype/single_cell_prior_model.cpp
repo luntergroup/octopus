@@ -73,15 +73,25 @@ SingleCellPriorModel::evaluate(const std::vector<GenotypeIndex>& genotypes) cons
 }
 
 SingleCellPriorModel::LogProbability
+SingleCellPriorModel::compute_cnv_log_prior(const Genotype<Haplotype>& ancestor) const
+{
+    // This is the prior probability that an entire haplotype is gained or lost from the ancestor genotype
+    // We assume that the length distribution is such that any copy number event will affect the whole haplotype.
+    // Maybe for very large haplotypes we'll need to look at another model
+    return std::log(parameters_.copy_number_prior);
+}
+
+SingleCellPriorModel::LogProbability
 SingleCellPriorModel::log_probability(const Genotype<Haplotype>& ancestor, const Genotype<Haplotype>& descendant) const
 {
+    const auto cnv_log_prior = compute_cnv_log_prior(ancestor);
     LogProbability result {0};
     std::vector<unsigned> ancestor_haplotype_indices(ancestor.ploidy());
     std::iota(std::begin(ancestor_haplotype_indices), std::end(ancestor_haplotype_indices), 0u);
     if (ancestor.ploidy() != descendant.ploidy()) {
         const auto p = std::minmax({ancestor.ploidy(), descendant.ploidy()});
         const auto copy_change = p.second - p.first;
-        result += parameters_.copy_number_log_probability * copy_change;
+        result += cnv_log_prior * copy_change;
         if (ancestor.ploidy() < descendant.ploidy()) {
             // Copy gain
             for (unsigned i {0}; i < ancestor.ploidy(); ++i) {

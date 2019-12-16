@@ -28,7 +28,7 @@ public:
     
     struct Parameters
     {
-        LogProbability copy_number_log_probability;
+        double copy_number_prior;
     };
     
     SingleCellPriorModel() = delete;
@@ -59,6 +59,7 @@ private:
     std::reference_wrapper<const DeNovoModel> denovo_model_;
     Parameters parameters_;
     
+    LogProbability compute_cnv_log_prior(const Genotype<Haplotype>& ancestor) const;
     LogProbability log_probability(const Genotype<Haplotype>& ancestor, const Genotype<Haplotype>& descendant) const;
 };
 

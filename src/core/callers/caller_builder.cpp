@@ -245,15 +245,15 @@ CallerBuilder& CallerBuilder::set_max_somatic_haplotypes(unsigned n) noexcept
     return *this;
 }
 
-CallerBuilder& CallerBuilder::set_somatic_snv_mutation_rate(double rate) noexcept
+CallerBuilder& CallerBuilder::set_somatic_snv_prior(double rate) noexcept
 {
-    params_.somatic_snv_mutation_rate = rate;
+    params_.somatic_snv_prior = rate;
     return *this;
 }
 
-CallerBuilder& CallerBuilder::set_somatic_indel_mutation_rate(double rate) noexcept
+CallerBuilder& CallerBuilder::set_somatic_indel_prior(double rate) noexcept
 {
-    params_.somatic_indel_mutation_rate = rate;
+    params_.somatic_indel_prior = rate;
     return *this;
 }
 
@@ -305,15 +305,15 @@ CallerBuilder& CallerBuilder::set_min_denovo_posterior(Phred<double> posterior) 
     return *this;
 }
 
-CallerBuilder& CallerBuilder::set_snv_denovo_mutation_rate(double rate) noexcept
+CallerBuilder& CallerBuilder::set_snv_denovo_prior(double prior) noexcept
 {
-    params_.snv_denovo_mutation_rate = rate;
+    params_.snv_denovo_prior = prior;
     return *this;
 }
 
-CallerBuilder& CallerBuilder::set_indel_denovo_mutation_rate(double rate) noexcept
+CallerBuilder& CallerBuilder::set_indel_denovo_prior(double prior) noexcept
 {
-    params_.indel_denovo_mutation_rate = rate;
+    params_.indel_denovo_prior = prior;
     return *this;
 }
 
@@ -347,9 +347,9 @@ CallerBuilder& CallerBuilder::set_max_copy_gains(unsigned gains) noexcept
     return *this;
 }
 
-CallerBuilder& CallerBuilder::set_somatic_cnv_mutation_rate(double rate) noexcept
+CallerBuilder& CallerBuilder::set_somatic_cnv_prior(double prior) noexcept
 {
-    params_.somatic_cnv_mutation_rate = rate;
+    params_.somatic_cnv_prior = prior;
     return *this;
 }
 
@@ -462,7 +462,7 @@ CallerBuilder::CallerFactoryMap CallerBuilder::generate_factory() const
                 params_.ploidies.of(samples.front(), *requested_contig_),
                 std::move(normal),
                 make_cancer_prior_model(params_.snp_heterozygosity, params_.indel_heterozygosity),
-                {params_.somatic_snv_mutation_rate, params_.somatic_indel_mutation_rate},
+                {params_.somatic_snv_prior, params_.somatic_indel_prior},
                 params_.min_expected_somatic_frequency,
                 params_.credible_mass,
                 params_.min_credible_somatic_frequency,
@@ -484,7 +484,7 @@ CallerBuilder::CallerFactoryMap CallerBuilder::generate_factory() const
                                                     params_.ploidies.of(params_.trio->father(), *requested_contig_),
                                                     params_.ploidies.of(params_.trio->child(), *requested_contig_),
                                                     make_trio_prior_model(params_.snp_heterozygosity, params_.indel_heterozygosity),
-                                                    {*params_.snv_denovo_mutation_rate, *params_.indel_denovo_mutation_rate},
+                                                    {*params_.snv_denovo_prior, *params_.indel_denovo_prior},
                                                     params_.min_variant_posterior,
                                                     params_.min_denovo_posterior,
                                                     params_.min_refcall_posterior,
@@ -520,10 +520,10 @@ CallerBuilder::CallerFactoryMap CallerBuilder::generate_factory() const
                                                     params_.max_joint_genotypes,
                                                     params_.dropout_concentration,
                                                     params_.sample_dropout_concentrations,
-                                                    {params_.somatic_snv_mutation_rate, params_.somatic_indel_mutation_rate},
+                                                    {params_.somatic_snv_prior, params_.somatic_indel_prior},
                                                     params_.max_vb_seeds,
                                                     params_.normal_samples,
-                                                    params_.somatic_cnv_mutation_rate
+                                                    params_.somatic_cnv_prior
                                                 });
         }}
     };

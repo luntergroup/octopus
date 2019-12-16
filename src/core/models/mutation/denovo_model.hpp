@@ -26,7 +26,7 @@ public:
     
     struct Parameters
     {
-        double snv_mutation_rate, indel_mutation_rate;
+        double snv_prior, indel_prior;
     };
     
     enum class CachingStrategy { none, value, address };

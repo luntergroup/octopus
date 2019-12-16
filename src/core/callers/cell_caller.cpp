@@ -354,7 +354,7 @@ CellCaller::infer_latents(const HaplotypeBlock& haplotypes, const HaplotypeLikel
     const auto genotype_prior_model = make_prior_model(haplotypes);
     DeNovoModel mutation_model {parameters_.mutation_model_parameters};
     model::SingleCellPriorModel::Parameters cell_prior_params {};
-    cell_prior_params.copy_number_log_probability = std::log(parameters_.somatic_cnv_mutation_rate);
+    cell_prior_params.copy_number_prior = parameters_.somatic_cnv_prior;
     model::SingleCellModel::Parameters model_parameters {};
     model_parameters.dropout_concentration = parameters_.dropout_concentration;
     if (!parameters_.sample_dropout_concentrations.empty()) {

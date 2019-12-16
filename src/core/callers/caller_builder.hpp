@@ -76,8 +76,8 @@ public:
     CallerBuilder& add_normal_sample(SampleName normal_sample);
     CallerBuilder& set_normal_sample(SampleName normal_sample);
     CallerBuilder& set_max_somatic_haplotypes(unsigned n) noexcept;
-    CallerBuilder& set_somatic_snv_mutation_rate(double rate) noexcept;
-    CallerBuilder& set_somatic_indel_mutation_rate(double rate) noexcept;
+    CallerBuilder& set_somatic_snv_prior(double prior) noexcept;
+    CallerBuilder& set_somatic_indel_prior(double prior) noexcept;
     CallerBuilder& set_min_expected_somatic_frequency(double frequency) noexcept;
     CallerBuilder& set_credible_mass(double mass) noexcept;
     CallerBuilder& set_min_credible_somatic_frequency(double frequency) noexcept;
@@ -88,8 +88,8 @@ public:
     // trio
     CallerBuilder& set_trio(Trio trio);
     CallerBuilder& set_min_denovo_posterior(Phred<double> posterior) noexcept;
-    CallerBuilder& set_snv_denovo_mutation_rate(double rate) noexcept;
-    CallerBuilder& set_indel_denovo_mutation_rate(double rate) noexcept;
+    CallerBuilder& set_snv_denovo_prior(double prior) noexcept;
+    CallerBuilder& set_indel_denovo_prior(double prior) noexcept;
     
     // polyclone
     CallerBuilder& set_max_clones(unsigned n) noexcept;
@@ -99,7 +99,7 @@ public:
     CallerBuilder& set_dropout_concentration(const SampleName& sample, double concentration) noexcept;
     CallerBuilder& set_max_copy_losses(unsigned losses) noexcept;
     CallerBuilder& set_max_copy_gains(unsigned gains) noexcept;
-    CallerBuilder& set_somatic_cnv_mutation_rate(double rate) noexcept;
+    CallerBuilder& set_somatic_cnv_prior(double prior) noexcept;
     
     // pedigree
     CallerBuilder& set_pedigree(Pedigree pedigree);
@@ -134,7 +134,7 @@ private:
         // cancer
         std::vector<SampleName> normal_samples;
         unsigned max_somatic_haplotypes;
-        double somatic_snv_mutation_rate, somatic_indel_mutation_rate;
+        double somatic_snv_prior, somatic_indel_prior;
         double min_expected_somatic_frequency;
         double credible_mass;
         double min_credible_somatic_frequency;
@@ -146,7 +146,7 @@ private:
         // trio
         boost::optional<Trio> trio;
         Phred<double> min_denovo_posterior;
-        boost::optional<double> snv_denovo_mutation_rate, indel_denovo_mutation_rate;
+        boost::optional<double> snv_denovo_prior, indel_denovo_prior;
         
         // polyclone
         unsigned max_clones;
@@ -155,7 +155,7 @@ private:
         std::unordered_map<SampleName, double> sample_dropout_concentrations;
         double dropout_concentration;
         unsigned max_copy_loss, max_copy_gain;
-        double somatic_cnv_mutation_rate;
+        double somatic_cnv_prior;
         
         // pedigree
         boost::optional<Pedigree> pedigree;

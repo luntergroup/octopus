@@ -1505,8 +1505,8 @@ make_bad_region_detector(const OptionMap& options, const boost::optional<const R
     auto snp_heterozygosity = options.at("snp-heterozygosity").as<float>();
     auto indel_heterozygosity = options.at("indel-heterozygosity").as<float>();
     if (is_cancer_calling(options)) {
-        snp_heterozygosity += options.at("somatic-snv-mutation-rate").as<float>();
-        indel_heterozygosity += options.at("somatic-indel-mutation-rate").as<float>();
+        snp_heterozygosity += options.at("somatic-snv-prior").as<float>();
+        indel_heterozygosity += options.at("somatic-indel-prior").as<float>();
     }
     const auto heterozygosity = snp_heterozygosity + indel_heterozygosity;
     auto heterozygosity_stdev = options.at("snp-heterozygosity-stdev").as<float>();
@@ -2084,8 +2084,8 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
             vc_builder.set_normal_sample(normals.front());
         }
         vc_builder.set_max_somatic_haplotypes(as_unsigned("max-somatic-haplotypes", options));
-        vc_builder.set_somatic_snv_mutation_rate(options.at("somatic-snv-mutation-rate").as<float>());
-        vc_builder.set_somatic_indel_mutation_rate(options.at("somatic-indel-mutation-rate").as<float>());
+        vc_builder.set_somatic_snv_prior(options.at("somatic-snv-prior").as<float>());
+        vc_builder.set_somatic_indel_prior(options.at("somatic-indel-prior").as<float>());
         vc_builder.set_min_expected_somatic_frequency(options.at("min-expected-somatic-frequency").as<float>());
         vc_builder.set_credible_mass(options.at("somatic-credible-mass").as<float>());
         vc_builder.set_min_credible_somatic_frequency(options.at("min-credible-somatic-frequency").as<float>());
@@ -2095,8 +2095,8 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
         vc_builder.set_tumour_germline_concentration(options.at("tumour-germline-concentration").as<float>());
     } else if (caller == "trio") {
         vc_builder.set_trio(make_trio(read_pipe.samples(), options, pedigree));
-        vc_builder.set_snv_denovo_mutation_rate(options.at("denovo-snv-mutation-rate").as<float>());
-        vc_builder.set_indel_denovo_mutation_rate(options.at("denovo-indel-mutation-rate").as<float>());
+        vc_builder.set_snv_denovo_prior(options.at("denovo-snv-prior").as<float>());
+        vc_builder.set_indel_denovo_prior(options.at("denovo-indel-prior").as<float>());
         vc_builder.set_min_denovo_posterior(options.at("min-denovo-posterior").as<Phred<double>>());
     } else if (caller == "polyclone") {
         vc_builder.set_max_clones(as_unsigned("max-clones", options));
@@ -2110,12 +2110,12 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
         for (const SampleDropoutConcentrationPair& p : get_sample_dropout_concentrations(options)) {
             vc_builder.set_dropout_concentration(p.sample, p.concentration);
         }
-        vc_builder.set_somatic_snv_mutation_rate(options.at("somatic-snv-mutation-rate").as<float>());
-        vc_builder.set_somatic_indel_mutation_rate(options.at("somatic-indel-mutation-rate").as<float>());
+        vc_builder.set_somatic_snv_prior(options.at("somatic-snv-prior").as<float>());
+        vc_builder.set_somatic_indel_prior(options.at("somatic-indel-prior").as<float>());
         vc_builder.set_max_clones(as_unsigned("max-clones", options));
         vc_builder.set_max_copy_losses(as_unsigned("max-copy-loss", options));
         vc_builder.set_max_copy_gains(as_unsigned("max-copy-gain", options));
-        vc_builder.set_somatic_cnv_mutation_rate(options.at("somatic-cnv-mutation-rate").as<float>());
+        vc_builder.set_somatic_cnv_prior(options.at("somatic-cnv-prior").as<float>());
     }
     vc_builder.set_model_posterior_policy(get_model_posterior_policy(options));
     if (is_set("max-vb-seeds", options)) vc_builder.set_max_vb_seeds(as_unsigned("max-vb-seeds", options));
