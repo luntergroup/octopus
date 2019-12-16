@@ -383,6 +383,7 @@ CellCaller::infer_latents(const HaplotypeBlock& haplotypes, const HaplotypeLikel
             std::vector<SingleCellModelInferences> clone_inferences {};
             clone_inferences.reserve(phylogenies.size());
             for (auto& phylogeny : phylogenies) {
+                assert(phylogeny.size() == clones);
                 if (parameters_.normal_samples.empty()) {
                     model_parameters.group_priors = boost::none;
                 } else {
@@ -399,7 +400,7 @@ CellCaller::infer_latents(const HaplotypeBlock& haplotypes, const HaplotypeLikel
                     }
                 }
                 model::SingleCellPriorModel phylogeny_prior_model {std::move(phylogeny), *genotype_prior_model, mutation_model, cell_prior_params};
-                model::SingleCellModel phylogeny_model {samples_, std::move(phylogeny_prior_model), model_parameters, config, population_prior_model};
+                const model::SingleCellModel phylogeny_model {samples_, std::move(phylogeny_prior_model), std::move(model_parameters), config, population_prior_model};
                 auto phylogeny_inferences = phylogeny_model.evaluate(genotypes, haplotype_likelihoods);
                 log(phylogeny_inferences, samples_, genotypes, debug_log_);
                 

@@ -29,7 +29,7 @@ VariationalBayesMixtureMixtureModel::evaluate(const LogProbabilityVector& genoty
                                               const MixtureConcentrationArray& mixture_concentrations,
                                               std::vector<LogProbabilityVector> seeds) const
 {
-    const static auto group_log_priors = to_logs(group_priors);
+    const auto group_log_priors = to_logs(group_priors);
     const auto evaluate_seed = [&] (auto&& seed) {
         return this->evaluate(genotype_log_priors, log_likelihoods, group_log_priors, group_concentrations, mixture_concentrations, std::move(seed)); };
     std::vector<Inferences> seed_results(seeds.size());
