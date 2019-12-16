@@ -140,9 +140,10 @@ void fill_summary_stats(const std::deque<MemoryFootprint>& footprints, ReadSetPr
     fill_summary_stats(bytes, result);
 }
 
-template <typename T>
-auto copy_positive(const std::deque<T>& values)
+template <typename Range>
+auto copy_positive(const Range& values)
 {
+    using T = typename Range::value_type;
     std::vector<T> result {};
     result.reserve(values.size());
     std::copy_if(std::cbegin(values), std::cend(values), std::back_inserter(result), [] (T value) { return value > 0; });
@@ -165,31 +166,29 @@ auto make_depth_stats(const Range& depths)
     return result;
 }
 
-} // namespace
-
+template <typename DepthType>
 boost::optional<ReadSetProfile>
-profile_reads(const std::vector<SampleName>& samples,
-              const InputRegionMap& regions,
-              const ReadManager& source,
-              ReadSetProfileConfig config)
+profile_reads_helper(const std::vector<SampleName>& samples,
+                     const InputRegionMap& regions,
+                     const ReadManager& source,
+                     ReadSetProfileConfig config)
 {
     ReadSetProfile result {};
     std::deque<MemoryFootprint> memory_footprints {}, fragmented_memory_footprints {};
-    std::deque<unsigned> depths {};
-    std::unordered_map<GenomicRegion::ContigName, std::deque<unsigned>> contig_depths {};
+    std::unordered_map<GenomicRegion::ContigName, std::vector<DepthType>> contig_depths {};
     std::deque<unsigned> read_lengths {};
     std::deque<AlignedRead::MappingQuality> mapping_qualities {};
     const auto contig_sampling_distribution = make_contig_sampling_distribution(regions);
     for (const auto& sample : samples) {
-        std::deque<unsigned> sample_depths {};
-        std::unordered_map<GenomicRegion::ContigName, std::deque<unsigned>> sample_contig_depths {};
+        std::vector<DepthType> sample_depths {};
+        std::unordered_map<GenomicRegion::ContigName, std::vector<DepthType>> sample_contig_depths {};
         SamplingSummary sampling_summary {};
         auto remaining_sampling_regions = regions;
         auto sample_contig_sampling_distribution = contig_sampling_distribution;
         while (true) {
             const auto target_sampling_region = choose_next_sample_region(sample, remaining_sampling_regions, config, sample_contig_sampling_distribution, sampling_summary);
             if (!target_sampling_region) break;
-            CoverageTracker<GenomicRegion> depth_tracker {};
+            CoverageTracker<GenomicRegion, DepthType> depth_tracker {true};
             auto remaining_reads = static_cast<int>(config.max_reads_per_draw);
             const auto read_visitor = [&] (const SampleName& sample, AlignedRead read) {
                 read_lengths.push_back(sequence_size(read));
@@ -237,15 +236,16 @@ profile_reads(const std::vector<SampleName>& samples,
         ReadSetProfile::GenomeContigDepthStatsPair sample_depth_stats {};
         if (!sample_depths.empty()) {
             fill_depth_stats(sample_depths, sample_depth_stats.genome);
-            for (const auto& p : sample_contig_depths) {
+            sample_depths.clear();
+            sample_depths.shrink_to_fit();
+            for (auto& p : sample_contig_depths) {
                 sample_depth_stats.contig.emplace(p.first, make_depth_stats(p.second));
+                utils::append(std::move(p.second), contig_depths[p.first]);
+                p.second.clear();
+                p.second.shrink_to_fit();
             }
         }
         result.depth_stats.sample.emplace(sample, std::move(sample_depth_stats));
-        utils::append(std::move(sample_depths), depths);
-        for (auto& p : sample_contig_depths) {
-            utils::append(std::move(p.second), contig_depths[p.first]);
-        }
     }
     if (memory_footprints.empty()) return boost::none;
     fill_summary_stats(memory_footprints, result.memory_stats);
@@ -255,10 +255,41 @@ profile_reads(const std::vector<SampleName>& samples,
     }
     fill_summary_stats(read_lengths, result.length_stats);
     fill_summary_stats(mapping_qualities, result.mapping_quality_stats);
-    if (!depths.empty()) {
+    std::size_t total_depths {0};
+    for (const auto& p : contig_depths) {
+        result.depth_stats.combined.contig.emplace(p.first, make_depth_stats(p.second));
+        total_depths += p.second.size();
+    }
+    if (total_depths > 0) {
+        std::vector<DepthType> depths {};
+        depths.reserve(total_depths / contig_depths.size());
+        for (auto& p : contig_depths) {
+            utils::append(std::move(p.second), depths);
+            p.second.clear();
+            p.second.shrink_to_fit();
+        }
+        contig_depths.clear();
         fill_depth_stats(depths, result.depth_stats.combined.genome);
-        for (const auto& p : contig_depths) {
-            result.depth_stats.combined.contig.emplace(p.first, make_depth_stats(p.second));
+    }
+    return result;
+}
+
+} // namespace
+
+boost::optional<ReadSetProfile>
+profile_reads(const std::vector<SampleName>& samples,
+              const InputRegionMap& regions,
+              const ReadManager& source,
+              ReadSetProfileConfig config)
+{
+    boost::optional<ReadSetProfile> result {};
+    try {
+        result = profile_reads_helper<unsigned short>(samples, regions, source, config);
+    } catch (const std::runtime_error& e) {
+        try {
+            result = profile_reads_helper<unsigned>(samples, regions, source, config);
+        } catch (const std::runtime_error& e) {
+            result = profile_reads_helper<unsigned long>(samples, regions, source, config);
         }
     }
     return result;
