@@ -189,7 +189,8 @@ profile_reads_helper(const std::vector<SampleName>& samples,
             const auto target_sampling_region = choose_next_sample_region(sample, remaining_sampling_regions, config, sample_contig_sampling_distribution, sampling_summary);
             if (!target_sampling_region) break;
             CoverageTracker<GenomicRegion, DepthType> depth_tracker {true};
-            auto remaining_reads = static_cast<int>(config.max_reads_per_draw);
+            auto remaining_reads = static_cast<int>(config.target_reads_per_draw);
+            boost::optional<GenomicRegion> first_sampled_read_region {};
             const auto read_visitor = [&] (const SampleName& sample, AlignedRead read) {
                 read_lengths.push_back(sequence_size(read));
                 mapping_qualities.push_back(read.mapping_quality());
@@ -198,7 +199,9 @@ profile_reads_helper(const std::vector<SampleName>& samples,
                     fragmented_memory_footprints.push_back(fragmented_footprint(read, *config.fragment_size));
                 }
                 depth_tracker.add(read);
-                return --remaining_reads > 0;
+                if (!first_sampled_read_region) first_sampled_read_region = mapped_region(read);
+                if (remaining_reads > 0) --remaining_reads;
+                return remaining_reads > 0 || overlaps(read, *first_sampled_read_region);
             };
             source.iterate(sample, *target_sampling_region, read_visitor);
             auto sampled_region = *target_sampling_region;

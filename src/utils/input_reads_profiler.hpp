@@ -19,7 +19,7 @@ namespace octopus {
 struct ReadSetProfileConfig
 {
     std::size_t max_draws_per_sample = 500;
-    std::size_t max_reads_per_draw = 10'000;
+    std::size_t target_reads_per_draw = 10'000;
     std::size_t min_draws_per_contig = 10;
     boost::optional<AlignedRead::NucleotideSequence::size_type> fragment_size = boost::none;
 };
