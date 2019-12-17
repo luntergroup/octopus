@@ -323,6 +323,18 @@ CallerBuilder& CallerBuilder::set_max_clones(unsigned n) noexcept
     return *this;
 }
 
+CallerBuilder& CallerBuilder::set_clonality_prior(std::function<double(unsigned)> prior) noexcept
+{
+    params_.clonality_prior = std::move(prior);
+    return *this;
+}
+
+CallerBuilder& CallerBuilder::set_clone_concentration(double concentration) noexcept
+{
+    params_.clone_concentration = concentration;
+    return *this;
+}
+
 CallerBuilder& CallerBuilder::set_dropout_concentration(double concentration) noexcept
 {
     params_.dropout_concentration = concentration;
@@ -502,7 +514,9 @@ CallerBuilder::CallerFactoryMap CallerBuilder::generate_factory() const
                                                          params_.deduplicate_haplotypes_with_caller_model,
                                                          params_.max_clones,
                                                          params_.max_genotypes,
-                                                         params_.max_vb_seeds
+                                                         params_.max_vb_seeds,
+                                                         params_.clonality_prior,
+                                                         params_.clone_concentration
                                                      });
         }},
         {"cell", [this, &samples] () {

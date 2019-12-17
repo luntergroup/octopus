@@ -664,6 +664,14 @@ OptionMap parse_options(const int argc, const char** argv)
     ("min-clone-frequency",
      po::value<float>()->default_value(0.01, "0.01"),
      "Minimum expected clone frequency in the sample")
+    
+    ("clone-prior",
+     po::value<float>()->default_value(0.01, "0.01"),
+     "Prior probability of each clone in the sample")
+    
+    ("clone-concentration",
+     po::value<float>()->default_value(1, "1"),
+     "Prior mixture concentration for each clone in the sample")
     ;
     
     po::options_description cell("Cell calling model");
@@ -1138,7 +1146,7 @@ void validate(const OptionMap& vm)
         "snp-heterozygosity", "snp-heterozygosity-stdev", "indel-heterozygosity",
         "somatic-snv-prior", "somatic-indel-prior", "min-expected-somatic-frequency", "min-credible-somatic-frequency", "somatic-credible-mass",
         "denovo-snv-prior", "denovo-indel-prior", "min-candidate-credible-vaf-probability",
-        "somatic-cnv-prior"
+        "somatic-cnv-prior", "clone-prior"
     };
     conflicting_options(vm, "maternal-sample", "normal-sample");
     conflicting_options(vm, "paternal-sample", "normal-sample");

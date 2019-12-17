@@ -93,6 +93,8 @@ public:
     
     // polyclone
     CallerBuilder& set_max_clones(unsigned n) noexcept;
+    CallerBuilder& set_clonality_prior(std::function<double(unsigned)> prior) noexcept;
+    CallerBuilder& set_clone_concentration(double concentration) noexcept;
     
     // cell
     CallerBuilder& set_dropout_concentration(double concentration) noexcept;
@@ -150,6 +152,8 @@ private:
         
         // polyclone
         unsigned max_clones;
+        std::function<double(unsigned)> clonality_prior;
+        double clone_concentration;
         
         // cell
         std::unordered_map<SampleName, double> sample_dropout_concentrations;

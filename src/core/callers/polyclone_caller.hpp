@@ -43,7 +43,8 @@ public:
         unsigned max_clones = 3;
         boost::optional<std::size_t> max_genotypes = 10'000;
         boost::optional<unsigned> max_vb_seeds = boost::none; // Use default if none
-        std::function<double(unsigned)> clonality_prior = [] (unsigned clonality) { return maths::geometric_pdf(clonality, 0.5); };
+        std::function<double(unsigned)> clonality_prior = [] (unsigned clonality) { return maths::geometric_pdf(clonality, 0.99); };
+        double clone_mixture_prior_concentration = 1;
     };
     
     PolycloneCaller() = delete;
@@ -68,6 +69,12 @@ private:
     struct ModelProbabilities
     {
         double clonal, subclonal;
+    };
+    
+    struct IndexedGenotypeVectorPair
+    {
+        std::vector<Genotype<Haplotype>> raw;
+        std::vector<GenotypeIndex> indices;
     };
     
     std::string do_name() const override;
@@ -106,6 +113,12 @@ private:
                    const ReadPileupMap& pileup) const;
     
     const SampleName& sample() const noexcept;
+    void fit_sublone_model(const MappableBlock<Haplotype>& haplotypes,
+                           const HaplotypeLikelihoodArray& haplotype_likelihoods,
+                           GenotypePriorModel& genotype_prior_model,
+                           const double haploid_model_evidence,
+                           IndexedGenotypeVectorPair& prev_genotypes,
+                           model::SubcloneModel::InferredLatents& sublonal_inferences) const;
     
     std::unique_ptr<GenotypePriorModel> make_prior_model(const HaplotypeBlock& haplotypes) const;
     

@@ -2100,6 +2100,9 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
         vc_builder.set_min_denovo_posterior(options.at("min-denovo-posterior").as<Phred<double>>());
     } else if (caller == "polyclone") {
         vc_builder.set_max_clones(as_unsigned("max-clones", options));
+        const double clone_prior = options.at("clone-prior").as<float>();
+        vc_builder.set_clonality_prior([clone_prior] (unsigned clonality) { return maths::geometric_pdf(clonality, 1 - clone_prior); });
+        vc_builder.set_clone_concentration(options.at("clone-concentration").as<float>());
     } else if (caller == "cell") {
         if (is_set("normal-samples", options)) {
             for (auto sample : options.at("normal-samples").as<std::vector<std::string>>()) {
