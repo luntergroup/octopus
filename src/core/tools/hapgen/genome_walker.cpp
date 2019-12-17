@@ -54,7 +54,7 @@ template <typename BidirIt>
 bool is_sandwich_allele(BidirIt first, BidirIt allele, BidirIt last)
 {
     if (allele != first && allele != last && std::next(allele) != last) {
-        return overlaps(*std::prev(allele), *allele) && overlaps(*allele, *std::next(allele));
+        return has_overlapped(first, std::prev(allele), *allele) && has_overlapped(std::next(allele), last, *allele);
     } else {
         return false;
     }
