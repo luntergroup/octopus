@@ -15,6 +15,11 @@ $ octopus --version
 ```
 
 **Command**
+Command line to install octopus:
+```shell
+$ 
+```
+
 Command line to run octopus:
 ```shell
 $ octopus
