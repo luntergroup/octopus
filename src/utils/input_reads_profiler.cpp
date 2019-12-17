@@ -235,10 +235,12 @@ profile_reads_helper(const std::vector<SampleName>& samples,
         }
         ReadSetProfile::GenomeContigDepthStatsPair sample_depth_stats {};
         if (!sample_depths.empty()) {
+            std::sort(std::begin(sample_depths), std::end(sample_depths)); // sorting means no copying from stats calculations
             fill_depth_stats(sample_depths, sample_depth_stats.genome);
             sample_depths.clear();
             sample_depths.shrink_to_fit();
             for (auto& p : sample_contig_depths) {
+                std::sort(std::begin(p.second), std::end(p.second)); // sorting means no copying from stats calculations
                 sample_depth_stats.contig.emplace(p.first, make_depth_stats(p.second));
                 utils::append(std::move(p.second), contig_depths[p.first]);
                 p.second.clear();
@@ -256,7 +258,8 @@ profile_reads_helper(const std::vector<SampleName>& samples,
     fill_summary_stats(read_lengths, result.length_stats);
     fill_summary_stats(mapping_qualities, result.mapping_quality_stats);
     std::size_t total_depths {0};
-    for (const auto& p : contig_depths) {
+    for (auto& p : contig_depths) {
+        std::sort(std::begin(p.second), std::end(p.second)); // sorting means no copying from stats calculations
         result.depth_stats.combined.contig.emplace(p.first, make_depth_stats(p.second));
         total_depths += p.second.size();
     }
@@ -269,6 +272,7 @@ profile_reads_helper(const std::vector<SampleName>& samples,
             p.second.shrink_to_fit();
         }
         contig_depths.clear();
+        std::sort(std::begin(depths), std::end(depths)); // sorting means no copying from stats calculations
         fill_depth_stats(depths, result.depth_stats.combined.genome);
     }
     return result;
