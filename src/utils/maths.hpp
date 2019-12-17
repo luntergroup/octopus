@@ -205,18 +205,18 @@ T median(const Range& values)
     return detail::median_const<T>(std::cbegin(values), std::cend(values));
 }
 
-template <typename InputIt, typename UnaryOperation>
-auto stdev(InputIt first, InputIt last, UnaryOperation unary_op)
+template <typename ForwardIterator, typename UnaryOperation>
+auto stdev(ForwardIterator first, ForwardIterator last, UnaryOperation unary_op)
 {
     const auto m = mean(first, last, unary_op);
     const auto n = std::distance(first, last);
-    std::vector<double> diff(n);
-    std::transform(first, last, std::begin(diff), [&] (const auto& x) { return unary_op(x) - m; });
-    return std::sqrt(std::inner_product(std::begin(diff), std::end(diff), std::begin(diff), 0.0) / n);
+    const auto sum_square = [&] (auto total, const auto& x) { return total + std::pow(unary_op(x) - m, 2); };
+    const auto ss = std::accumulate(first, last, 0.0, sum_square);
+    return std::sqrt(ss / n);
 }
 
-template <typename InputIt>
-auto stdev(InputIt first, InputIt last)
+template <typename ForwardIterator>
+auto stdev(ForwardIterator first, ForwardIterator last)
 {
     return stdev(first, last, IdFunction {});
 }
