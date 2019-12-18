@@ -116,31 +116,6 @@ SingleCellModel::evaluate(const PhylogenyNodePloidyMap& phylogeny_ploidies,
 
 // private methods
 
-namespace {
-
-template <typename T, typename BinaryPredicate = std::less<T>>
-std::vector<std::size_t>
-select_top_k_indices(const std::vector<T>& values, const std::size_t k, const BinaryPredicate comp_less = std::less<T> {})
-{
-    std::vector<std::size_t> result(k);
-    if (k < values.size() && k > 0) {
-        std::vector<std::pair<std::reference_wrapper<const T>, std::size_t>> indexed_values {};
-        indexed_values.reserve(values.size());
-        for (std::size_t idx {0}; idx < values.size(); ++idx) {
-            indexed_values.emplace_back(values[idx], idx);
-        }
-        const auto ref_greater = [&comp_less] (const auto& lhs, const auto& rhs) { return comp_less(rhs.first.get(), lhs.first.get()); };
-        const auto kth = std::next(std::begin(indexed_values), k);
-        std::partial_sort(std::begin(indexed_values), kth, std::end(indexed_values), ref_greater);
-        std::transform(std::begin(indexed_values), kth, std::rbegin(result), [] (const auto& p) { return p.second; });
-    } else if (!values.empty() && k > 0) {
-        std::iota(std::begin(result), std::end(result), std::size_t {0});
-    }
-    return result;
-}
-
-} // namespace
-
 std::vector<std::size_t>
 SingleCellModel::propose_genotypes(const GenotypeVector& genotypes,
                                    const HaplotypeLikelihoodArray& haplotype_likelihoods) const
