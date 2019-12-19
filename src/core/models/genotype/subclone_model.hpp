@@ -52,15 +52,17 @@ public:
         using GenotypeMixturesDirichletAlphas   = std::vector<double>;
         using GenotypeMixturesDirichletAlphaMap = std::unordered_map<SampleName, GenotypeMixturesDirichletAlphas>;
         using ProbabilityVector                 = std::vector<double>;
+        using LogProbabilityVector              = std::vector<double>;
         
-        ProbabilityVector genotype_probabilities, genotype_log_probabilities;
+        ProbabilityVector genotype_probabilities;
+        LogProbabilityVector genotype_log_probabilities;
         GenotypeMixturesDirichletAlphaMap alphas;
     };
     
     struct InferredLatents
     {
         Latents max_evidence_params;
-        typename Latents::ProbabilityVector genotype_log_priors;
+        typename Latents::LogProbabilityVector genotype_log_priors;
         typename Latents::ProbabilityVector weighted_genotype_posteriors;
         double approx_log_evidence;
     };
@@ -86,13 +88,13 @@ public:
     InferredLatents
     evaluate(const std::vector<Genotype_>& genotypes,
              const HaplotypeLikelihoodArray& haplotype_likelihoods,
-             std::vector<typename Latents::ProbabilityVector> hints = {}) const;
+             std::vector<typename Latents::LogProbabilityVector> hints = {}) const;
     
     InferredLatents
     evaluate(const std::vector<Genotype_>& genotypes,
              const std::vector<GenotypeIndex_>& genotype_indices,
              const HaplotypeLikelihoodArray& haplotype_likelihoods,
-             std::vector<typename Latents::ProbabilityVector> hints = {}) const;
+             std::vector<typename Latents::LogProbabilityVector> hints = {}) const;
     
 private:
     std::vector<SampleName> samples_;
@@ -367,7 +369,7 @@ run_variational_bayes(const std::vector<SampleName>& samples,
                       const typename SubcloneModelBase<G, GI, GPM>::Priors& priors,
                       const HaplotypeLikelihoodArray& haplotype_log_likelihoods,
                       const typename SubcloneModelBase<G, GI, GPM>::AlgorithmParameters& params,
-                      std::vector<typename SubcloneModelBase<G, GI, GPM>::Latents::ProbabilityVector> hints,
+                      std::vector<typename SubcloneModelBase<G, GI, GPM>::Latents::LogProbabilityVector> hints,
                       boost::optional<IndexData<GI>> index_data = boost::none)
 {
     constexpr auto max_ploidy = SubcloneModelBase<G, GI, GPM>::max_ploidy;
@@ -384,7 +386,7 @@ template <typename G, typename GI, typename GPM>
 typename SubcloneModelBase<G, GI, GPM>::InferredLatents
 SubcloneModelBase<G, GI, GPM>::evaluate(const std::vector<G>& genotypes,
                                         const HaplotypeLikelihoodArray& haplotype_likelihoods,
-                                        std::vector<typename Latents::ProbabilityVector> hints) const
+                                        std::vector<typename Latents::LogProbabilityVector> hints) const
 {
     assert(!genotypes.empty());
     return detail::run_variational_bayes<G, GI, GPM>(samples_, genotypes, priors_, haplotype_likelihoods, parameters_, std::move(hints));
@@ -395,7 +397,7 @@ typename SubcloneModelBase<G, GI, GPM>::InferredLatents
 SubcloneModelBase<G, GI, GPM>::evaluate(const std::vector<G>& genotypes,
                                         const std::vector<GI>& genotype_indices,
                                         const HaplotypeLikelihoodArray& haplotype_likelihoods,
-                                        std::vector<typename Latents::ProbabilityVector> hints) const
+                                        std::vector<typename Latents::LogProbabilityVector> hints) const
 {
     assert(!genotypes.empty());
     assert(genotypes.size() == genotype_indices.size());

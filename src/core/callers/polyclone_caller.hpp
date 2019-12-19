@@ -116,7 +116,7 @@ private:
     void fit_sublone_model(const MappableBlock<Haplotype>& haplotypes,
                            const HaplotypeLikelihoodArray& haplotype_likelihoods,
                            GenotypePriorModel& genotype_prior_model,
-                           const double haploid_model_evidence,
+                           const model::IndividualModel::InferredLatents& haploid_latents,
                            IndexedGenotypeVectorPair& prev_genotypes,
                            model::SubcloneModel::InferredLatents& sublonal_inferences) const;
     
