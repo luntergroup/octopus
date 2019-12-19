@@ -19,25 +19,56 @@ using Index = std::size_t;
 using IndexTuple = std::vector<Index>;
 using IndexTupleVector = std::vector<IndexTuple>;
 
-template <typename T, typename BinaryPredicate = std::less<T>>
-std::vector<Index>
-select_top_k_indices(const std::vector<T>& values, const std::size_t k, const BinaryPredicate comp_less = std::less<T> {})
+namespace detail {
+
+template <typename T>
+auto index_cref(const std::vector<T>& values)
 {
-    std::vector<Index> result(k);
-    if (k < values.size() && k > 0) {
-        std::vector<std::pair<std::reference_wrapper<const T>, std::size_t>> indexed_values {};
-        indexed_values.reserve(values.size());
-        for (std::size_t idx {0}; idx < values.size(); ++idx) {
-            indexed_values.emplace_back(values[idx], idx);
-        }
-        const auto ref_greater = [&comp_less] (const auto& lhs, const auto& rhs) { return comp_less(rhs.first.get(), lhs.first.get()); };
-        const auto kth = std::next(std::begin(indexed_values), k);
-        std::partial_sort(std::begin(indexed_values), kth, std::end(indexed_values), ref_greater);
-        std::transform(std::begin(indexed_values), kth, std::rbegin(result), [] (const auto& p) { return p.second; });
-    } else if (!values.empty() && k > 0) {
-        std::iota(std::begin(result), std::end(result), std::size_t {0});
+    std::vector<std::pair<std::reference_wrapper<const T>, std::size_t>> result {};
+    result.reserve(values.size());
+    for (std::size_t idx {0}; idx < values.size(); ++idx) {
+        result.emplace_back(values[idx], idx);
     }
     return result;
+}
+
+template <typename _, typename T>
+auto copy_k_second(const std::vector<std::pair<_, T>>& pairs, std::size_t k)
+{
+    k = std::min(k, pairs.size());
+    std::vector<T> result(k);
+    const static auto get_second = [] (const auto& p) { return p.second; };
+    std::transform(std::cbegin(pairs), std::next(std::cbegin(pairs), k), std::begin(result), get_second);
+    return result;
+}
+
+} // namespace detail
+
+template <typename T, typename BinaryPredicate = std::greater<T>>
+std::vector<Index>
+select_top_k_indices(const std::vector<T>& values, const std::size_t k,
+                     const bool sorted = true,
+                     const BinaryPredicate comp = std::greater<T> {})
+{
+    if (!sorted && values.size() <= k) {
+        std::vector<Index> result(values.size());
+        std::iota(std::begin(result), std::end(result), 0);
+        return result;
+    } else {
+        auto indexed_values = detail::index_cref(values);
+        const auto ref_comp = [&comp] (const auto& lhs, const auto& rhs) { return comp(lhs.first.get(), rhs.first.get()); };
+        if (k < values.size()) {
+            const auto kth = std::next(std::begin(indexed_values), k);
+            if (sorted) {
+                std::partial_sort(std::begin(indexed_values), kth, std::end(indexed_values), ref_comp);
+            } else {
+                std::nth_element(std::begin(indexed_values), kth, std::end(indexed_values), ref_comp);
+            }
+        } else {
+            std::sort(std::begin(indexed_values), std::end(indexed_values), ref_comp);
+        }
+        return detail::copy_k_second(indexed_values, k);
+    }
 }
 
 namespace detail {

@@ -553,7 +553,7 @@ select_top_k(std::vector<Genotype<Haplotype>>& genotypes, std::vector<GenotypeIn
              const model::IndividualModel::Latents::ProbabilityVector& genotype_posteriors,
              const std::size_t k)
 {
-    const auto best_indices = select_top_k_indices(genotype_posteriors, k);
+    const auto best_indices = select_top_k_indices(genotype_posteriors, k, false);
     erase_complement_indices(genotypes, best_indices);
     erase_complement_indices(genotype_indices, best_indices);
 }
