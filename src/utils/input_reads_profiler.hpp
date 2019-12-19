@@ -12,6 +12,7 @@
 
 #include "config/common.hpp"
 #include "basics/aligned_read.hpp"
+#include "io/reference/reference_genome.hpp"
 #include "io/read/read_manager.hpp"
 
 namespace octopus {
@@ -22,6 +23,7 @@ struct ReadSetProfileConfig
     std::size_t target_reads_per_draw = 10'000;
     std::size_t min_draws_per_contig = 10;
     boost::optional<AlignedRead::NucleotideSequence::size_type> fragment_size = boost::none;
+    unsigned min_read_lengths = 20;
 };
 
 struct ReadSetProfile
@@ -63,6 +65,7 @@ struct ReadSetProfile
 
 boost::optional<ReadSetProfile>
 profile_reads(const std::vector<SampleName>& samples,
+              const ReferenceGenome& reference,
               const InputRegionMap& regions,
               const ReadManager& source,
               ReadSetProfileConfig config = ReadSetProfileConfig {});

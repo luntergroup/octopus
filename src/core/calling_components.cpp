@@ -407,6 +407,7 @@ bool includes(const std::vector<unsigned>& values, const unsigned value) noexcep
 }
 
 auto profile_reads_helper(const std::vector<SampleName>& samples,
+                          const ReferenceGenome& reference,
                           const InputRegionMap& input_regions,
                           const ReadManager& source,
                           const PloidyMap& ploidies,
@@ -415,7 +416,7 @@ auto profile_reads_helper(const std::vector<SampleName>& samples,
     ReadSetProfileConfig config {};
     config.fragment_size = options::max_read_length(options);
     if (samples.size() == 1) {
-        auto result = profile_reads(samples, input_regions, source, config);
+        auto result = profile_reads(samples, reference, input_regions, source, config);
         if (result) result->depth_stats.sample.clear(); // no need to keep this duplicate info
         return result;
     } else if (options::use_same_read_profile_for_all_samples(options)) {
@@ -432,11 +433,11 @@ auto profile_reads_helper(const std::vector<SampleName>& samples,
             }
             if (include_sample) profile_samples.push_back(sample);
         }
-        auto result = profile_reads(profile_samples, input_regions, source, config);
+        auto result = profile_reads(profile_samples, reference, input_regions, source, config);
         if (result) result->depth_stats.sample.clear();
         return result;
     } else {
-        return profile_reads(samples, input_regions, source, config);
+        return profile_reads(samples, reference, input_regions, source, config);
     }
 }
 
@@ -571,7 +572,7 @@ GenomeCallingComponents::Components::Components(ReferenceGenome&& reference, Rea
 , regions {get_search_regions(options, this->reference, this->read_manager)}
 , contigs {get_contigs(this->regions, this->reference, options::get_contig_output_order(options))}
 , ploidies {options::get_ploidy_map(options)}
-, reads_profile {profile_reads_helper(this->samples, this->regions, this->read_manager, this->ploidies, options)}
+, reads_profile {profile_reads_helper(this->samples, this->reference, this->regions, this->read_manager, this->ploidies, options)}
 , read_pipe {options::make_read_pipe(this->read_manager, this->reference, this->samples, options)}
 , haplotype_likelihood_model {options::make_haplotype_likelihood_model(options, optional_cref(this->reads_profile))}
 , caller_factory {options::make_caller_factory(this->reference, this->read_pipe, this->regions, options, optional_cref(this->reads_profile))}

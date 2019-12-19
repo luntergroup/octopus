@@ -105,6 +105,8 @@ inline constexpr char capitalise_base(const char base) noexcept
     }
 }
 
+} // namespace detail
+
 inline bool is_dna_nucleotide(const char b) noexcept
 {
     return b == 'A' || b == 'C' || b == 'G' || b == 'T';
@@ -122,15 +124,13 @@ inline bool is_dna_or_rna_nucleotide(const char b) noexcept
 
 inline bool is_iupac_ambiguous_base(const char base) noexcept
 {
-    return iupac_symbols[base].size() > 1;
+    return detail::iupac_symbols[base].size() > 1;
 }
 
 inline char disambiguate_iupac_base(const char base)
 {
-    return iupac_symbols[base].front();
+    return detail::iupac_symbols[base].front();
 }
-
-} // namespace detail
 
 template <typename SequenceType>
 bool has_ns(const SequenceType& sequence) noexcept
@@ -142,26 +142,26 @@ template <typename SequenceType>
 bool is_dna(const SequenceType& sequence) noexcept
 {
     return std::all_of(std::cbegin(sequence), std::cend(sequence),
-                       [] (const auto c) noexcept { return detail::is_dna_nucleotide(c) || c == 'N'; });
+                       [] (const auto c) noexcept { return is_dna_nucleotide(c) || c == 'N'; });
 }
 
 template <typename SequenceType>
 bool is_canonical_dna(const SequenceType& sequence) noexcept
 {
-    return std::all_of(std::cbegin(sequence), std::cend(sequence), detail::is_dna_nucleotide);
+    return std::all_of(std::cbegin(sequence), std::cend(sequence), is_dna_nucleotide);
 }
 
 template <typename SequenceType>
 bool is_rna(const SequenceType& sequence) noexcept
 {
     return std::all_of(std::cbegin(sequence), std::cend(sequence),
-                       [] (const auto c) noexcept { return detail::is_rna_nucleotide(c) || c == 'N'; });
+                       [] (const auto c) noexcept { return is_rna_nucleotide(c) || c == 'N'; });
 }
 
 template <typename SequenceType>
 bool is_canonical_rna(const SequenceType& sequence) noexcept
 {
-    return std::all_of(std::cbegin(sequence), std::cend(sequence), detail::is_rna_nucleotide);
+    return std::all_of(std::cbegin(sequence), std::cend(sequence), is_rna_nucleotide);
 }
 
 template <typename SequenceType>
@@ -173,7 +173,7 @@ bool is_dna_rna_ambiguous(const SequenceType& sequence) // i.e. is_dna(sequence)
 template <typename SequenceType>
 bool is_canonical_dna_or_rna(const SequenceType& sequence) noexcept
 {
-    return std::all_of(std::cbegin(sequence), std::cend(sequence), detail::is_dna_or_rna_nucleotide);
+    return std::all_of(std::cbegin(sequence), std::cend(sequence), is_dna_or_rna_nucleotide);
 }
 
 template <typename SequenceType>
@@ -236,10 +236,10 @@ void disambiguate_iupac_bases(SequenceType& sequence, const bool allow_ns = fals
 {
     if (allow_ns) {
         std::transform(std::begin(sequence), std::end(sequence), std::begin(sequence),
-                       [] (auto base) { return base == 'N' ? base : detail::disambiguate_iupac_base(base); });
+                       [] (auto base) { return base == 'N' ? base : disambiguate_iupac_base(base); });
     } else {
         std::transform(std::begin(sequence), std::end(sequence), std::begin(sequence),
-                       [] (auto base) { return detail::disambiguate_iupac_base(base); });
+                       [] (auto base) { return disambiguate_iupac_base(base); });
     }
 }
 
@@ -417,7 +417,7 @@ double gc_content(const SequenceType& sequence) noexcept
 template <typename ForwardIt>
 bool is_homopolymer(ForwardIt first, ForwardIt last) noexcept
 {
-    return std::distance(first, last) > 0 && detail::is_dna_or_rna_nucleotide(*first)
+    return std::distance(first, last) > 0 && is_dna_or_rna_nucleotide(*first)
            && std::adjacent_find(first, last, std::not_equal_to<> {}) == last;
 }
 
