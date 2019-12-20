@@ -81,8 +81,10 @@ SingleCellModel::evaluate(const GenotypeVector& genotypes,
                           const HaplotypeLikelihoodArray& haplotype_likelihoods) const
 {
     assert(all_same_ploidy(genotypes));
+    const auto num_clones = prior_model_.phylogeny().size();
+    assert(num_clones <= genotypes.size());
     Inferences result {};
-    if (prior_model_.phylogeny().size() == 1) {
+    if (num_clones == 1) {
         evaluate(result, genotypes, haplotype_likelihoods);
     } else {
         const auto genotype_combinations = propose_genotype_combinations(genotypes, haplotype_likelihoods);
@@ -104,7 +106,9 @@ SingleCellModel::evaluate(const PhylogenyNodePloidyMap& phylogeny_ploidies,
                           const HaplotypeLikelihoodArray& haplotype_likelihoods) const
 {
     assert(phylogeny_ploidies.size() == prior_model_.phylogeny().size());
-    if (prior_model_.phylogeny().size() == 1) {
+    const auto num_clones = prior_model_.phylogeny().size();
+    assert(num_clones <= genotypes.size());
+    if (num_clones == 1) {
         return evaluate(genotypes, haplotype_likelihoods);
     } else {
         Inferences result {};

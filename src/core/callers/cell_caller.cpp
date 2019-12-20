@@ -376,8 +376,9 @@ CellCaller::infer_latents(const HaplotypeBlock& haplotypes, const HaplotypeLikel
     std::vector<std::vector<SingleCellModelInferences>> inferences {};
     double max_log_evidence {};
     bool copy_change_predicted {false};
+    const auto max_clones = std::min(parameters_.max_clones, static_cast<unsigned>(genotypes.size()));
     
-    for (unsigned clones {1}; clones <= parameters_.max_clones; ++clones) {
+    for (unsigned clones {1}; clones <= max_clones; ++clones) {
         auto phylogenies = propose_next_phylogenies(inferences);
         if (!phylogenies.empty()) {
             std::vector<SingleCellModelInferences> clone_inferences {};
