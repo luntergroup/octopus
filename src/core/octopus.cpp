@@ -821,9 +821,9 @@ auto run(Task task, ContigCallingComponents components, CallerSyncPacket& sync)
             lock.unlock();
             sync.cv.notify_all();
             return result;
-        } catch (...) {
+        } catch (const std::exception& e) {
             logging::ErrorLogger error_log {};
-            stream(error_log) << "Encountered a problem whilst calling " << task;
+            stream(error_log) << "Encountered a problem whilst calling " << task << "(" << e.what() << ")";
             using namespace std::chrono_literals;
             std::this_thread::sleep_for(2s); // Try to make sure the error is logged before raising
             std::unique_lock<std::mutex> lock {sync.mutex};
