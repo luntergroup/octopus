@@ -13,6 +13,7 @@
 #include "core/types/haplotype.hpp"
 #include "io/reference/reference_genome.hpp"
 #include "config/common.hpp"
+#include "call.hpp"
 #include "call_wrapper.hpp"
 
 namespace octopus {
@@ -28,33 +29,7 @@ private:
 };
 
 std::vector<unsigned>
-compute_haplotype_order(const std::vector<Genotype<Allele>>& genotypes, const ReferenceGenome& reference)
-{
-    if (!genotypes.empty()) {
-        const auto ploidy = genotypes.front().ploidy();
-        const auto region = encompassing_region(genotypes);
-        assert(std::all_of(std::cbegin(genotypes), std::cend(genotypes), [ploidy] (const auto& g) { return g.ploidy() == ploidy; }));
-        std::vector<std::pair<Haplotype, unsigned>> haplotypes {};
-        haplotypes.reserve(ploidy);
-        for (unsigned haplotype_idx {0}; haplotype_idx < ploidy; ++haplotype_idx) {
-            Haplotype::Builder haplotype {region, reference};
-            for (const auto& genotype : genotypes) {
-                const auto& allele = genotype[haplotype_idx];
-                if (!is_reference(allele, reference) && haplotype.can_push_back(allele)) {
-                    haplotype.push_back(allele);
-                }
-            }
-            haplotypes.push_back({haplotype.build(), haplotype_idx});
-        }
-        std::sort(std::begin(haplotypes), std::end(haplotypes));
-        std::vector<unsigned> result(ploidy);
-        std::transform(std::cbegin(haplotypes), std::cend(haplotypes), std::begin(result),
-                       [] (const auto& p) { return p.second; });
-        return result;
-    } else {
-        return {};
-    }
-}
+compute_haplotype_order(const std::vector<Genotype<Allele>>& genotypes, const ReferenceGenome& reference);
 
 } // namespace detail
 
@@ -79,17 +54,10 @@ void sort_genotype_alleles(Iterator first_call, Iterator last_call, const Sample
 
 namespace detail {
 
-bool are_in_phase(const Call::GenotypeCall& lhs, const Call::GenotypeCall& rhs)
-{
-    return lhs.phase && rhs.phase && overlaps(lhs.phase->region(), rhs.phase->region());
-}
+bool are_in_phase(const Call::GenotypeCall& lhs, const Call::GenotypeCall& rhs);
+bool are_in_phase(const CallWrapper& lhs, const CallWrapper& rhs, const SampleName& sample);
 
-bool are_in_phase(const CallWrapper& lhs, const CallWrapper& rhs, const SampleName& sample)
-{
-    return are_in_phase(lhs->get_genotype_call(sample), rhs->get_genotype_call(sample));
-}
-
-} // namespacedetail
+} // namespace detail
 
 template <typename Iterator>
 void sort_genotype_alleles_by_phase_set(Iterator first_call, Iterator last_call, const SampleName& sample, const ReferenceGenome& reference)
