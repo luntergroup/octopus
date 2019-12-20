@@ -132,7 +132,7 @@ bool has_reads(const GenomicRegion& region, ContigCallingComponents& components)
 auto get_call_types(const GenomeCallingComponents& components, const std::vector<ContigName>& contigs)
 {
     CallTypeSet result {};
-    for (const auto& contig : components.contigs()) {
+    for (const auto& contig : contigs) {
         const auto tmp_caller = components.caller_factory().make(contig);
         auto caller_call_types = tmp_caller->call_types();
         result.insert(std::begin(caller_call_types), std::end(caller_call_types));
