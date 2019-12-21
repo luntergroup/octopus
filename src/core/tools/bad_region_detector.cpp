@@ -437,13 +437,11 @@ auto discrete_sf(const Range& probabilities, std::size_t x)
 
 auto calculate_conditional_depth_probability(const unsigned target_depth, const ReadSetProfile::DepthStats& stats)
 {
-    const auto low_depth = stats.positive.mean + std::min(stats.positive.median, stats.positive.stdev) / 2;
+    const auto low_depth = stats.positive.mean + (1 + stats.distribution[0]) * std::min(stats.positive.median, stats.positive.stdev) / 2;
     double result {1};
     if (low_depth < target_depth) {
         result *= discrete_sf(stats.distribution, target_depth);
         result /= discrete_sf(stats.distribution, low_depth);
-        result /= (1 - stats.distribution[0]);
-        result = std::min(result, 1.0);
     }
     return result;
 }
