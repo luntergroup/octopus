@@ -33,8 +33,22 @@ VariantGenerator::VariantGenerator(const VariantGenerator& other)
 
 VariantGenerator& VariantGenerator::operator=(VariantGenerator other)
 {
-    std::swap(variant_generators_, other.variant_generators_);
+    swap(*this, other);
     return *this;
+}
+
+VariantGenerator::VariantGenerator(VariantGenerator&& other) : VariantGenerator {}
+{
+    swap(*this, other);
+}
+
+void swap(VariantGenerator& lhs, VariantGenerator& rhs) noexcept
+{
+    using std::swap;
+    swap(lhs.variant_generators_, rhs.variant_generators_);
+    swap(lhs.active_region_generator_, rhs.active_region_generator_);
+    swap(lhs.debug_log_, rhs.debug_log_);
+    swap(lhs.trace_log_, rhs.trace_log_);
 }
 
 void VariantGenerator::add(std::unique_ptr<VariantGenerator> generator)

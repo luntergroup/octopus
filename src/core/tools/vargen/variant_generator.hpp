@@ -32,9 +32,11 @@ public:
     
     VariantGenerator(const VariantGenerator&);
     VariantGenerator& operator=(VariantGenerator);
-    VariantGenerator(VariantGenerator&&)            = default;
+    VariantGenerator(VariantGenerator&&);
     
     virtual ~VariantGenerator() = default;
+    
+    friend void swap(VariantGenerator& lhs, VariantGenerator& rhs) noexcept;
     
     void add(std::unique_ptr<VariantGenerator> generator);
     
