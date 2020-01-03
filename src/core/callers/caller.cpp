@@ -168,6 +168,7 @@ std::deque<VcfRecord> Caller::call(const GenomicRegion& call_region, ProgressMet
         // as we didn't fetch them earlier
         reads = read_pipe_.get().fetch_reads(call_region, reads_report);
     }
+    candidate_generator_ = {};
     std::vector<GenomicRegion> likely_difficult_regions {};
     if (bad_region_detector_ && has_coverage(reads)) {
         const auto bad_regions = bad_region_detector_->detect(candidates, reads, reads_report);
@@ -1046,7 +1047,6 @@ MappableFlatSet<Variant> Caller::generate_candidate_variants(const GenomicRegion
     if (debug_log_) debug::print_left_aligned_candidates(stream(*debug_log_), raw_candidates, reference_);
     auto final_candidates = unique_left_align(std::move(raw_candidates), reference_);
     assert(check_reference(final_candidates, reference_));
-    candidate_generator_.clear();
     return MappableFlatSet<Variant> {std::make_move_iterator(std::begin(final_candidates)),
                                      std::make_move_iterator(std::end(final_candidates))};
 }
