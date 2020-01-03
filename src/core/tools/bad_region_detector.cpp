@@ -415,6 +415,14 @@ BadRegionDetector::compute_states(const std::vector<GenomicRegion>& regions, con
 
 namespace {
 
+template <typename PairRange>
+auto sum_second(const PairRange& pairs)
+{
+    using T = typename PairRange::value_type::second_type;
+    const static auto add_second = [] (T total, const auto& p) { return total + p.second; };
+    return std::accumulate(std::cbegin(pairs), std::cend(pairs), T {}, add_second);
+}
+
 bool are_similar(const ReadSetProfile::DepthSummaryStats& lhs, const ReadSetProfile::DepthSummaryStats& rhs)
 {
 	const auto diff = lhs.median < rhs.median ? (rhs.median - rhs.median) : (lhs.median < rhs.median);
@@ -437,7 +445,7 @@ auto discrete_sf(const Range& probabilities, std::size_t x)
 
 auto calculate_conditional_depth_probability(const unsigned target_depth, const ReadSetProfile::DepthStats& stats)
 {
-    const auto low_depth = stats.positive.mean + (1 + stats.distribution[0]) * std::min(stats.positive.median, stats.positive.stdev) / 2;
+    const auto low_depth = std::max(stats.positive.mean, stats.positive.median) + (stats.positive.stdev / (2 - stats.distribution[0]));
     double result {1};
     if (low_depth < target_depth) {
         result *= discrete_sf(stats.distribution, target_depth);
@@ -457,24 +465,11 @@ double BadRegionDetector::calculate_probability_good(const RegionState& state, O
     double result {1};
     if (reads_profile_) {
         const auto& depth_stats = reads_profile_->depth_stats;
-        for (const auto& p : state.read_stats.average_depths) {
-            if (depth_stats.sample.count(p.first) == 1) {
-				const auto& genome_stats = depth_stats.sample.at(p.first).genome;
-                if (depth_stats.sample.at(p.first).contig.count(state.region.contig_name()) == 1) {
-					const auto& contig_stats = depth_stats.sample.at(p.first).contig.at(state.region.contig_name());
-					if (are_similar(contig_stats.all, genome_stats.all)) {
-						result *= calculate_conditional_depth_probability(p.second, genome_stats);
-					} else {
-						result *= calculate_conditional_depth_probability(p.second, contig_stats);
-					}
-                } else {
-                    result *= calculate_conditional_depth_probability(p.second, genome_stats);
-                }
-            } else if (depth_stats.combined.contig.count(state.region.contig_name()) == 1) {
-                result *= calculate_conditional_depth_probability(p.second, depth_stats.combined.contig.at(state.region.contig_name()));
-            } else {
-                result *= calculate_conditional_depth_probability(p.second, depth_stats.combined.genome);
-            }
+        const auto average_depth = sum_second(state.read_stats.average_depths) / state.read_stats.average_depths.size();
+        if (depth_stats.combined.contig.count(state.region.contig_name()) == 1) {
+            result *= calculate_conditional_depth_probability(average_depth, depth_stats.combined.contig.at(state.region.contig_name()));
+        } else {
+            result *= calculate_conditional_depth_probability(average_depth, depth_stats.combined.genome);
         }
         if (state.read_stats.median_mapping_quality < reads_profile_->mapping_quality_stats.median) {
             result /= std::min((reads_profile_->mapping_quality_stats.median - state.read_stats.median_mapping_quality) / 10, 4);
@@ -501,7 +496,7 @@ double BadRegionDetector::calculate_probability_good(const RegionState& state, O
         const auto density_mean = size(state.region) * (params_.heterozygosity + tolerance_factor * params_.heterozygosity_stdev);
         result *= maths::poisson_sf(state.variant_stats->count, density_mean);
     }
-	result *= maths::poisson_sf(size(state.region), 5'000.0); // penalise very large regions
+    result = std::pow(result, size(state.region) / 1'000); // penalise large regions
     return result;
 }
 
@@ -509,31 +504,30 @@ bool BadRegionDetector::is_bad(const RegionState& state, OptionalReadsReport rea
 {
     GenomicRegion::Size min_region_size {100};
     unsigned min_alleles {0};
-    double tolerance_factor;
+    double min_probability_good {0.5};
     switch (params_.tolerance) {
         case Parameters::Tolerance::high: {
             min_alleles = 20;
-            tolerance_factor = 0.001;
-            min_region_size *= 3;
+            min_probability_good = 0.0001;
+            min_region_size = 300;
             break;
         }
         case Parameters::Tolerance::normal: {
             min_alleles = 10;
-            tolerance_factor = 0.01;
-			min_region_size *= 2;
+            min_probability_good = 0.005;
+			min_region_size = 200;
             break;
         }
         case Parameters::Tolerance::low: {
             min_alleles = 5;
-            tolerance_factor = 0.1;
+            min_probability_good = 0.01;
+            min_region_size = 100;
             break;
         }
     }
-    const auto num_samples = state.read_stats.average_depths.size();
-    auto min_good_prob = tolerance_factor * std::pow(0.9, num_samples - 1);
     return (!state.variant_stats || state.variant_stats->count >= min_alleles)
         && size(state.region) > min_region_size
-        && calculate_probability_good(state, reads_report) < min_good_prob;
+        && calculate_probability_good(state, reads_report) < min_probability_good;
 }
 
 } // namespace coretools
