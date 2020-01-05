@@ -24,11 +24,11 @@ VariantGenerator::VariantGenerator(ActiveRegionGenerator region_generator)
 
 VariantGenerator::VariantGenerator(const VariantGenerator& other)
 {
-    variant_generators_.reserve(other.variant_generators_.size());
+    this->variant_generators_.reserve(other.variant_generators_.size());
     for (const auto& generator : other.variant_generators_) {
-        variant_generators_.push_back(generator->clone());
+        this->variant_generators_.push_back(generator->clone());
     }
-    active_region_generator_ = other.active_region_generator_;
+    this->active_region_generator_ = other.active_region_generator_;
 }
 
 VariantGenerator& VariantGenerator::operator=(VariantGenerator other)
@@ -47,8 +47,6 @@ void swap(VariantGenerator& lhs, VariantGenerator& rhs) noexcept
     using std::swap;
     swap(lhs.variant_generators_, rhs.variant_generators_);
     swap(lhs.active_region_generator_, rhs.active_region_generator_);
-    swap(lhs.debug_log_, rhs.debug_log_);
-    swap(lhs.trace_log_, rhs.trace_log_);
 }
 
 void VariantGenerator::add(std::unique_ptr<VariantGenerator> generator)
