@@ -61,7 +61,7 @@ template <typename T>
 std::vector<T> concat(const std::vector<std::vector<T>>& values)
 {
     std::vector<T> result {};
-    result.reserve(sum_sizes(values));
+    result.reserve(detail::sum_sizes(values));
     for (const auto& v : values) utils::append(v, result);
     return result;
 }
@@ -70,7 +70,7 @@ template <typename T>
 std::vector<T> concat(std::vector<std::vector<T>>&& values)
 {
     std::vector<T> result {};
-    result.reserve(sum_sizes(values));
+    result.reserve(detail::sum_sizes(values));
     for (auto& v : values) utils::append(std::move(v), result);
     return result;
 }
