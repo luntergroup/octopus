@@ -496,7 +496,9 @@ double BadRegionDetector::calculate_probability_good(const RegionState& state, O
         const auto density_mean = size(state.region) * (params_.heterozygosity + tolerance_factor * params_.heterozygosity_stdev);
         result *= maths::poisson_sf(state.variant_stats->count, density_mean);
     }
-    result = std::pow(result, size(state.region) / 1'000); // penalise large regions
+    if (size(state.region) > 1'000) {
+        result = std::pow(result, static_cast<double>(size(state.region)) / 1'000); // penalise large regions
+    }
     return result;
 }
 
