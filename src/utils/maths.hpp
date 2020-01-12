@@ -420,13 +420,24 @@ RealType log_factorial(IntegerType x)
     return std::lgamma(x + 1);
 }
 
-template <typename InputIt>
-auto entropy(InputIt first, InputIt last)
+namespace detail {
+
+template <typename InputIt, typename Log>
+auto entropy_helper(InputIt first, InputIt last, const Log log)
 {
     using RealType = typename std::iterator_traits<InputIt>::value_type;
     static_assert(std::is_floating_point<RealType>::value,
                   "entropy is only defined for floating point values");
-    return -std::accumulate(first, last, RealType {0}, [] (auto curr, auto p) { return curr + p * std::log(p); });
+    const auto add_entropy = [&] (auto total, auto p) { return total + (p > 0 ? p * log(p) : 0); };
+    return -std::accumulate(first, last, RealType {0}, add_entropy);
+}
+
+} // namespace detail
+
+template <typename InputIt>
+auto entropy(InputIt first, InputIt last)
+{
+    return detail::entropy_helper(first, last, [] (auto x) { return std::log(x); });
 }
 
 template <typename Container>
@@ -438,10 +449,7 @@ auto entropy(const Container& values)
 template <typename InputIt>
 auto entropy2(InputIt first, InputIt last)
 {
-    using RealType = typename std::iterator_traits<InputIt>::value_type;
-    static_assert(std::is_floating_point<RealType>::value,
-                  "entropy2 is only defined for floating point values");
-    return -std::accumulate(first, last, RealType {0}, [] (auto curr, auto p) { return curr + p * std::log2(p); });
+    return detail::entropy_helper(first, last, [] (auto x) { return std::log2(x); });
 }
 
 template <typename Container>
@@ -453,10 +461,7 @@ auto entropy2(const Container& values)
 template <typename InputIt>
 auto entropy10(InputIt first, InputIt last)
 {
-    using RealType = typename std::iterator_traits<InputIt>::value_type;
-    static_assert(std::is_floating_point<RealType>::value,
-                  "entropy10 is only defined for floating point values");
-    return -std::accumulate(first, last, RealType {0}, [] (auto curr, auto p) { return curr + p * std::log10(p); });
+    return detail::entropy_helper(first, last, [] (auto x) { return std::log10(x); });
 }
 
 template <typename Container>
