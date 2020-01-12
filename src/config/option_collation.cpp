@@ -2113,6 +2113,7 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
         for (const SampleDropoutConcentrationPair& p : get_sample_dropout_concentrations(options)) {
             vc_builder.set_dropout_concentration(p.sample, p.concentration);
         }
+        vc_builder.set_phylogeny_concentration(options.at("phylogeny-concentration").as<float>());
         vc_builder.set_somatic_snv_prior(options.at("somatic-snv-prior").as<float>());
         vc_builder.set_somatic_indel_prior(options.at("somatic-indel-prior").as<float>());
         vc_builder.set_max_clones(as_unsigned("max-clones", options));

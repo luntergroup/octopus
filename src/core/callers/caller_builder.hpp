@@ -99,6 +99,7 @@ public:
     // cell
     CallerBuilder& set_dropout_concentration(double concentration) noexcept;
     CallerBuilder& set_dropout_concentration(const SampleName& sample, double concentration) noexcept;
+    CallerBuilder& set_phylogeny_concentration(double prior) noexcept;
     CallerBuilder& set_max_copy_losses(unsigned losses) noexcept;
     CallerBuilder& set_max_copy_gains(unsigned gains) noexcept;
     CallerBuilder& set_somatic_cnv_prior(double prior) noexcept;
@@ -158,6 +159,7 @@ private:
         // cell
         std::unordered_map<SampleName, double> sample_dropout_concentrations;
         double dropout_concentration;
+        double phylogeny_concentration;
         unsigned max_copy_loss, max_copy_gain;
         double somatic_cnv_prior;
         

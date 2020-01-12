@@ -347,6 +347,12 @@ CallerBuilder& CallerBuilder::set_dropout_concentration(const SampleName& sample
     return *this;
 }
 
+CallerBuilder& CallerBuilder::set_phylogeny_concentration(double concentration) noexcept
+{
+    params_.phylogeny_concentration = concentration;
+    return *this;
+}
+
 CallerBuilder& CallerBuilder::set_max_copy_losses(unsigned losses) noexcept
 {
     params_.max_copy_loss = losses;
@@ -534,6 +540,7 @@ CallerBuilder::CallerFactoryMap CallerBuilder::generate_factory() const
                                                     params_.max_joint_genotypes,
                                                     params_.dropout_concentration,
                                                     params_.sample_dropout_concentrations,
+                                                    params_.phylogeny_concentration,
                                                     {params_.somatic_snv_prior, params_.somatic_indel_prior},
                                                     params_.max_vb_seeds,
                                                     params_.normal_samples,

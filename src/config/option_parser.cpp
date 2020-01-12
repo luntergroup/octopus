@@ -658,7 +658,7 @@ OptionMap parse_options(const int argc, const char** argv)
     po::options_description polyclone("Polyclone calling model");
     polyclone.add_options()
     ("max-clones",
-     po::value<int>()->default_value(3),
+     po::value<int>()->default_value(4),
      "Maximum number of unique clones to consider")
     
     ("min-clone-frequency",
@@ -685,16 +685,20 @@ OptionMap parse_options(const int argc, const char** argv)
      "Maximum number of haplotype gains in the phylogeny")
     
     ("somatic-cnv-prior",
-     po::value<float>()->default_value(1e-3, "1e-3"),
+     po::value<float>()->default_value(0.01, "0.01"),
      "Prior probability of a given base in a sample being affected by a CNV")
      
     ("dropout-concentration",
-    po::value<float>()->default_value(10, "10"),
+    po::value<float>()->default_value(5, "5"),
     "Allelic dropout concentration parameter (default for all samples)")
     
     ("sample-dropout-concentrations",
      po::value<std::vector<SampleDropoutConcentrationPair>>()->multitoken(),
      "Sample allelic dropout concentration parameter (format SAMPLE=CONCENTRATION")
+    
+    ("phylogeny-concentration",
+     po::value<float>()->default_value(50, "50"),
+     "Concentration prior for clones in phylogeny")
     ;
     
     po::options_description call_filtering("Call filtering and annotation");

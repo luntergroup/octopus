@@ -229,12 +229,26 @@ CellCaller::Latents::genotype_posteriors() const noexcept
 
 // CellCaller::Latents private methods
 
+Phylogeny<std::size_t, Genotype<Haplotype>>
+compute_map_phylogeny(const model::SingleCellModel::Inferences::InferedPhylogeny& phylogeny, const std::vector<Genotype<Haplotype>>& genotypes)
+{
+    const auto get_map_genotype = [&genotypes] (const model::SingleCellModel::Inferences::GroupInferences& group) -> Genotype<Haplotype> {
+        auto map_itr = std::max_element(std::cbegin(group.genotype_posteriors), std::cend(group.genotype_posteriors));
+        auto map_idx = static_cast<std::size_t>(std::distance(std::cbegin(group.genotype_posteriors), map_itr));
+        return genotypes[map_idx];
+    };
+    return phylogeny.transform(get_map_genotype);
+}
+
 template <typename S>
 void log(const model::SingleCellModel::Inferences& inferences,
          const std::vector<SampleName>& samples,
          const std::vector<Genotype<Haplotype>>& genotypes,
          S&& logger)
 {
+    std::ostringstream ss {};
+    inferences.phylogeny.serialise(ss, [] (std::ostream& os, const auto& group) { os << group.id; });
+    logger << "Phylogeny: " << ss.str() << '\n';
     std::vector<std::size_t> map_genotypes {};
     map_genotypes.reserve(inferences.phylogeny.size());
     std::vector<std::pair<std::size_t, double>> map_sample_assignments(samples.size());
@@ -292,13 +306,13 @@ propose_next_phylogenies(const std::vector<std::vector<model::SingleCellModel::I
         two_group_phylogeny.add_descendant({1}, 0);
         return {std::move(two_group_phylogeny)};
     } else if (prev_inferences.size() == 2) {
-        CellPhylogeny flat_three_group_phylogeny{{0}};
-        flat_three_group_phylogeny.add_descendant({1}, 0);
-        flat_three_group_phylogeny.add_descendant({2}, 1);
+        CellPhylogeny linear_three_group_phylogeny{{0}};
+        linear_three_group_phylogeny.add_descendant({1}, 0);
+        linear_three_group_phylogeny.add_descendant({2}, 1);
         CellPhylogeny forking_three_group_phylogeny{{0}};
         forking_three_group_phylogeny.add_descendant({1}, 0);
         forking_three_group_phylogeny.add_descendant({2}, 0);
-        result = {std::move(flat_three_group_phylogeny), std::move(forking_three_group_phylogeny)};
+        result = {std::move(linear_three_group_phylogeny), std::move(forking_three_group_phylogeny)};
     } else {
         using CellInferredPhylogeny = model::SingleCellModel::Inferences::InferedPhylogeny;
         const auto best_prev_inferences_itr = std::max_element(std::cbegin(prev_inferences.back()), std::cend(prev_inferences.back()), SingleCellModelInferencesEvidenceLess {});
@@ -365,7 +379,7 @@ CellCaller::infer_latents(const HaplotypeBlock& haplotypes, const HaplotypeLikel
             }
         }
     }
-    model_parameters.group_concentration = 1.0;
+    model_parameters.group_concentration = parameters_.clone_concentration;
     model::SingleCellModel::AlgorithmParameters config {};
     config.max_genotype_combinations = *parameters_.max_genotype_combinations;
     config.execution_policy = this->exucution_policy();
@@ -388,8 +402,8 @@ CellCaller::infer_latents(const HaplotypeBlock& haplotypes, const HaplotypeLikel
                 if (parameters_.normal_samples.empty()) {
                     model_parameters.group_priors = boost::none;
                 } else {
-                    std::vector<double> normal_group_priors(phylogeny.size());
-                    normal_group_priors[0] = 1;
+                    std::vector<double> normal_group_priors(phylogeny.size(), parameters_.normal_not_founder_prior / (phylogeny.size() - 1));
+                    normal_group_priors[0] = 1 - parameters_.normal_not_founder_prior;
                     model_parameters.group_priors = model::SingleCellModel::Parameters::GroupOptionalPriorArray {};
                     model_parameters.group_priors->reserve(samples_.size());
                     for (const auto& sample : samples_) {
@@ -401,11 +415,11 @@ CellCaller::infer_latents(const HaplotypeBlock& haplotypes, const HaplotypeLikel
                     }
                 }
                 model::SingleCellPriorModel phylogeny_prior_model {std::move(phylogeny), *genotype_prior_model, mutation_model, cell_prior_params};
-                const model::SingleCellModel phylogeny_model {samples_, std::move(phylogeny_prior_model), std::move(model_parameters), config, population_prior_model};
+                const model::SingleCellModel phylogeny_model {samples_, std::move(phylogeny_prior_model), model_parameters, config, population_prior_model};
                 auto phylogeny_inferences = phylogeny_model.evaluate(genotypes, haplotype_likelihoods);
                 log(phylogeny_inferences, samples_, genotypes, debug_log_);
                 
-                if (clones > 1 && copy_number_change_detection_enabled && phylogeny_inferences.log_evidence > max_log_evidence) {
+                if (clones > 1 && copy_number_change_detection_enabled) {
                     std::vector<unsigned> phylogeny_ploidy_assignments((1 + parameters_.max_copy_loss + parameters_.max_copy_gain) * (clones - 1));
                     auto assignment_itr = std::begin(phylogeny_ploidy_assignments);
                     for (auto ploidy = parameters_.ploidy - parameters_.max_copy_loss; ploidy <= parameters_.ploidy + parameters_.max_copy_gain; ++ploidy) {

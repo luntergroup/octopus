@@ -44,10 +44,12 @@ public:
         boost::optional<std::size_t> max_genotype_combinations;
         double dropout_concentration;
         std::unordered_map<SampleName, double> sample_dropout_concentrations;
+        double clone_concentration;
         DeNovoModel::Parameters mutation_model_parameters;
         boost::optional<unsigned> max_vb_seeds = boost::none; // Use default if none
         std::vector<SampleName> normal_samples = {};
         double somatic_cnv_prior = 1e-4;
+        double normal_not_founder_prior = 1e-100;
     };
     
     CellCaller() = delete;

@@ -352,7 +352,8 @@ VariationalBayesMixtureMixtureModel::update_responsibilities(GroupResponsibility
     const auto G = genotype_posteriors.size();
     const auto ln_ex_psi = dirichlet_expectation_log(group_concentrations);
     for (std::size_t s {0}; s < S; ++s) {
-        std::vector<double> component_responsibility_sums(component_responsibilities[s].size());
+        const auto max_K = component_responsibilities[s].size();
+        std::vector<double> component_responsibility_sums(max_K);
         std::transform(std::cbegin(component_responsibilities[s]), std::cend(component_responsibilities[s]),
                        std::begin(component_responsibility_sums), [] (const auto& taus) { return sum(taus); });
         for (std::size_t t {0}; t < T; ++t) {
@@ -360,10 +361,14 @@ VariationalBayesMixtureMixtureModel::update_responsibilities(GroupResponsibility
             if (group_log_priors[s]) result[s][t] += (*group_log_priors[s])[t];
             const auto ln_ex_pi = dirichlet_expectation_log(mixture_concentrations[s][t]);
             const auto K = ln_ex_pi.size();
-            for (std::size_t k {0}; k < K; ++k) {
+            for (std::size_t k {0}; k < max_K; ++k) {
                 result[s][t] += ln_ex_pi[k] * component_responsibility_sums[k];
                 for (std::size_t g {0}; g < G; ++g) {
-                    result[s][t] += genotype_posteriors[g] * inner_product(component_responsibilities[s][k], log_likelihoods[s][g][t][k]);
+                    if (k < K) {
+                        result[s][t] += genotype_posteriors[g] * inner_product(component_responsibilities[s][k], log_likelihoods[s][g][t][k]);
+                    } else {
+                        result[s][t] += genotype_posteriors[g] * inner_product(component_responsibilities[s][k], log_likelihoods[s][g][t][0]);
+                    }
                 }
             }
         }
@@ -437,7 +442,6 @@ VariationalBayesMixtureMixtureModel::update_responsibilities(ComponentResponsibi
                     result[s][k][n] += group_responsibilities[s][t] * w;
                 }
             }
-            
         }
         std::vector<double> ln_rho(max_K);
         for (std::size_t n {0}; n < N; ++n) {
@@ -531,12 +535,16 @@ VariationalBayesMixtureMixtureModel::update_mixture_concentrations(MixtureConcen
 namespace {
 
 template <typename Range1, typename Range2>
-auto inner_inner_product(const Range1& lhs, const Range2& rhs) noexcept
+auto marginalise(const Range1& lhs, const Range2& rhs) noexcept
 {
     using T = decltype(inner_product(lhs[0], rhs[0]));
-    const auto k = std::min(lhs.size(), rhs.size());
-    return std::inner_product(std::cbegin(lhs), std::next(std::cbegin(lhs), k), std::cbegin(rhs), T {}, std::plus<> {},
-                              [] (const auto& a, const auto& b) { return inner_product(a, b); });
+    const auto k = lhs.size();
+    assert(lhs.size() <= rhs.size());
+    return std::inner_product(std::cbegin(lhs), std::next(std::cbegin(lhs), k), std::cbegin(rhs), T {0}, std::plus<> {},
+                              [] (const auto& a, const auto& b) noexcept { return inner_product(a, b); })
+           + std::accumulate(std::next(std::cbegin(lhs), k), std::cend(lhs), T {0},
+                                [&rhs] (const auto total, const auto& a) noexcept { return inner_product(a, rhs[0]); });
+    
 }
 
 template <typename T>
@@ -575,7 +583,7 @@ VariationalBayesMixtureMixtureModel::calculate_evidence(const GroupConcentration
         auto w = genotype_log_priors[g] - genotype_log_posteriors[g];
         for (std::size_t s {0}; s < S; ++s) {
             for (std::size_t t {0}; t < T; ++t) {
-                w += group_responsibilities[s][t] * inner_inner_product(component_responsibilities[s], log_likelihoods[s][g][t]);
+                w += group_responsibilities[s][t] * marginalise(component_responsibilities[s], log_likelihoods[s][g][t]);
             }
         }
         result += genotype_posteriors[g] * w;

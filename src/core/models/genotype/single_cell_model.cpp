@@ -13,6 +13,7 @@
 #include "utils/k_medoids.hpp"
 #include "utils/select_top_k.hpp"
 #include "utils/maths.hpp"
+#include "utils/concat.hpp"
 #include "subclone_model.hpp"
 #include "population_model.hpp"
 #include "coalescent_population_prior_model.hpp"
@@ -193,7 +194,7 @@ cluster_samples(const std::vector<PopulationModel::Latents::ProbabilityVector>& 
     params.initialisation = KMediodsParameters::InitialisationMode::random;
     for (int i {0}; i < 3; ++i) {
         tmp.clear();
-        fit = k_medoids(genotype_posteriors, num_clusters, tmp, l1_norm).second;
+        fit = k_medoids(genotype_posteriors, num_clusters, tmp, l1_norm, params).second;
         if (fit < best_fit) {
             result = std::move(tmp);
             best_fit = fit;
@@ -263,6 +264,101 @@ void combine(const IndividualModel::Latents::ProbabilityVector& src, IndividualM
     std::transform(std::cbegin(src), std::cend(src), std::cbegin(dst), std::begin(dst), combine_probs);
 }
 
+template <typename T>
+std::vector<T> select(const std::vector<bool>& selectors, const std::vector<T>& values)
+{
+    assert(selectors.size() == values.size());
+    std::vector<T> result {};
+    result.reserve(std::accumulate(std::cbegin(selectors), std::cend(selectors), 0));
+    std::size_t selector_idx {0};
+    const auto selector = [&] (const auto&) { return selectors[selector_idx++]; };
+    std::copy_if(std::cbegin(values), std::cend(values), std::back_inserter(result), selector);
+    return result;
+}
+
+template <typename T>
+IndexTupleVector
+select_top_k_combinations(const std::vector<std::vector<T>>& values, const std::size_t k, const std::size_t n)
+{
+    const auto tuples = select_top_k_tuples(values, k);
+    if (values.size() <= n) {
+        return tuples;
+    } else {
+        IndexTupleVector result {};
+        result.reserve(k);
+        std::vector<bool> selectors(values.size());
+        std::fill_n(std::rbegin(selectors), n, 1);
+        for (const auto& tuple : tuples) {
+            do {
+                result.push_back(select(selectors, tuple));
+            } while (std::next_permutation(std::begin(selectors), std::end(selectors)));
+        }
+        return result;
+    }
+}
+
+template <typename Range>
+auto sum_entropies(const std::vector<Range>& ranges)
+{
+    const static auto add_entropy = [] (auto total, const auto& probs) { return maths::entropy2(probs); };
+    return std::accumulate(std::cbegin(ranges), std::cend(ranges), 0.0, add_entropy);
+}
+
+template <typename Range>
+auto max_entropy_idx(const std::vector<Range>& ranges)
+{
+    std::size_t result {0};
+    double max {0};
+    for (std::size_t idx {0}; idx < ranges.size(); ++idx) {
+        const auto entropy = maths::entropy(ranges[idx]);
+        if (idx == 0 || max < entropy) {
+            result = idx;
+            max = entropy;
+        }
+    }
+    return result;
+}
+
+template <typename T>
+void erase(std::vector<T>& values, const std::size_t idx)
+{
+    values.erase(std::next(std::cbegin(values), idx));
+}
+
+struct ClusterHelper
+{
+    std::vector<std::size_t> sample_indices;
+    std::vector<SampleName> samples;
+    ProbabilityVector genotype_probabilities;
+    double entropy;
+};
+
+void sort_by_size_and_entropy(ClusterVector& clusters,
+                              std::vector<std::vector<SampleName>>& samples_by_cluster,
+                              std::vector<ProbabilityVector>& cluster_marginal_genotype_posteriors)
+{
+    std::vector<ClusterHelper> tmp_clusters(clusters.size());
+    for (std::size_t k {0}; k < clusters.size(); ++k) {
+        std::swap(tmp_clusters[k].sample_indices, clusters[k]);
+        std::swap(tmp_clusters[k].samples, samples_by_cluster[k]);
+        std::swap(tmp_clusters[k].genotype_probabilities, cluster_marginal_genotype_posteriors[k]);
+        tmp_clusters[k].entropy = maths::entropy2(tmp_clusters[k].genotype_probabilities);
+    }
+    const static auto sorter = [] (const ClusterHelper& lhs, const ClusterHelper& rhs) {
+        if (lhs.samples.size() == rhs.samples.size()) {
+            return lhs.entropy < rhs.entropy;
+        } else {
+            return lhs.samples.size() > rhs.samples.size();
+        }
+    };
+    std::sort(std::begin(tmp_clusters), std::end(tmp_clusters), sorter);
+    for (std::size_t k {0}; k < clusters.size(); ++k) {
+        std::swap(tmp_clusters[k].sample_indices, clusters[k]);
+        std::swap(tmp_clusters[k].samples, samples_by_cluster[k]);
+        std::swap(tmp_clusters[k].genotype_probabilities, cluster_marginal_genotype_posteriors[k]);
+    }
+}
+
 } // namespace
 
 SingleCellModel::GenotypeCombinationVector
@@ -282,39 +378,58 @@ SingleCellModel::propose_genotype_combinations(const GenotypeVector& genotypes,
     population_model_options.max_joint_genotypes = max_genotype_combinations;
     PopulationModel population_model {*population_prior_model_, population_model_options};
     std::vector<PopulationModel::Latents::ProbabilityVector> population_genotype_posteriors;
-    auto population_inferences = population_model.evaluate(samples_, genotypes, haplotype_likelihoods);
-    population_genotype_posteriors = std::move(population_inferences.posteriors.marginal_genotype_probabilities);
-    
-    auto clusters = cluster_samples(population_genotype_posteriors, std::min(2 * num_groups, samples_.size() - 1));
-    
     IndividualModel individual_model {prior_model_.germline_prior_model()};
     std::vector<ProbabilityVector> cluster_marginal_genotype_posteriors {};
-    cluster_marginal_genotype_posteriors.reserve(clusters.size());
+    cluster_marginal_genotype_posteriors.reserve(samples_.size() / 2);
     const auto haplotypes = extract_unique_elements(genotypes);
-    for (const auto& cluster : clusters) {
-        const auto cluster_samples = select(cluster, samples_);
-        const auto pooled_likelihoods = pool_likelihood(cluster_samples, haplotypes, haplotype_likelihoods);
-        auto cluster_inferences = individual_model.evaluate(genotypes, pooled_likelihoods);
-        cluster_marginal_genotype_posteriors.push_back(std::move(cluster_inferences.posteriors.genotype_probabilities));
-    }
+    ClusterVector clusters {};
+    std::vector<std::vector<SampleName>> samples_by_cluster {};
     
-    auto cluster_marginals = zip(std::move(clusters), std::move(cluster_marginal_genotype_posteriors));
-    for (auto k = cluster_marginals.size(); k > num_groups; --k) {
-        assert(cluster_marginals.size() > 1);
-        const static auto cluster_size_greater = [] (const auto& lhs, const auto& rhs) { return lhs.first.size() > rhs.first.size(); };
-        std::sort(std::begin(cluster_marginals), std::end(cluster_marginals), cluster_size_greater);
-        const auto n = cluster_marginals.size() - 1;
-        combine(cluster_marginals[n].second, cluster_marginals[n - 1].second,
-                cluster_marginals[n].first.size(), cluster_marginals[n - 1].first.size());
-        utils::append(std::move(cluster_marginals[n].first), cluster_marginals[n - 1].first);
-        cluster_marginals.pop_back();
+    while (clusters.empty() || clusters.size() > num_groups) {
+        if (clusters.empty()) {
+            auto population_inferences = population_model.evaluate(samples_, genotypes, haplotype_likelihoods);
+            population_genotype_posteriors = std::move(population_inferences.posteriors.marginal_genotype_probabilities);
+            clusters = cluster_samples(population_genotype_posteriors, std::max(samples_.size() / 4, 2 * num_groups));
+        } else if (clusters.size() > 2 * num_groups) {
+            clusters = cluster_samples(cluster_marginal_genotype_posteriors, std::max(clusters.size() / 2, 2 * num_groups));
+        } else {
+            auto num_effective_clusters = sum_entropies(cluster_marginal_genotype_posteriors);
+            if ((clusters.size() == num_groups + 1 && num_effective_clusters < num_groups / 2)
+             || (num_groups < 4 && clusters.size() <= num_groups + 2 && num_effective_clusters < 2)) {
+                break;
+            }
+            sort_by_size_and_entropy(clusters, samples_by_cluster, cluster_marginal_genotype_posteriors);
+            while (clusters.size() > num_groups && clusters.back().size() == 1
+                && maths::entropy2(cluster_marginal_genotype_posteriors.back()) > 1) {
+                clusters.pop_back();
+                samples_by_cluster.pop_back();
+                cluster_marginal_genotype_posteriors.pop_back();
+            }
+            if (clusters.size() <= num_groups + 1) break;
+            num_effective_clusters = sum_entropies(cluster_marginal_genotype_posteriors);
+            if (num_groups < 4 && clusters.size() <= num_groups + 2 && num_effective_clusters < 2) break;
+            clusters = cluster_samples(cluster_marginal_genotype_posteriors, num_groups + 1);
+        }
+        cluster_marginal_genotype_posteriors.clear();
+        std::vector<std::vector<SampleName>> next_samples_by_cluster {};
+        next_samples_by_cluster.reserve(clusters.size());
+        for (const auto& cluster : clusters) {
+            if (samples_by_cluster.empty()) {
+                next_samples_by_cluster.push_back(select(cluster, samples_));
+            } else {
+                next_samples_by_cluster.push_back(concat(select(cluster, samples_by_cluster)));
+            }
+            const auto pooled_likelihoods = pool_likelihood(next_samples_by_cluster.back(), haplotypes, haplotype_likelihoods);
+            auto cluster_inferences = individual_model.evaluate(genotypes, pooled_likelihoods);
+            cluster_marginal_genotype_posteriors.push_back(std::move(cluster_inferences.posteriors.genotype_probabilities));
+        }
+        samples_by_cluster = std::move(next_samples_by_cluster);
     }
-    std::tie(clusters, cluster_marginal_genotype_posteriors) = unzip(std::move(cluster_marginals));
     
     GenotypeCombinationVector result {};
-    auto k = max_genotype_combinations;
+    auto k = 10 * max_genotype_combinations;
     while (result.empty()) {
-        result = select_top_k_tuples(cluster_marginal_genotype_posteriors, k);
+        result = select_top_k_combinations(cluster_marginal_genotype_posteriors, k, num_groups);
         // Remove combinations with duplicate genotypes as these are redundant according to model.
         std::vector<int> counts(genotypes.size());
         result.erase(std::remove_if(std::begin(result), std::end(result), [&counts] (const auto& indices) {
@@ -326,6 +441,7 @@ SingleCellModel::propose_genotype_combinations(const GenotypeVector& genotypes,
         std::vector<SingleCellPriorModel::GenotypeReference> combination_refs {};
         combination_refs.reserve(num_groups);
         for (GenotypeCombination& combination : result) {
+            std::sort(std::begin(combination), std::end(combination));
             GenotypeCombination best_combination;
             auto max_prior = std::numeric_limits<double>::lowest();
             do {
@@ -418,15 +534,24 @@ class ZygosityGenotypePriorModel : public GenotypePriorModel
 public:
     using GenotypePriorModel::LogProbability;
     
+    ZygosityGenotypePriorModel(const GenotypePriorModel& base) : base_ {std::addressof(base)} {}
+    
     virtual ~ZygosityGenotypePriorModel() = default;
 
 private:
+    const GenotypePriorModel* base_;
+    
     virtual LogProbability do_evaluate(const Genotype<Haplotype>& genotype) const override
     {
-        return (genotype.ploidy() - genotype.zygosity()) * std::log(0.5);
+        LogProbability result {(genotype.ploidy() - genotype.zygosity()) * std::log(0.1)};
+        if (base_) {
+            result += base_->evaluate(genotype);
+        }
+        return result;
     }
     virtual LogProbability do_evaluate(const GenotypeIndex& genotype) const override { return 1.0; } // TODO
     bool check_is_primed() const noexcept override { return true; }
+    
 };
 
 SingleCellModel::GenotypeCombinationVector
@@ -438,7 +563,7 @@ SingleCellModel::propose_genotype_combinations(const PhylogenyNodePloidyMap& phy
     const auto genotypes_by_ploidy = segment_by_ploidy(genotypes);
     std::vector<unsigned> sample_ploidies {};
     sample_ploidies.reserve(samples_.size());
-    const ZygosityGenotypePriorModel zygosity_prior {};
+    const ZygosityGenotypePriorModel zygosity_prior {prior_model_.germline_prior_model()};
     const IndividualModel zygosity_individual_model {zygosity_prior};
     for (const auto& sample : samples_) {
         haplotype_likelihoods.prime(sample);
@@ -458,43 +583,57 @@ SingleCellModel::propose_genotype_combinations(const PhylogenyNodePloidyMap& phy
     population_model_options.max_joint_genotypes = config_.max_genotype_combinations;
     PopulationModel population_model {*population_prior_model_, population_model_options};
     std::vector<PopulationModel::Latents::ProbabilityVector> population_genotype_posteriors;
-    auto population_inferences = population_model.evaluate(samples_, sample_ploidies, genotypes, haplotype_likelihoods);
-    population_genotype_posteriors = std::move(population_inferences.posteriors.marginal_genotype_probabilities);
-    
     const auto num_groups = prior_model_.phylogeny().size();
-    auto clusters = cluster_samples(population_genotype_posteriors, std::min(2 * num_groups, samples_.size() - 1));
-    
-    IndividualModel individual_model {prior_model_.germline_prior_model()};
     std::vector<ProbabilityVector> cluster_marginal_genotype_posteriors {};
-    cluster_marginal_genotype_posteriors.reserve(clusters.size());
     const auto haplotypes = extract_unique_elements(genotypes);
-    for (const auto& cluster : clusters) {
-        const auto cluster_samples = select(cluster, samples_);
-        const auto pooled_likelihoods = pool_likelihood(cluster_samples, haplotypes, haplotype_likelihoods);
-        auto cluster_inferences = individual_model.evaluate(genotypes, pooled_likelihoods);
-        cluster_marginal_genotype_posteriors.push_back(std::move(cluster_inferences.posteriors.genotype_probabilities));
-    }
+    ClusterVector clusters {};
+    std::vector<std::vector<SampleName>> samples_by_cluster {};
     
-    auto cluster_marginals = zip(std::move(clusters), std::move(cluster_marginal_genotype_posteriors));
-    for (auto k = cluster_marginals.size(); k > num_groups; --k) {
-        assert(cluster_marginals.size() > 1);
-        const static auto cluster_size_greater = [] (const auto& lhs, const auto& rhs) { return lhs.first.size() > rhs.first.size(); };
-        std::sort(std::begin(cluster_marginals), std::end(cluster_marginals), cluster_size_greater);
-        const auto n = cluster_marginals.size() - 1;
-        combine(cluster_marginals[n].second, cluster_marginals[n - 1].second,
-                cluster_marginals[n].first.size(), cluster_marginals[n - 1].first.size());
-        utils::append(std::move(cluster_marginals[n].first), cluster_marginals[n - 1].first);
-        cluster_marginals.pop_back();
+    while (clusters.empty() || clusters.size() > num_groups) {
+        if (clusters.empty()) {
+            auto population_inferences = population_model.evaluate(samples_, genotypes, haplotype_likelihoods);
+            population_genotype_posteriors = std::move(population_inferences.posteriors.marginal_genotype_probabilities);
+            clusters = cluster_samples(population_genotype_posteriors, std::max(samples_.size() / 4, 2 * num_groups));
+        } else if (clusters.size() > 2 * num_groups) {
+            clusters = cluster_samples(cluster_marginal_genotype_posteriors, std::max(clusters.size() / 2, 2 * num_groups));
+        } else {
+            auto num_effective_clusters = sum_entropies(cluster_marginal_genotype_posteriors);
+            if ((clusters.size() == num_groups + 1 && num_effective_clusters < num_groups / 2)
+                || (num_groups < 4 && clusters.size() <= num_groups + 2 && num_effective_clusters < 1)) {
+                break;
+            }
+            sort_by_size_and_entropy(clusters, samples_by_cluster, cluster_marginal_genotype_posteriors);
+            while (clusters.size() > num_groups && clusters.back().size() == 1
+                   && maths::entropy2(cluster_marginal_genotype_posteriors.back()) > 1) {
+                clusters.pop_back();
+                samples_by_cluster.pop_back();
+                cluster_marginal_genotype_posteriors.pop_back();
+            }
+            if (clusters.size() <= num_groups + 1) break;
+            clusters = cluster_samples(cluster_marginal_genotype_posteriors, num_groups + 1);
+        }
+        cluster_marginal_genotype_posteriors.clear();
+        std::vector<std::vector<SampleName>> next_samples_by_cluster {};
+        next_samples_by_cluster.reserve(clusters.size());
+        for (const auto& cluster : clusters) {
+            if (samples_by_cluster.empty()) {
+                next_samples_by_cluster.push_back(select(cluster, samples_));
+            } else {
+                next_samples_by_cluster.push_back(concat(select(cluster, samples_by_cluster)));
+            }
+            const auto pooled_likelihoods = pool_likelihood(next_samples_by_cluster.back(), haplotypes, haplotype_likelihoods);
+            auto cluster_inferences = zygosity_individual_model.evaluate(genotypes, pooled_likelihoods);
+            cluster_marginal_genotype_posteriors.push_back(std::move(cluster_inferences.posteriors.genotype_probabilities));
+        }
+        samples_by_cluster = std::move(next_samples_by_cluster);
     }
-    std::tie(clusters, cluster_marginal_genotype_posteriors) = unzip(std::move(cluster_marginals));
-    
     
     std::vector<unsigned> required_ploidies(num_groups);
     for (std::size_t id {0}; id < num_groups; ++id) required_ploidies[id] = phylogeny_ploidies.at(id);
     GenotypeCombinationVector result {};
-    auto k = config_.max_genotype_combinations ? *config_.max_genotype_combinations : std::numeric_limits<std::size_t>::max();
+    auto k = config_.max_genotype_combinations ? 10 * *config_.max_genotype_combinations : std::numeric_limits<std::size_t>::max();
     while (result.empty()) {
-        result = select_top_k_tuples(cluster_marginal_genotype_posteriors, k);
+        result = select_top_k_combinations(cluster_marginal_genotype_posteriors, k, num_groups);
         // Remove combinations with duplicate genotypes as these are redundant according to model.
         std::vector<int> counts(genotypes.size());
         result.erase(std::remove_if(std::begin(result), std::end(result), [&counts] (const auto& indices) {
@@ -508,6 +647,7 @@ SingleCellModel::propose_genotype_combinations(const PhylogenyNodePloidyMap& phy
         GenotypeCombinationVector buffer {};
         buffer.reserve(result.size());
         for (GenotypeCombination& combination : result) {
+            std::sort(std::begin(combination), std::end(combination));
             GenotypeCombination best_combination;
             auto max_prior = std::numeric_limits<double>::lowest();
             bool has_valid_combination {false};
