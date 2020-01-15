@@ -725,13 +725,13 @@ SingleCellModel::evaluate(Inferences& result,
         Inferences::GroupInferences group {};
         group.sample_attachment_posteriors.resize(samples_.size());
         for (std::size_t sample_idx {0}; sample_idx < samples_.size(); ++sample_idx) {
-            group.sample_attachment_posteriors[sample_idx] = vb_inferences.group_responsibilities[sample_idx][group_idx];
+            group.sample_attachment_posteriors[sample_idx] = vb_inferences.weighted_group_responsibilities[sample_idx][group_idx];
         }
         // Marginalise over genotypes
         group.genotype_posteriors.resize(genotypes.size());
         for (std::size_t genotype_combo_idx {0};
              genotype_combo_idx < genotype_combinations.size(); ++genotype_combo_idx) {
-            group.genotype_posteriors[genotype_combinations[genotype_combo_idx][group_idx]] += vb_inferences.genotype_posteriors[genotype_combo_idx];
+            group.genotype_posteriors[genotype_combinations[genotype_combo_idx][group_idx]] += vb_inferences.weighted_genotype_posteriors[genotype_combo_idx];
         }
         if (group_idx == 0) {
             result.phylogeny.set_founder({group_idx, std::move(group)});
@@ -740,7 +740,7 @@ SingleCellModel::evaluate(Inferences& result,
             result.phylogeny.add_descendant({group_idx, std::move(group)}, ancestor_idx);
         }
     }
-    result.log_evidence = vb_inferences.approx_log_evidence;
+    result.log_evidence = vb_inferences.map.approx_log_evidence;
 }
 
 VariationalBayesMixtureMixtureModel::LogProbabilityVector

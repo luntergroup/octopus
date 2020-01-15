@@ -48,14 +48,31 @@ public:
     using GroupOptionalPriorVector = boost::optional<ProbabilityVector>; // One element per group
     using GroupOptionalPriorArray = std::vector<GroupOptionalPriorVector>; // One element per sample
     
-    struct Inferences
+    using Tau = std::vector<double>; // One element per read
+    using ComponentResponsibilityVector = std::vector<Tau>; // One element per haplotype in genotype (max)
+    using ComponentResponsibilityMatrix = std::vector<ComponentResponsibilityVector>; // One element per sample
+    
+    struct Latents
     {
         ProbabilityVector genotype_posteriors;
         LogProbabilityVector genotype_log_posteriors;
         GroupConcentrationVector group_concentrations;
         MixtureConcentrationArray mixture_concentrations;
         GroupResponsibilityVector group_responsibilities;
+        ComponentResponsibilityMatrix component_responsibilities;
+    };
+    
+    struct PointInferences
+    {
+        Latents latents;
         double approx_log_evidence;
+    };
+    
+    struct Inferences
+    {
+        PointInferences map;
+        ProbabilityVector weighted_genotype_posteriors;
+        GroupResponsibilityVector weighted_group_responsibilities;
     };
     
     VariationalBayesMixtureMixtureModel() = default;
@@ -114,10 +131,6 @@ public:
              std::vector<LogProbabilityVector> seeds) const;
     
 private:
-    using Tau = std::vector<double>; // One element per read
-    using ComponentResponsibilityVector = std::vector<Tau>; // One element per haplotype in genotype (max)
-    using ComponentResponsibilityMatrix = std::vector<ComponentResponsibilityVector>; // One element per sample
-    
     using GroupOptionalLogPriorVector = boost::optional<LogProbabilityVector>; // One element per group
     using GroupOptionalLogPriorArray = std::vector<GroupOptionalLogPriorVector>; // One element per sample
     
@@ -125,7 +138,7 @@ private:
     
     GroupOptionalLogPriorVector to_logs(const GroupOptionalPriorVector& prior) const;
     GroupOptionalLogPriorArray to_logs(const GroupOptionalPriorArray& priors) const;
-    Inferences
+    PointInferences
     evaluate(const LogProbabilityVector& genotype_log_priors,
              const HaplotypeLikelihoodMatrix& log_likelihoods,
              const GroupOptionalLogPriorArray& group_log_priors,
@@ -137,7 +150,8 @@ private:
                           const GroupConcentrationVector& group_concentrations,
                           const MixtureConcentrationArray& mixture_concentrations,
                           const ProbabilityVector& genotype_priors,
-                          const HaplotypeLikelihoodMatrix& log_likelihoods) const;
+                          const HaplotypeLikelihoodMatrix& log_likelihoods,
+                          bool ignore_component_mixture_prior = false) const;
     void
     update_responsibilities(GroupResponsibilityVector& result,
                             const GroupOptionalLogPriorArray& group_log_priors,
@@ -145,7 +159,8 @@ private:
                             const MixtureConcentrationArray& mixture_concentrations,
                             const ProbabilityVector& genotype_posteriors,
                             const ComponentResponsibilityMatrix& component_responsibilities,
-                            const HaplotypeLikelihoodMatrix& log_likelihoods) const;
+                            const HaplotypeLikelihoodMatrix& log_likelihoods,
+                            bool ignore_component_mixture_prior = false) const;
     ComponentResponsibilityMatrix
     init_responsibilities(const GroupConcentrationVector& group_concentrations,
                           const MixtureConcentrationArray& mixture_concentrations,
@@ -192,7 +207,12 @@ private:
                        const ProbabilityVector& genotype_posteriors,
                        const GroupResponsibilityVector& group_responsibilities,
                        const ComponentResponsibilityMatrix& component_responsibilities,
-                       const HaplotypeLikelihoodMatrix& log_likelihoods) const;
+                       const HaplotypeLikelihoodMatrix& log_likelihoods,
+                       bool debug = false) const;
+    void
+    compute_evidence_weighted_latents(ProbabilityVector& genotype_posteriors,
+                                      GroupResponsibilityVector& group_responsibilities,
+                                      const std::vector<PointInferences>& latents) const;
     
     // debug
     void print_concentrations(const GroupConcentrationVector& concentrations) const;
