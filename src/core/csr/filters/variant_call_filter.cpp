@@ -332,11 +332,7 @@ VariantCallFilter::compute_joint_quality(const ClassificationList& sample_classi
         }
     }
     if (!sample_classification_qualities.empty()) {
-        if (sample_classification_qualities.size() == 1) {
-            return sample_classification_qualities.front();
-        } else {
-            return compute_joint_probability(sample_classification_qualities);
-        }
+        return compute_joint_probability(sample_classification_qualities);
     }
     return boost::none;
 }
@@ -364,6 +360,8 @@ Phred<double> ln_probability_true_to_phred(const double ln_prob_true)
 
 Phred<double> VariantCallFilter::compute_joint_probability(const std::vector<Phred<double>>& qualities) const
 {
+    assert(!qualities.empty());
+    if (qualities.size() == 1) return qualities.front();
     if (std::any_of(std::cbegin(qualities), std::cend(qualities), [] (auto p) { return p.score() <= 0; })) {
         return Phred<double> {0.0};
     }
@@ -480,7 +478,7 @@ void VariantCallFilter::annotate(VcfRecord::Builder& call, const Classification 
     if (quality_name) {
         call.add_info(*quality_name);
         if (status.quality) {
-            call.set_info(*quality_name, utils::to_string(status.quality->score(), 2));
+            call.set_info(*quality_name, utils::to_string(status.quality->score(), 3, utils::PrecisionRule::sf));
         } else {
             call.set_info_missing(*quality_name);
         }
