@@ -574,6 +574,7 @@ bool is_good_somatic(const Variant& variant, const unsigned depth, const unsigne
         if (support == 1 && alt_sequence_size(variant) > 8) return false;
         erase_below(observed_qualities, 20);
         const auto good_support = observed_qualities.size();
+        if (good_support > 1 && alt_sequence_size(variant) > 10) return true;
         const auto probability_vaf_greater_than_min_vaf = beta_sf(good_support, depth - good_support, vaf_def.min_vaf);
         return good_support > 1 && probability_vaf_greater_than_min_vaf >= vaf_def.min_probability;
     } else {
