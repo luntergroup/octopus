@@ -17,11 +17,9 @@ void CellVariantCall::decorate(VcfRecord::Builder& record) const
 {
     if (is_somatic()) record.set_somatic();
     record.set_info("PPP", utils::to_string(phylogeny_summary_.map_posterior.score()));
-    std::vector<std::string> size_posteriors {};
-    size_posteriors.reserve(phylogeny_summary_.size_posteriors.size());
-    for (const auto p : phylogeny_summary_.size_posteriors) {
-        size_posteriors.push_back(std::to_string(static_cast<unsigned>(p.score())));
-    }
+    std::vector<std::string> size_posteriors(phylogeny_summary_.size_posteriors.size() - 1);
+    std::transform(std::next(std::cbegin(phylogeny_summary_.size_posteriors)), std::cend(phylogeny_summary_.size_posteriors),
+                   std::begin(size_posteriors), [] (auto p) { return std::to_string(static_cast<unsigned>(p.score())); });
     record.set_info("PSPP", std::move(size_posteriors));
     if (phylogeny_summary_.map.size() > 1) {
         std::ostringstream ss {};
