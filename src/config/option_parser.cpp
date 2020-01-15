@@ -685,7 +685,7 @@ OptionMap parse_options(const int argc, const char** argv)
      "Maximum number of haplotype gains in the phylogeny")
     
     ("somatic-cnv-prior",
-     po::value<float>()->default_value(0.01, "0.01"),
+     po::value<float>()->default_value(0.001, "0.001"),
      "Prior probability of a given base in a sample being affected by a CNV")
      
     ("dropout-concentration",
@@ -697,7 +697,7 @@ OptionMap parse_options(const int argc, const char** argv)
      "Sample allelic dropout concentration parameter (format SAMPLE=CONCENTRATION")
     
     ("phylogeny-concentration",
-     po::value<float>()->default_value(50, "50"),
+     po::value<float>()->default_value(20, "20"),
      "Concentration prior for clones in phylogeny")
     ;
     
