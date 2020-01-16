@@ -69,12 +69,13 @@ void DeNovoModel::prime(MappableBlock<Haplotype> haplotypes)
     gap_model_index_cache_.resize(haplotypes_.size());
     if (haplotypes_.size() <= max_unguardered) {
         unguarded_index_cache_.assign(haplotypes_.size(), std::vector<LogProbability>(haplotypes_.size(), 0));
-        for (unsigned target {0}; target < haplotypes_.size(); ++target) {
-            for (unsigned given {0}; given < haplotypes_.size(); ++given) {
+        for (unsigned given {0}; given < haplotypes_.size(); ++given) {
+            for (unsigned target {0}; target < haplotypes_.size(); ++target) {
                 if (target != given) {
                     unguarded_index_cache_[target][given] = evaluate_uncached(target, given);
                 }
             }
+            gap_model_index_cache_[given] = boost::none; // clear the cache to reclaim memory
         }
         use_unguarded_ = true;
     } else {
