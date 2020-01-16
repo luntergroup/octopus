@@ -17,14 +17,8 @@
 
 namespace octopus { namespace coretools {
 
-GenomeWalker::GenomeWalker(unsigned max_included,
-                           IndicatorPolicy indicator_policy,
-                           ExtensionPolicy extension_policy,
-                           ReadTemplatePolicy read_template_policy)
-: max_included_ {max_included}
-, indicator_policy_ {indicator_policy}
-, extension_policy_ {extension_policy}
-, read_template_policy_ {read_template_policy}
+GenomeWalker::GenomeWalker(Config config)
+: config_ {config}
 {}
 
 namespace {
@@ -181,7 +175,7 @@ GenomeWalker::walk(const GenomicRegion& previous_region,
     if (included_itr == last_allele_itr) {
         return shift(tail_region(rightmost_region(alleles)), 1);
     }
-    if (max_included_ == 0) {
+    if (config_.max_alleles == 0) {
         if (included_itr != last_allele_itr) {
             return *intervening_region(previous_region, *included_itr);
         } else {
@@ -190,10 +184,10 @@ GenomeWalker::walk(const GenomicRegion& previous_region,
     }
     unsigned num_indicators {0};
     boost::optional<const TemplateMap&> indicator_read_templates {};
-    if (read_templates && use_read_templates_for_lagging(read_template_policy_)) {
+    if (read_templates && use_read_templates_for_lagging(config_.read_template_policy)) {
         indicator_read_templates = read_templates;
     }
-    switch (indicator_policy_) {
+    switch (config_.indicator_policy) {
         case IndicatorPolicy::includeNone: break;
         case IndicatorPolicy::includeIfSharedWithNovelRegion:
         {
@@ -241,8 +235,8 @@ GenomeWalker::walk(const GenomicRegion& previous_region,
     auto first_included_itr = get_first_included(first_previous_itr, included_itr, num_indicators);
     auto num_remaining_alleles = static_cast<unsigned>(distance(included_itr, last_allele_itr));
     unsigned num_excluded_alleles {0};
-    auto num_included = max_included_;
-    if (extension_policy_ == ExtensionPolicy::includeIfWithinReadLengthOfFirstIncluded) {
+    auto num_included = config_.max_alleles;
+    if (config_.extension_policy == ExtensionPolicy::includeIfWithinReadLengthOfFirstIncluded) {
         auto max_alleles_within_read_length = static_cast<unsigned>(max_count_if_shared_with_first(reads, first_included_itr, last_allele_itr));
         num_included = min({num_included, num_remaining_alleles, max_alleles_within_read_length + 1});
         num_excluded_alleles = max_alleles_within_read_length - num_included;
@@ -250,7 +244,7 @@ GenomeWalker::walk(const GenomicRegion& previous_region,
         num_included = min(num_included, num_remaining_alleles);
     }
     boost::optional<const TemplateMap&> extension_read_templates {};
-    if (read_templates && use_read_templates_for_extension(read_template_policy_)) {
+    if (read_templates && use_read_templates_for_extension(config_.read_template_policy)) {
         extension_read_templates = read_templates;
     }
     assert(num_included > 0);
@@ -271,20 +265,23 @@ bool
 GenomeWalker::can_extend(const Allele& active, const Allele& novel,
                          const ReadMap& reads, boost::optional<const TemplateMap&> read_templates) const
 {
-    if (extension_policy_ == ExtensionPolicy::includeIfAllSamplesSharedWithFrontier) {
+    if (config_.max_extension && inner_distance(active, novel) > *config_.max_extension) {
+        return false;
+    }
+    if (config_.extension_policy == ExtensionPolicy::includeIfAllSamplesSharedWithFrontier) {
         if (read_templates) {
             return all_shared(*read_templates, active, novel);
         } else {
             return all_shared(reads, active, novel);
         }
-    } else if (extension_policy_ == ExtensionPolicy::includeIfAnySampleSharedWithFrontier) {
+    } else if (config_.extension_policy == ExtensionPolicy::includeIfAnySampleSharedWithFrontier) {
         if (read_templates) {
             return has_shared(*read_templates, active, novel);
         } else {
             return has_shared(reads, active, novel);
         }
     }
-    return extension_policy_ == ExtensionPolicy::noLimit;
+    return config_.extension_policy == ExtensionPolicy::noLimit;
 }
 
 } // namespace coretools

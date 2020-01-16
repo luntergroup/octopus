@@ -48,6 +48,7 @@ public:
         unsigned max_holdout_depth = 2;
         Haplotype::MappingDomain::Size min_flank_pad = 30;
         boost::optional<Haplotype::NucleotideSequence::size_type> max_indicator_join_distance = boost::none;
+        boost::optional<GenomicRegion::Distance> max_allele_distance = boost::none;
     };
     
     enum class Mode { allele, haplotype, allele_and_haplotype };
@@ -251,6 +252,7 @@ public:
     Builder& set_max_holdout_depth(unsigned n) noexcept;
     Builder& set_min_flank_pad(Haplotype::MappingDomain::Size n) noexcept;
     Builder& set_max_indicator_join_distance(Haplotype::NucleotideSequence::size_type n) noexcept;
+    Builder& set_max_allele_distance(GenomicRegion::Distance gap) noexcept;
     
     HaplotypeGenerator
     build(const ReferenceGenome& reference,

@@ -175,12 +175,13 @@ auto decompose(const MappableFlatSet<Variant>& variants)
 
 auto make_lagged_walker(const HaplotypeGenerator::Policies& policies)
 {
-    return GenomeWalker {
+    return GenomeWalker {{
         max_included(policies.haplotype_limits.target),
         get_walker_policy(policies.lagging),
         get_walker_policy(policies.extension),
-        get_walker_read_template_policy(policies)
-    };
+        get_walker_read_template_policy(policies),
+        policies.max_allele_distance
+    }};
 }
 
 } // namespace
@@ -194,18 +195,20 @@ HaplotypeGenerator::HaplotypeGenerator(const ReferenceGenome& reference,
                                        Policies policies)
 : policies_ {std::move(policies)}
 , tree_ {get_contig_name(candidates, reads, reference), reference}
-, default_walker_ {
+, default_walker_ {{
     max_included(policies_.haplotype_limits.target),
     GenomeWalker::IndicatorPolicy::includeNone,
     get_walker_policy(policies.extension),
-    get_walker_read_template_policy(policies)
-}
-, holdout_walker_{
+    get_walker_read_template_policy(policies),
+    policies.max_allele_distance
+}}
+, holdout_walker_{{
 	max_included(policies_.haplotype_limits.target),
 	GenomeWalker::IndicatorPolicy::includeAll,
 	get_walker_policy(policies.extension),
-    get_walker_read_template_policy(policies)
-}
+    get_walker_read_template_policy(policies),
+    policies.max_allele_distance
+}}
 , lagged_walker_{}
 , alleles_{decompose(candidates)}
 , reads_{reads}
@@ -1662,6 +1665,12 @@ HaplotypeGenerator::Builder& HaplotypeGenerator::Builder::set_min_flank_pad(cons
 HaplotypeGenerator::Builder& HaplotypeGenerator::Builder::set_max_indicator_join_distance(Haplotype::NucleotideSequence::size_type n) noexcept
 {
     policies_.max_indicator_join_distance = n;
+    return *this;
+}
+
+HaplotypeGenerator::Builder& HaplotypeGenerator::Builder::set_max_allele_distance(GenomicRegion::Distance gap) noexcept
+{
+    policies_.max_allele_distance = gap;
     return *this;
 }
 

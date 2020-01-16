@@ -1604,11 +1604,19 @@ auto make_haplotype_generator_builder(const OptionMap& options, const boost::opt
     const auto holdout_limit     = as_unsigned("haplotype-holdout-threshold", options);
     const auto overflow_limit    = as_unsigned("haplotype-overflow", options);
     const auto max_holdout_depth = as_unsigned("max-holdout-depth", options);
-    auto result = HaplotypeGenerator::Builder().set_extension_policy(get_extension_policy(options)).set_backtrack_policy(get_backtrack_policy(options))
-    .set_target_limit(max_haplotypes).set_holdout_limit(holdout_limit).set_overflow_limit(overflow_limit)
-    .set_lagging_policy(lagging_policy).set_max_holdout_depth(max_holdout_depth)
-    .set_max_indicator_join_distance(get_max_indicator_join_distance())
-    .set_min_flank_pad(get_min_haplotype_flank_pad(options, input_reads_profile));
+    auto result = HaplotypeGenerator::Builder()
+        .set_extension_policy(get_extension_policy(options))
+        .set_backtrack_policy(get_backtrack_policy(options))
+        .set_target_limit(max_haplotypes)
+        .set_holdout_limit(holdout_limit)
+        .set_overflow_limit(overflow_limit)
+        .set_lagging_policy(lagging_policy)
+        .set_max_holdout_depth(max_holdout_depth)
+        .set_max_indicator_join_distance(get_max_indicator_join_distance())
+        .set_min_flank_pad(get_min_haplotype_flank_pad(options, input_reads_profile));
+    if (input_reads_profile) {
+        result.set_max_allele_distance(1000 * input_reads_profile->length_stats.max);
+    }
     return result;
 }
 
