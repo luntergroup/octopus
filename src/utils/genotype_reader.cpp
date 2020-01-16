@@ -279,6 +279,12 @@ auto wrap_calls(const std::vector<VcfRecord>& calls, const SampleName& sample)
     return result;
 }
 
+std::vector<std::vector<CallWrapper>>
+segment_into_contiguous_phase_blocks(const std::vector<VcfRecord>& calls, const SampleName& sample)
+{
+    return segment_overlapped_copy(wrap_calls(calls, sample));
+}
+
 auto get_max_ploidy(const std::vector<CallWrapper>& calls, const SampleName& sample)
 {
     unsigned result {0};
@@ -297,10 +303,11 @@ auto make_genotype(std::vector<Haplotype::Builder>&& haplotypes)
     return result;
 }
 
-Genotype<Haplotype> extract_genotype(const std::vector<CallWrapper>& phased_calls,
-                                     const GenomicRegion& region,
-                                     const SampleName& sample,
-                                     const ReferenceGenome& reference)
+Genotype<Haplotype>
+extract_genotype(const std::vector<CallWrapper>& phased_calls,
+                 const GenomicRegion& region,
+                 const SampleName& sample,
+                 const ReferenceGenome& reference)
 {
     assert(!phased_calls.empty());
     assert(contains(region, encompassing_region(phased_calls)));
@@ -320,15 +327,16 @@ Genotype<Haplotype> extract_genotype(const std::vector<CallWrapper>& phased_call
 
 } // namespace
 
-GenotypeMap extract_genotypes(const std::vector<VcfRecord>& calls,
-                              const std::vector<VcfRecord::SampleName>& samples,
-                              const ReferenceGenome& reference,
-                              boost::optional<GenomicRegion> call_region)
+GenotypeMap
+extract_genotypes(const std::vector<VcfRecord>& calls,
+                  const std::vector<VcfRecord::SampleName>& samples,
+                  const ReferenceGenome& reference,
+                  boost::optional<GenomicRegion> call_region)
 {
     if (calls.empty()) return {};
     GenotypeMap result {samples.size()};
     for (const auto& sample : samples) {
-        const auto wrapped_calls = segment_overlapped_copy(wrap_calls(calls, sample));
+        const auto wrapped_calls = segment_into_contiguous_phase_blocks(calls, sample);
         if (wrapped_calls.size() == 1) {
             if (!call_region) {
                 call_region = encompassing_region(wrapped_calls.front());
