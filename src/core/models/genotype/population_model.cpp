@@ -149,6 +149,17 @@ struct ModelConstants
     , frequency_update_norm {calculate_frequency_update_norm(sample_ploidies)}
     , genotypes_containing_haplotypes {make_inverse_genotype_table(haplotypes, genotypes)}
     {}
+    ModelConstants(const MappableBlock<Haplotype>& haplotypes,
+                   const PopulationModel::GenotypeVector& genotypes,
+                   const std::vector<GenotypeIndex>& genotype_indices,
+                   const GenotypeLogLikelihoodMatrix& genotype_log_likilhoods,
+                   const std::vector<unsigned>& sample_ploidies)
+    : haplotypes {haplotypes}
+    , genotypes {genotypes}
+    , genotype_log_likilhoods {genotype_log_likilhoods}
+    , frequency_update_norm {calculate_frequency_update_norm(sample_ploidies)}
+    , genotypes_containing_haplotypes {make_inverse_genotype_table(genotype_indices, haplotypes.size())}
+    {}
 };
 
 HardyWeinbergModel make_hardy_weinberg_model(const ModelConstants& constants)
@@ -184,6 +195,28 @@ compute_genotype_log_likelihoods(const std::vector<SampleName>& samples,
 
 GenotypeLogLikelihoodMatrix
 compute_genotype_log_likelihoods(const std::vector<SampleName>& samples,
+                                 const std::vector<Haplotype>& haplotypes,
+                                 const std::vector<GenotypeIndex>& genotypes,
+                                 const HaplotypeLikelihoodArray& haplotype_likelihoods)
+{
+    assert(!genotypes.empty());
+    ConstantMixtureGenotypeLikelihoodModel likelihood_model {haplotype_likelihoods};
+    GenotypeLogLikelihoodMatrix result {};
+    result.reserve(samples.size());
+    std::transform(std::cbegin(samples), std::cend(samples), std::back_inserter(result), [&] (const auto& sample) {
+        GenotypeLogLikelihoodVector likelihoods(genotypes.size());
+        haplotype_likelihoods.prime(sample);
+        likelihood_model.prime(haplotypes);
+        std::transform(std::cbegin(genotypes), std::cend(genotypes), std::begin(likelihoods),
+                       [&] (const auto& genotype) { return likelihood_model.evaluate(genotype); });
+        likelihood_model.unprime();
+        return likelihoods;
+    });
+    return result;
+}
+
+GenotypeLogLikelihoodMatrix
+compute_genotype_log_likelihoods(const std::vector<SampleName>& samples,
                                  const PopulationModel::GenotypeVector& genotypes,
                                  const HaplotypeLikelihoodArray& haplotype_likelihoods,
                                  const std::vector<std::vector<bool>>& sample_genotype_masks)
@@ -192,16 +225,42 @@ compute_genotype_log_likelihoods(const std::vector<SampleName>& samples,
     ConstantMixtureGenotypeLikelihoodModel likelihood_model {haplotype_likelihoods};
     GenotypeLogLikelihoodMatrix result {};
     result.reserve(samples.size());
-    std::transform(std::cbegin(samples), std::cend(samples), std::cbegin(sample_genotype_masks), std::back_inserter(result),
-                   [&genotypes, &haplotype_likelihoods, &likelihood_model] (const auto& sample, const auto& mask) {
-                       GenotypeLogLikelihoodVector likelihoods(genotypes.size());
-                       haplotype_likelihoods.prime(sample);
-                       std::transform(std::cbegin(genotypes), std::cend(genotypes), std::cbegin(mask), std::begin(likelihoods),
-                                      [&likelihood_model] (const auto& genotype, bool ok) {
-                                          return ok ? likelihood_model.evaluate(genotype) : -std::numeric_limits<LogProbability>::infinity();
-                                      });
-                       return likelihoods;
-                   });
+    std::transform(std::cbegin(samples), std::cend(samples), std::cbegin(sample_genotype_masks),
+                   std::back_inserter(result), [&] (const auto& sample, const auto& mask) {
+        GenotypeLogLikelihoodVector likelihoods(genotypes.size());
+        haplotype_likelihoods.prime(sample);
+        std::transform(std::cbegin(genotypes), std::cend(genotypes), std::cbegin(mask), std::begin(likelihoods),
+                       [&] (const auto& genotype, bool ok) {
+                           return ok ? likelihood_model.evaluate(genotype) : -std::numeric_limits<LogProbability>::infinity();
+                       });
+        return likelihoods;
+    });
+    return result;
+}
+
+GenotypeLogLikelihoodMatrix
+compute_genotype_log_likelihoods(const std::vector<SampleName>& samples,
+                                 const std::vector<Haplotype>& haplotypes,
+                                 const std::vector<GenotypeIndex>& genotypes,
+                                 const HaplotypeLikelihoodArray& haplotype_likelihoods,
+                                 const std::vector<std::vector<bool>>& sample_genotype_masks)
+{
+    assert(!genotypes.empty());
+    ConstantMixtureGenotypeLikelihoodModel likelihood_model {haplotype_likelihoods};
+    GenotypeLogLikelihoodMatrix result {};
+    result.reserve(samples.size());
+    std::transform(std::cbegin(samples), std::cend(samples), std::cbegin(sample_genotype_masks),
+                   std::back_inserter(result), [&] (const auto& sample, const auto& mask) {
+        GenotypeLogLikelihoodVector likelihoods(genotypes.size());
+        likelihood_model.prime(haplotypes);
+        haplotype_likelihoods.prime(sample);
+        std::transform(std::cbegin(genotypes), std::cend(genotypes), std::cbegin(mask), std::begin(likelihoods),
+                       [&] (const auto& genotype, bool ok) {
+                           return ok ? likelihood_model.evaluate(genotype) : -std::numeric_limits<LogProbability>::infinity();
+                       });
+        likelihood_model.unprime();
+        return likelihoods;
+    });
     return result;
 }
 
@@ -368,6 +427,17 @@ auto compute_approx_genotype_marginal_posteriors(const PopulationModel::Genotype
     const auto haplotypes = extract_unique_elements(genotypes);
     const ModelConstants constants {haplotypes, genotypes, genotype_likelihoods, sample_plodies};
     return compute_approx_genotype_marginal_posteriors(haplotypes, genotypes, genotype_likelihoods, options);
+}
+
+auto compute_approx_genotype_marginal_posteriors(const MappableBlock<Haplotype>& haplotypes,
+                                                 const PopulationModel::GenotypeVector& genotypes,
+                                                 const std::vector<GenotypeIndex>& genotype_indices,
+                                                 const GenotypeLogLikelihoodMatrix& genotype_likelihoods,
+                                                 const std::vector<unsigned>& sample_plodies,
+                                                 const EMOptions options)
+{
+    const ModelConstants constants {haplotypes, genotypes, genotype_indices, genotype_likelihoods, sample_plodies};
+    return compute_approx_genotype_marginal_posteriors(haplotypes, genotypes, genotype_likelihoods, constants, options);
 }
 
 using GenotypeCombinationVector = std::vector<std::size_t>;
@@ -703,12 +773,12 @@ PopulationModel::evaluate(const SampleVector& samples,
                           const HaplotypeLikelihoodArray& haplotype_likelihoods) const
 {
     assert(!genotypes.empty());
-    const auto genotype_log_likelihoods = compute_genotype_log_likelihoods(samples, genotypes, haplotype_likelihoods);
+    const auto genotype_log_likelihoods = compute_genotype_log_likelihoods(samples, haplotypes, genotype_indices, haplotype_likelihoods);
     const auto num_possible_joint_genotypes = compute_num_combinations(genotypes.size(), samples.size());
     InferredLatents result;
     if (!options_.max_joint_genotypes || (num_possible_joint_genotypes && *num_possible_joint_genotypes <= *options_.max_joint_genotypes)) {
         const auto joint_genotypes = generate_all_genotype_combinations(genotypes.size(), samples.size());
-        calculate_posterior_marginals(genotypes, joint_genotypes, genotype_log_likelihoods, prior_model_, result);
+        calculate_posterior_marginals(genotype_indices, joint_genotypes, genotype_log_likelihoods, prior_model_, result);
     } else {
         const auto max_genotype_combinations = options_.max_joint_genotypes ? *options_.max_joint_genotypes : *num_possible_joint_genotypes;
         const EMOptions em_options {options_.max_em_iterations, options_.em_epsilon};
@@ -796,6 +866,33 @@ PopulationModel::evaluate(const SampleVector& samples,
         const auto em_genotype_marginals = compute_approx_genotype_marginal_posteriors(genotypes, genotype_log_likelihoods, sample_ploidies, em_options);
         const auto joint_genotypes = propose_joint_genotypes(genotypes, em_genotype_marginals, max_genotype_combinations);
         calculate_posterior_marginals(genotypes, joint_genotypes, genotype_log_likelihoods, prior_model_, result);
+    }
+    return result;
+}
+
+PopulationModel::InferredLatents
+PopulationModel::evaluate(const SampleVector& samples,
+                          const std::vector<unsigned>& sample_ploidies,
+                          const GenotypeVector& genotypes,
+                          const std::vector<GenotypeIndex>& genotype_indices,
+                          const std::vector<Haplotype>& haplotypes,
+                          const HaplotypeLikelihoodArray& haplotype_likelihoods) const
+{
+    const auto genotype_masks = make_genotype_masks(sample_ploidies, genotypes);
+    const auto genotype_log_likelihoods = compute_genotype_log_likelihoods(samples, haplotypes, genotype_indices, haplotype_likelihoods, genotype_masks);
+    std::vector<std::size_t> sample_genotype_set_ids, genotype_set_sizes;
+    std::tie(sample_genotype_set_ids, genotype_set_sizes) = get_genotype_sets(sample_ploidies, genotypes);
+    const auto num_possible_joint_genotypes = compute_num_combinations(sample_genotype_set_ids, genotype_set_sizes);
+    InferredLatents result {};
+    if (!options_.max_joint_genotypes || (num_possible_joint_genotypes && *num_possible_joint_genotypes <= *options_.max_joint_genotypes)) {
+        const auto joint_genotypes = generate_all_genotype_combinations(sample_genotype_set_ids, genotype_set_sizes);
+        calculate_posterior_marginals(genotype_indices, joint_genotypes, genotype_log_likelihoods, prior_model_, result);
+    } else {
+        const auto max_genotype_combinations = options_.max_joint_genotypes ? *options_.max_joint_genotypes : *num_possible_joint_genotypes;
+        const EMOptions em_options {options_.max_em_iterations, options_.em_epsilon};
+        const auto em_genotype_marginals = compute_approx_genotype_marginal_posteriors(genotypes, genotype_log_likelihoods, sample_ploidies, em_options);
+        const auto joint_genotypes = propose_joint_genotypes(genotypes, em_genotype_marginals, max_genotype_combinations);
+        calculate_posterior_marginals(genotype_indices, joint_genotypes, genotype_log_likelihoods, prior_model_, result);
     }
     return result;
 }

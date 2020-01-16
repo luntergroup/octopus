@@ -47,9 +47,9 @@ PopulationCaller::PopulationCaller(Caller::Components&& components,
 : Caller {std::move(components), std::move(general_parameters)}
 , parameters_ {specific_parameters}
 {
-    if (all_equal(parameters_.ploidies)) {
-        parameters_.ploidies.resize(1);
-    }
+    unique_ploidies_ = parameters_.ploidies;
+    std::sort(std::begin(unique_ploidies_), std::end(unique_ploidies_));
+    unique_ploidies_.erase(std::unique(std::begin(unique_ploidies_), std::end(unique_ploidies_)), std::end(unique_ploidies_));
 }
 
 std::string PopulationCaller::do_name() const
@@ -64,12 +64,12 @@ PopulationCaller::CallTypeSet PopulationCaller::do_call_types() const
 
 unsigned PopulationCaller::do_min_callable_ploidy() const
 {
-    return *std::min_element(std::cbegin(parameters_.ploidies), std::cend(parameters_.ploidies));
+    return unique_ploidies_.front();
 }
 
 unsigned PopulationCaller::do_max_callable_ploidy() const
 {
-    return *std::max_element(std::cbegin(parameters_.ploidies), std::cend(parameters_.ploidies));
+    return unique_ploidies_.back();
 }
 
 std::size_t PopulationCaller::do_remove_duplicates(HaplotypeBlock& haplotypes) const
@@ -733,22 +733,18 @@ auto generate_unique_genotypes(const MappableBlock<Haplotype>& haplotypes, std::
     return result;
 }
 
-auto assign_samples_to_genotypes(std::vector<unsigned> ploidies, const GenotypesMap& genotypes)
-{
-    std::vector<GenotypeBlockReference> result {};
-    result.reserve(ploidies.size());
-    for (auto ploidy : ploidies) {
-        result.emplace_back(genotypes.at(ploidy));
-    }
-    return result;
-}
-
 namespace {
 
 template <typename Container1, typename MappableType, typename Container2>
 auto append(MappableBlock<MappableType, Container1>&& src, MappableBlock<MappableType, Container2>& dst)
 {
     return utils::append(std::move(static_cast<Container1&>(src)), static_cast<Container2&>(dst));
+}
+
+template <typename MappableType, typename Container2>
+auto append(std::vector<MappableType>&& src, MappableBlock<MappableType, Container2>& dst)
+{
+    return utils::append(std::move(src), static_cast<Container2&>(dst));
 }
 
 } // namespace append
@@ -759,7 +755,7 @@ PopulationCaller::infer_latents_with_joint_model(const HaplotypeBlock& haplotype
 {
     const auto prior_model = make_joint_prior_model(haplotypes);
     const model::PopulationModel model {*prior_model, {parameters_.max_joint_genotypes}, debug_log_};
-    if (parameters_.ploidies.size() == 1) {
+    if (unique_ploidies_.size() == 1) {
         prior_model->prime(haplotypes);
         std::vector<GenotypeIndex> genotype_indices;
         auto genotypes = generate_all_genotypes(haplotypes, parameters_.ploidies.front(), genotype_indices);
@@ -767,9 +763,14 @@ PopulationCaller::infer_latents_with_joint_model(const HaplotypeBlock& haplotype
         auto inferences = model.evaluate(samples_, genotypes, genotype_indices, haplotypes, haplotype_likelihoods);
         return std::make_unique<Latents>(samples_, haplotypes, std::move(genotypes), std::move(inferences));
     } else {
-        auto unique_genotypes = generate_unique_genotypes(haplotypes, parameters_.ploidies);
         model::PopulationModel::GenotypeVector genotypes {};
-        for (auto& p : unique_genotypes) append(std::move(p.second), genotypes);
+        std::vector<GenotypeIndex> genotype_indices {};
+        for (const auto ploidy : unique_ploidies_) {
+            std::vector<GenotypeIndex> next_genotype_indices {};
+            auto next_genotypes = generate_all_genotypes(haplotypes, ploidy);
+            append(std::move(next_genotypes), genotypes);
+            utils::append(std::move(next_genotype_indices), genotype_indices);
+        }
         auto inferences = model.evaluate(samples_, parameters_.ploidies, genotypes, haplotype_likelihoods);
         return std::make_unique<Latents>(samples_, haplotypes, std::move(genotypes), std::move(inferences));
     }

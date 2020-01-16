@@ -60,6 +60,7 @@ private:
     class Latents;
     
     Parameters parameters_;
+    std::vector<unsigned> unique_ploidies_;
     
     std::string do_name() const override;
     CallTypeSet do_call_types() const override;
