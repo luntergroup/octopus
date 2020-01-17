@@ -191,6 +191,7 @@ select_top_k_tuples(const std::vector<std::vector<T>>& values, const std::size_t
     result.reserve(k);
     for (auto& p : joins) {
         result.push_back(std::move(p.indices));
+        p.indices = {};
     }
     return result;
 }
