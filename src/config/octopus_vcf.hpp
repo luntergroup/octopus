@@ -15,7 +15,7 @@ namespace spec {
 
 namespace allele {
 
-VCF_SPEC_CONSTANT nonref {"<*>"};
+
 
 } // namespace info
 

@@ -45,11 +45,23 @@ public:
     VcfRecord(String1&& chrom, GenomicRegion::Position pos, String2&& id,
               Sequence1&& ref, Sequence2&& alt, boost::optional<QualityType> qual,
               Filters&& filters, Info&& info);
+    // Constructor without genotype fields
+    template <typename String, typename Sequence1, typename Sequence2,
+              typename Filters, typename Info>
+    VcfRecord(GenomicRegion region, String&& id,
+              Sequence1&& ref, Sequence2&& alt, boost::optional<QualityType> qual,
+              Filters&& filters, Info&& info);
     
     // Constructor with genotype fields
     template <typename String1, typename String2, typename Sequence1, typename Sequence2,
     typename Filters, typename Info, typename Format, typename Genotypes, typename Samples>
     VcfRecord(String1&& chrom, GenomicRegion::Position pos, String2&& id,
+              Sequence1&& ref, Sequence2&& alt, boost::optional<QualityType> qual,
+              Filters&& filters, Info&& info,
+              Format&& format, Genotypes&& genotypes, Samples&& samples);
+    template <typename String, typename Sequence1, typename Sequence2,
+              typename Filters, typename Info, typename Format, typename Genotypes, typename Samples>
+    VcfRecord(GenomicRegion region, String&& id,
               Sequence1&& ref, Sequence2&& alt, boost::optional<QualityType> qual,
               Filters&& filters, Info&& info,
               Format&& format, Genotypes&& genotypes, Samples&& samples);
@@ -136,6 +148,7 @@ std::vector<double> get_allele_frequency(const VcfRecord& record);
 
 bool is_info_missing(const VcfRecord::KeyType& key, const VcfRecord& record);
 
+bool is_refcall(const VcfRecord& record) noexcept;
 bool is_filtered(const VcfRecord& record) noexcept;
 bool is_dbsnp_member(const VcfRecord& record) noexcept;
 bool is_hapmap2_member(const VcfRecord& record) noexcept;
@@ -221,10 +234,11 @@ public:
     Builder& clear_filter(const SampleName& sample) noexcept;
     Builder& clear_all_sample_filters() noexcept;
     
-    Builder& set_refcall();
     Builder& set_somatic();
     Builder& set_denovo();
     Builder& set_reference_reversion();
+    
+    Builder& set_blocked_reference();
     
     GenomicRegion::Position pos() const noexcept;
     
@@ -243,6 +257,7 @@ private:
     decltype(VcfRecord::format_) format_ = {};
     decltype(VcfRecord::genotypes_) genotypes_ = {};
     decltype(VcfRecord::samples_) samples_ = {};
+    boost::optional<GenomicRegion::Position> end_;
 };
 
 template <typename String1, typename String2, typename Sequence1, typename Sequence2,
@@ -261,13 +276,48 @@ VcfRecord::VcfRecord(String1&& chrom, GenomicRegion::Position pos, String2&& id,
 , samples_ {}
 {}
 
+template <typename String, typename Sequence1, typename Sequence2,
+          typename Filters, typename Info>
+VcfRecord::VcfRecord(GenomicRegion region, String&& id,  Sequence1&& ref, Sequence2&& alt,
+                     boost::optional<QualityType> qual, Filters&& filters, Info&& info)
+: region_ {std::move(region)}
+, id_ {std::forward<String>(id)}
+, ref_ {std::forward<Sequence1>(ref)}
+, alt_ {std::forward<Sequence2>(alt)}
+, qual_ {qual}
+, filter_ {std::forward<Filters>(filters)}
+, info_ {std::forward<Info>(info)}
+, format_ {}
+, genotypes_ {}
+, samples_ {}
+{}
+
 template <typename String1, typename String2, typename Sequence1, typename Sequence2,
 typename Filters, typename Info, typename Format, typename Genotypes, typename Samples>
-VcfRecord::VcfRecord(String1&& chrom, GenomicRegion::Position pos, String2&& id,   Sequence1&& ref, Sequence2&& alt,
+VcfRecord::VcfRecord(String1&& chrom, GenomicRegion::Position pos, String2&& id,
+                     Sequence1&& ref, Sequence2&& alt,
                      boost::optional<QualityType> qual, Filters&& filters,
                      Info&& info, Format&& format, Genotypes&& genotypes, Samples&& samples)
 : region_ {std::forward<String1>(chrom), pos - 1, pos + static_cast<GenomicRegion::Position>(utils::length(ref)) - 1}
 , id_ {std::forward<String2>(id)}
+, ref_ {std::forward<Sequence1>(ref)}
+, alt_ {std::forward<Sequence2>(alt)}
+, qual_ {qual}
+, filter_ {std::forward<Filters>(filters)}
+, info_ {std::forward<Info>(info)}
+, format_ {std::forward<Format>(format)}
+, genotypes_ {std::forward<Genotypes>(genotypes)}
+, samples_ {std::forward<Samples>(samples)}
+{}
+
+template <typename String, typename Sequence1, typename Sequence2,
+          typename Filters, typename Info, typename Format, typename Genotypes, typename Samples>
+VcfRecord::VcfRecord(GenomicRegion region, String&& id,
+                     Sequence1&& ref, Sequence2&& alt,
+                     boost::optional<QualityType> qual, Filters&& filters,
+                     Info&& info, Format&& format, Genotypes&& genotypes, Samples&& samples)
+: region_ {std::move(region)}
+, id_ {std::forward<String>(id)}
 , ref_ {std::forward<Sequence1>(ref)}
 , alt_ {std::forward<Sequence2>(alt)}
 , qual_ {qual}

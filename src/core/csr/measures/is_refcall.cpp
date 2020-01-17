@@ -18,15 +18,6 @@ std::unique_ptr<Measure> IsRefcall::do_clone() const
     return std::make_unique<IsRefcall>(*this);
 }
 
-namespace {
-
-bool is_refcall(const VcfRecord& record)
-{
-    return record.alt().size() == 1 && record.alt()[0] == vcf::spec::allele::nonref;
-}
-
-} // namespace
-
 Measure::ResultType IsRefcall::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     if (report_sample_status_) {

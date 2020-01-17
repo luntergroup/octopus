@@ -98,6 +98,7 @@ VCF_SPEC_CONSTANT vcfVersion {"fileformat"};
 namespace allele {
 
 VCF_SPEC_SEPERATOR seperator {','};
+VCF_SPEC_CONSTANT nonref {"<*>"};
 
 } // namespace allele
 

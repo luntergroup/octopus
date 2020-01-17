@@ -331,6 +331,12 @@ bool is_info_missing(const VcfRecord::KeyType& key, const VcfRecord& record)
     return !record.has_info(key) || is_missing(record.info_value(key));
 }
 
+bool is_refcall(const VcfRecord& record) noexcept
+{
+    const static std::vector<VcfRecord::NucleotideSequence> refcall_alts {vcfspec::allele::nonref};
+    return record.alt() == refcall_alts;
+}
+
 bool is_filtered(const VcfRecord& record) noexcept
 {
     const auto& filters = record.filter();
@@ -540,6 +546,11 @@ VcfRecord::Builder& VcfRecord::Builder::set_info(const KeyType& key, const Value
 
 VcfRecord::Builder& VcfRecord::Builder::set_info(const KeyType& key, std::vector<ValueType> values)
 {
+    if (key == "END") {
+        if (values.size() != 1)
+            throw std::runtime_error {"VcfRecord::Builder INFO key END requires 1 value"};
+        end_ = std::stoll(values.front());
+    }
     info_[key] = std::move(values);
     return *this;
 }
@@ -715,11 +726,6 @@ VcfRecord::Builder& VcfRecord::Builder::clear_all_sample_filters() noexcept
     return *this;
 }
 
-VcfRecord::Builder& VcfRecord::Builder::set_refcall()
-{
-    return set_alt("<NON_REF>");
-}
-
 VcfRecord::Builder& VcfRecord::Builder::set_somatic()
 {
     return this->set_info_flag(vcfspec::info::somatic);
@@ -735,6 +741,25 @@ VcfRecord::Builder& VcfRecord::Builder::set_reference_reversion()
     return this->set_info_flag("REVERSION");
 }
 
+VcfRecord::Builder& VcfRecord::Builder::set_blocked_reference()
+{
+    const static std::vector<VcfRecord::NucleotideSequence> refcall_alts {vcfspec::allele::nonref};
+    if (alt_ != refcall_alts)
+        throw std::runtime_error {"Cannot block a non reference call"};
+    if (ref_.size() > 1) {
+        set_info("END", pos_ + ref_.size() - 1);
+        for (auto& p : genotypes_) {
+            for (auto& allele : p.second.first) {
+                if (allele == ref_) {
+                    allele.resize(1);
+                }
+            }
+        }
+        ref_.resize(1);
+    }
+    return *this;
+}
+
 GenomicRegion::Position VcfRecord::Builder::pos() const noexcept
 {
     return pos_;
@@ -743,21 +768,46 @@ GenomicRegion::Position VcfRecord::Builder::pos() const noexcept
 VcfRecord VcfRecord::Builder::build() const
 {
     if (genotypes_.empty() && samples_.empty()) {
-        return VcfRecord {chrom_, pos_, id_, ref_, alt_, qual_, filter_, info_};
+        if (end_) {
+            GenomicRegion region {chrom_, pos_, *end_};
+            return VcfRecord {std::move(region), id_, ref_, alt_, qual_, filter_, info_};
+        } else {
+            return VcfRecord {chrom_, pos_, id_, ref_, alt_, qual_, filter_, info_};
+        }
     } else {
-        return VcfRecord {chrom_, pos_, id_, ref_, alt_, qual_, filter_, info_, format_, genotypes_, samples_};
+        if (end_) {
+            GenomicRegion region {chrom_, pos_, *end_};
+            return VcfRecord {std::move(region), id_, ref_, alt_, qual_, filter_,
+                              info_, format_, genotypes_, samples_};
+        } else {
+            return VcfRecord {chrom_, pos_, id_, ref_, alt_, qual_, filter_,
+                             info_, format_, genotypes_, samples_};
+        }
     }
 }
 
 VcfRecord VcfRecord::Builder::build_once() noexcept
 {
     if (genotypes_.empty() && samples_.empty()) {
-        return VcfRecord {std::move(chrom_), pos_, std::move(id_), std::move(ref_),
-                          std::move(alt_), qual_, std::move(filter_), std::move(info_)};
+        if (end_) {
+            GenomicRegion region {std::move(chrom_), pos_, *end_ + 1};
+            return VcfRecord {std::move(region), std::move(id_), std::move(ref_),
+                              std::move(alt_), qual_, std::move(filter_), std::move(info_)};
+        } else {
+            return VcfRecord {std::move(chrom_), pos_, std::move(id_), std::move(ref_),
+                              std::move(alt_), qual_, std::move(filter_), std::move(info_)};
+        }
     } else {
-        return VcfRecord {std::move(chrom_), pos_, std::move(id_), std::move(ref_),
-                          std::move(alt_), qual_, std::move(filter_), std::move(info_),
-                          std::move(format_), std::move(genotypes_), std::move(samples_)};
+        if (end_) {
+            GenomicRegion region {std::move(chrom_), pos_, *end_ + 1};
+            return VcfRecord {std::move(region), std::move(id_), std::move(ref_),
+                              std::move(alt_), qual_, std::move(filter_), std::move(info_),
+                              std::move(format_), std::move(genotypes_), std::move(samples_)};
+        } else {
+            return VcfRecord {std::move(chrom_), pos_, std::move(id_), std::move(ref_),
+                              std::move(alt_), qual_, std::move(filter_), std::move(info_),
+                              std::move(format_), std::move(genotypes_), std::move(samples_)};
+        }
     }
 }
 

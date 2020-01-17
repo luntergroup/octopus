@@ -555,7 +555,7 @@ void set_vcf_genotype(const SampleName& sample, const Call::GenotypeCall& call, 
     auto genotyped_alleles = extract_allele_sequences(call.genotype);
     if (replace_missing_with_non_ref) {
         std::replace(std::begin(genotyped_alleles), std::end(genotyped_alleles),
-                     std::string {vcfspec::missingValue}, std::string {vcf::spec::allele::nonref});
+                     std::string {vcfspec::missingValue}, std::string {vcfspec::allele::nonref});
     }
     record.set_genotype(sample, std::move(genotyped_alleles), VcfRecord::Builder::Phasing::phased);
 }
@@ -607,34 +607,27 @@ VcfRecord VcfRecordFactory::make(std::unique_ptr<Call> call) const
 {
     auto result = VcfRecord::Builder {};
     const auto& region = call->mapped_region();
-    
-    bool has_non_ref {false};
+    bool is_refcall {false};
     auto alts = extract_genotyped_alt_alleles(call.get(), samples_);
     if (alts.empty()) {
-        alts.push_back(vcf::spec::allele::nonref);
-        has_non_ref = true;
+        alts.push_back(vcfspec::allele::nonref);
+        is_refcall = true;
     } else {
-        has_non_ref = std::find(std::cbegin(alts), std::cend(alts), vcf::spec::allele::nonref) != std::cend(alts);
+        is_refcall = std::find(std::cbegin(alts), std::cend(alts), vcfspec::allele::nonref) != std::cend(alts);
     }
-    
     result.set_chrom(contig_name(region));
     result.set_pos(mapped_begin(region) + 1);
     result.set_ref(call->reference().sequence());
     set_allele_counts(*call, samples_, alts, result);
     result.set_alt(std::move(alts));
     result.set_qual(std::min(max_qual, maths::round(call->quality().score(), 2)));
-    if (has_non_ref) {
-        result.set_info("END", mapped_end(region));
-    }
     const auto call_reads = copy_overlapped(reads_, region);
     result.set_info("NS",  count_samples_with_coverage(call_reads));
     result.set_info("DP",  sum_max_coverages(call_reads));
     result.set_info("MQ",  static_cast<unsigned>(rmq_mapping_quality(call_reads)));
-    
     if (call->model_posterior()) {
         result.set_info("MP",  maths::round(call->model_posterior()->score(), 2));
     }
-    
     if (!sites_only_) {
         if (call->all_phased()) {
             result.set_format({"GT", "GQ", "DP", "MQ", "PS", "PQ"});
@@ -645,7 +638,7 @@ VcfRecord VcfRecordFactory::make(std::unique_ptr<Call> call) const
             const auto& genotype_call = call->get_genotype_call(sample);
             static const Phred<double> max_genotype_quality {10'000};
             const auto gq = static_cast<int>(std::round(std::min(max_genotype_quality, genotype_call.posterior).score()));
-            set_vcf_genotype(sample, genotype_call, result, has_non_ref);
+            set_vcf_genotype(sample, genotype_call, result, is_refcall);
             result.set_format(sample, "GQ", std::to_string(gq));
             result.set_format(sample, "DP", max_coverage(call_reads.at(sample)));
             result.set_format(sample, "MQ", static_cast<unsigned>(rmq_mapping_quality(call_reads.at(sample))));
@@ -658,7 +651,11 @@ VcfRecord VcfRecordFactory::make(std::unique_ptr<Call> call) const
         }
     }
     call->decorate(result);
-    
+    if (is_refcall) {
+        try {
+            result.set_blocked_reference();
+        } catch (...) {}
+    }
     return result.build_once();
 }
 
@@ -712,22 +709,17 @@ void set_allele_counts(const std::vector<VcfRecord::NucleotideSequence>& alt_all
 VcfRecord VcfRecordFactory::make_segment(std::vector<std::unique_ptr<Call>>&& calls) const
 {
     assert(!calls.empty());
-    
     if (calls.size() == 1) {
         return make(std::move(calls.front()));
     }
-    
     auto result = VcfRecord::Builder {};
     const auto& region = calls.front()->mapped_region();
     const auto& ref = calls.front()->reference().sequence();
-    
     result.set_chrom(contig_name(region));
     result.set_pos(mapped_begin(region) + 1);
     result.set_ref(ref);
-    
     std::vector<std::vector<VcfRecord::NucleotideSequence>> resolved_genotypes {};
     resolved_genotypes.reserve(samples_.size());
-    
     for (const auto& sample : samples_) {
         const auto ploidy = calls.front()->get_genotype_call(sample).genotype.ploidy();
         std::vector<VcfRecord::NucleotideSequence> resolved_sample_genotype(ploidy);
@@ -750,7 +742,6 @@ VcfRecord VcfRecordFactory::make_segment(std::vector<std::unique_ptr<Call>>&& ca
         });
         resolved_genotypes.push_back(std::move(resolved_sample_genotype));
     }
-    
     std::vector<VcfRecord::NucleotideSequence> alt_alleles {};
     for (const auto& genotype : resolved_genotypes) {
         alt_alleles.insert(std::end(alt_alleles), std::cbegin(genotype), std::cend(genotype));
@@ -761,12 +752,12 @@ VcfRecord VcfRecordFactory::make_segment(std::vector<std::unique_ptr<Call>>&& ca
     std::sort(std::begin(alt_alleles), std::end(alt_alleles));
     itr = std::unique(std::begin(alt_alleles), std::end(alt_alleles));
     alt_alleles.erase(itr, std::end(alt_alleles));
-    bool has_non_ref {false};
+    bool is_refcall {false};
     if (alt_alleles.empty()) {
-        alt_alleles.push_back(vcf::spec::allele::nonref);
-        has_non_ref = true;
+        alt_alleles.push_back(vcfspec::allele::nonref);
+        is_refcall = true;
     } else {
-        has_non_ref = std::find(std::cbegin(alt_alleles), std::cend(alt_alleles), vcf::spec::allele::nonref) != std::cend(alt_alleles);
+        is_refcall = std::find(std::cbegin(alt_alleles), std::cend(alt_alleles), vcfspec::allele::nonref) != std::cend(alt_alleles);
     }
     set_allele_counts(alt_alleles, resolved_genotypes, result);
     result.set_alt(std::move(alt_alleles));
@@ -776,7 +767,6 @@ VcfRecord VcfRecordFactory::make_segment(std::vector<std::unique_ptr<Call>>&& ca
     result.set_info("NS",  count_samples_with_coverage(reads_, region));
     result.set_info("DP",  sum_max_coverages(reads_, region));
     result.set_info("MQ",  static_cast<unsigned>(rmq_mapping_quality(reads_, region)));
-	
     const auto mp = get_model_posterior(calls);
     if (mp) {
         result.set_info("MP", maths::round(*mp, 2));
@@ -787,16 +777,15 @@ VcfRecord VcfRecordFactory::make_segment(std::vector<std::unique_ptr<Call>>&& ca
         } else {
             result.set_format({"GT", "GQ", "DP", "MQ"});
         }
-        
         auto sample_itr = std::begin(resolved_genotypes);
         for (const auto& sample : samples_) {
             const auto posterior = calls.front()->get_genotype_call(sample).posterior;
             static const Phred<double> max_genotype_quality {10'000};
             const auto gq = static_cast<int>(std::round(std::min(max_genotype_quality, posterior).score()));
             auto& genotype_call = *sample_itr++;
-            if (has_non_ref) {
+            if (is_refcall) {
                 std::replace(std::begin(genotype_call), std::end(genotype_call),
-                             std::string {vcfspec::missingValue}, std::string {vcf::spec::allele::nonref});
+                             std::string {vcfspec::missingValue}, std::string {vcfspec::allele::nonref});
             }
             result.set_genotype(sample, genotype_call, VcfRecord::Builder::Phasing::phased);
             result.set_format(sample, "GQ", std::to_string(gq));
@@ -810,11 +799,14 @@ VcfRecord VcfRecordFactory::make_segment(std::vector<std::unique_ptr<Call>>&& ca
             }
         }
     }
-    
     for (const auto& call : calls) {
         call->decorate(result);
     }
-    
+    if (is_refcall) {
+        try {
+            result.set_blocked_reference();
+        } catch (...) {}
+    }
     return result.build_once();
 }
     

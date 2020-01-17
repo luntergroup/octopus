@@ -135,8 +135,12 @@ make_allele(const VcfRecord& call, VcfRecord::NucleotideSequence allele_sequence
     return ContigAllele {region, std::move(allele_sequence)};
 }
 
-auto extract_genotype(const VcfRecord& call, const SampleName& sample)
+auto extract_genotype(const VcfRecord& call, const SampleName& sample, const ReferenceGenome& reference)
 {
+    if (is_refcall(call)) {
+        auto refallele = demote(make_reference_allele(mapped_region(call), reference));
+        return std::vector<boost::optional<ContigAllele>>(call.ploidy(sample), refallele);
+    }
     auto genotype = get_genotype(call, sample);
     const auto ploidy = genotype.size();
     std::vector<boost::optional<ContigAllele>> result(ploidy, boost::none);
@@ -314,7 +318,7 @@ extract_genotype(const std::vector<CallWrapper>& phased_calls,
     const auto max_ploidy = get_max_ploidy(phased_calls, sample);
     std::vector<Haplotype::Builder> haplotypes(max_ploidy, Haplotype::Builder {region, reference});
     for (const auto& call : phased_calls) {
-        auto genotype = extract_genotype(call.call, sample);
+        auto genotype = extract_genotype(call.call, sample, reference);
         assert(genotype.size() <= max_ploidy);
         for (unsigned i {0}; i < genotype.size(); ++i) {
             if (genotype[i] && haplotypes[i].can_push_back(*genotype[i])) {
