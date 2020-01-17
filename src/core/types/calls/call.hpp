@@ -69,6 +69,7 @@ public:
     std::unique_ptr<Call> clone() const;
     
     Phred<double> quality() const noexcept;
+    void set_quality(Phred<double> new_quality) noexcept;
     
     GenotypeCall& get_genotype_call(const SampleName& sample);
     const GenotypeCall& get_genotype_call(const SampleName& sample) const;

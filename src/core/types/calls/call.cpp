@@ -21,6 +21,11 @@ Phred<double> Call::quality() const noexcept
     return quality_;
 }
 
+void Call::set_quality(Phred<double> new_quality) noexcept
+{
+    quality_ = new_quality;
+}
+
 Call::GenotypeCall& Call::get_genotype_call(const SampleName& sample)
 {
     return genotype_calls_.at(sample);

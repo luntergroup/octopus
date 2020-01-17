@@ -50,6 +50,7 @@ public:
     CallerBuilder& set_caller(std::string caller);
     CallerBuilder& set_refcall_type(Caller::RefCallType type) noexcept;
     CallerBuilder& set_refcall_merge_block_threshold(Phred<double> threshold) noexcept;
+    CallerBuilder& set_max_refcall_posterior(Phred<double> posterior) noexcept;
     CallerBuilder& set_sites_only() noexcept;
     CallerBuilder& set_reference_haplotype_protection(bool b) noexcept;
     CallerBuilder& set_target_memory_footprint(MemoryFootprint memory) noexcept;

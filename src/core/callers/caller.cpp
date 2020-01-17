@@ -1272,11 +1272,16 @@ std::vector<CallWrapper> Caller::call_reference(const GenomicRegion& region, con
 std::vector<CallWrapper>
 Caller::call_reference_helper(const std::vector<Allele>& alleles, const Latents& latents, const ReadPileupMap& pileups) const
 {
-    if (is_merge_block_refcalling()) {
-        return wrap(squash_reference_calls(call_reference(alleles, latents, pileups)));
-    } else {
-        return wrap(call_reference(alleles, latents, pileups));
+    auto refcalls = call_reference(alleles, latents, pileups);
+    if (parameters_.max_refcall_posterior) {
+        for (auto& refcall : refcalls) {
+            refcall->set_quality(std::min(refcall->quality(), *parameters_.max_refcall_posterior));
+        }
     }
+    if (is_merge_block_refcalling()) {
+        refcalls =squash_reference_calls(std::move(refcalls));
+    }
+    return wrap(std::move(refcalls));
 }
 
 namespace {

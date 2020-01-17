@@ -105,6 +105,12 @@ CallerBuilder& CallerBuilder::set_refcall_merge_block_threshold(Phred<double> th
     return *this;
 }
 
+CallerBuilder& CallerBuilder::set_max_refcall_posterior(Phred<double> posterior) noexcept
+{
+    params_.general.max_refcall_posterior = posterior;
+    return *this;
+}
+
 CallerBuilder& CallerBuilder::set_sites_only() noexcept
 {
     params_.general.call_sites_only = true;

@@ -62,7 +62,7 @@ public:
     struct Parameters
     {
         RefCallType refcall_type;
-        boost::optional<Phred<double>> refcall_block_merge_threshold;
+        boost::optional<Phred<double>> refcall_block_merge_threshold, max_refcall_posterior;
         bool call_sites_only;
         unsigned max_haplotypes;
         double haplotype_extension_threshold, saturation_limit;

@@ -517,7 +517,11 @@ OptionMap parse_options(const int argc, const char** argv)
      
     ("min-refcall-posterior",
      po::value<Phred<double>>()->default_value(Phred<double> {2.0}),
-     "Report reference alleles with posterior probability (phred scale) greater than this")
+     "Report reference alleles with posterior probability (QUAL) greater than this")
+
+    ("max-refcall-posterior",
+     po::value<Phred<double>>(),
+     "Maximum allowed posterior probability (QUAL) for reference calls")
     
     ("snp-heterozygosity,z",
      po::value<float>()->default_value(0.001, "0.001"),
