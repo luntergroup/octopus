@@ -15,6 +15,7 @@
 #include "core/types/genotype.hpp"
 #include "core/types/phylogeny.hpp"
 #include "core/models/haplotype_likelihood_array.hpp"
+#include "exceptions/program_error.hpp"
 #include "single_cell_prior_model.hpp"
 #include "population_prior_model.hpp"
 #include "uniform_population_prior_model.hpp"
@@ -49,8 +50,14 @@ public:
     struct AlgorithmParameters
     {
         boost::optional<std::size_t> max_genotype_combinations;
-        unsigned max_seeds = 5;
+        unsigned max_seeds = 20;
         ExecutionPolicy execution_policy = ExecutionPolicy::seq;
+    };
+    
+    struct NoViableGenotypeCombinationsError : public ProgramError
+    {
+        std::string do_where() const override { return "SingleCellModel"; }
+        std::string do_why() const override { return "No viable genotype combinations found"; };
     };
     
     using GenotypeVector = std::vector<Genotype<Haplotype>>;

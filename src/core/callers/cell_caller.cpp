@@ -427,20 +427,30 @@ CellCaller::infer_latents(const HaplotypeBlock& haplotypes, const HaplotypeLikel
                     }
                     std::unordered_map<std::size_t, unsigned> phylogeny_ploidies {};
                     phylogeny_ploidies.reserve(clones);
+                    bool can_ignore_future_copy_changes {false};
                     do {
                         if (phylogeny_ploidy_assignments[0] == parameters_.ploidy) {
                             for (std::size_t id {0}; id < clones; ++id) {
                                 phylogeny_ploidies[id] = phylogeny_ploidy_assignments[id];
                             }
-                            auto phylogeny_copy_inferences = phylogeny_model.evaluate(phylogeny_ploidies, copy_change_genotypes, haplotype_likelihoods);
-                            log(phylogeny_copy_inferences, samples_, copy_change_genotypes, debug_log_);
-                            if (phylogeny_copy_inferences.log_evidence > phylogeny_inferences.log_evidence) {
-                                phylogeny_inferences = std::move(phylogeny_copy_inferences);
-                                copy_change_predicted = true;
+                            try {
+                                auto phylogeny_copy_inferences = phylogeny_model.evaluate(phylogeny_ploidies, copy_change_genotypes, haplotype_likelihoods);
+                                log(phylogeny_copy_inferences, samples_, copy_change_genotypes, debug_log_);
+                                if (phylogeny_copy_inferences.log_evidence > phylogeny_inferences.log_evidence) {
+                                    phylogeny_inferences = std::move(phylogeny_copy_inferences);
+                                    copy_change_predicted = true;
+                                    can_ignore_future_copy_changes = false;
+                                } else if (phylogeny_copy_inferences.log_evidence > max_log_evidence) {
+                                    can_ignore_future_copy_changes = false;
+                                }
+                                phylogeny_ploidies.clear();
+                            } catch (const model::SingleCellModel::NoViableGenotypeCombinationsError&) {
+                                can_ignore_future_copy_changes = true;
+                                break;
                             }
-                            phylogeny_ploidies.clear();
                         }
                     } while (std::next_permutation(std::begin(phylogeny_ploidy_assignments), std::end(phylogeny_ploidy_assignments)));
+                    if (can_ignore_future_copy_changes) copy_number_change_detection_enabled = false;
                 }
                 clone_inferences.push_back(std::move(phylogeny_inferences));
             }

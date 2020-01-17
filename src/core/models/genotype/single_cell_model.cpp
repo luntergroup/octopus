@@ -290,7 +290,11 @@ select_top_k_combinations(const std::vector<std::vector<T>>& values, const std::
         std::fill_n(std::rbegin(selectors), n, 1);
         for (const auto& tuple : tuples) {
             do {
-                result.push_back(select(selectors, tuple));
+                if (result.size() < k) {
+                    result.push_back(select(selectors, tuple));
+                } else {
+                    return result;
+                }
             } while (std::next_permutation(std::begin(selectors), std::end(selectors)));
         }
         return result;
@@ -357,6 +361,16 @@ void sort_by_size_and_entropy(ClusterVector& clusters,
         std::swap(tmp_clusters[k].samples, samples_by_cluster[k]);
         std::swap(tmp_clusters[k].genotype_probabilities, cluster_marginal_genotype_posteriors[k]);
     }
+}
+
+void erase_combinations_with_duplicate_indices(std::vector<std::vector<std::size_t>>& combinations, const std::size_t max_index)
+{
+    std::vector<int> counts(max_index);
+    combinations.erase(std::remove_if(std::begin(combinations), std::end(combinations), [&counts] (const auto& indices) {
+        std::fill(std::begin(counts), std::end(counts), 0);
+        for (auto idx : indices) ++counts[idx];
+        return std::any_of(std::cbegin(counts), std::cend(counts), [] (auto count) { return count > 1; });
+    }), std::end(combinations));
 }
 
 } // namespace
@@ -431,12 +445,7 @@ SingleCellModel::propose_genotype_combinations(const GenotypeVector& genotypes,
     while (result.empty()) {
         result = select_top_k_combinations(cluster_marginal_genotype_posteriors, k, num_groups);
         // Remove combinations with duplicate genotypes as these are redundant according to model.
-        std::vector<int> counts(genotypes.size());
-        result.erase(std::remove_if(std::begin(result), std::end(result), [&counts] (const auto& indices) {
-            std::fill(std::begin(counts), std::end(counts), 0);
-            for (auto idx : indices) ++counts[idx];
-            return std::any_of(std::cbegin(counts), std::cend(counts), [] (auto count) { return count > 1; });
-        }), std::end(result));
+        erase_combinations_with_duplicate_indices(result, genotypes.size());
         // Reorder the combinations, keeping only the most probable one under the prior
         std::vector<SingleCellPriorModel::GenotypeReference> combination_refs {};
         combination_refs.reserve(num_groups);
@@ -631,45 +640,36 @@ SingleCellModel::propose_genotype_combinations(const PhylogenyNodePloidyMap& phy
     std::vector<unsigned> required_ploidies(num_groups);
     for (std::size_t id {0}; id < num_groups; ++id) required_ploidies[id] = phylogeny_ploidies.at(id);
     GenotypeCombinationVector result {};
-    auto k = config_.max_genotype_combinations ? 10 * *config_.max_genotype_combinations : std::numeric_limits<std::size_t>::max();
-    while (result.empty()) {
-        result = select_top_k_combinations(cluster_marginal_genotype_posteriors, k, num_groups);
-        // Remove combinations with duplicate genotypes as these are redundant according to model.
-        std::vector<int> counts(genotypes.size());
-        result.erase(std::remove_if(std::begin(result), std::end(result), [&counts] (const auto& indices) {
-            std::fill(std::begin(counts), std::end(counts), 0);
-            for (auto idx : indices) ++counts[idx];
-            return std::any_of(std::cbegin(counts), std::cend(counts), [] (auto count) { return count > 1; });
-        }), std::end(result));
-        // Reorder the combinations, keeping only the most probable one under the prior
-        std::vector<SingleCellPriorModel::GenotypeReference> combination_refs {};
-        combination_refs.reserve(num_groups);
-        GenotypeCombinationVector buffer {};
-        buffer.reserve(result.size());
-        for (GenotypeCombination& combination : result) {
-            std::sort(std::begin(combination), std::end(combination));
-            GenotypeCombination best_combination;
-            auto max_prior = std::numeric_limits<double>::lowest();
-            bool has_valid_combination {false};
-            do {
-                if (valid_ploidies(combination, genotypes, required_ploidies)) {
-                    for (auto idx : combination) combination_refs.emplace_back(genotypes[idx]);
-                    const auto prior = prior_model_.evaluate(combination_refs);
-                    combination_refs.clear();
-                    if (prior > max_prior) {
-                        best_combination = combination;
-                        max_prior = prior;
-                    }
-                    has_valid_combination = true;
+    const auto k = config_.max_genotype_combinations ? 100 * *config_.max_genotype_combinations : std::numeric_limits<std::size_t>::max();
+    result = select_top_k_combinations(cluster_marginal_genotype_posteriors, k, num_groups);
+    // Remove combinations with duplicate genotypes as these are redundant according to model.
+    erase_combinations_with_duplicate_indices(result, genotypes.size());
+    // Reorder the combinations, keeping only the most probable one under the prior
+    std::vector<SingleCellPriorModel::GenotypeReference> combination_refs {};
+    combination_refs.reserve(num_groups);
+    result.erase(std::remove_if(std::begin(result), std::end(result), [&] (GenotypeCombination& combination) {
+        std::sort(std::begin(combination), std::end(combination));
+        GenotypeCombination best_combination;
+        auto max_prior = std::numeric_limits<double>::lowest();
+        bool has_valid_combination {false};
+        do {
+            if (valid_ploidies(combination, genotypes, required_ploidies)) {
+                for (auto idx : combination) combination_refs.emplace_back(genotypes[idx]);
+                const auto prior = prior_model_.evaluate(combination_refs);
+                combination_refs.clear();
+                if (prior > max_prior) {
+                    best_combination = combination;
+                    max_prior = prior;
                 }
-            } while (std::next_permutation(std::begin(combination), std::end(combination)));
-            if (has_valid_combination) {
-                buffer.push_back(std::move(best_combination));
+                has_valid_combination = true;
             }
-        }
-        result = std::move(buffer);
-        unique_stable_erase(result);
-        k *= 2;
+        } while (std::next_permutation(std::begin(combination), std::end(combination)));
+        combination = std::move(best_combination);
+        return !has_valid_combination;
+    }), std::end(result));
+    unique_stable_erase(result);
+    if (result.empty()) {
+        throw NoViableGenotypeCombinationsError {};
     }
     if (config_.max_genotype_combinations && result.size() > *config_.max_genotype_combinations) {
         result.resize(*config_.max_genotype_combinations);
