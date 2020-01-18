@@ -36,6 +36,7 @@ set(CONCEPTS_SOURCES
     concepts/comparable.hpp
     concepts/mappable.hpp
     concepts/mappable_range.hpp
+    concepts/indexed.hpp
 )
 
 set(BASICS_SOURCES
