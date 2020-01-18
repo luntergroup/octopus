@@ -100,6 +100,7 @@ public:
     
     friend bool contains(const Haplotype& lhs, const Haplotype& rhs);
     friend Haplotype detail::do_copy(const Haplotype& haplotype, const GenomicRegion& region, std::true_type);
+    friend Haplotype copy(const Haplotype&, const std::vector<GenomicRegion>&);
     friend bool is_reference(const Haplotype& haplotype);
     friend Haplotype expand(const Haplotype& haplotype, MappingDomain::Position n);
     friend Haplotype remap(const Haplotype& haplotype, const GenomicRegion& region);
@@ -228,8 +229,8 @@ public:
     
     Haplotype build();
     
-    friend Haplotype detail::do_copy(const Haplotype& haplotype, const GenomicRegion& region,
-                                     std::true_type);
+    friend Haplotype detail::do_copy(const Haplotype& haplotype, const GenomicRegion& region, std::true_type);
+    friend Haplotype copy(const Haplotype&, const std::vector<GenomicRegion>&);
     
 private:
     GenomicRegion region_;
@@ -258,6 +259,8 @@ MappableType copy(const Haplotype& haplotype, const GenomicRegion& region)
 }
 
 ContigAllele copy(const Haplotype& haplotype, const ContigRegion& region);
+
+Haplotype copy(const Haplotype& haplotype, const std::vector<GenomicRegion>& regions);
 
 template <typename MappableType, typename Container,
           typename = std::enable_if_t<std::is_same<typename Container::value_type, Haplotype>::value>>

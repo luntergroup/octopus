@@ -622,6 +622,44 @@ bool all_of(const Genotype<MappableType>& genotype, UnaryPredicate&& pred)
 
 template <typename T, std::enable_if_t<detail::is_haplotype_like_v<T>, int> = 0>
 bool contains(const Genotype<T>& genotype, const Allele& allele)
+Genotype<Haplotype> copy(const Genotype<Haplotype>& genotype, const std::vector<GenomicRegion>& regions);
+
+namespace detail {
+
+template <typename Map>
+Genotype<Haplotype> copy_shared(const Genotype<Haplotype>& genotype, const std::vector<GenomicRegion>& regions, Map& cache)
+{
+    Genotype<Haplotype> result {get(genotype).ploidy()};
+    for (const auto& haplotype : get(genotype)) {
+        const auto itr = cache.find(haplotype);
+        if (itr == std::cend(cache)) {
+            auto copy_ptr = std::make_shared<Haplotype>(copy(haplotype, regions));
+            cache.emplace(std::piecewise_construct, std::forward_as_tuple(haplotype), std::forward_as_tuple(copy_ptr));
+            emplace(copy_ptr, result);
+        } else {
+            emplace(itr->second, result);
+        }
+    }
+    return result;
+}
+
+} // namespace detail
+
+template <typename Range>
+std::vector<Genotype<Haplotype>> copy_each(const Range& genotypes, const std::vector<GenomicRegion>& regions)
+{
+    std::vector<Genotype<Haplotype>> result {};
+    if (genotypes.empty()) return result;
+    result.reserve(genotypes.size());
+    std::unordered_map<Haplotype, std::shared_ptr<Haplotype>> cache {};
+    cache.reserve(genotypes.size());
+    std::transform(std::cbegin(genotypes), std::cend(genotypes), std::back_inserter(result),
+                   [&] (const auto& genotype) { return detail::copy_shared<Haplotype>(genotype, regions, cache); });
+    return result;
+}
+
+template <typename UnaryPredicate>
+bool any_of(const Genotype<Haplotype>& genotype, UnaryPredicate&& pred)
 {
     return any_of(genotype, [&] (const T& haplotype) { return haplotype.contains(allele); });
 }
