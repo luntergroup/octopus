@@ -401,23 +401,57 @@ const GenomicRegion& mapped_region(const GenotypeProbabilityMap& genotype_poster
     return mapped_region(std::cbegin(genotype_posteriors)->first);
 }
 
+bool contains_helper(const Haplotype& haplotype, const Allele& allele)
+{
+    if (!is_indel(allele)) {
+        return haplotype.contains(allele);
+    } else {
+        return haplotype.includes(allele);
+    }
+}
+
 bool has_variation(const Allele& allele, const GenotypeProbabilityMap& genotype_posteriors)
 {
     if (!genotype_posteriors.empty() && !contains(mapped_region(genotype_posteriors), allele)) {
         return false;
     }
-    return std::any_of(std::cbegin(genotype_posteriors), std::cend(genotype_posteriors),
-                       [&allele] (const auto& p) {
-                           return !is_homozygous(p.first, allele);
-                       });
+    std::unordered_map<const Haplotype*, bool> cache {};
+    cache.reserve(genotype_posteriors.size() / 2);
+    const auto contains_cached = [&cache] (const Haplotype& haplotype, const Allele& allele) {
+        const auto itr = cache.find(std::addressof(haplotype));
+        if (itr == std::cend(cache)) {
+            const auto result = contains_helper(haplotype, allele);
+            cache.emplace(std::piecewise_construct,
+                          std::forward_as_tuple(std::addressof(haplotype)),
+                          std::forward_as_tuple(result));
+            return result;
+        } else {
+            return itr->second;
+        }
+    };
+    const auto is_heterozygous_cached = [&] (const auto& p) { return is_heterozygous(p.first, allele, contains_cached); };
+    return std::any_of(std::cbegin(genotype_posteriors), std::cend(genotype_posteriors), is_heterozygous_cached);
 }
 
 auto marginalise_homozygous(const Allele& allele, const GenotypeProbabilityMap& genotype_posteriors)
 {
-    auto p = std::accumulate(std::cbegin(genotype_posteriors), std::cend(genotype_posteriors), 0.0,
-                             [&] (const auto curr, const auto& p) {
-                                 return curr + (is_homozygous(p.first, allele) ? 0.0 : p.second);
-                             });
+    std::unordered_map<const Haplotype*, bool> cache {};
+    cache.reserve(genotype_posteriors.size() / 2);
+    const auto contains_cached = [&cache] (const Haplotype& haplotype, const Allele& allele) {
+        const auto itr = cache.find(std::addressof(haplotype));
+        if (itr == std::cend(cache)) {
+            const auto result = contains_helper(haplotype, allele);
+            cache.emplace(std::piecewise_construct,
+                          std::forward_as_tuple(std::addressof(haplotype)),
+                          std::forward_as_tuple(result));
+            return result;
+        } else {
+            return itr->second;
+        }
+    };
+    const auto add_homozygous_cached = [&] (const auto total, const auto& p) {
+        return total + (is_homozygous(p.first, allele, contains_cached) ? 0.0 : p.second); };
+    auto p = std::accumulate(std::cbegin(genotype_posteriors), std::cend(genotype_posteriors), 0.0, add_homozygous_cached);
     return probability_false_to_phred(p);
 }
 

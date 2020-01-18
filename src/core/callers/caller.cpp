@@ -1279,7 +1279,7 @@ Caller::call_reference_helper(const std::vector<Allele>& alleles, const Latents&
         }
     }
     if (is_merge_block_refcalling()) {
-        refcalls =squash_reference_calls(std::move(refcalls));
+        refcalls = squash_reference_calls(std::move(refcalls));
     }
     return wrap(std::move(refcalls));
 }

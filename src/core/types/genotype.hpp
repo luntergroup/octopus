@@ -164,7 +164,8 @@ public:
         using pointer    = const Haplotype*;
         
         Iterator(BaseIterator it);
-        reference operator*() const;
+        reference operator*() const noexcept;
+        pointer operator->() const noexcept;
     };
     
     Iterator begin() const noexcept;
@@ -490,6 +491,30 @@ std::vector<Genotype<MappableType>> copy_each(const Container& genotypes, const 
     }
 }
 
+template <typename UnaryPredicate>
+bool any_of(const Genotype<Haplotype>& genotype, UnaryPredicate&& pred)
+{
+    for (auto haplotype_itr = std::cbegin(genotype); haplotype_itr != std::cend(genotype);) {
+        if (pred(*haplotype_itr)) return true;
+        const auto is_same_haplotype = [haplotype_itr] (const Haplotype& x) noexcept {
+            return std::addressof(x) == std::addressof(*haplotype_itr); };
+        haplotype_itr = std::find_if_not(std::next(haplotype_itr), std::cend(genotype), is_same_haplotype);
+    }
+    return false;
+}
+
+template <typename UnaryPredicate>
+bool all_of(const Genotype<Haplotype>& genotype, UnaryPredicate&& pred)
+{
+    for (auto haplotype_itr = std::cbegin(genotype); haplotype_itr != std::cend(genotype);) {
+        if (!pred(*haplotype_itr)) return false;
+        const auto is_same_haplotype = [haplotype_itr] (const Haplotype& x) noexcept {
+            return std::addressof(x) == std::addressof(*haplotype_itr); };
+        haplotype_itr = std::find_if_not(std::next(haplotype_itr), std::cend(genotype), is_same_haplotype);
+    }
+    return true;
+}
+
 bool contains(const Genotype<Haplotype>& genotype, const Allele& allele);
 bool includes(const Genotype<Haplotype>& genotype, const Allele& allele);
 
@@ -563,7 +588,22 @@ bool is_homozygous(const Genotype<MappableType>& genotype, const MappableType& e
     return genotype.count(element) == genotype.ploidy();
 }
 
+template <typename BinaryPredicate>
+bool is_homozygous(const Genotype<Haplotype>& genotype, const Allele& allele, BinaryPredicate&& contains_pred)
+{
+    if (!contains(mapped_region(genotype), allele)) return true;
+    if (genotype.is_homozygous()) return true;
+    return all_of(genotype, [&] (const Haplotype& haplotype) { return contains_pred(haplotype, allele); });
+}
+
+template <typename BinaryPredicate>
+bool is_heterozygous(const Genotype<Haplotype>& genotype, const Allele& allele, BinaryPredicate&& contains_pred)
+{
+    return !is_homozygous(genotype, allele, std::forward<BinaryPredicate>(contains_pred));
+}
+
 bool is_homozygous(const Genotype<Haplotype>& genotype, const Allele& allele);
+bool is_heterozygous(const Genotype<Haplotype>& genotype, const Allele& allele);
 
 Genotype<Haplotype> remap(const Genotype<Haplotype>& genotype, const GenomicRegion& region);
 
