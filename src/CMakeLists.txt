@@ -547,6 +547,7 @@ set(CORE_SOURCES
     core/types/variant.cpp
     core/types/phylogeny.hpp
     core/types/phylogeny.cpp
+    core/types/indexed_haplotype.hpp
 
     core/calling_components.hpp
     core/calling_components.cpp
