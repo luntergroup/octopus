@@ -168,8 +168,8 @@ boost::optional<std::string> RandomForestFilter::call_quality_name() const
 
 void RandomForestFilter::annotate(VcfHeader::Builder& header) const
 {
-    header.add_info(call_quality_name_, "1", "Float", "Combined quality score for call using product of sample RFQQ");
-    header.add_format(genotype_quality_name_, "1", "Float", "Empirical quality score from random forest classifier");
+    header.add_info(call_quality_name_, "1", "Float", "Empirical quality score (phred scaled) for the call - the geometric mean of all sample RFGQ probabilities");
+    header.add_format(genotype_quality_name_, "1", "Float", "Empirical quality score (phred scaled) of the sample genotype from random forest classifier");
     header.add_filter("RF", "Random Forest filtered");
 }
 

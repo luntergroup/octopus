@@ -103,7 +103,7 @@ protected:
                VcfWriter& dest) const;
     bool measure_annotations_requested() const noexcept;
     void annotate(VcfRecord::Builder& call, const MeasureVector& measures, const VcfHeader& header) const;
-    Phred<double> compute_joint_probability(const std::vector<Phred<double>>& qualities) const;
+    Phred<double> compute_joint_quality(const std::vector<Phred<double>>& qualities) const;
     std::vector<std::string> compute_reason_union(const ClassificationList& sample_classifications) const;
     
 private:

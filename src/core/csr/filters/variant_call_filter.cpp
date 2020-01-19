@@ -332,7 +332,7 @@ VariantCallFilter::compute_joint_quality(const ClassificationList& sample_classi
         }
     }
     if (!sample_classification_qualities.empty()) {
-        return compute_joint_probability(sample_classification_qualities);
+        return compute_joint_quality(sample_classification_qualities);
     }
     return boost::none;
 }
@@ -358,7 +358,7 @@ Phred<double> ln_probability_true_to_phred(const double ln_prob_true)
     }
 }
 
-Phred<double> VariantCallFilter::compute_joint_probability(const std::vector<Phred<double>>& qualities) const
+Phred<double> VariantCallFilter::compute_joint_quality(const std::vector<Phred<double>>& qualities) const
 {
     assert(!qualities.empty());
     if (qualities.size() == 1) return qualities.front();
@@ -368,7 +368,8 @@ Phred<double> VariantCallFilter::compute_joint_probability(const std::vector<Phr
     std::vector<double> log_probs(qualities.size());
     std::transform(std::cbegin(qualities), std::cend(qualities), std::begin(log_probs),
                    [] (auto p) { return std::log(p.probability_true()); });
-    return ln_probability_true_to_phred(std::accumulate(std::cbegin(log_probs), std::cend(log_probs), 0.0));
+    const auto ln_prob_all_good = std::accumulate(std::cbegin(log_probs), std::cend(log_probs), 0.0);
+    return ln_probability_true_to_phred(ln_prob_all_good / log_probs.size());
 }
 
 std::vector<std::string> VariantCallFilter::compute_reason_union(const ClassificationList& sample_classifications) const
