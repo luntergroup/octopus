@@ -263,8 +263,8 @@ template <typename T>
 auto reduce(std::vector<T>& zipped, const TrioModel::Options& options)
 {
     auto last_to_join = std::cend(zipped);
-    if (options.max_joint_genotypes) {
-        last_to_join = reduce(zipped, get_sample_reduction_count(*options.max_joint_genotypes), options.max_individual_log_probability_loss);
+    if (options.max_genotype_combinations) {
+        last_to_join = reduce(zipped, get_sample_reduction_count(*options.max_genotype_combinations), options.max_individual_log_probability_loss);
     }
     return make_reduction_map(zipped, last_to_join, options);
 }
@@ -361,8 +361,8 @@ auto find_represented(const Haplotype& haplotype,
 auto reduce(std::vector<ParentsProbabilityPair>& parents, const ChildReductionMap& child,
             boost::optional<double>& lost_log_mass, const TrioModel::Options& options)
 {
-    if (!options.max_joint_genotypes) return make_reduction_map(parents, std::cend(parents), options);
-    const auto reduction_count = get_sample_reduction_count(*options.max_joint_genotypes);
+    if (!options.max_genotype_combinations) return make_reduction_map(parents, std::cend(parents), options);
+    const auto reduction_count = get_sample_reduction_count(*options.max_genotype_combinations);
     auto last_to_join = reduce(parents, reduction_count, options.max_joint_log_probability_loss, lost_log_mass);
     if (last_to_join != std::cend(parents)) {
         std::vector<UniformPriorJointProbabilityHelper> uniform_parents(parents.size());
@@ -420,8 +420,8 @@ auto reduce(std::vector<GenotypeRefProbabilityPair>& likelihoods,
             boost::optional<double>& lost_log_mass,
             const TrioModel::Options& options)
 {
-    if (!options.max_joint_genotypes) return make_reduction_map(likelihoods, std::cend(likelihoods), options);
-    const auto reduction_count = get_sample_reduction_count(*options.max_joint_genotypes);
+    if (!options.max_genotype_combinations) return make_reduction_map(likelihoods, std::cend(likelihoods), options);
+    const auto reduction_count = get_sample_reduction_count(*options.max_genotype_combinations);
     const auto last_likelihood_join = reduce(likelihoods, reduction_count, options.max_individual_log_probability_loss, lost_log_mass);
     if (last_likelihood_join == std::end(likelihoods)) {
         return make_reduction_map(likelihoods, std::cend(likelihoods), options);

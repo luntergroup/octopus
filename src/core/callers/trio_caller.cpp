@@ -406,7 +406,7 @@ TrioCaller::infer_latents(const HaplotypeBlock& haplotypes,
     DeNovoModel denovo_model {parameters_.denovo_model_params, haplotypes.size(), DeNovoModel::CachingStrategy::address};
     const model::TrioModel model {
         parameters_.trio, *germline_prior_model, denovo_model,
-        TrioModel::Options {parameters_.max_joint_genotypes},
+        TrioModel::Options {parameters_.max_genotype_combinations},
         debug_log_
     };
     std::vector<std::vector<unsigned>> genotype_indices {};
@@ -471,7 +471,7 @@ TrioCaller::calculate_model_posterior(const HaplotypeBlock& haplotypes,
         denovo_model.prime(haplotypes);
         if (debug_log_) *debug_log_ << "Calculating model posterior";
         const model::TrioModel model {parameters_.trio, *germline_prior_model, denovo_model,
-                                      TrioModel::Options {parameters_.max_joint_genotypes},
+                                      TrioModel::Options {parameters_.max_genotype_combinations},
                                       debug_log_};
         const auto inferences = model.evaluate(genotypes, genotype_indices, haplotype_likelihoods);
         return octopus::calculate_model_posterior(latents.model_latents.log_evidence, inferences.log_evidence);

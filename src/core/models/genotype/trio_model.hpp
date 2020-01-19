@@ -46,7 +46,7 @@ public:
     
     struct Options
     {
-        boost::optional<std::size_t> max_joint_genotypes = boost::none;
+        boost::optional<std::size_t> max_genotype_combinations = boost::none;
         double max_individual_log_probability_loss = -1'000, max_joint_log_probability_loss = -10'000;
     };
     

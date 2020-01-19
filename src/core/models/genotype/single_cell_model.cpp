@@ -389,7 +389,7 @@ SingleCellModel::propose_genotype_combinations(const GenotypeVector& genotypes,
     // 4. Select top combinations using cluster marginal posteriors
     
     PopulationModel::Options population_model_options {};
-    population_model_options.max_joint_genotypes = max_genotype_combinations;
+    population_model_options.max_genotype_combinations = max_genotype_combinations;
     PopulationModel population_model {*population_prior_model_, population_model_options};
     std::vector<PopulationModel::Latents::ProbabilityVector> population_genotype_posteriors;
     IndividualModel individual_model {prior_model_.germline_prior_model()};
@@ -589,7 +589,7 @@ SingleCellModel::propose_genotype_combinations(const PhylogenyNodePloidyMap& phy
     }
     
     PopulationModel::Options population_model_options {};
-    population_model_options.max_joint_genotypes = config_.max_genotype_combinations;
+    population_model_options.max_genotype_combinations = config_.max_genotype_combinations;
     PopulationModel population_model {*population_prior_model_, population_model_options};
     std::vector<PopulationModel::Latents::ProbabilityVector> population_genotype_posteriors;
     const auto num_groups = prior_model_.phylogeny().size();

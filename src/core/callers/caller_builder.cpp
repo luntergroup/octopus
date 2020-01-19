@@ -201,9 +201,9 @@ CallerBuilder& CallerBuilder::set_max_genotypes(boost::optional<std::size_t> max
     return *this;
 }
 
-CallerBuilder& CallerBuilder::set_max_joint_genotypes(boost::optional<std::size_t> max) noexcept
+CallerBuilder& CallerBuilder::set_max_genotype_combinations(boost::optional<std::size_t> max) noexcept
 {
-    params_.max_joint_genotypes = max;
+    params_.max_genotype_combinations = max;
     return *this;
 }
 
@@ -469,7 +469,7 @@ CallerBuilder::CallerFactoryMap CallerBuilder::generate_factory() const
                                                           params_.min_refcall_posterior,
                                                           get_ploidies(samples, *requested_contig_, params_.ploidies),
                                                           make_population_prior_model(params_.snp_heterozygosity, params_.indel_heterozygosity),
-                                                          params_.max_joint_genotypes,
+                                                          params_.max_genotype_combinations,
                                                           params_.use_independent_genotype_priors,
                                                           params_.deduplicate_haplotypes_with_caller_model
                                                       });
@@ -512,7 +512,7 @@ CallerBuilder::CallerFactoryMap CallerBuilder::generate_factory() const
                                                     params_.min_variant_posterior,
                                                     params_.min_denovo_posterior,
                                                     params_.min_refcall_posterior,
-                                                    params_.max_joint_genotypes,
+                                                    params_.max_genotype_combinations,
                                                     params_.deduplicate_haplotypes_with_caller_model
                                                 });
         }},
@@ -543,7 +543,7 @@ CallerBuilder::CallerFactoryMap CallerBuilder::generate_factory() const
                                                     params_.max_clones,
                                                     params_.max_copy_loss,
                                                     params_.max_copy_gain,
-                                                    params_.max_joint_genotypes,
+                                                    params_.max_genotype_combinations,
                                                     params_.dropout_concentration,
                                                     params_.sample_dropout_concentrations,
                                                     params_.phylogeny_concentration,

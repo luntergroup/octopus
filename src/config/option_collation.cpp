@@ -1980,10 +1980,10 @@ boost::optional<std::size_t> get_max_genotypes(const OptionMap& options, const s
     }
 }
 
-boost::optional<std::size_t> get_max_joint_genotypes(const OptionMap& options, const std::string& caller)
+boost::optional<std::size_t> get_max_genotype_combinations(const OptionMap& options, const std::string& caller)
 {
-    if (options.count("max-joint-genotypes") == 1) {
-        return as_unsigned("max-joint-genotypes", options);
+    if (options.count("max-genotype-combinations") == 1) {
+        return as_unsigned("max-genotype-combinations", options);
     } else if (is_fast_mode(options)) {
         return 10'000;
     } else if (caller == "cell") {
@@ -2074,7 +2074,7 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
     vc_builder.set_ploidies(get_ploidy_map(options));
     vc_builder.set_max_haplotypes(get_max_haplotypes(options));
     vc_builder.set_max_genotypes(get_max_genotypes(options, caller));
-    vc_builder.set_max_joint_genotypes(get_max_joint_genotypes(options, caller));
+    vc_builder.set_max_genotype_combinations(get_max_genotype_combinations(options, caller));
     vc_builder.set_haplotype_extension_threshold(options.at("min-protected-haplotype-posterior").as<double>());
     vc_builder.set_reference_haplotype_protection(protect_reference_haplotype(options));
     vc_builder.set_likelihood_model(make_haplotype_likelihood_model(options, read_profile));

@@ -543,9 +543,9 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<int>(),
      "Maximum number of genotypes that must be evaluated")
     
-    ("max-joint-genotypes",
+    ("max-genotype-combinations",
      po::value<int>(),
-     "Maximum number of joint genotype vectors that must be considered when computing joint"
+     "Maximum number of genotype combinations that can be considered when computing joint"
      " genotype posterior probabilities")
     
     ("use-independent-genotype-priors",
@@ -1147,7 +1147,7 @@ void validate(const OptionMap& vm)
         "max-open-read-files", "downsample-above", "downsample-target", "min-supporting-reads",
         "max-region-to-assemble", "fallback-kmer-gap", "organism-ploidy",
         "max-haplotypes", "haplotype-holdout-threshold", "haplotype-overflow",
-        "max-genotypes", "max-joint-genotypes", "max-somatic-haplotypes", "max-clones",
+        "max-genotypes", "max-genotype-combinations", "max-somatic-haplotypes", "max-clones",
         "max-vb-seeds", "max-indel-errors", "max-base-quality", "max-phylogeny-size"
     };
     const std::vector<std::string> probability_options {

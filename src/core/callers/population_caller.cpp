@@ -754,7 +754,7 @@ PopulationCaller::infer_latents_with_joint_model(const HaplotypeBlock& haplotype
                                                  const HaplotypeLikelihoodArray& haplotype_likelihoods) const
 {
     const auto prior_model = make_joint_prior_model(haplotypes);
-    const model::PopulationModel model {*prior_model, {parameters_.max_joint_genotypes}, debug_log_};
+    const model::PopulationModel model {*prior_model, {parameters_.max_genotype_combinations}, debug_log_};
     if (unique_ploidies_.size() == 1) {
         prior_model->prime(haplotypes);
         std::vector<GenotypeIndex> genotype_indices;
