@@ -121,7 +121,9 @@ find_k_max_pairs(const std::vector<T>& lhs, const std::vector<T>& rhs, const std
         return result;
     auto cmp = [&lhs, &rhs] (const IndexPair& a, const IndexPair& b) {
         return lhs[a.first] + rhs[a.second] < lhs[b.first] + rhs[b.second]; };
-    std::priority_queue<IndexPair, std::vector<IndexPair>, decltype(cmp)> max_heap {cmp};
+    std::vector<IndexPair> heap_storage {};
+    heap_storage.reserve(k);
+    std::priority_queue<IndexPair, decltype(heap_storage), decltype(cmp)> max_heap {cmp, std::move(heap_storage)};
     max_heap.emplace(0, 0);
     for (std::size_t i {0}; i < k && !max_heap.empty(); ++i) {
         const auto idx_pair = max_heap.top(); max_heap.pop();
