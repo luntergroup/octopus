@@ -18,6 +18,7 @@
 #include "utils/mappable_algorithms.hpp"
 #include "utils/append.hpp"
 #include "utils/sequence_utils.hpp"
+#include "utils/free_memory.hpp"
 #include "logging/logging.hpp"
 
 #include "utils/maths.hpp"
@@ -263,16 +264,13 @@ std::vector<Variant> CigarScanner::do_generate(const RegionSet& regions) const
 
 void CigarScanner::do_clear() noexcept
 {
-    buffer_.clear();
-    buffer_.shrink_to_fit();
-    candidates_.clear();
-    candidates_.shrink_to_fit();
-    likely_misaligned_candidates_.clear();
-    likely_misaligned_candidates_.shrink_to_fit();
-    combined_read_coverage_tracker_.clear();
-    misaligned_read_coverage_tracker_.clear();
-    sample_read_coverage_tracker_.clear();
-    sample_forward_strand_coverage_tracker_.clear();
+    free_memory(buffer_);
+    free_memory(candidates_);
+    free_memory(likely_misaligned_candidates_);
+    free_memory(combined_read_coverage_tracker_);
+    free_memory(misaligned_read_coverage_tracker_);
+    free_memory(sample_read_coverage_tracker_);
+    free_memory(sample_forward_strand_coverage_tracker_);
     max_seen_candidate_size_ = 0;
 }
 

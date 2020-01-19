@@ -18,6 +18,7 @@
 #include "concepts/mappable_range.hpp"
 #include "utils/mappable_algorithms.hpp"
 #include "utils/repeat_finder.hpp"
+#include "utils/free_memory.hpp"
 #include "logging/logging.hpp"
 
 namespace octopus { namespace coretools {
@@ -70,10 +71,9 @@ std::vector<Variant> RepeatScanner::do_generate(const RegionSet& regions) const
 
 void RepeatScanner::do_clear() noexcept
 {
-    snv_buffer_.clear();
-    snv_buffer_.shrink_to_fit();
-    candidates_.clear();
-    candidates_.shrink_to_fit();
+    free_memory(snv_buffer_);
+    free_memory(candidates_);
+    free_memory(read_coverage_tracker_);
 }
 
 std::string RepeatScanner::name() const

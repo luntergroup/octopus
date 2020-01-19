@@ -16,6 +16,7 @@
 #include "utils/mappable_algorithms.hpp"
 #include "utils/maths.hpp"
 #include "utils/append.hpp"
+#include "utils/free_memory.hpp"
 
 #include <iostream>
 
@@ -289,9 +290,9 @@ std::vector<GenomicRegion> AssemblerActiveRegionGenerator::generate(const Genomi
 
 void AssemblerActiveRegionGenerator::clear() noexcept
 {
-    coverage_tracker_.clear();
-    interesting_read_coverages_.clear();
-    clipped_coverage_tracker_.clear();
+    free_memory(coverage_tracker_);
+    free_memory(interesting_read_coverages_);
+    free_memory(clipped_coverage_tracker_);
 }
 
 // private methods

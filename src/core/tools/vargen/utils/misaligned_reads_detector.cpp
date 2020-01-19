@@ -14,6 +14,7 @@
 #include "utils/mappable_algorithms.hpp"
 #include "utils/maths.hpp"
 #include "utils/append.hpp"
+#include "utils/free_memory.hpp"
 
 namespace octopus { namespace coretools {
 
@@ -53,8 +54,8 @@ std::vector<GenomicRegion> MisalignedReadsDetector::generate(const GenomicRegion
 
 void MisalignedReadsDetector::clear() noexcept
 {
-    coverage_tracker_.clear();
-    likely_misaligned_coverage_tracker_.clear();
+    free_memory(coverage_tracker_);
+    free_memory(likely_misaligned_coverage_tracker_);
 }
 
 namespace {

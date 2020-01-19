@@ -22,6 +22,7 @@
 #include "utils/append.hpp"
 #include "utils/global_aligner.hpp"
 #include "utils/read_stats.hpp"
+#include "utils/free_memory.hpp"
 #include "io/reference/reference_genome.hpp"
 #include "logging/logging.hpp"
 
@@ -389,7 +390,7 @@ std::vector<Variant> LocalReassembler::do_generate(const RegionSet& regions) con
 
 void LocalReassembler::do_clear() noexcept
 {
-    read_buffer_.clear();
+    free_memory(read_buffer_);
 }
 
 std::string LocalReassembler::name() const
