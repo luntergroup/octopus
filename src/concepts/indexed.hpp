@@ -5,6 +5,7 @@
 #define indexed_hpp
 
 #include <cstddef>
+#include <type_traits>
 
 namespace octopus {
 
@@ -16,6 +17,21 @@ IndexType index_of(const Indexed<T, IndexType>& indexed) noexcept
 {
     return static_cast<const T&>(indexed).index();
 }
+
+namespace detail {
+
+template <typename T, typename = void>
+struct IsIndexedHelper : std::false_type {};
+
+template <typename T>
+struct IsIndexedHelper<T,
+        std::enable_if_t<std::is_integral<decltype(index_of(std::declval<T>()))>::value>
+    > : std::true_type {};
+
+} // namespace detail
+
+template <typename T>
+constexpr bool is_indexed = detail::IsIndexedHelper<T>::value_type;
 
 } // namespace octopus
 
