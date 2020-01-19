@@ -213,13 +213,6 @@ typename Genotype<Haplotype>::Iterator Genotype<Haplotype>::cend() const noexcep
 
 // non-member methods
 
-Genotype<Haplotype> copy(const Genotype<Haplotype>& genotype, const std::vector<GenomicRegion>& regions)
-{
-    Genotype<Haplotype> result {genotype.ploidy()};
-    for (const auto& haplotype : genotype) result.emplace(copy(haplotype, regions));
-    return result;
-}
-
 bool contains(const Genotype<Haplotype>& genotype, const Allele& allele)
 {
     return any_of(genotype, [&] (const Haplotype& haplotype) { return haplotype.contains(allele); });
