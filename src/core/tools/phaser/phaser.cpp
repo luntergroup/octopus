@@ -13,6 +13,21 @@
 #include <iostream>
 
 #include <boost/functional/hash.hpp>
+#include <boost/graph/adjacency_list.hpp>
+#include <boost/graph/adjacency_matrix.hpp>
+#include <boost/graph/graphviz.hpp>
+
+#if defined(__clang__)
+    #pragma clang diagnostic push
+    #pragma clang diagnostic ignored "-Wunused-variable"
+        #include <boost/graph/bron_kerbosch_all_cliques.hpp>
+    #pragma clang diagnostic pop
+#elif defined(__GNUG__)
+    #pragma gcc diagnostic push
+    #pragma gcc diagnostic ignored "-Wunused-variable"
+        #include <boost/graph/bron_kerbosch_all_cliques.hpp>
+    #pragma gcc diagnostic pop
+#endif // defined (__clang__)
 
 #include "utils/mappable_algorithms.hpp"
 #include "utils/maths.hpp"
@@ -386,6 +401,42 @@ auto copy_and_marginalise(const std::vector<CompressedGenotype>& genotypes,
     return std::make_pair(std::move(chunks), std::move(chunk_posteriors));
 }
 
+template <typename Range>
+auto marginalise(const Range& genotypes,
+                 const std::vector<GenomicRegion>& regions,
+                 const Phaser::SampleGenotypePosteriorMap& genotype_posteriors)
+{
+    auto chunks = copy_each(genotypes, regions);
+    for (auto& genotype : chunks) {
+        genotype = genotype.collapse();
+    }
+    GenotypeChunkPosteriorMap chunk_posteriors {genotypes.size()};
+    for (std::size_t g {0}; g < genotypes.size(); ++g) {
+        chunk_posteriors[chunks[g]] += genotype_posteriors[genotypes[g]];
+    }
+    std::sort(std::begin(chunks), std::end(chunks), GenotypeLess {});
+    chunks.erase(std::unique(std::begin(chunks), std::end(chunks)), std::end(chunks));
+    std::vector<double> posteriors(chunks.size());
+    std::transform(std::cbegin(chunks), std::cend(chunks), std::begin(posteriors),
+                   [&] (const auto& chunk) { return chunk_posteriors[chunk]; });
+    maths::normalise(posteriors);
+    return posteriors;
+}
+
+template <typename Range>
+auto compute_phase_quality(const Range& genotypes,
+                           const std::vector<GenomicRegion>& regions,
+                           const Phaser::SampleGenotypePosteriorMap& genotype_posteriors)
+{
+    const auto marginal_posteriors = marginalise(genotypes, regions, genotype_posteriors);
+    assert(!marginal_posteriors.empty());
+    const auto map_marginal_posterior_itr = std::max_element(std::cbegin(marginal_posteriors), std::cend(marginal_posteriors));
+    const auto not_map_posterior = std::accumulate(std::cbegin(marginal_posteriors), map_marginal_posterior_itr,
+                                   std::accumulate(std::next(map_marginal_posterior_itr), std::cend(marginal_posteriors), 0.0));
+    assert(not_map_posterior > 0);
+    return probability_false_to_phred(not_map_posterior);
+}
+
 template <typename Map>
 void print(const PhaseComplementSets& phase_sets, const Map& genotype_posteriors)
 {
@@ -400,7 +451,57 @@ void print(const PhaseComplementSets& phase_sets, const Map& genotype_posteriors
     }
 }
 
+template <typename T, typename Container, typename BinaryPredicate = std::less<>>
+auto
+insert_sorted(T value, Container& values, BinaryPredicate compare = std::less<> {})
+{
+    auto position = std::upper_bound(std::begin(values), std::end(values), value, compare);
+    return values.insert(position, std::move(value));
+}
+
 } // namespace
+
+template <typename Graph>
+struct MaxCliqueVisitor
+{
+    template <typename Clique>
+    void clique(const Clique& clique, const Graph& g)
+    {
+        std::cout << "clique: "; for (auto v : clique) std::cout << v << ' '; std::cout << std::endl;
+        if (clique.size() > max_clique.size()) {
+            max_clique.assign(std::cbegin(clique), std::cend(clique));
+        }
+    }
+    using Vertex = typename boost::graph_traits<Graph>::vertex_descriptor;
+    std::vector<Vertex>& max_clique;
+};
+
+template <typename Graph>
+struct CliqueRecorder
+{
+    template <typename Clique_>
+    void clique(const Clique_& clique, const Graph& g)
+    {
+        cliques.emplace_back(std::cbegin(clique), std::cend(clique));
+    }
+    using Vertex = typename boost::graph_traits<Graph>::vertex_descriptor;
+    using Clique = std::deque<Vertex>;
+    using CliqueList = std::deque<Clique>;
+    CliqueList& cliques;
+};
+
+template <typename UnaryPredicate, typename Graph>
+void remove_vertex_if(UnaryPredicate&& pred, Graph& g)
+{
+    typename boost::graph_traits<Graph>::vertex_iterator vi, vi_end, vi_next;
+    std::tie(vi, vi_end) = boost::vertices(g);
+    for (vi_next = vi; vi != vi_end; vi = vi_next) {
+        ++vi_next;
+        if (pred(*vi)) {
+            boost::remove_vertex(*vi, g);
+        }
+    }
+}
 
 Phaser::PhaseSet::SamplePhaseRegions
 Phaser::phase_sample(const GenomicRegion& region,
@@ -408,6 +509,143 @@ Phaser::phase_sample(const GenomicRegion& region,
                      const std::vector<CompressedGenotype>& genotypes,
                      const SampleGenotypePosteriorMap& genotype_posteriors) const
 {
+    using std::cbegin; using std::cend;
+    std::vector<GenomicRegion> partition_pair {};
+    using CompletePhaseGraph = boost::adjacency_list<boost::listS, boost::listS, boost::undirectedS, std::size_t, Phred<double>>;
+    using CompletePhaseGraphVertex = boost::graph_traits<CompletePhaseGraph>::vertex_descriptor;
+    CompletePhaseGraph phase_graph {};
+    std::vector<CompletePhaseGraphVertex> vertices(partitions.size());
+    for (std::size_t idx {0}; idx < partitions.size(); ++idx) {
+        vertices[idx] = boost::add_vertex(idx, phase_graph);
+    }
+    for (std::size_t lhs_partition_idx {0}; lhs_partition_idx < partitions.size() - 1; ++lhs_partition_idx) {
+        for (auto rhs_partition_idx = lhs_partition_idx + 1; rhs_partition_idx < partitions.size(); ++rhs_partition_idx) {
+            partition_pair.assign({partitions[lhs_partition_idx], partitions[rhs_partition_idx]});
+            const auto phase_quality = compute_phase_quality(genotypes, partition_pair, genotype_posteriors);
+            if (phase_quality >= config_.min_phase_score) {
+                boost::add_edge(vertices[lhs_partition_idx], vertices[rhs_partition_idx], phase_quality, phase_graph);
+            }
+        }
+    }
+    std::vector<std::size_t> fully_connected_vertices {}, not_fully_connected_vertices {};
+    fully_connected_vertices.reserve(partitions.size());
+    not_fully_connected_vertices.reserve(partitions.size());
+    for (std::size_t vertex_idx {0}; vertex_idx < partitions.size(); ++vertex_idx) {
+        if (boost::degree(vertices[vertex_idx], phase_graph) == boost::num_vertices(phase_graph) - 1) {
+            fully_connected_vertices.push_back(vertex_idx);
+            boost::clear_vertex(vertices[vertex_idx], phase_graph);
+            boost::remove_vertex(vertices[vertex_idx], phase_graph);
+        } else {
+            not_fully_connected_vertices.push_back(vertex_idx);
+        }
+    }
+    std::vector<std::vector<std::size_t>> phase_sets {};
+    if (not_fully_connected_vertices.empty()) {
+        phase_sets.push_back(std::move(fully_connected_vertices)); // everything phased
+    } else {
+        std::vector<std::size_t> singleton_vertices {}, partially_connected_vertices {};
+        singleton_vertices.reserve(not_fully_connected_vertices.size());
+        partially_connected_vertices.reserve(not_fully_connected_vertices.size());
+        for (const auto vertex_idx : not_fully_connected_vertices) {
+            if (boost::degree(vertices[vertex_idx], phase_graph) == 0) {
+                singleton_vertices.push_back(vertex_idx);
+                boost::remove_vertex(vertices[vertex_idx], phase_graph);
+            } else {
+                partially_connected_vertices.push_back(vertex_idx);
+            }
+        }
+        not_fully_connected_vertices.clear();
+        not_fully_connected_vertices.shrink_to_fit();
+        fully_connected_vertices.shrink_to_fit();
+        partially_connected_vertices.shrink_to_fit();
+        singleton_vertices.shrink_to_fit();
+        using PartialPhaseGraph = boost::adjacency_matrix<boost::undirectedS>;
+        CliqueRecorder<PartialPhaseGraph>::CliqueList cliques {};
+        if (!partially_connected_vertices.empty()) {
+            PartialPhaseGraph partial_phase_graph(partially_connected_vertices.size());
+            for (std::size_t lhs_idx {0}; lhs_idx < partially_connected_vertices.size() - 1; ++lhs_idx) {
+                for (std::size_t rhs_idx {0}; rhs_idx < partially_connected_vertices.size(); ++rhs_idx) {
+                    const auto lhs_vertex = vertices[partially_connected_vertices[lhs_idx]];
+                    const auto rhs_vertex = vertices[partially_connected_vertices[rhs_idx]];
+                    if (boost::edge(lhs_vertex, rhs_vertex, phase_graph).second) {
+                        boost::add_edge(lhs_idx, rhs_idx, partial_phase_graph);
+                    }
+                }
+            }
+            CliqueRecorder<PartialPhaseGraph> clique_recorder {cliques};
+            boost::bron_kerbosch_all_cliques(partial_phase_graph, clique_recorder);
+            for (auto& clique : cliques) {
+                for (auto& idx : clique) {
+                    idx = partially_connected_vertices[idx];
+                }
+                std::sort(std::begin(clique), std::end(clique));
+            }
+        }
+        std::vector<std::vector<std::size_t>> partition_possible_cliques(partitions.size());
+        for (const auto partition_idx : partially_connected_vertices) {
+            for (std::size_t clique_idx {0}; clique_idx < cliques.size(); ++clique_idx) {
+                const auto& clique = cliques[clique_idx];
+                if (std::binary_search(std::cbegin(clique), std::cend(clique), partition_idx)) {
+                    partition_possible_cliques[partition_idx].push_back(clique_idx);
+                }
+            }
+        }
+        for (std::size_t i {0}; i < singleton_vertices.size(); ++i) {
+            partition_possible_cliques[singleton_vertices[i]].push_back(cliques.size() + i);
+        }
+        for (const auto idx : singleton_vertices) {
+            cliques.push_back({idx});
+        }
+        for (const auto partition_idx : fully_connected_vertices) {
+            partition_possible_cliques[partition_idx].resize(cliques.size());
+            std::iota(std::begin(partition_possible_cliques[partition_idx]), std::end(partition_possible_cliques[partition_idx]), 0);
+        }
+        phase_sets.resize(cliques.size());
+        for (std::size_t partition_idx {0}; partition_idx < partitions.size(); ++partition_idx) {
+            const auto& possible_cliques = partition_possible_cliques[partition_idx];
+            if (possible_cliques.size() == 1) {
+                phase_sets[possible_cliques[0]].push_back(partition_idx);
+            } else {
+                auto selected_phase_set_idx = possible_cliques.front();
+                GenomicRegion::Distance min_partition_distance {-1};
+                for (const auto clique_idx : possible_cliques) {
+                    for (const auto other_partition_idx : cliques[clique_idx]) {
+                        if (partition_possible_cliques[other_partition_idx].size() == 1) {
+                            const auto partition_distance = std::abs(inner_distance(partitions[partition_idx], partitions[other_partition_idx]));
+                            if (min_partition_distance < 0 || partition_distance < min_partition_distance) {
+                                selected_phase_set_idx = clique_idx;
+                                min_partition_distance = partition_distance;
+                            }
+                        }
+                    }
+                }
+                phase_sets[selected_phase_set_idx].push_back(partition_idx);
+            }
+        }
+        phase_sets.erase(std::remove_if(std::begin(phase_sets), std::end(phase_sets),
+                                        [] (const auto& c) { return c.empty(); }), std::end(phase_sets));
+    }
+    
+    std::cout << "phase sets" << std::endl;
+    for (const auto& ps : phase_sets) {
+        for (auto partition_idx : ps) {
+            std::cout << partition_idx << " (" << partitions[partition_idx] << ") ";
+        }
+        std::cout << std::endl;
+    }
+    
+//    std::ofstream phase_graph_dot {"/Users/dcooke/Genomics/octopus/scratch/phase_graph.dot"};
+//    const auto edge_writer = [&phase_graph] (std::ostream& out, auto e) {
+//        if (phase_graph[e].score() >= 5) {
+//            out << " [color=green]" << std::endl;
+//        } else {
+//            out << " [style=dotted,color=red]" << std::endl;
+//        }
+//        out << " [label=\"" << phase_graph[e] << "\"]" << std::endl;
+//    };
+//    boost::write_graphviz(phase_graph_dot, phase_graph, boost::default_writer(), edge_writer);
+////    boost::write_graphviz(phase_graph_dot, phase_graph, boost::default_writer(), boost::make_label_writer(boost::get(boost::edge_bundle, phase_graph)));
+    
     auto first_partition = std::cbegin(partitions);
     auto last_partition  = std::cend(partitions);
     Phaser::PhaseSet::SamplePhaseRegions result {};
