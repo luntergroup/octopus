@@ -654,7 +654,7 @@ std::vector<Genotype<Haplotype>> copy_each(const Range& genotypes, const std::ve
     std::unordered_map<Haplotype, std::shared_ptr<Haplotype>> cache {};
     cache.reserve(genotypes.size());
     std::transform(std::cbegin(genotypes), std::cend(genotypes), std::back_inserter(result),
-                   [&] (const auto& genotype) { return detail::copy_shared<Haplotype>(genotype, regions, cache); });
+                   [&] (const auto& genotype) { return detail::copy_shared(genotype, regions, cache); });
     return result;
 }
 
