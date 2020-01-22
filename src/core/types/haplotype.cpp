@@ -628,18 +628,18 @@ Haplotype copy(const Haplotype& haplotype, const std::vector<GenomicRegion>& reg
                 } else {
                     result.push_back(ContigAllele {region.contig_region(), ""});
                 }
-                return result.build();
-            }
-            if (!contains(region.contig_region(), overlapped_alleles.front())) {
-                result.push_front(copy(overlapped_alleles.front(), *overlapped_region(overlapped_alleles.front(), region.contig_region())));
-                overlapped_alleles.advance_begin(1);
-            }
-            if (!overlapped_alleles.empty()) {
-                if (contains(region.contig_region(), overlapped_alleles.back())) {
-                    result.explicit_alleles_.insert(end(result.explicit_alleles_), cbegin(overlapped_alleles), cend(overlapped_alleles));
-                } else {
-                    result.explicit_alleles_.insert(end(result.explicit_alleles_), cbegin(overlapped_alleles), prev(cend(overlapped_alleles)));
-                    result.push_back(copy(overlapped_alleles.back(), *overlapped_region(overlapped_alleles.back(), region.contig_region())));
+            } else {
+                if (!contains(region.contig_region(), overlapped_alleles.front())) {
+                    result.push_front(copy(overlapped_alleles.front(), *overlapped_region(overlapped_alleles.front(), region.contig_region())));
+                    overlapped_alleles.advance_begin(1);
+                }
+                if (!overlapped_alleles.empty()) {
+                    if (contains(region.contig_region(), overlapped_alleles.back())) {
+                        for (const auto& allele : overlapped_alleles) result.push_back(allele);
+                    } else {
+                        std::for_each(cbegin(overlapped_alleles), prev(cend(overlapped_alleles)), [&] (const auto& allele) { result.push_back(allele); });
+                        result.push_back(copy(overlapped_alleles.back(), *overlapped_region(overlapped_alleles.back(), region.contig_region())));
+                    }
                 }
             }
         }
