@@ -24,6 +24,7 @@ public:
     
 private:
     virtual LogProbability do_evaluate(const Genotype<Haplotype>& genotype) const override { return 1.0; }
+    virtual LogProbability do_evaluate(const Genotype<IndexedHaplotype<>>& genotype) const override { return 1.0; }
     virtual LogProbability do_evaluate(const GenotypeIndex& genotype) const override { return 1.0; }
     bool check_is_primed() const noexcept override { return true; }
 };

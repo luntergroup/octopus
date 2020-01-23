@@ -75,6 +75,22 @@ ConstantMixtureGenotypeLikelihoodModel::evaluate(const Genotype<Haplotype>& geno
     }
 }
 
+ConstantMixtureGenotypeLikelihoodModel::LogProbability
+ConstantMixtureGenotypeLikelihoodModel::evaluate(const Genotype<IndexedHaplotype<>>& genotype) const
+{
+    assert(likelihoods_.is_primed());
+    const auto ln_ploidy = std::log(genotype.ploidy());
+    buffer_.resize(genotype.ploidy());
+    LogProbability result {0};
+    const auto num_likelihoods = indexed_likelihoods_.front().get().size();
+    for (std::size_t read_idx {0}; read_idx < num_likelihoods; ++read_idx) {
+        std::transform(std::cbegin(genotype), std::cend(genotype), std::begin(buffer_),
+                       [=] (const auto& haplotype) noexcept { return indexed_likelihoods_[index_of(haplotype)].get()[read_idx]; });
+        result += maths::log_sum_exp(buffer_) - ln_ploidy;
+    }
+    return result;
+}
+
 namespace {
 
 template <typename T = double>

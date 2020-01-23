@@ -18,20 +18,13 @@ IndexType index_of(const Indexed<T, IndexType>& indexed) noexcept
     return static_cast<const T&>(indexed).index();
 }
 
-namespace detail {
-
 template <typename T, typename = void>
-struct IsIndexedHelper : std::false_type {};
+struct is_indexed : std::false_type {};
+template <typename T>
+struct is_indexed<T, std::enable_if_t<std::is_integral<decltype(index_of(std::declval<T>()))>::value> > : std::true_type {};
 
 template <typename T>
-struct IsIndexedHelper<T,
-        std::enable_if_t<std::is_integral<decltype(index_of(std::declval<T>()))>::value>
-    > : std::true_type {};
-
-} // namespace detail
-
-template <typename T>
-constexpr bool is_indexed = detail::IsIndexedHelper<T>::value;
+constexpr bool is_indexed_v = is_indexed<T>::value;
 
 } // namespace octopus
 

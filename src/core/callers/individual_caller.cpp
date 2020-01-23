@@ -75,18 +75,42 @@ std::size_t IndividualCaller::do_remove_duplicates(HaplotypeBlock& haplotypes) c
 
 // IndividualCaller::Latents public methods
 
+auto unindex(const Genotype<IndexedHaplotype<>>& genotype, const std::vector<std::shared_ptr<Haplotype>>& haplotypes)
+{
+    Genotype<Haplotype> result {genotype.ploidy()};
+    for (const auto& haplotype : genotype) {
+        result.emplace(haplotypes[index_of(haplotype)]);
+    }
+    return result;
+}
+
+auto unindex(const MappableBlock<Genotype<IndexedHaplotype<>>>& genotypes,
+             const MappableBlock<Haplotype>& haplotypes)
+{
+    std::vector<std::shared_ptr<Haplotype>> temp_pointers(haplotypes.size());
+    std::transform(std::cbegin(haplotypes), std::cend(haplotypes), std::begin(temp_pointers),
+                   [] (const auto& haplotype) { return std::make_shared<Haplotype>(haplotype); });
+    MappableBlock<Genotype<Haplotype>> result {mapped_region(genotypes)};
+    result.reserve(genotypes.size());
+    for (const auto& genotype : genotypes) {
+        result.push_back(unindex(genotype, temp_pointers));
+    }
+    return result;
+}
+
 IndividualCaller::Latents::Latents(const SampleName& sample,
                                    const HaplotypeBlock& haplotypes,
-                                   std::vector<Genotype<Haplotype>>&& genotypes,
+                                   IndividualCaller::GenotypeBlock genotypes,
                                    ModelInferences&& inferences)
 : genotype_posteriors_ {}
 , haplotype_posteriors_ {}
 , model_log_evidence_ {inferences.log_evidence}
 {
-    GenotypeProbabilityMap genotype_log_posteriors {std::cbegin(genotypes), std::cend(genotypes)};
+    auto tmp_genotypes = unindex(genotypes, haplotypes);
+    GenotypeProbabilityMap genotype_log_posteriors {std::cbegin(tmp_genotypes), std::cend(tmp_genotypes)};
     insert_sample(sample, inferences.posteriors.genotype_log_probabilities, genotype_log_posteriors);
-    genotype_log_posteriors_  = std::make_shared<GenotypeProbabilityMap>(std::move(genotype_log_posteriors));
-    GenotypeProbabilityMap genotype_posteriors {std::make_move_iterator(std::begin(genotypes)), std::make_move_iterator(std::end(genotypes))};
+    genotype_log_posteriors_ = std::make_shared<GenotypeProbabilityMap>(std::move(genotype_log_posteriors));
+    GenotypeProbabilityMap genotype_posteriors {std::make_move_iterator(std::begin(tmp_genotypes)), std::make_move_iterator(std::end(tmp_genotypes))};
     insert_sample(sample, inferences.posteriors.genotype_probabilities, genotype_posteriors);
     genotype_posteriors_  = std::make_shared<GenotypeProbabilityMap>(std::move(genotype_posteriors));
     haplotype_posteriors_ = std::make_shared<HaplotypeProbabilityMap>(calculate_haplotype_posteriors(haplotypes));
@@ -127,15 +151,15 @@ std::unique_ptr<IndividualCaller::Caller::Latents>
 IndividualCaller::infer_latents(const HaplotypeBlock& haplotypes,
                                 const HaplotypeLikelihoodArray& haplotype_likelihoods) const
 {
-    auto indexed_genotypes = propose_genotypes(haplotypes, haplotype_likelihoods);
-    if (debug_log_) stream(*debug_log_) << "There are " << indexed_genotypes.genotypes.size() << " candidate genotypes";
+    auto genotypes = propose_genotypes(haplotypes, haplotype_likelihoods);
+    if (debug_log_) stream(*debug_log_) << "There are " << genotypes.size() << " candidate genotypes";
     auto prior_model = make_prior_model(haplotypes);
     prior_model->prime(haplotypes);
     model::IndividualModel model {*prior_model, debug_log_, trace_log_};
     model.prime(haplotypes);
     haplotype_likelihoods.prime(sample());
-    auto inferences = model.evaluate(indexed_genotypes.genotypes, indexed_genotypes.indices, haplotype_likelihoods);
-    return std::make_unique<Latents>(sample(), haplotypes, std::move(indexed_genotypes.genotypes), std::move(inferences));
+    auto inferences = model.evaluate(genotypes, haplotype_likelihoods);
+    return std::make_unique<Latents>(sample(), haplotypes, std::move(genotypes), std::move(inferences));
 }
 
 boost::optional<double>
@@ -568,8 +592,8 @@ std::unique_ptr<GenotypePriorModel> IndividualCaller::make_prior_model(const Hap
 }
 
 namespace {
-template <typename T>
-void erase_complement_indices(std::vector<T>& values, const std::vector<std::size_t>& indices)
+template <typename Container>
+void erase_complement_indices(Container& values, const std::vector<std::size_t>& indices)
 {
     std::vector<bool> keep(values.size(), true);
     for (auto idx : indices) keep[idx] = false;
@@ -582,82 +606,31 @@ void erase_complement_indices(std::vector<T>& values, const std::vector<std::siz
     }
 }
 
-void
-select_top_k(std::vector<Genotype<Haplotype>>& genotypes, std::vector<GenotypeIndex>& genotype_indices,
-             const model::IndividualModel::Latents::ProbabilityVector& genotype_posteriors,
-             const std::size_t k)
+template <typename Container, typename Range>
+void select_top_k(Container& items, const Range& probabilities, const std::size_t k)
 {
-    const auto best_indices = select_top_k_indices(genotype_posteriors, k, false);
-    erase_complement_indices(genotypes, best_indices);
-    erase_complement_indices(genotype_indices, best_indices);
+    const auto best_indices = select_top_k_indices(probabilities, k, false);
+    erase_complement_indices(items, best_indices);
 }
 
-template <typename T1, typename T2>
-auto zip(std::vector<T1>&& lhs, std::vector<T2>&& rhs)
+template <typename IndexType>
+void erase_duplicates(MappableBlock<Genotype<IndexedHaplotype<IndexType>>>& genotypes)
 {
-    assert(lhs.size() == rhs.size());
-    std::vector<std::pair<T1, T2>> result {};
-    result.reserve(lhs.size());
-    std::transform(std::make_move_iterator(std::begin(lhs)), std::make_move_iterator(std::end(lhs)),
-                   std::make_move_iterator(std::begin(rhs)), std::back_inserter(result),
-                   [] (T1&& a, T2&& b) noexcept { return std::make_pair(std::move(a), std::move(b)); });
-    return result;
-}
-
-template <typename T1, typename T2>
-auto unzip(std::vector<std::pair<T1, T2>>&& zipped)
-{
-    std::vector<T1> lhs {}; std::vector<T2> rhs {};
-    lhs.reserve(zipped.size()); rhs.reserve(zipped.size());
-    for (auto& p : zipped) {
-        lhs.push_back(std::move(p.first));
-        rhs.push_back(std::move(p.second));
-    }
-    return std::make_pair(std::move(lhs), std::move(rhs));
-}
-
-template <typename ForwardIterator,
-          typename BinaryPredicate1,
-          typename BinaryPredicate2>
-ForwardIterator
-stable_unique(const ForwardIterator first, const ForwardIterator last,
-              const BinaryPredicate1 less, const BinaryPredicate2 equal)
-{
-    const auto n = static_cast<std::size_t>(std::distance(first, last));
-    using ValueTp = typename std::iterator_traits<ForwardIterator>::value_type;
-    std::vector<std::pair<ValueTp, std::size_t>> indexed_values(n);
-    std::size_t idx {0};
-    std::transform(std::make_move_iterator(first), std::make_move_iterator(last), std::begin(indexed_values),
-                   [&] (auto&& value) { return std::make_pair(std::move(value), idx++); });
-    const auto value_less = [&less] (const auto& lhs, const auto& rhs) { return less(lhs.first, rhs.first); };
-    std::sort(std::begin(indexed_values), std::end(indexed_values), value_less);
-    const auto value_equal = [&equal] (const auto& lhs, const auto& rhs) { return equal(lhs.first, rhs.first); };
-    indexed_values.erase(std::unique(std::begin(indexed_values), std::end(indexed_values), value_equal), std::end(indexed_values));
-    const static auto index_less = [] (const auto& lhs, const auto& rhs) { return lhs.second < rhs.second; };
-    std::sort(std::begin(indexed_values), std::end(indexed_values), index_less);
-    return std::transform(std::make_move_iterator(std::begin(indexed_values)),
-                          std::make_move_iterator(std::end(indexed_values)),
-                          first, [] (auto&& p) { return std::move(p.first); });
-}
-
-void erase_duplicates(std::vector<Genotype<Haplotype>>& genotypes, std::vector<GenotypeIndex>& genotype_indices)
-{
-    auto zipped = zip(std::move(genotypes), std::move(genotype_indices));
-    const static auto zipped_less = [] (const auto& lhs, const auto& rhs) { return GenotypeLess{}(lhs.first, rhs.first); };
-    const static auto zipped_equal = [] (const auto& lhs, const auto& rhs) { return lhs.first ==rhs.first; };
-    zipped.erase(stable_unique(std::begin(zipped), std::end(zipped), zipped_less, zipped_equal), std::end(zipped));
-    std::tie(genotypes, genotype_indices) = unzip(std::move(zipped));
+    using std::begin; using std::end;
+    std::sort(begin(genotypes), end(genotypes), GenotypeLess {});
+    genotypes.erase(std::unique(begin(genotypes), end(genotypes)), end(genotypes));
 }
 
 } // namespace
 
-IndividualCaller::GenotypeVectorPair
+IndividualCaller::GenotypeBlock
 IndividualCaller::propose_genotypes(const HaplotypeBlock& haplotypes, const HaplotypeLikelihoodArray& haplotype_likelihoods) const
 {
+    const auto indexed_haplotypes = index(haplotypes);
     const auto num_possible_genotypes = num_genotypes_noexcept(haplotypes.size(), parameters_.ploidy);
-    GenotypeVectorPair result {};
+    GenotypeBlock result {mapped_region(haplotypes)};
     if (!parameters_.max_genotypes || (num_possible_genotypes && *num_possible_genotypes <= *parameters_.max_genotypes)) {
-        result.genotypes = generate_all_genotypes(haplotypes, parameters_.ploidy, result.indices);
+        result = generate_all_genotypes(indexed_haplotypes, parameters_.ploidy);
     } else {
         if (debug_log_) {
             if (num_possible_genotypes) {
@@ -672,22 +645,21 @@ IndividualCaller::propose_genotypes(const HaplotypeBlock& haplotypes, const Hapl
             if (num_ploidy_genotypes && *num_ploidy_genotypes <= *parameters_.max_genotypes) break;
         }
         if (debug_log_) stream(*debug_log_) << "Starting genotype reduction with ploidy " << ploidy;
-        result.genotypes = generate_all_genotypes(haplotypes, ploidy, result.indices);
+        result = generate_all_genotypes(indexed_haplotypes, ploidy);
         auto prior_model = make_prior_model(haplotypes);
         prior_model->prime(haplotypes);
         model::IndividualModel model {*prior_model};
         model.prime(haplotypes);
         haplotype_likelihoods.prime(sample());
         for (; ploidy < parameters_.ploidy; ++ploidy) {
-            if (debug_log_) stream(*debug_log_) << "Finding good genotypes with ploidy " << ploidy << " from " << result.genotypes.size();
-            const auto ploidy_inferences = model.evaluate(result.genotypes, result.indices, haplotype_likelihoods);
+            if (debug_log_) stream(*debug_log_) << "Finding good genotypes with ploidy " << ploidy << " from " << result.size();
+            const auto ploidy_inferences = model.evaluate(result, haplotype_likelihoods);
             const std::size_t max_seeds {2 * std::max(*parameters_.max_genotypes / haplotypes.size(), std::size_t {1})};
-            select_top_k(result.genotypes, result.indices, ploidy_inferences.posteriors.genotype_log_probabilities, max_seeds);
-            std::tie(result.genotypes, result.indices) = extend_genotypes(result.genotypes, result.indices, haplotypes);
-            erase_duplicates(result.genotypes, result.indices);
-            if (result.genotypes.size() > *parameters_.max_genotypes) {
-                result.genotypes.resize(*parameters_.max_genotypes);
-                result.indices.resize(*parameters_.max_genotypes);
+            select_top_k(result, ploidy_inferences.posteriors.genotype_log_probabilities, max_seeds);
+            result = extend(result, indexed_haplotypes);
+            erase_duplicates(result);
+            if (result.size() > *parameters_.max_genotypes) {
+                result.resize(*parameters_.max_genotypes);
             }
         }
     }

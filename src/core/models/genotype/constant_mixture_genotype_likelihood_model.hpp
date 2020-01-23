@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "core/types/haplotype.hpp"
+#include "core/types/indexed_haplotype.hpp"
 #include "core/types/genotype.hpp"
 #include "core/models/haplotype_likelihood_array.hpp"
 
@@ -37,6 +38,7 @@ public:
     bool is_primed() const noexcept;
     
     LogProbability evaluate(const Genotype<Haplotype>& genotype) const;
+    LogProbability evaluate(const Genotype<IndexedHaplotype<>>& genotype) const;
     LogProbability evaluate(const GenotypeIndex& genotype) const;
     
 private:

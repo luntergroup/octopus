@@ -550,7 +550,8 @@ public:
 private:
     const GenotypePriorModel* base_;
     
-    virtual LogProbability do_evaluate(const Genotype<Haplotype>& genotype) const override
+    template <typename T>
+    LogProbability do_evaluate_helper(const Genotype<T>& genotype) const
     {
         LogProbability result {(genotype.ploidy() - genotype.zygosity()) * std::log(0.1)};
         if (base_) {
@@ -558,6 +559,8 @@ private:
         }
         return result;
     }
+    virtual LogProbability do_evaluate(const Genotype<Haplotype>& genotype) const override { return do_evaluate_helper(genotype);}
+    virtual LogProbability do_evaluate(const Genotype<IndexedHaplotype<>>& genotype) const override { return do_evaluate_helper(genotype); }
     virtual LogProbability do_evaluate(const GenotypeIndex& genotype) const override { return 1.0; } // TODO
     bool check_is_primed() const noexcept override { return true; }
     

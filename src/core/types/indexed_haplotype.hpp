@@ -18,13 +18,17 @@
 
 namespace octopus {
 
-template <typename IndexTp = std::size_t>
+template <typename IndexTp = std::size_t,
+          typename UseIndexEquality = std::true_type,
+          typename IsSortedIndex = std::true_type>
 class IndexedHaplotype : public Mappable<IndexedHaplotype<IndexTp>>
                        , public Comparable<IndexedHaplotype<IndexTp>>
                        , public Indexed<IndexedHaplotype<IndexTp>>
 {
 public:
     using IndexType = IndexTp;
+    using IndexEquality = UseIndexEquality;
+    using SortedIndex = IsSortedIndex;
     using MappingDomain = Haplotype::MappingDomain;
     
     IndexedHaplotype() = delete;
@@ -72,6 +76,31 @@ private:
     Haplotype haplotype_;
     IndexType index_;
 };
+
+template <typename IndexType>
+bool operator==(const IndexedHaplotype<IndexType, std::true_type>& lhs,
+                const IndexedHaplotype<IndexType, std::true_type>& rhs) noexcept
+{
+    return index_of(lhs) == index_of(rhs);
+}
+template <typename IndexType>
+bool operator==(const IndexedHaplotype<IndexType, std::false_type>& lhs,
+                const IndexedHaplotype<IndexType, std::false_type>& rhs)
+{
+    return lhs.haplotype() == rhs.haplotype();
+}
+template <typename IndexType, typename EqualityPolicy>
+bool operator<(const IndexedHaplotype<IndexType, EqualityPolicy, std::true_type>& lhs,
+               const IndexedHaplotype<IndexType, EqualityPolicy, std::true_type>& rhs) noexcept
+{
+    return index_of(lhs) < index_of(rhs);
+}
+template <typename IndexType, typename EqualityPolicy>
+bool operator<(const IndexedHaplotype<IndexType, EqualityPolicy, std::false_type>& lhs,
+               const IndexedHaplotype<IndexType, EqualityPolicy, std::false_type>& rhs)
+{
+    return lhs.haplotype() < rhs.haplotype();
+}
 
 template <typename IndexType, typename H>
 IndexedHaplotype<IndexType> index(H&& haplotype, IndexType idx)
@@ -192,19 +221,15 @@ unindex(MappableBlock<IndexedHaplotype<IndexType>>&& haplotypes)
     return result;
 }
 
-namespace detail {
-
 template <typename>
-struct IsIndexedHaplotype : std::false_type {};
+struct is_indexed_haplotype : std::false_type {};
 template <typename IndexType>
-struct IsIndexedHaplotype<IndexedHaplotype<IndexType>> : std::true_type {
-    static_assert(is_indexed<IndexedHaplotype<IndexType>>, "");
+struct is_indexed_haplotype<IndexedHaplotype<IndexType>> : std::true_type {
+    static_assert(is_indexed_v<IndexedHaplotype<IndexType>>, "");
 };
 
-} // namespace detail
-
 template <typename T>
-constexpr bool is_indexed_haplotype = detail::IsIndexedHaplotype<T>::value;
+constexpr bool is_indexed_haplotype_v = is_indexed_haplotype<T>::value;
 
 } // namespace octopus
 

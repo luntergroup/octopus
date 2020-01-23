@@ -34,6 +34,10 @@ private:
     {
         return model_.evaluate(genotype);
     }
+    virtual LogProbability do_evaluate(const Genotype<IndexedHaplotype<>>& genotype) const override
+    {
+        return model_.evaluate(genotype);
+    }
     LogProbability do_evaluate(const GenotypeIndex& genotype) const override
     {
         return model_.evaluate(genotype);

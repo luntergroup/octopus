@@ -80,6 +80,24 @@ IndividualModel::evaluate(const MappableBlock<Genotype<Haplotype>>& genotypes,
 }
 
 IndividualModel::InferredLatents
+IndividualModel::evaluate(const MappableBlock<Genotype<IndexedHaplotype<>>>& genotypes,
+                         const HaplotypeLikelihoodArray& haplotype_likelihoods) const
+{
+    assert(!genotypes.empty());
+    assert(genotypes.size() == genotypes.size());
+    ConstantMixtureGenotypeLikelihoodModel likelihood_model {haplotype_likelihoods};
+    InferredLatents result {};
+    if (is_primed()) likelihood_model.prime(*haplotypes_);
+    result.posteriors.genotype_log_probabilities = octopus::model::evaluate(genotypes, likelihood_model);
+    //debug::log_genotype_likelihoods(debug_log_, trace_log_, genotypes, result.posteriors.genotype_log_probabilities);
+    octopus::evaluate(genotypes, genotype_prior_model_, result.posteriors.genotype_log_probabilities, false, true);
+    result.log_evidence = maths::normalise_logs(result.posteriors.genotype_log_probabilities);
+    result.posteriors.genotype_probabilities = result.posteriors.genotype_log_probabilities;
+    maths::exp_each(result.posteriors.genotype_probabilities);
+    return result;
+}
+
+IndividualModel::InferredLatents
 IndividualModel::evaluate(const MappableBlock<Genotype<Haplotype>>& genotypes,
                           const std::vector<GenotypeIndex>& genotype_indices,
                           const HaplotypeLikelihoodArray& haplotype_likelihoods) const

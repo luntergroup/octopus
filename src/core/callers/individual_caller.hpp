@@ -57,11 +57,7 @@ public:
 private:
     class Latents;
     
-    struct GenotypeVectorPair
-    {
-        std::vector<Genotype<Haplotype>> genotypes;
-        std::vector<GenotypeIndex> indices;
-    };
+    using GenotypeBlock = MappableBlock<Genotype<IndexedHaplotype<>>>;
     
     Parameters parameters_;
     
@@ -102,7 +98,7 @@ private:
     const SampleName& sample() const noexcept;
     
     std::unique_ptr<GenotypePriorModel> make_prior_model(const HaplotypeBlock& haplotypes) const;
-    GenotypeVectorPair propose_genotypes(const HaplotypeBlock& haplotypes, const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
+    GenotypeBlock propose_genotypes(const HaplotypeBlock& haplotypes, const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
 };
 
 class IndividualCaller::Latents : public Caller::Latents
@@ -117,8 +113,10 @@ public:
     
     Latents() = delete;
     
-    Latents(const SampleName& sample, const HaplotypeBlock& haplotypes,
-            std::vector<Genotype<Haplotype>>&& genotypes, ModelInferences&& latents);
+    Latents(const SampleName& sample,
+            const HaplotypeBlock& haplotypes,
+            IndividualCaller::GenotypeBlock genotypes,
+            ModelInferences&& latents);
     
     std::shared_ptr<HaplotypeProbabilityMap> haplotype_posteriors() const noexcept override;
     std::shared_ptr<GenotypeProbabilityMap> genotype_posteriors() const noexcept override;

@@ -36,7 +36,7 @@ namespace detail {
 template <typename T>
 constexpr bool is_allele = std::is_same<T, Allele>::value || std::is_same<T, ContigAllele>::value;
 template <typename T>
-constexpr bool is_haplotype_or_indexed_haplotype = std::is_same<T, Haplotype>::value || is_indexed_haplotype<T>;
+constexpr bool is_haplotype_or_indexed_haplotype = std::is_same<T, Haplotype>::value || is_indexed_haplotype_v<T>;
 
 } // namespace detail
 
@@ -56,6 +56,8 @@ public:
     
     using ordered = std::false_type;
     using share_memory = std::false_type;
+    
+    using value_type = ElementType; // for use with genetic algorithms
     
     Genotype() = default;
     
@@ -119,6 +121,8 @@ public:
     
     using ordered = std::true_type;
     using share_memory = std::true_type;
+    
+    using value_type = ElementType; // for use with genetic algorithms
     
     Genotype() = default;
     
@@ -1256,6 +1260,37 @@ generate_all_max_zygosity_genotypes(const Range& elements, const unsigned ploidy
     std::vector<Genotype<MappableType>> result {};
     generate_all_max_zygosity_genotypes(result, indices, elements, ploidy);
     return result;
+}
+
+template <typename MappableType, typename UnaryPredicate>
+auto extend(const MappableBlock<Genotype<MappableType>>& genotypes,
+            const MappableBlock<MappableType>& haplotypes,
+            UnaryPredicate&& selector)
+{
+    static_assert(detail::is_haplotype_or_indexed_haplotype<MappableType>, "");
+    std::vector<std::shared_ptr<MappableType>> temp_pointers(haplotypes.size());
+    std::transform(std::cbegin(haplotypes), std::cend(haplotypes), std::begin(temp_pointers),
+                   [] (const auto& haplotype) { return std::make_shared<MappableType>(haplotype); });
+    MappableBlock<Genotype<MappableType>> result {mapped_region(haplotypes)};
+    result.reserve(genotypes.size() * haplotypes.size());
+    for (const auto& genotype : genotypes) {
+        for (const auto& haplotype_ptr : temp_pointers) {
+            if (selector(genotype, *haplotype_ptr)) {
+                auto extended_genotype = genotype;
+                extended_genotype.emplace(haplotype_ptr);
+                result.push_back(std::move(extended_genotype));
+            }
+        }
+    }
+    return result;
+}
+
+template <typename MappableType>
+auto extend(const MappableBlock<Genotype<MappableType>>& genotypes,
+            const MappableBlock<MappableType>& haplotypes)
+{
+    const static auto default_selector = [] (const auto&, const auto&) noexcept { return true; };
+    return extend(genotypes, haplotypes, default_selector);
 }
 
 template <typename UnaryPredicate>

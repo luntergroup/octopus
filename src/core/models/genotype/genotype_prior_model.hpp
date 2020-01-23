@@ -5,6 +5,7 @@
 #define genotype_prior_model_hpp
 
 #include "core/types/haplotype.hpp"
+#include "core/types/indexed_haplotype.hpp"
 #include "core/types/genotype.hpp"
 #include "containers/mappable_block.hpp"
 #include "utils/maths.hpp"
@@ -31,10 +32,12 @@ public:
     bool is_primed() const noexcept { return check_is_primed(); }
     
     LogProbability evaluate(const Genotype<Haplotype>& genotype) const { return do_evaluate(genotype); }
+    LogProbability evaluate(const Genotype<IndexedHaplotype<>>& genotype) const { return do_evaluate(genotype); }
     LogProbability evaluate(const GenotypeIndex& genotype) const { return do_evaluate(genotype); }
     
 private:
     virtual LogProbability do_evaluate(const Genotype<Haplotype>& genotype) const = 0;
+    virtual LogProbability do_evaluate(const Genotype<IndexedHaplotype<>>& genotype) const = 0;
     virtual LogProbability do_evaluate(const GenotypeIndex& genotype) const = 0;
     virtual void do_prime(const HaplotypeBlock& haplotypes) {};
     virtual void do_unprime() noexcept {};
