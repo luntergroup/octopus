@@ -29,6 +29,11 @@ std::unique_ptr<Measure> ReadEndBias::do_clone() const
     return std::make_unique<ReadEndBias>(*this);
 }
 
+Measure::ResultType ReadEndBias::get_default_result() const
+{
+    return std::vector<double> {};
+}
+
 void ReadEndBias::do_set_parameters(std::vector<std::string> params)
 {
     if (params.size() != 1) {

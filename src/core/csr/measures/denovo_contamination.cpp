@@ -35,6 +35,11 @@ std::unique_ptr<Measure> DeNovoContamination::do_clone() const
     return std::make_unique<DeNovoContamination>(*this);
 }
 
+Measure::ResultType DeNovoContamination::get_default_result() const
+{
+    return boost::optional<int> {};
+}
+
 namespace {
 
 bool is_denovo(const VcfRecord& call, const Measure::FacetMap& facets)

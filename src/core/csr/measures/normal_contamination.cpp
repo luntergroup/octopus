@@ -31,6 +31,11 @@ std::unique_ptr<Measure> NormalContamination::do_clone() const
     return std::make_unique<NormalContamination>(*this);
 }
 
+Measure::ResultType NormalContamination::get_default_result() const
+{
+    return boost::optional<int> {};
+}
+
 namespace {
 
 auto extract_called_alleles(const VcfRecord& call, const VcfRecord::SampleName& sample)

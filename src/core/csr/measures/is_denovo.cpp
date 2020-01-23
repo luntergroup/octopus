@@ -20,6 +20,11 @@ std::unique_ptr<Measure> IsDenovo::do_clone() const
     return std::make_unique<IsDenovo>(*this);
 }
 
+Measure::ResultType IsDenovo::get_default_result() const
+{
+    return bool {};
+}
+
 namespace {
 
 bool is_denovo(const VcfRecord& call)

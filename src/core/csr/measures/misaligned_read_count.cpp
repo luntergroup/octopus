@@ -25,6 +25,11 @@ std::unique_ptr<Measure> MisalignedReadCount::do_clone() const
     return std::make_unique<MisalignedReadCount>(*this);
 }
 
+Measure::ResultType MisalignedReadCount::get_default_result() const
+{
+    return std::vector<int> {};
+}
+
 double error_expectation(const AlignedRead::BaseQualityVector& qualities)
 {
     return std::accumulate(std::cbegin(qualities), std::cend(qualities), 0.0,

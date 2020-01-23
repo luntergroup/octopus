@@ -18,6 +18,11 @@ std::unique_ptr<Measure> GCContent::do_clone() const
     return std::make_unique<GCContent>(*this);
 }
 
+Measure::ResultType GCContent::get_default_result() const
+{
+    return double {};
+}
+
 Measure::ResultType GCContent::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     const auto& reference = get_value<ReferenceContext>(facets.at("ReferenceContext"));

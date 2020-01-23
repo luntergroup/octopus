@@ -20,6 +20,11 @@ std::unique_ptr<Measure> IsTransversion::do_clone() const
     return std::make_unique<IsTransversion>(*this);
 }
 
+Measure::ResultType IsTransversion::get_default_result() const
+{
+    return bool {};
+}
+
 Measure::ResultType IsTransversion::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     return std::any_of(std::cbegin(call.alt()), std::cend(call.alt()), [&] (const auto& alt) -> bool {

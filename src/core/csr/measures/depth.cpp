@@ -26,6 +26,11 @@ std::unique_ptr<Measure> Depth::do_clone() const
     return std::make_unique<Depth>(*this);
 }
 
+Measure::ResultType Depth::get_default_result() const
+{
+    return std::vector<std::size_t> {};
+}
+
 Measure::ResultType Depth::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     if (aggregate_) {

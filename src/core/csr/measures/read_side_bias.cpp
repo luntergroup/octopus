@@ -29,6 +29,11 @@ std::unique_ptr<Measure> ReadSideBias::do_clone() const
     return std::make_unique<ReadSideBias>(*this);
 }
 
+Measure::ResultType ReadSideBias::get_default_result() const
+{
+    return std::vector<double> {};
+}
+
 namespace {
 
 struct PositionCounts

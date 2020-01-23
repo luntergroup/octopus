@@ -20,6 +20,7 @@ class ReadTailBias : public Measure
     const static std::string name_;
     double tail_fraction_ = 0.03;
     std::unique_ptr<Measure> do_clone() const override;
+    ResultType get_default_result() const override;
     void do_set_parameters(std::vector<std::string> params) override;
     ResultType do_evaluate(const VcfRecord& call, const FacetMap& facets) const override;
     ResultCardinality do_cardinality() const noexcept override;

@@ -15,6 +15,11 @@ std::unique_ptr<Measure> PosteriorProbability::do_clone() const
     return std::make_unique<PosteriorProbability>(*this);
 }
 
+Measure::ResultType PosteriorProbability::get_default_result() const
+{
+    return boost::optional<double> {};
+}
+
 Measure::ResultType PosteriorProbability::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     boost::optional<double> result {};

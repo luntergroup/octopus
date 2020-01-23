@@ -14,6 +14,11 @@ std::unique_ptr<Measure> Quality::do_clone() const
     return std::make_unique<Quality>(*this);
 }
 
+Measure::ResultType Quality::get_default_result() const
+{
+    return boost::optional<double> {};
+}
+
 Measure::ResultType Quality::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     boost::optional<double> result {};

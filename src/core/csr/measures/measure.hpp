@@ -67,6 +67,7 @@ private:
     virtual std::unique_ptr<Measure> do_clone() const = 0;
     virtual void do_set_parameters(std::vector<std::string> params);
     virtual std::vector<std::string> do_parameters() const { return {}; }
+    virtual ResultType get_default_result() const { return boost::any {}; };
     virtual ResultType do_evaluate(const VcfRecord& call, const FacetMap& facets) const = 0;
     virtual ResultCardinality do_cardinality() const noexcept = 0;
     virtual const std::string& do_name() const = 0;

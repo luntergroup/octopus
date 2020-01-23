@@ -27,6 +27,11 @@ std::unique_ptr<Measure> BaseMismatchFraction::do_clone() const
     return std::make_unique<BaseMismatchFraction>(*this);
 }
 
+Measure::ResultType BaseMismatchFraction::get_default_result() const
+{
+    return std::vector<double> {};
+}
+
 Measure::ResultType BaseMismatchFraction::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     const auto depths = boost::get<std::vector<std::size_t>>(depth_.evaluate(call, facets));

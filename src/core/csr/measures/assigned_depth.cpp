@@ -24,6 +24,11 @@ std::unique_ptr<Measure> AssignedDepth::do_clone() const
     return std::make_unique<AssignedDepth>(*this);
 }
 
+Measure::ResultType AssignedDepth::get_default_result() const
+{
+    return std::vector<std::size_t> {};
+}
+
 namespace {
 
 template <typename Map>

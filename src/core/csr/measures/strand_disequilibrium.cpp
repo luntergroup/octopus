@@ -22,6 +22,11 @@ std::unique_ptr<Measure> StrandDisequilibrium::do_clone() const
     return std::make_unique<StrandDisequilibrium>(*this);
 }
 
+Measure::ResultType StrandDisequilibrium::get_default_result() const
+{
+    return std::vector<double> {};
+}
+
 void StrandDisequilibrium::do_set_parameters(std::vector<std::string> params)
 {
     if (params.size() != 1) {

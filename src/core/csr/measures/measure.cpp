@@ -9,6 +9,7 @@
 #include <iterator>
 #include <algorithm>
 #include <cassert>
+#include <type_traits>
 
 #include <boost/lexical_cast.hpp>
 
@@ -78,17 +79,35 @@ std::string Measure::do_serialise(const ResultType& value) const
     return vis.str;
 }
 
+struct MeasureResultTypeVisitor : boost::static_visitor<std::string>
+{
+    auto operator()(bool) const { return vcfspec::header::meta::type::flag; }
+    template <typename T, std::enable_if_t<std::is_integral<T>::value, int> = 0>
+    auto operator()(T) const { return vcfspec::header::meta::type::integer; }
+    template <typename T, std::enable_if_t<std::is_floating_point<T>::value, int> = 0>
+    auto operator()(T) const { return vcfspec::header::meta::type::floating; }
+    template <typename T> auto operator()(boost::optional<T>) const { return (*this)(T{}); }
+    template <typename T> auto operator()(std::vector<T>) const { return (*this)(T{}); }
+    auto operator()(boost::any) const { return vcfspec::header::meta::type::string; }
+};
+
+std::string get_vcf_typename(const Measure::ResultType& value)
+{
+    MeasureResultTypeVisitor vis {};
+    return boost::apply_visitor(vis, value);
+}
+
 void Measure::annotate(VcfHeader::Builder& header) const
 {
     if (!is_required_vcf_field()) {
-        using namespace vcfspec::header::meta::type;
+        const auto vcf_typename = get_vcf_typename(this->get_default_result());
         using namespace vcfspec::header::meta::number;
         if (this->cardinality() == Measure::ResultCardinality::num_samples) {
-            header.add_format(this->name(), one, string, this->describe());
+            header.add_format(this->name(), one, vcf_typename, this->describe());
         } else if (this->cardinality() == Measure::ResultCardinality::num_alleles) {
-            header.add_info(this->name(), per_allele, string, this->describe());
+            header.add_info(this->name(), per_allele, vcf_typename, this->describe());
         } else {
-            header.add_info(this->name(), one, string, this->describe());
+            header.add_info(this->name(), one, vcf_typename, this->describe());
         }
     }
 }

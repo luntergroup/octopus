@@ -23,6 +23,11 @@ std::unique_ptr<Measure> AlleleFrequency::do_clone() const
     return std::make_unique<AlleleFrequency>(*this);
 }
 
+Measure::ResultType AlleleFrequency::get_default_result() const
+{
+    return std::vector<boost::optional<double>> {};
+}
+
 Measure::ResultType AlleleFrequency::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     const auto allele_depths = boost::get<std::vector<boost::optional<int>>>(AlleleDepth{}.evaluate(call, facets));

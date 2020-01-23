@@ -17,6 +17,11 @@ std::unique_ptr<Measure> SomaticHaplotypeCount::do_clone() const
     return std::make_unique<SomaticHaplotypeCount>(*this);
 }
 
+Measure::ResultType SomaticHaplotypeCount::get_default_result() const
+{
+    return boost::optional<std::vector<int>> {};
+}
+
 Measure::ResultType SomaticHaplotypeCount::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     boost::optional<std::vector<int>> result {};

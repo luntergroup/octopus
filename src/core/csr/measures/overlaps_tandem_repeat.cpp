@@ -18,6 +18,11 @@ std::unique_ptr<Measure> OverlapsTandemRepeat::do_clone() const
     return std::make_unique<OverlapsTandemRepeat>(*this);
 }
 
+Measure::ResultType OverlapsTandemRepeat::get_default_result() const
+{
+    return bool {};
+}
+
 Measure::ResultType OverlapsTandemRepeat::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     const auto& reference = get_value<ReferenceContext>(facets.at("ReferenceContext"));

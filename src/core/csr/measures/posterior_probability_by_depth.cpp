@@ -20,6 +20,11 @@ std::unique_ptr<Measure> PosteriorProbabilityByDepth::do_clone() const
     return std::make_unique<PosteriorProbabilityByDepth>(*this);
 }
 
+Measure::ResultType PosteriorProbabilityByDepth::get_default_result() const
+{
+    return boost::optional<double> {};
+}
+
 Measure::ResultType PosteriorProbabilityByDepth::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     boost::optional<double> result {};

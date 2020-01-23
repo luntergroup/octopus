@@ -31,6 +31,11 @@ std::unique_ptr<Measure> DuplicateConcordance::do_clone() const
     return std::make_unique<DuplicateConcordance>(*this);
 }
 
+Measure::ResultType DuplicateConcordance::get_default_result() const
+{
+    return std::vector<boost::optional<double>> {};
+}
+
 namespace {
 
 bool is_canonical(const VcfRecord::NucleotideSequence& allele) noexcept

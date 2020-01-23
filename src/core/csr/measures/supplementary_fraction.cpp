@@ -24,6 +24,11 @@ std::unique_ptr<Measure> SupplementaryFraction::do_clone() const
     return std::make_unique<SupplementaryFraction>(*this);
 }
 
+Measure::ResultType SupplementaryFraction::get_default_result() const
+{
+    return std::vector<boost::optional<double>> {};
+}
+
 Measure::ResultType SupplementaryFraction::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     const auto& samples = get_value<Samples>(facets.at("Samples"));

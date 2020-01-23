@@ -17,6 +17,11 @@ std::unique_ptr<Measure> ClassificationConfidence::do_clone() const
     return std::make_unique<ClassificationConfidence>(*this);
 }
 
+Measure::ResultType ClassificationConfidence::get_default_result() const
+{
+    return boost::optional<double> {};
+}
+
 Measure::ResultType ClassificationConfidence::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     const auto quality = boost::get<boost::optional<double>>(Quality().evaluate(call, facets));

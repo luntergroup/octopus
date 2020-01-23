@@ -19,6 +19,11 @@ std::unique_ptr<Measure> QualityByDepth::do_clone() const
     return std::make_unique<QualityByDepth>(*this);
 }
 
+Measure::ResultType QualityByDepth::get_default_result() const
+{
+    return boost::optional<double> {};
+}
+
 Measure::ResultType QualityByDepth::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     auto depth = boost::get<std::size_t>(depth_.evaluate(call, facets));

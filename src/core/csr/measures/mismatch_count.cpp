@@ -24,6 +24,11 @@ std::unique_ptr<Measure> MismatchCount::do_clone() const
     return std::make_unique<MismatchCount>(*this);
 }
 
+Measure::ResultType MismatchCount::get_default_result() const
+{
+    return std::vector<int> {};
+}
+
 namespace {
 
 bool completely_contains(const AlignedRead& read, const Allele& allele)

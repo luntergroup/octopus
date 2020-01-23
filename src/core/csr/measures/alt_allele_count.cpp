@@ -21,6 +21,11 @@ std::unique_ptr<Measure> AltAlleleCount::do_clone() const
     return std::make_unique<AltAlleleCount>(*this);
 }
 
+Measure::ResultType AltAlleleCount::get_default_result() const
+{
+    return std::vector<int> {};
+}
+
 namespace {
 
 int count_non_ref_alleles(const VcfRecord& call, const VcfRecord::SampleName& sample)

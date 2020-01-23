@@ -24,6 +24,11 @@ std::unique_ptr<Measure> STRLength::do_clone() const
     return std::make_unique<STRLength>(*this);
 }
 
+Measure::ResultType STRLength::get_default_result() const
+{
+    return int {};
+}
+
 namespace {
 
 template <typename Region>

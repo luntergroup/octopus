@@ -29,6 +29,11 @@ std::unique_ptr<Measure> ErrorRateStdev::do_clone() const
     return std::make_unique<ErrorRateStdev>(*this);
 }
 
+Measure::ResultType ErrorRateStdev::get_default_result() const
+{
+    return std::vector<boost::optional<double>> {};
+}
+
 namespace {
 
 auto calculate_error_rate(const AlignedRead& read) noexcept

@@ -22,6 +22,11 @@ std::unique_ptr<Measure> FilteredReadFraction::do_clone() const
     return std::make_unique<FilteredReadFraction>(*this);
 }
 
+Measure::ResultType FilteredReadFraction::get_default_result() const
+{
+    return std::vector<double> {};
+}
+
 Measure::ResultType FilteredReadFraction::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     if (filtering_depth_.cardinality() == Measure::ResultCardinality::num_samples) {

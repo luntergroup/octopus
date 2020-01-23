@@ -21,6 +21,11 @@ std::unique_ptr<Measure> ClippedReadFraction::do_clone() const
     return std::make_unique<ClippedReadFraction>(*this);
 }
 
+Measure::ResultType ClippedReadFraction::get_default_result() const
+{
+    return boost::optional<double> {};
+}
+
 namespace {
 
 auto clip_fraction(const AlignedRead& read) noexcept

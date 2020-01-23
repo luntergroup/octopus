@@ -25,6 +25,11 @@ std::unique_ptr<Measure> AlleleDepth::do_clone() const
     return std::make_unique<AlleleDepth>(*this);
 }
 
+Measure::ResultType AlleleDepth::get_default_result() const
+{
+    return std::vector<boost::optional<int>> {};
+}
+
 namespace {
 
 bool is_canonical(const VcfRecord::NucleotideSequence& allele) noexcept

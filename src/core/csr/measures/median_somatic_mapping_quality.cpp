@@ -33,6 +33,11 @@ std::unique_ptr<Measure> MedianSomaticMappingQuality::do_clone() const
     return std::make_unique<MedianSomaticMappingQuality>(*this);
 }
 
+Measure::ResultType MedianSomaticMappingQuality::get_default_result() const
+{
+    return std::vector<boost::optional<int>> {};
+}
+
 namespace {
 
 auto extract_called_alleles(const VcfRecord& call, const VcfRecord::SampleName& sample)

@@ -29,6 +29,11 @@ std::unique_ptr<Measure> ReadTailBias::do_clone() const
     return std::make_unique<ReadTailBias>(*this);
 }
 
+Measure::ResultType ReadTailBias::get_default_result() const
+{
+    return std::vector<double> {};
+}
+
 void ReadTailBias::do_set_parameters(std::vector<std::string> params)
 {
     if (params.size() != 1) {

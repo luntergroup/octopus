@@ -22,6 +22,11 @@ std::unique_ptr<Measure> IsSomatic::do_clone() const
     return std::make_unique<IsSomatic>(*this);
 }
 
+Measure::ResultType IsSomatic::get_default_result() const
+{
+    return bool {};
+}
+
 namespace {
 
 bool is_somatic_sample(const VcfRecord& call, const VcfRecord::SampleName& sample, const unsigned sample_ploidy)

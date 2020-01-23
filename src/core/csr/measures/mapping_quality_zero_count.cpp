@@ -20,6 +20,11 @@ std::unique_ptr<Measure> MappingQualityZeroCount::do_clone() const
     return std::make_unique<MappingQualityZeroCount>(*this);
 }
 
+Measure::ResultType MappingQualityZeroCount::get_default_result() const
+{
+    return std::size_t {};
+}
+
 Measure::ResultType MappingQualityZeroCount::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     if (recalculate_) {

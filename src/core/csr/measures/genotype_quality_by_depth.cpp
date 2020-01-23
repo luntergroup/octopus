@@ -25,6 +25,11 @@ std::unique_ptr<Measure> GenotypeQualityByDepth::do_clone() const
     return std::make_unique<GenotypeQualityByDepth>(*this);
 }
 
+Measure::ResultType GenotypeQualityByDepth::get_default_result() const
+{
+    return std::vector<boost::optional<double>> {};
+}
+
 Measure::ResultType GenotypeQualityByDepth::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     const auto depths = boost::get<std::vector<std::size_t>>(depth_.evaluate(call, facets));

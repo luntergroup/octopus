@@ -41,6 +41,11 @@ std::unique_ptr<Measure> StrandBias::do_clone() const
     return std::make_unique<StrandBias>(*this);
 }
 
+Measure::ResultType StrandBias::get_default_result() const
+{
+    return std::vector<boost::optional<double>> {};
+}
+
 void StrandBias::do_set_parameters(std::vector<std::string> params)
 {
     if (params.size() != 1) {

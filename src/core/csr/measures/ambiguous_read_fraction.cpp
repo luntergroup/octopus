@@ -26,6 +26,11 @@ std::unique_ptr<Measure> AmbiguousReadFraction::do_clone() const
     return std::make_unique<AmbiguousReadFraction>(*this);
 }
 
+Measure::ResultType AmbiguousReadFraction::get_default_result() const
+{
+    return std::vector<boost::optional<double>> {};
+}
+
 Measure::ResultType AmbiguousReadFraction::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     const auto& samples = get_value<Samples>(facets.at("Samples"));

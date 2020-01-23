@@ -18,6 +18,11 @@ std::unique_ptr<Measure> VariantLength::do_clone() const
     return std::make_unique<VariantLength>(*this);
 }
 
+Measure::ResultType VariantLength::get_default_result() const
+{
+    return std::vector<int> {};
+}
+
 Measure::ResultType VariantLength::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     const auto& samples = get_value<Samples>(facets.at("Samples"));

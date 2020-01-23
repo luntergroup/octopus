@@ -28,6 +28,11 @@ std::unique_ptr<Measure> ErrorRate::do_clone() const
     return std::make_unique<ErrorRate>(*this);
 }
 
+Measure::ResultType ErrorRate::get_default_result() const
+{
+    return std::vector<boost::optional<double>> {};
+}
+
 namespace {
 
 boost::optional<double> 

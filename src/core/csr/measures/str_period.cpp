@@ -25,6 +25,11 @@ std::unique_ptr<Measure> STRPeriod::do_clone() const
     return std::make_unique<STRPeriod>(*this);
 }
 
+Measure::ResultType STRPeriod::get_default_result() const
+{
+    return int {};
+}
+
 namespace {
 
 template <typename Region>

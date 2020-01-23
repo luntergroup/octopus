@@ -18,6 +18,11 @@ std::unique_ptr<Measure> IsRefcall::do_clone() const
     return std::make_unique<IsRefcall>(*this);
 }
 
+Measure::ResultType IsRefcall::get_default_result() const
+{
+    return bool {};
+}
+
 Measure::ResultType IsRefcall::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     if (report_sample_status_) {

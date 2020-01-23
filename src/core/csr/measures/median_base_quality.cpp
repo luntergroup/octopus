@@ -28,6 +28,11 @@ std::unique_ptr<Measure> MedianBaseQuality::do_clone() const
     return std::make_unique<MedianBaseQuality>(*this);
 }
 
+Measure::ResultType MedianBaseQuality::get_default_result() const
+{
+    return std::vector<boost::optional<int>> {};
+}
+
 namespace {
 
 bool is_canonical(const VcfRecord::NucleotideSequence& allele) noexcept

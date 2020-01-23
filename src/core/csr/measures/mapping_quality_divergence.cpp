@@ -30,6 +30,11 @@ std::unique_ptr<Measure> MappingQualityDivergence::do_clone() const
     return std::make_unique<MappingQualityDivergence>(*this);
 }
 
+Measure::ResultType MappingQualityDivergence::get_default_result() const
+{
+    return std::vector<boost::optional<int>> {};
+}
+
 namespace {
 
 using MappingQualityVector = std::vector<AlignedRead::MappingQuality>;
