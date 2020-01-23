@@ -13,6 +13,7 @@
 #include "concepts/mappable.hpp"
 #include "concepts/comparable.hpp"
 #include "concepts/indexed.hpp"
+#include "containers/mappable_block.hpp"
 #include "haplotype.hpp"
 
 namespace octopus {
@@ -24,6 +25,7 @@ class IndexedHaplotype : public Mappable<IndexedHaplotype<IndexTp>>
 {
 public:
     using IndexType = IndexTp;
+    using MappingDomain = Haplotype::MappingDomain;
     
     IndexedHaplotype() = delete;
     
@@ -72,38 +74,59 @@ private:
 };
 
 template <typename IndexType, typename H>
-IndexedHaplotype<IndexType> index(H&& haplotype, IndexType index)
+IndexedHaplotype<IndexType> index(H&& haplotype, IndexType idx)
 {
-    return IndexedHaplotype<IndexType> {std::forward<H>(haplotype), index};
+    return IndexedHaplotype<IndexType> {std::forward<H>(haplotype), idx};
 }
 
-template <typename IndexType, typename InputIterator, typename OutputIterator,
-          typename = std::enable_if_t<std::is_same<typename std::iterator_traits<InputIterator>::value_type, Haplotype>::value_type>>
+template <typename IndexType, typename InputIterator, typename OutputIterator>
 OutputIterator
-index(InputIterator first, InputIterator last, OutputIterator result, IndexType index = IndexType {0})
+index(InputIterator first, InputIterator last, OutputIterator result, IndexType init = IndexType {0})
 {
-    return std::transform(first, last, result, [&] (auto&& h) { return index(std::forward<decltype(h)>(h), index++); });
+    return std::transform(first, last, result, [&] (auto&& h) { return index(std::forward<decltype(h)>(h), init++); });
 }
 
 template <typename IndexType = std::size_t>
 std::vector<IndexedHaplotype<IndexType>>
-index(const std::vector<Haplotype>& haplotypes, const IndexType index = IndexType {0})
+index(const std::vector<Haplotype>& haplotypes, const IndexType init = IndexType {0})
 {
     std::vector<IndexedHaplotype<IndexType>> result {};
     result.reserve(haplotypes.size());
     index(std::cbegin(haplotypes), std::cend(haplotypes),
-          std::back_inserter(result), index);
+          std::back_inserter(result), init);
     return result;
 }
 
 template <typename IndexType = std::size_t>
 std::vector<IndexedHaplotype<IndexType>>
-index(std::vector<Haplotype>&& haplotypes, const IndexType index = IndexType {0})
+index(std::vector<Haplotype>&& haplotypes, const IndexType init = IndexType {0})
 {
     std::vector<IndexedHaplotype<IndexType>> result {};
     result.reserve(haplotypes.size());
     index(std::make_move_iterator(std::begin(haplotypes)), std::make_move_iterator(std::end(haplotypes)),
-          std::back_inserter(result), index);
+          std::back_inserter(result), init);
+    return result;
+}
+
+template <typename IndexType = std::size_t>
+MappableBlock<IndexedHaplotype<IndexType>>
+index(const MappableBlock<Haplotype>& haplotypes, const IndexType init = IndexType {0})
+{
+    MappableBlock<IndexedHaplotype<IndexType>> result {mapped_region(haplotypes)};
+    result.reserve(haplotypes.size());
+    index(std::cbegin(haplotypes), std::cend(haplotypes),
+          std::back_inserter(result), init);
+    return result;
+}
+
+template <typename IndexType = std::size_t>
+MappableBlock<IndexedHaplotype<IndexType>>
+index(MappableBlock<Haplotype>&& haplotypes, const IndexType init = IndexType {0})
+{
+    MappableBlock<IndexedHaplotype<IndexType>> result {mapped_region(haplotypes)};
+    result.reserve(haplotypes.size());
+    index(std::make_move_iterator(std::begin(haplotypes)), std::make_move_iterator(std::end(haplotypes)),
+          std::back_inserter(result), init);
     return result;
 }
 
@@ -127,7 +150,7 @@ unindex(InputIterator first, InputIterator last, OutputIterator result)
 
 template <typename IndexType>
 std::vector<Haplotype>
-unindex(const std::vector<Haplotype>& haplotypes)
+unindex(const std::vector<IndexedHaplotype<IndexType>>& haplotypes)
 {
     std::vector<Haplotype> result {};
     result.reserve(haplotypes.size());
@@ -137,10 +160,32 @@ unindex(const std::vector<Haplotype>& haplotypes)
 }
 
 template <typename IndexType = std::size_t>
-std::vector<IndexedHaplotype<IndexType>>
-index(std::vector<Haplotype>&& haplotypes)
+std::vector<Haplotype>
+unindex(std::vector<IndexedHaplotype<IndexType>>&& haplotypes)
 {
     std::vector<Haplotype> result {};
+    result.reserve(haplotypes.size());
+    unindex(std::make_move_iterator(std::begin(haplotypes)), std::make_move_iterator(std::end(haplotypes)),
+            std::back_inserter(result));
+    return result;
+}
+
+template <typename IndexType>
+MappableBlock<Haplotype>
+unindex(const MappableBlock<IndexedHaplotype<IndexType>>& haplotypes)
+{
+    MappableBlock<Haplotype> result {};
+    result.reserve(haplotypes.size());
+    unindex(std::cbegin(haplotypes), std::cend(haplotypes),
+            std::back_inserter(result));
+    return result;
+}
+
+template <typename IndexType = std::size_t>
+MappableBlock<Haplotype>
+unindex(MappableBlock<IndexedHaplotype<IndexType>>&& haplotypes)
+{
+    MappableBlock<Haplotype> result {};
     result.reserve(haplotypes.size());
     unindex(std::make_move_iterator(std::begin(haplotypes)), std::make_move_iterator(std::end(haplotypes)),
             std::back_inserter(result));
@@ -153,7 +198,7 @@ template <typename>
 struct IsIndexedHaplotype : std::false_type {};
 template <typename IndexType>
 struct IsIndexedHaplotype<IndexedHaplotype<IndexType>> : std::true_type {
-    static_assert(is_indexed<IndexedHaplotype<IndexType>>(), "");
+    static_assert(is_indexed<IndexedHaplotype<IndexType>>, "");
 };
 
 } // namespace detail

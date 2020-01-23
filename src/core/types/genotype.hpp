@@ -27,24 +27,35 @@
 #include "utils/reorder.hpp"
 #include "allele.hpp"
 #include "haplotype.hpp"
+#include "indexed_haplotype.hpp"
 
 namespace octopus {
 
+namespace detail {
+
 template <typename T>
-using EnableIfGenotypable = std::enable_if_t<
-                                std::is_same<T, Haplotype>::value
-                                || std::is_same<T, Allele>::value
-                                || std::is_same<T, ContigAllele>::value
-                            >;
+constexpr bool is_allele = std::is_same<T, Allele>::value || std::is_same<T, ContigAllele>::value;
+template <typename T>
+constexpr bool is_haplotype_or_indexed_haplotype = std::is_same<T, Haplotype>::value || is_indexed_haplotype<T>;
 
-template <typename MappableType, typename = EnableIfGenotypable<MappableType>> class Genotype;
+} // namespace detail
 
-template <typename MappableType>
-class Genotype<MappableType> : public Equitable<Genotype<MappableType>>, public Mappable<Genotype<MappableType>>
+template <typename T>
+constexpr bool is_genotypeable = detail::is_allele<T> || detail::is_haplotype_or_indexed_haplotype<T>;
+
+//template <typename MappableType, typename = std::enable_if_t<is_genotypeable<MappableType>>> class Genotype;
+
+template <typename MappableType, typename Enable = void>
+class Genotype : public Equitable<Genotype<MappableType>>, public Mappable<Genotype<MappableType>>
 {
 public:
+    static_assert(is_genotypeable<MappableType>, "");
+    
     using ElementType   = MappableType;
     using MappingDomain = RegionType<ElementType>;
+    
+    using ordered = std::false_type;
+    using share_memory = std::false_type;
     
     Genotype() = default;
     
@@ -85,26 +96,37 @@ private:
 public:
     using Iterator = typename decltype(elements_)::const_iterator;
     
-    Iterator begin() const noexcept;
-    Iterator end() const noexcept ;
-    Iterator cbegin() const noexcept ;
-    Iterator cend() const noexcept ;
+    Iterator begin() const noexcept { return std::begin(elements_); }
+    Iterator end() const noexcept { return std::end(elements_); }
+    Iterator cbegin() const noexcept { return std::cbegin(elements_); }
+    Iterator cend() const noexcept { return std::cend(elements_); }
 };
 
-template <>
-class Genotype<Haplotype> : public Equitable<Genotype<Haplotype>>, public Mappable<Genotype<Haplotype>>
+namespace detail {
+
+template <typename MappableType>
+using enable_if_haplotypelike = std::enable_if_t<is_haplotype_or_indexed_haplotype<MappableType>>;
+
+} // namespace detail
+
+template <typename MappableType>
+class Genotype<MappableType, detail::enable_if_haplotypelike<MappableType>>
+    : public Equitable<Genotype<MappableType>>, public Mappable<Genotype<MappableType>>
 {
 public:
-    using ElementType   = Haplotype;
-    using MappingDomain = Haplotype::MappingDomain;
+    using ElementType   = MappableType;
+    using MappingDomain = typename MappableType::MappingDomain;
+    
+    using ordered = std::true_type;
+    using share_memory = std::true_type;
     
     Genotype() = default;
     
     explicit Genotype(unsigned ploidy);
-    explicit Genotype(unsigned ploidy, const Haplotype& init);
-    explicit Genotype(unsigned ploidy, const std::shared_ptr<Haplotype>& init);
-    explicit Genotype(std::initializer_list<Haplotype> elements);
-    explicit Genotype(std::initializer_list<std::shared_ptr<Haplotype>> elements);
+    explicit Genotype(unsigned ploidy, const ElementType& init);
+    explicit Genotype(unsigned ploidy, const std::shared_ptr<ElementType>& init);
+    explicit Genotype(std::initializer_list<ElementType> elements);
+    explicit Genotype(std::initializer_list<std::shared_ptr<ElementType>> elements);
     
     Genotype(const Genotype&)            = default;
     Genotype& operator=(const Genotype&) = default;
@@ -114,28 +136,28 @@ public:
     ~Genotype() = default;
     
     template <typename T> void emplace(T&& element);
-    void emplace(const std::shared_ptr<Haplotype>& element);
+    void emplace(const std::shared_ptr<ElementType>& element);
     
-    const Haplotype& operator[](unsigned n) const;
+    const ElementType& operator[](unsigned n) const;
     
     const GenomicRegion& mapped_region() const noexcept;
     
     unsigned ploidy() const noexcept;
     
-    bool contains(const Haplotype& haplotype) const;
-    unsigned count(const Haplotype& haplotype) const;
+    bool contains(const ElementType& haplotype) const;
+    unsigned count(const ElementType& haplotype) const;
     
     bool is_homozygous() const;
     unsigned zygosity() const;
     
-    Genotype<Haplotype> collapse() const;
+    Genotype<ElementType> collapse() const;
     
-    std::vector<Haplotype> copy_unique() const;
-    std::vector<std::reference_wrapper<const Haplotype>> copy_unique_ref() const;
+    std::vector<ElementType> copy_unique() const;
+    std::vector<std::reference_wrapper<const ElementType>> copy_unique_ref() const;
     std::vector<unsigned> unique_counts() const;
     
 private:
-    using HaplotypePtr  = std::shared_ptr<Haplotype>;
+    using HaplotypePtr  = std::shared_ptr<ElementType>;
     using BaseContainer = std::vector<HaplotypePtr>;
     using BaseIterator  = typename BaseContainer::const_iterator;
     
@@ -143,90 +165,90 @@ private:
     
     struct HaplotypePtrLess
     {
-        bool operator()(const HaplotypePtr& lhs, const HaplotypePtr& rhs) const;
-        bool operator()(const Haplotype& lhs, const HaplotypePtr& rhs) const;
-        bool operator()(const HaplotypePtr& lhs, const Haplotype& rhs) const;
+        bool operator()(const HaplotypePtr& lhs, const HaplotypePtr& rhs) const { return *lhs < *rhs; }
+        bool operator()(const ElementType& lhs, const HaplotypePtr& rhs) const { return lhs < *rhs; }
+        bool operator()(const HaplotypePtr& lhs, const ElementType& rhs) const  { return *lhs < rhs; }
     };
     
     struct HaplotypePtrEqual
     {
-        bool operator()(const HaplotypePtr& lhs, const HaplotypePtr& rhs) const;
-        bool operator()(const Haplotype& lhs, const HaplotypePtr& rhs) const;
-        bool operator()(const HaplotypePtr& lhs, const Haplotype& rhs) const;
+        bool operator()(const HaplotypePtr& lhs, const HaplotypePtr& rhs) const { return lhs == rhs || *lhs == *rhs; }
+        bool operator()(const ElementType& lhs, const HaplotypePtr& rhs) const { return lhs == *rhs; }
+        bool operator()(const HaplotypePtr& lhs, const ElementType& rhs) const { return *lhs == rhs; }
     };
     
 public:
     class Iterator : public BaseIterator
     {
     public:
-        using value_type = Haplotype;
-        using reference  = const Haplotype&;
-        using pointer    = const Haplotype*;
+        using value_type = typename BaseIterator::value_type::element_type;
+        using reference  = const value_type&;
+        using pointer    = const value_type*;
         
-        Iterator(BaseIterator it);
-        reference operator*() const noexcept;
-        pointer operator->() const noexcept;
+        Iterator(BaseIterator it) : BaseIterator {it} {}
+        reference operator*() const noexcept { return *BaseIterator::operator*(); }
+        pointer operator->() const noexcept { return std::addressof(this->operator*()); }
     };
     
-    Iterator begin() const noexcept;
-    Iterator end() const noexcept;
-    Iterator cbegin() const noexcept;
-    Iterator cend() const noexcept;
+    Iterator begin() const noexcept { return std::begin(haplotypes_); }
+    Iterator end() const noexcept { return std::end(haplotypes_); }
+    Iterator cbegin() const noexcept { return std::cbegin(haplotypes_); }
+    Iterator cend() const noexcept { return std::cend(haplotypes_); }
 };
 
 // Genotype<MappableType>
 
-template <typename MappableType>
+template <typename MappableType, typename Enable>
 template <typename T>
-void Genotype<MappableType>::emplace(T&& element)
+void Genotype<MappableType, Enable>::emplace(T&& element)
 {
     elements_.emplace_back(std::forward<T>(element));
 }
 
-template <typename MappableType>
-Genotype<MappableType>::Genotype(const unsigned ploidy)
+template <typename MappableType, typename Enable>
+Genotype<MappableType, Enable>::Genotype(const unsigned ploidy)
 : elements_ {}
 {
     elements_.reserve(ploidy);
 }
 
-template <typename MappableType>
-Genotype<MappableType>::Genotype(const unsigned ploidy, const MappableType& init)
+template <typename MappableType, typename Enable>
+Genotype<MappableType, Enable>::Genotype(const unsigned ploidy, const MappableType& init)
 : elements_ {ploidy, init}
 {}
 
-template <typename MappableType>
-Genotype<MappableType>::Genotype(std::initializer_list<MappableType> elements)
+template <typename MappableType, typename Enable>
+Genotype<MappableType, Enable>::Genotype(std::initializer_list<MappableType> elements)
 : elements_ {elements}
 {}
 
-template <typename MappableType>
-const typename Genotype<MappableType>::MappingDomain& Genotype<MappableType>::mapped_region() const noexcept
+template <typename MappableType, typename Enable>
+const typename Genotype<MappableType, Enable>::MappingDomain& Genotype<MappableType, Enable>::mapped_region() const noexcept
 {
     return elements_.front().mapped_region();
 }
 
-template <typename MappableType>
-const MappableType& Genotype<MappableType>::operator[](const unsigned n) const
+template <typename MappableType, typename Enable>
+const MappableType& Genotype<MappableType, Enable>::operator[](const unsigned n) const
 {
     return elements_[n];
 }
 
-template <typename MappableType>
-unsigned Genotype<MappableType>::ploidy() const noexcept
+template <typename MappableType, typename Enable>
+unsigned Genotype<MappableType, Enable>::ploidy() const noexcept
 {
     return elements_.size();
 }
 
-template <typename MappableType>
-bool Genotype<MappableType>::is_homozygous() const
+template <typename MappableType, typename Enable>
+bool Genotype<MappableType, Enable>::is_homozygous() const
 {
     return std::adjacent_find(std::cbegin(elements_), std::cend(elements_),
                               std::not_equal_to<Allele>()) == std::cend(elements_);
 }
 
-template <typename MappableType>
-unsigned Genotype<MappableType>::zygosity() const
+template <typename MappableType, typename Enable>
+unsigned Genotype<MappableType, Enable>::zygosity() const
 {
     if (ploidy() == 1 || is_homozygous()) {
         return 1;
@@ -236,20 +258,20 @@ unsigned Genotype<MappableType>::zygosity() const
     return copy_unique().size();
 }
 
-template <typename MappableType>
-bool Genotype<MappableType>::contains(const MappableType& element) const
+template <typename MappableType, typename Enable>
+bool Genotype<MappableType, Enable>::contains(const MappableType& element) const
 {
     return std::find(std::cbegin(elements_), std::cend(elements_), element) != std::cend(elements_);
 }
 
-template <typename MappableType>
-unsigned Genotype<MappableType>::count(const MappableType& element) const
+template <typename MappableType, typename Enable>
+unsigned Genotype<MappableType, Enable>::count(const MappableType& element) const
 {
     return std::count(std::cbegin(elements_), std::cend(elements_), element);
 }
 
-template <typename MappableType>
-Genotype<MappableType> Genotype<MappableType>::collapse() const
+template <typename MappableType, typename Enable>
+Genotype<MappableType> Genotype<MappableType, Enable>::collapse() const
 {
     if (ploidy() < 2) return *this;
     Genotype<MappableType> result {ploidy()};
@@ -262,8 +284,8 @@ Genotype<MappableType> Genotype<MappableType>::collapse() const
     return result;
 }
 
-template <typename MappableType>
-std::vector<MappableType> Genotype<MappableType>::copy_unique() const
+template <typename MappableType, typename Enable>
+std::vector<MappableType> Genotype<MappableType, Enable>::copy_unique() const
 {
     auto result = elements_;
     std::sort(std::begin(result), std::end(result));
@@ -271,69 +293,201 @@ std::vector<MappableType> Genotype<MappableType>::copy_unique() const
     return result;
 }
 
-template <typename MappableType>
-void Genotype<MappableType>::reorder_alleles(const std::vector<unsigned>& order)
+template <typename MappableType, typename Enable>
+void Genotype<MappableType, Enable>::reorder_alleles(const std::vector<unsigned>& order)
 {
     assert(order.size() == elements_.size());
     reorder(std::cbegin(order), std::cend(order), std::begin(elements_));
 }
 
+// Genotype<IndexedHaplotype>
+
 template <typename MappableType>
-typename Genotype<MappableType>::Iterator Genotype<MappableType>::begin() const noexcept
+Genotype<MappableType, detail::enable_if_haplotypelike<MappableType>>::Genotype(const unsigned ploidy)
+: haplotypes_ {}
 {
-    return std::begin(elements_);
+    haplotypes_.reserve(ploidy);
 }
 
 template <typename MappableType>
-typename Genotype<MappableType>::Iterator Genotype<MappableType>::end() const noexcept
+Genotype<MappableType, detail::enable_if_haplotypelike<MappableType>>::Genotype(const unsigned ploidy, const MappableType& init)
 {
-    return std::end(elements_);
+    if (ploidy > 0) {
+        haplotypes_.resize(ploidy);
+        haplotypes_.front() = std::make_shared<Haplotype>(init);
+        std::fill_n(std::next(std::begin(haplotypes_)), ploidy - 1, haplotypes_.front());
+    }
 }
 
 template <typename MappableType>
-typename Genotype<MappableType>::Iterator Genotype<MappableType>::cbegin() const noexcept
+Genotype<MappableType, detail::enable_if_haplotypelike<MappableType>>::Genotype(const unsigned ploidy, const std::shared_ptr<MappableType>& init)
+: haplotypes_ {ploidy, init}
+{}
+
+template <typename MappableType>
+Genotype<MappableType, detail::enable_if_haplotypelike<MappableType>>::Genotype(std::initializer_list<MappableType> haplotypes)
 {
-    return std::cbegin(elements_);
+    std::transform(std::cbegin(haplotypes), std::cend(haplotypes), std::back_inserter(haplotypes_),
+                   [] (const auto& haplotype) { return std::make_shared<Haplotype>(haplotype); });
+    std::sort(std::begin(haplotypes_), std::end(haplotypes_), HaplotypePtrLess {});
 }
 
 template <typename MappableType>
-typename Genotype<MappableType>::Iterator Genotype<MappableType>::cend() const noexcept
+Genotype<MappableType, detail::enable_if_haplotypelike<MappableType>>::Genotype(std::initializer_list<std::shared_ptr<MappableType>> haplotypes)
+: haplotypes_ {haplotypes}
 {
-    return std::cend(elements_);
+    std::sort(std::begin(haplotypes_), std::end(haplotypes_), HaplotypePtrLess {});
 }
 
-// Genotype<Haplotype>
-
+template <typename MappableType>
 template <typename T>
-void Genotype<Haplotype>::emplace(T&& haplotype)
+void Genotype<MappableType, detail::enable_if_haplotypelike<MappableType>>::emplace(T&& haplotype)
 {
-    haplotypes_.emplace_back(std::make_shared<Haplotype>(std::forward<T>(haplotype)));
+    haplotypes_.emplace_back(std::make_shared<MappableType>(std::forward<T>(haplotype)));
     std::inplace_merge(std::begin(haplotypes_), std::prev(std::end(haplotypes_)),
                        std::end(haplotypes_), HaplotypePtrLess {});
+}
+
+namespace detail {
+
+template <typename T, typename BinaryPredicate>
+typename std::vector<T>::iterator
+insert_sorted(T value, std::vector<T>& values, BinaryPredicate compare)
+{
+    auto position = std::upper_bound(std::begin(values), std::end(values), value, compare);
+    return values.insert(position, std::move(value));
+}
+
+} // namespace detail
+
+template <typename MappableType>
+void Genotype<MappableType, detail::enable_if_haplotypelike<MappableType>>::emplace(const std::shared_ptr<MappableType>& haplotype)
+{
+    detail::insert_sorted(haplotype, haplotypes_, HaplotypePtrLess {});
+}
+
+template <typename MappableType>
+const MappableType& Genotype<MappableType, detail::enable_if_haplotypelike<MappableType>>::operator[](const unsigned n) const
+{
+    return *haplotypes_[n];
+}
+
+template <typename MappableType>
+const GenomicRegion& Genotype<MappableType, detail::enable_if_haplotypelike<MappableType>>::mapped_region() const noexcept
+{
+    return haplotypes_.front()->mapped_region();
+}
+
+template <typename MappableType>
+unsigned Genotype<MappableType, detail::enable_if_haplotypelike<MappableType>>::ploidy() const noexcept
+{
+    return static_cast<unsigned>(haplotypes_.size());
+}
+
+template <typename MappableType>
+bool Genotype<MappableType, detail::enable_if_haplotypelike<MappableType>>::is_homozygous() const
+{
+    return haplotypes_.front() == haplotypes_.back() ||  *haplotypes_.front() == *haplotypes_.back();
+}
+
+template <typename MappableType>
+unsigned Genotype<MappableType, detail::enable_if_haplotypelike<MappableType>>::zygosity() const
+{
+    if (ploidy() < 2) return ploidy();
+    unsigned result {0};
+    for (auto it = std::cbegin(haplotypes_), last = std::cend(haplotypes_); it != last; ++result) {
+        // naive algorithm faster in practice than binary searching
+        it = std::find_if_not(std::next(it), last, [it] (const auto& x) { return x == *it || *x == **it; });
+    }
+    return result;
+}
+
+template <typename MappableType>
+Genotype<MappableType>
+Genotype<MappableType, detail::enable_if_haplotypelike<MappableType>>::collapse() const
+{
+    if (zygosity() == ploidy()) return *this;
+    std::vector<std::reference_wrapper<const HaplotypePtr>> unique {};
+    unique.reserve(ploidy());
+    std::unique_copy(std::cbegin(haplotypes_), std::cend(haplotypes_), std::back_inserter(unique), HaplotypePtrEqual {});
+    Genotype<Haplotype> result {static_cast<unsigned>(unique.size())};
+    for (const auto& haplotype_ptr : unique) result.emplace(haplotype_ptr.get());
+    return result;
+}
+
+template <typename MappableType>
+bool Genotype<MappableType, detail::enable_if_haplotypelike<MappableType>>::contains(const MappableType& haplotype) const
+{
+    return std::binary_search(std::cbegin(haplotypes_), std::cend(haplotypes_), haplotype, HaplotypePtrLess {});
+}
+
+template <typename MappableType>
+unsigned Genotype<MappableType, detail::enable_if_haplotypelike<MappableType>>::count(const MappableType& haplotype) const
+{
+    const auto equal_range = std::equal_range(std::cbegin(haplotypes_), std::cend(haplotypes_),
+                                              haplotype, HaplotypePtrLess {});
+    return static_cast<unsigned>(std::distance(equal_range.first, equal_range.second));
+}
+
+template <typename MappableType>
+std::vector<MappableType>
+Genotype<MappableType, detail::enable_if_haplotypelike<MappableType>>::copy_unique() const
+{
+    std::vector<std::reference_wrapper<const HaplotypePtr>> ptr_copy {};
+    ptr_copy.reserve(ploidy());
+    std::unique_copy(std::cbegin(haplotypes_), std::cend(haplotypes_), std::back_inserter(ptr_copy), HaplotypePtrEqual {});
+    std::vector<Haplotype> result {};
+    result.reserve(ptr_copy.size());
+    std::transform(std::cbegin(ptr_copy), std::cend(ptr_copy), std::back_inserter(result),
+                   [] (const auto& ptr) { return *ptr.get(); });
+    return result;
+}
+
+template <typename MappableType>
+std::vector<std::reference_wrapper<const MappableType>>
+Genotype<MappableType, detail::enable_if_haplotypelike<MappableType>>::copy_unique_ref() const
+{
+    std::vector<std::reference_wrapper<const MappableType>> result {};
+    result.reserve(ploidy());
+    std::transform(std::cbegin(haplotypes_), std::cend(haplotypes_), std::back_inserter(result),
+                   [] (const HaplotypePtr& haplotype) { return std::cref(*haplotype); });
+    result.erase(std::unique(std::begin(result), std::end(result)), std::end(result));
+    return result;
+}
+
+template <typename MappableType>
+std::vector<unsigned>
+Genotype<MappableType, detail::enable_if_haplotypelike<MappableType>>::unique_counts() const
+{
+    std::vector<unsigned> result {};
+    result.reserve(haplotypes_.size());
+    for (auto itr = std::cbegin(haplotypes_), last = std::cend(haplotypes_); itr != last;) {
+        auto next = std::find_if_not(std::next(itr), last, [itr] (const auto& x) { return *x == **itr; });
+        result.push_back(std::distance(itr, next));
+        itr = next;
+    }
+    return result;
 }
 
 // non-member methods
 
 template <typename MappableType>
-bool is_haploid(const Genotype<MappableType>& genotype)
+bool is_haploid(const Genotype<MappableType>& genotype) noexcept
 {
     return genotype.ploidy() == 1;
 }
-
 template <typename MappableType>
-bool is_diploid(const Genotype<MappableType>& genotype)
+bool is_diploid(const Genotype<MappableType>& genotype) noexcept
 {
     return genotype.ploidy() == 2;
 }
-
 template <typename MappableType>
-bool is_triploid(const Genotype<MappableType>& genotype)
+bool is_triploid(const Genotype<MappableType>& genotype) noexcept
 {
     return genotype.ploidy() == 3;
 }
-
 template <typename MappableType>
-bool is_tetraploid(const Genotype<MappableType>& genotype)
+bool is_tetraploid(const Genotype<MappableType>& genotype) noexcept
 {
     return genotype.ploidy() == 4;
 }
@@ -386,6 +540,9 @@ auto copy_each_basic(const Container& genotypes, const GenomicRegion& region)
     return result;
 }
 
+template <typename MappableType>
+struct share_memory : public Genotype<MappableType>::share_memory {};
+
 template <typename T>
 struct CopyType
 {
@@ -432,9 +589,6 @@ auto copy_each_cached(const Container& genotypes, const GenomicRegion& region, s
     return result;
 }
 
-template <typename MappableType>
-struct ShareMemory : public std::is_same<MappableType, Haplotype> {};
-
 template <typename T>
 void emplace(const std::shared_ptr<T>& element, Genotype<T>& genotype)
 {
@@ -476,10 +630,13 @@ template <typename MappableType, typename Container>
 auto copy_each_cached(const Container& genotypes, const GenomicRegion& region)
 {
     using MappableType2 = copy_type<typename Container::value_type>;
-    return copy_each_cached<MappableType>(genotypes, region, ShareMemory<MappableType2> {});
+    return copy_each_cached<MappableType>(genotypes, region, share_memory<MappableType2> {});
 }
 
 } // namespace detail
+
+template <typename GenotypeType>
+constexpr bool is_ordered = GenotypeType::ordered::value;
 
 template <typename MappableType, typename Container>
 std::vector<Genotype<MappableType>> copy_each(const Container& genotypes, const GenomicRegion& region)
@@ -914,9 +1071,6 @@ auto do_generate_all_genotypes(const Range& elements, const unsigned ploidy,
     return result_itr;
 }
 
-template <typename MappableType>
-struct RequiresSharedMemory : public std::is_same<MappableType, Haplotype> {};
-
 template <typename Range>
 auto 
 generate_all_genotypes(const Range& elements, const unsigned ploidy,
@@ -1008,7 +1162,7 @@ auto
 generate_all_genotypes(const Range& elements, const unsigned ploidy)
 {
     using MappableType = detail::value_type_t<typename Range::value_type>;
-    return detail::generate_all_genotypes(elements, ploidy, detail::RequiresSharedMemory<MappableType> {});
+    return detail::generate_all_genotypes(elements, ploidy, detail::share_memory<MappableType> {});
 }
 
 template <typename Range>
@@ -1017,7 +1171,7 @@ generate_all_genotypes(const Range& elements, const unsigned ploidy,
                        std::vector<GenotypeIndex>& indices)
 {
     using MappableType = detail::value_type_t<typename Range::value_type>;
-    return detail::generate_all_genotypes(elements, ploidy, indices, detail::RequiresSharedMemory<MappableType> {});
+    return detail::generate_all_genotypes(elements, ploidy, indices, detail::share_memory<MappableType> {});
 }
 
 template <typename Range, typename UnaryPredicate, typename OutputIterator>
@@ -1026,7 +1180,7 @@ generate_all_genotypes(const Range& elements, const unsigned ploidy,
                        UnaryPredicate selector, OutputIterator result_itr)
 {
     using MappableType = detail::value_type_t<typename Range::value_type>;
-    return detail::generate_all_genotypes(elements, ploidy, selector, result_itr, detail::RequiresSharedMemory<MappableType> {});
+    return detail::generate_all_genotypes(elements, ploidy, selector, result_itr, detail::share_memory<MappableType> {});
 }
 
 template <typename Range, typename UnaryPredicate, typename OutputIterator>
@@ -1035,7 +1189,7 @@ generate_all_genotypes(const Range& elements, const unsigned ploidy,
                        UnaryPredicate selector, OutputIterator result_itr, std::vector<GenotypeIndex>& indices)
 {
     using MappableType = detail::value_type_t<typename Range::value_type>;
-    return detail::generate_all_genotypes(elements, ploidy, selector, result_itr, indices, detail::RequiresSharedMemory<MappableType> {});
+    return detail::generate_all_genotypes(elements, ploidy, selector, result_itr, indices, detail::share_memory<MappableType> {});
 }
 
 std::vector<Genotype<Haplotype>>

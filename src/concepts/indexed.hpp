@@ -31,7 +31,7 @@ struct IsIndexedHelper<T,
 } // namespace detail
 
 template <typename T>
-constexpr bool is_indexed = detail::IsIndexedHelper<T>::value_type;
+constexpr bool is_indexed = detail::IsIndexedHelper<T>::value;
 
 } // namespace octopus
 
