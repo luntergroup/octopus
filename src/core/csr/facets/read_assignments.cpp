@@ -47,7 +47,7 @@ ReadAssignments::ReadAssignments(const ReferenceGenome& reference,
             }
             if (!local_reads.empty()) {
                 HaplotypeSupportMap genotype_support {};
-                if (!genotype.is_homozygous()) {
+                if (!is_homozygous(genotype)) {
                     genotype_support = compute_haplotype_support(genotype, local_reads, result_.ambiguous[sample], likelihood_model_);
                 } else {
                     if (is_reference(genotype[0])) {

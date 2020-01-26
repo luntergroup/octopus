@@ -20,12 +20,12 @@
 #include "basics/contig_region.hpp"
 #include "basics/cigar_string.hpp"
 #include "allele.hpp"
+#include "variant.hpp"
 
 namespace octopus {
 
 class GenomicRegion;
 class ReferenceGenome;
-class Variant;
 
 /*
     A Haplotype is an ordered, non-overlapping, set of Alleles, and therefore implictly
@@ -249,6 +249,7 @@ bool is_sequence_empty(const Haplotype& haplotype) noexcept;
 
 bool contains(const Haplotype& lhs, const Allele& rhs);
 bool contains(const Haplotype& lhs, const Haplotype& rhs);
+bool includes(const Haplotype& lhs, const Allele& rhs);
 
 template <typename MappableType>
 MappableType copy(const Haplotype& haplotype, const GenomicRegion& region)

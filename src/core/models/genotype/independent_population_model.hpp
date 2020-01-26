@@ -11,6 +11,7 @@
 
 #include "config/common.hpp"
 #include "core/types/haplotype.hpp"
+#include "core/types/indexed_haplotype.hpp"
 #include "core/types/genotype.hpp"
 #include "genotype_prior_model.hpp"
 #include "individual_model.hpp"
@@ -25,7 +26,7 @@ class IndependentPopulationModel
 {
 public:
     using SampleVector            = std::vector<SampleName>;
-    using GenotypeVector          = MappableBlock<Genotype<Haplotype>>;
+    using GenotypeVector          = MappableBlock<Genotype<IndexedHaplotype<>>>;
     using GenotypeVectorReference = std::reference_wrapper<const GenotypeVector>;
     
     struct Latents

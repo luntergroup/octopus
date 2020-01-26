@@ -199,6 +199,7 @@ set(UTILS_SOURCES
     utils/array_tricks.hpp
     utils/reorder.hpp
     utils/free_memory.hpp
+    utils/erase_if.hpp
 )
 
 set(CORE_SOURCES
@@ -548,6 +549,7 @@ set(CORE_SOURCES
     core/types/phylogeny.hpp
     core/types/phylogeny.cpp
     core/types/indexed_haplotype.hpp
+    core/types/shared_haplotype.hpp
 
     core/calling_components.hpp
     core/calling_components.cpp

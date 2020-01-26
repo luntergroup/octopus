@@ -33,12 +33,10 @@ public:
     
     LogProbability evaluate(const Genotype<Haplotype>& genotype) const { return do_evaluate(genotype); }
     LogProbability evaluate(const Genotype<IndexedHaplotype<>>& genotype) const { return do_evaluate(genotype); }
-    LogProbability evaluate(const GenotypeIndex& genotype) const { return do_evaluate(genotype); }
     
 private:
     virtual LogProbability do_evaluate(const Genotype<Haplotype>& genotype) const = 0;
     virtual LogProbability do_evaluate(const Genotype<IndexedHaplotype<>>& genotype) const = 0;
-    virtual LogProbability do_evaluate(const GenotypeIndex& genotype) const = 0;
     virtual void do_prime(const HaplotypeBlock& haplotypes) {};
     virtual void do_unprime() noexcept {};
     virtual bool check_is_primed() const noexcept = 0;

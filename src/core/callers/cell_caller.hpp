@@ -112,26 +112,32 @@ private:
 class CellCaller::Latents : public Caller::Latents
 {
 public:
+    using IndexedHaplotypeBlock = MappableBlock<IndexedHaplotype<>>;
+    using GenotypeBlock = MappableBlock<Genotype<IndexedHaplotype<>>>;
     using Caller::Latents::HaplotypeProbabilityMap;
     using Caller::Latents::GenotypeProbabilityMap;
     
     Latents() = delete;
     
     Latents(const CellCaller& caller,
-            HaplotypeBlock haplotypes,
-            std::vector<Genotype<Haplotype>> genotypes,
+            IndexedHaplotypeBlock haplotypes,
+            GenotypeBlock genotypes,
             std::vector<model::SingleCellModel::Inferences> inferences);
     
     std::shared_ptr<HaplotypeProbabilityMap> haplotype_posteriors() const noexcept override;
     std::shared_ptr<GenotypeProbabilityMap> genotype_posteriors() const noexcept override;
 
 private:
+    using GenotypeMarginalPosteriorVector = std::vector<double>;
+    using GenotypeMarginalPosteriorMatrix = std::vector<GenotypeMarginalPosteriorVector>;
+    
+    mutable GenotypeMarginalPosteriorMatrix genotype_posteriors_array_;
     mutable std::shared_ptr<GenotypeProbabilityMap> genotype_posteriors_;
     mutable std::shared_ptr<HaplotypeProbabilityMap> haplotype_posteriors_;
     
     const CellCaller& caller_;
-    HaplotypeBlock haplotypes_;
-    std::vector<Genotype<Haplotype>> genotypes_;
+    IndexedHaplotypeBlock haplotypes_;
+    GenotypeBlock genotypes_;
     std::vector<model::SingleCellModel::Inferences> phylogeny_inferences_;
     std::vector<double> phylogeny_posteriors_;
     std::vector<double> phylogeny_size_posteriors_;

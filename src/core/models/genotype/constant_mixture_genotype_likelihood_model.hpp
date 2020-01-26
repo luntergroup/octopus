@@ -21,8 +21,6 @@ public:
     ConstantMixtureGenotypeLikelihoodModel() = delete;
     
     ConstantMixtureGenotypeLikelihoodModel(const HaplotypeLikelihoodArray& likelihoods);
-    ConstantMixtureGenotypeLikelihoodModel(const HaplotypeLikelihoodArray& likelihoods,
-                                           const std::vector<Haplotype>& haplotypes);
     
     ConstantMixtureGenotypeLikelihoodModel(const ConstantMixtureGenotypeLikelihoodModel&)            = default;
     ConstantMixtureGenotypeLikelihoodModel& operator=(const ConstantMixtureGenotypeLikelihoodModel&) = delete;
@@ -33,30 +31,22 @@ public:
     
     const HaplotypeLikelihoodArray& cache() const noexcept;
     
-    void prime(const std::vector<Haplotype>& haplotypes);
-    void unprime() noexcept;
-    bool is_primed() const noexcept;
-    
     LogProbability evaluate(const Genotype<Haplotype>& genotype) const;
     LogProbability evaluate(const Genotype<IndexedHaplotype<>>& genotype) const;
-    LogProbability evaluate(const GenotypeIndex& genotype) const;
     
 private:
     const HaplotypeLikelihoodArray& likelihoods_;
-    std::vector<HaplotypeLikelihoodArray::LikelihoodVectorRef> indexed_likelihoods_;
-    mutable std::vector<HaplotypeLikelihoodArray::LikelihoodVectorRef> likelihood_refs_;
     mutable std::vector<HaplotypeLikelihoodArray::LogProbability> buffer_;
+    mutable std::vector<HaplotypeLikelihoodArray::LikelihoodVectorRef> likelihood_refs_;
     
     // These are just for optimisation
     LogProbability evaluate_haploid(const Genotype<Haplotype>& genotype) const;
     LogProbability evaluate_diploid(const Genotype<Haplotype>& genotype) const;
     LogProbability evaluate_triploid(const Genotype<Haplotype>& genotype) const;
-    LogProbability evaluate_tetraploid(const Genotype<Haplotype>& genotype) const;
     LogProbability evaluate_polyploid(const Genotype<Haplotype>& genotype) const;
-    
-    LogProbability evaluate_haploid(const GenotypeIndex& genotype) const;
-    LogProbability evaluate_diploid(const GenotypeIndex& genotype) const;
-    LogProbability evaluate_polyploid(const GenotypeIndex& genotype) const;
+    LogProbability evaluate_haploid(const Genotype<IndexedHaplotype<>>& genotype) const;
+    LogProbability evaluate_diploid(const Genotype<IndexedHaplotype<>>& genotype) const;
+    LogProbability evaluate_polyploid(const Genotype<IndexedHaplotype<>>& genotype) const;
 };
 
 template <typename Container1, typename Container2>

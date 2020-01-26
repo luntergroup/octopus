@@ -38,10 +38,6 @@ private:
     {
         return model_.evaluate(genotype);
     }
-    LogProbability do_evaluate(const GenotypeIndex& genotype) const override
-    {
-        return model_.evaluate(genotype);
-    }
     void do_prime(const HaplotypeBlock& haplotypes) override
     {
         model_.prime(haplotypes);

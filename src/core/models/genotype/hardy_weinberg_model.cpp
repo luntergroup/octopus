@@ -15,114 +15,57 @@
 
 namespace octopus {
 
-HardyWeinbergModel::HardyWeinbergModel(Haplotype reference)
+HardyWeinbergModel::HardyWeinbergModel(IndexedHaplotype<> reference)
 : reference_ {std::move(reference)}
-, reference_idx_ {}
 , haplotype_frequencies_ {}
-, haplotype_idx_frequencies_ {}
 , empirical_ {false}
-{}
-
-HardyWeinbergModel::HardyWeinbergModel(unsigned reference_idx)
-: reference_ {}
-, reference_idx_ {reference_idx}
-, haplotype_frequencies_ {}
-, haplotype_idx_frequencies_ {}
-, empirical_ {false}
-{}
-
-HardyWeinbergModel::HardyWeinbergModel(HaplotypeFrequencyMap haplotype_frequencies)
-: reference_ {}
-, reference_idx_ {}
-, haplotype_frequencies_ {std::move(haplotype_frequencies)}
-, haplotype_idx_frequencies_ {}
-, empirical_ {true}
 {}
 
 HardyWeinbergModel::HardyWeinbergModel(HaplotypeFrequencyVector haplotype_frequencies)
 : reference_ {}
-, reference_idx_ {}
-, haplotype_frequencies_ {}
-, haplotype_idx_frequencies_ {std::move(haplotype_frequencies)}
+, haplotype_frequencies_ {std::move(haplotype_frequencies)}
 , empirical_ {true}
 {}
 
-void HardyWeinbergModel::set_frequencies(HaplotypeFrequencyMap haplotype_frequencies)
+void HardyWeinbergModel::set_frequencies(HaplotypeFrequencyVector haplotype_frequencies)
 {
     haplotype_frequencies_ = std::move(haplotype_frequencies);
     empirical_ = true;
 }
 
-void HardyWeinbergModel::set_frequencies(HaplotypeFrequencyVector haplotype_frequencies)
-{
-    haplotype_idx_frequencies_ = std::move(haplotype_frequencies);
-    empirical_ = true;
-}
-
-HardyWeinbergModel::HaplotypeFrequencyMap& HardyWeinbergModel::frequencies() noexcept
+HardyWeinbergModel::HaplotypeFrequencyVector& HardyWeinbergModel::frequencies() noexcept
 {
     return haplotype_frequencies_;
 }
 
-HardyWeinbergModel::HaplotypeFrequencyVector& HardyWeinbergModel::index_frequencies() noexcept
+const HardyWeinbergModel::HaplotypeFrequencyVector& HardyWeinbergModel::frequencies() const noexcept
 {
-    return haplotype_idx_frequencies_;
+    return haplotype_frequencies_;
 }
 
 namespace {
 
-auto ln_hardy_weinberg_haploid(const Genotype<Haplotype>& genotype,
-                               const HardyWeinbergModel::HaplotypeFrequencyMap& haplotype_frequencies)
-{
-    return std::log(haplotype_frequencies.at(genotype[0]));
-}
-
-auto ln_hardy_weinberg_diploid(const Genotype<Haplotype>& genotype,
-                               const HardyWeinbergModel::HaplotypeFrequencyMap& haplotype_frequencies)
-{
-    if (genotype.is_homozygous()) {
-        return 2 * std::log(haplotype_frequencies.at(genotype[0]));
-    }
-    static const double ln2 {std::log(2.0)};
-    return std::log(haplotype_frequencies.at(genotype[0])) + std::log(haplotype_frequencies.at(genotype[1])) + ln2;
-}
-
-auto ln_hardy_weinberg_polyploid(const Genotype<Haplotype>& genotype,
-                                 const HardyWeinbergModel::HaplotypeFrequencyMap& haplotype_frequencies)
-{
-    auto unique_haplotypes = genotype.copy_unique();
-    std::vector<unsigned> occurences {};
-    occurences.reserve(unique_haplotypes.size());
-    double r {0};
-    for (const auto& haplotype : unique_haplotypes) {
-        auto num_occurences = genotype.count(haplotype);
-        occurences.push_back(num_occurences);
-        r += num_occurences * std::log(haplotype_frequencies.at(haplotype));
-    }
-    return maths::log_multinomial_coefficient<double>(occurences) + r;
-}
-
-auto ln_hardy_weinberg_haploid(const GenotypeIndex& genotype,
+auto ln_hardy_weinberg_haploid(const Genotype<IndexedHaplotype<>>& genotype,
                                const HardyWeinbergModel::HaplotypeFrequencyVector& haplotype_frequencies)
 {
-    return std::log(haplotype_frequencies[genotype[0]]);
+    return std::log(haplotype_frequencies[index_of(genotype[0])]);
 }
 
-auto ln_hardy_weinberg_diploid(const GenotypeIndex& genotype,
+auto ln_hardy_weinberg_diploid(const Genotype<IndexedHaplotype<>>& genotype,
                                const HardyWeinbergModel::HaplotypeFrequencyVector& haplotype_frequencies)
 {
     if (genotype[0] == genotype[1]) {
-        return 2 * std::log(haplotype_frequencies[genotype[0]]);
+        return 2 * std::log(haplotype_frequencies[index_of(genotype[0])]);
     }
     static const double ln2 {std::log(2.0)};
-    return std::log(haplotype_frequencies[genotype[0]]) + std::log(haplotype_frequencies[genotype[1]]) + ln2;
+    return std::log(haplotype_frequencies[index_of(genotype[0])]) + std::log(haplotype_frequencies[index_of(genotype[1])]) + ln2;
 }
 
-auto ln_hardy_weinberg_polyploid(const GenotypeIndex& genotype,
+auto ln_hardy_weinberg_polyploid(const Genotype<IndexedHaplotype<>>& genotype,
                                  const HardyWeinbergModel::HaplotypeFrequencyVector& haplotype_frequencies)
 {
     std::vector<unsigned> counts(haplotype_frequencies.size());
-    for (auto idx : genotype) ++counts[idx];
+    for (const auto& haplotype : genotype) ++counts[index_of(haplotype)];
     return maths::log_multinomial_pdf<>(counts, haplotype_frequencies);
 }
 
@@ -145,7 +88,7 @@ std::vector<T> to_frequencies(const std::vector<unsigned>& counts)
 
 } // namespace
 
-HardyWeinbergModel::LogProbability HardyWeinbergModel::evaluate(const Genotype<Haplotype>& genotype) const
+HardyWeinbergModel::LogProbability HardyWeinbergModel::evaluate(const Genotype<IndexedHaplotype<>>& genotype) const
 {
     if (empirical_) {
         switch (genotype.ploidy()) {
@@ -156,69 +99,17 @@ HardyWeinbergModel::LogProbability HardyWeinbergModel::evaluate(const Genotype<H
     } else {
         static const LogProbability ln2 {std::log(2.0)}, ln3 {std::log(3.0)};
         if (is_haploid(genotype)) {
-            return reference_ && genotype.contains(*reference_) ? -ln2 : 0.0;
+            return reference_ && contains(genotype, *reference_) ? -ln2 : 0.0;
         }
         if (is_diploid(genotype)) {
-            if (reference_ && genotype.contains(*reference_)) {
-                return genotype.is_homozygous() ? -ln2 : -ln3;
+            if (reference_ && contains(genotype, *reference_)) {
+                return is_homozygous(genotype) ? -ln2 : -ln3;
             } else {
-                return genotype.is_homozygous() ? -ln2 : 0.0;
+                return is_homozygous(genotype) ? -ln2 : 0.0;
             }
         }
-        auto counts = genotype.unique_counts();
-        if (reference_ && !genotype.contains(*reference_)) {
-            counts.push_back(1);
-        }
-        auto probs = to_frequencies<LogProbability>(counts);
-        return maths::log_multinomial_pdf(counts, probs);
-    }
-}
-
-namespace {
-
-template <typename Range>
-void unique_counts(const Range& range, std::vector<unsigned>& result)
-{
-    for (auto itr = std::cbegin(range), last = std::cend(range); itr != last;) {
-        auto next = std::find_if_not(std::next(itr), last, [itr] (const auto& x) { return x == *itr; });
-        result.push_back(std::distance(itr, next));
-        itr = next;
-    }
-}
-
-} // namespace
-
-HardyWeinbergModel::LogProbability HardyWeinbergModel::evaluate(const GenotypeIndex& genotype) const
-{
-    assert(!genotype.empty());
-    if (empirical_) {
-        switch (genotype.size()) {
-            case 1 : return ln_hardy_weinberg_haploid(genotype, haplotype_idx_frequencies_);
-            case 2 : return ln_hardy_weinberg_diploid(genotype, haplotype_idx_frequencies_);
-            default: return ln_hardy_weinberg_polyploid(genotype, haplotype_idx_frequencies_);
-        }
-    } else {
-        static const LogProbability ln2 {std::log(2.0)}, ln3 {std::log(3.0)};
-        if (genotype.size() == 1) {
-            return reference_idx_ && genotype[0] == *reference_idx_ ? -ln2 : 0.0;
-        }
-        if (genotype.size() == 2) {
-            if (reference_idx_ && !(genotype[0] == *reference_idx_ || genotype[1] == *reference_idx_)) {
-                return genotype[0] == genotype[1] ? -ln2 : -ln3;
-            } else {
-                return genotype[0] == genotype[1] ? -ln2 : 0.0;
-            }
-        }
-        std::vector<unsigned> counts {};
-        counts.reserve(genotype.size());
-        if (std::is_sorted(std::cbegin(genotype), std::cend(genotype))) {
-            unique_counts(genotype, counts);
-        } else {
-            auto sorted_genotype = genotype;
-            std::sort(std::begin(sorted_genotype), std::end(sorted_genotype));
-            unique_counts(sorted_genotype, counts);
-        }
-        if (reference_idx_ && std::find(std::cbegin(genotype), std::cend(genotype), *reference_idx_) == std::cend(genotype)) {
+        auto counts = unique_counts(genotype);
+        if (reference_ && !contains(genotype, *reference_)) {
             counts.push_back(1);
         }
         auto probs = to_frequencies<LogProbability>(counts);
@@ -239,32 +130,20 @@ auto sum_plodies(const Range& genotypes) noexcept
 }
 
 template <typename Range>
-void fill_frequencies(const Range& genotypes, HardyWeinbergModel::HaplotypeFrequencyMap& result)
-{
-    const auto n = sum_plodies(genotypes);
-    const auto weight = 1.0 / n;
-    for (const auto& genotype : genotypes) {
-        for (const auto& haplotype : get(genotype)) {
-            result[haplotype] += weight;
-        }
-    }
-}
-
-template <typename Range>
 void fill_frequencies(const Range& genotypes, HardyWeinbergModel::HaplotypeFrequencyVector& result)
 {
-    unsigned max_haplotype_idx {0}, n {0};
+    decltype(index_of(get(genotypes[0])[0])) max_haplotype_idx {0}, n {0};
     for (const auto& genotype : genotypes) {
-        for (auto haplotype_idx : get(genotype)) {
-            max_haplotype_idx = std::max(max_haplotype_idx, haplotype_idx);
+        for (const auto& haplotype : get(genotype)) {
+            max_haplotype_idx = std::max(max_haplotype_idx, index_of(haplotype));
             ++n;
         }
     }
     result.resize(max_haplotype_idx + 1);
     const auto weight = 1.0 / n;
     for (const auto& genotype : genotypes) {
-        for (auto haplotype_idx : get(genotype)) {
-            result[haplotype_idx] += weight;
+        for (const auto& haplotype : get(genotype)) {
+            result[index_of(haplotype)] += weight;
         }
     }
 }
@@ -273,12 +152,12 @@ template <typename Range>
 auto joint_evaluate(const Range& genotypes, const HardyWeinbergModel& model)
 {
     return std::accumulate(std::cbegin(genotypes), std::cend(genotypes), 0.0,
-                           [&model] (auto curr, const auto& genotype) { return curr + model.evaluate(get(genotype)); });
+                           [&] (auto curr, const auto& genotype) { return curr + model.evaluate(genotype); });
 }
 
 } // namespace
 
-HardyWeinbergModel::LogProbability HardyWeinbergModel::evaluate(const std::vector<Genotype<Haplotype>>& genotypes) const
+HardyWeinbergModel::LogProbability HardyWeinbergModel::evaluate(const std::vector<Genotype<IndexedHaplotype<>>>& genotypes) const
 {
     if (empirical_) {
         return joint_evaluate(genotypes, *this);
@@ -292,7 +171,7 @@ HardyWeinbergModel::LogProbability HardyWeinbergModel::evaluate(const std::vecto
     }
 }
 
-HardyWeinbergModel::LogProbability HardyWeinbergModel::evaluate(const GenotypeReferenceVector& genotypes) const
+HardyWeinbergModel::LogProbability HardyWeinbergModel::evaluate(const std::vector<GenotypeReference>& genotypes) const
 {
     if (empirical_) {
         return joint_evaluate(genotypes, *this);
@@ -301,34 +180,6 @@ HardyWeinbergModel::LogProbability HardyWeinbergModel::evaluate(const GenotypeRe
         empirical_ = true;
         auto result = joint_evaluate(genotypes, *this);
         haplotype_frequencies_.clear();
-        empirical_ = false;
-        return result;
-    }
-}
-
-HardyWeinbergModel::LogProbability HardyWeinbergModel::evaluate(const GenotypeIndexVector& genotypes) const
-{
-    if (empirical_) {
-        return joint_evaluate(genotypes, *this);
-    } else {
-        fill_frequencies(genotypes, haplotype_idx_frequencies_);
-        empirical_ = true;
-        auto result = joint_evaluate(genotypes, *this);
-        haplotype_idx_frequencies_.clear();
-        empirical_ = false;
-        return result;
-    }
-}
-
-HardyWeinbergModel::LogProbability HardyWeinbergModel::evaluate(const GenotypeIndexReferenceVector& genotypes) const
-{
-    if (empirical_) {
-        return joint_evaluate(genotypes, *this);
-    } else {
-        fill_frequencies(genotypes, haplotype_idx_frequencies_);
-        empirical_ = true;
-        auto result = joint_evaluate(genotypes, *this);
-        haplotype_idx_frequencies_.clear();
         empirical_ = false;
         return result;
     }

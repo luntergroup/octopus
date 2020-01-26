@@ -9,6 +9,7 @@
 #include <type_traits>
 #include <iterator>
 #include <vector>
+#include <functional>
 
 #include "concepts/mappable.hpp"
 #include "concepts/comparable.hpp"
@@ -18,7 +19,7 @@
 
 namespace octopus {
 
-template <typename IndexTp = std::size_t,
+template <typename IndexTp = unsigned,
           typename UseIndexEquality = std::true_type,
           typename IsSortedIndex = std::true_type>
 class IndexedHaplotype : public Mappable<IndexedHaplotype<IndexTp>>
@@ -33,9 +34,8 @@ public:
     
     IndexedHaplotype() = delete;
     
-    template <typename H>
-    IndexedHaplotype(H&& haplotype, IndexType index)
-    : haplotype_ {std::forward<H>(haplotype)}
+    IndexedHaplotype(const Haplotype& haplotype, IndexType index) noexcept
+    : haplotype_ {haplotype}
     , index_ {index}
     {}
     
@@ -46,34 +46,34 @@ public:
     
     ~IndexedHaplotype() = default;
     
-    decltype(auto) mapped_region() const noexcept { return haplotype_.mapped_region(); }
-    
-    IndexType index() const noexcept { return index_; }
-    
     Haplotype& haplotype() noexcept { return haplotype_; }
     const Haplotype& haplotype() const noexcept { return haplotype_; }
     
-    operator Haplotype&() noexcept { return haplotype_; }
-    operator const Haplotype&() const noexcept { return haplotype_; }
+    operator Haplotype&() noexcept { return haplotype(); }
+    operator const Haplotype&() const noexcept { return haplotype(); }
     
-    decltype(auto) contains(const ContigAllele& allele) const { return haplotype_.contains(allele); }
-    decltype(auto) contains(const Allele& allele) const  { return haplotype_.contains(allele); }
+    IndexType index() const noexcept { return index_; }
     
-    decltype(auto) includes(const ContigAllele& allele) const { return haplotype_.includes(allele); }
-    decltype(auto) includes(const Allele& allele) const  { return haplotype_.includes(allele); }
+    decltype(auto) mapped_region() const noexcept { return haplotype().mapped_region(); }
     
-    decltype(auto) sequence(const ContigRegion& region) const { return haplotype_.sequence(region); }
-    decltype(auto) sequence(const GenomicRegion& region) const { return haplotype_.sequence(region); }
-    decltype(auto) sequence() const noexcept { return haplotype_.sequence(); }
+    decltype(auto) contains(const ContigAllele& allele) const { return haplotype().contains(allele); }
+    decltype(auto) contains(const Allele& allele) const  { return haplotype().contains(allele); }
     
-    decltype(auto) sequence_size(const ContigRegion& region) const { return haplotype_.sequence_size(region); }
-    decltype(auto) sequence_size(const GenomicRegion& region) const { return haplotype_.sequence_size(region); }
+    decltype(auto) includes(const ContigAllele& allele) const { return haplotype().includes(allele); }
+    decltype(auto) includes(const Allele& allele) const  { return haplotype().includes(allele); }
     
-    decltype(auto) difference(const IndexedHaplotype& other) const { return haplotype_.difference(other); }
-    decltype(auto) cigar() const { return haplotype_.cigar(); }
+    decltype(auto) sequence(const ContigRegion& region) const { return haplotype().sequence(region); }
+    decltype(auto) sequence(const GenomicRegion& region) const { return haplotype().sequence(region); }
+    decltype(auto) sequence() const noexcept { return haplotype().sequence(); }
+    
+    decltype(auto) sequence_size(const ContigRegion& region) const { return haplotype().sequence_size(region); }
+    decltype(auto) sequence_size(const GenomicRegion& region) const { return haplotype().sequence_size(region); }
+    
+    decltype(auto) difference(const IndexedHaplotype& other) const { return haplotype().difference(other.haplotype()); }
+    decltype(auto) cigar() const { return haplotype().cigar(); }
     
 private:
-    Haplotype haplotype_;
+    std::reference_wrapper<const Haplotype> haplotype_;
     IndexType index_;
 };
 
@@ -102,122 +102,36 @@ bool operator<(const IndexedHaplotype<IndexType, EqualityPolicy, std::false_type
     return lhs.haplotype() < rhs.haplotype();
 }
 
-template <typename IndexType, typename H>
-IndexedHaplotype<IndexType> index(H&& haplotype, IndexType idx)
+template <typename IndexType>
+IndexedHaplotype<IndexType> index(const Haplotype& haplotype, IndexType idx) noexcept
 {
-    return IndexedHaplotype<IndexType> {std::forward<H>(haplotype), idx};
+    return IndexedHaplotype<IndexType> {haplotype, idx};
 }
 
 template <typename IndexType, typename InputIterator, typename OutputIterator>
 OutputIterator
-index(InputIterator first, InputIterator last, OutputIterator result, IndexType init = IndexType {0})
+index(InputIterator first, InputIterator last, OutputIterator result, IndexType init = IndexType {0}) noexcept
 {
-    return std::transform(first, last, result, [&] (auto&& h) { return index(std::forward<decltype(h)>(h), init++); });
+    return std::transform(first, last, result, [&] (const auto& h) { return index(h, init++); });
 }
 
-template <typename IndexType = std::size_t>
+template <typename IndexType = IndexedHaplotype<>::IndexType>
 std::vector<IndexedHaplotype<IndexType>>
 index(const std::vector<Haplotype>& haplotypes, const IndexType init = IndexType {0})
 {
     std::vector<IndexedHaplotype<IndexType>> result {};
     result.reserve(haplotypes.size());
-    index(std::cbegin(haplotypes), std::cend(haplotypes),
-          std::back_inserter(result), init);
+    index(std::cbegin(haplotypes), std::cend(haplotypes), std::back_inserter(result), init);
     return result;
 }
 
-template <typename IndexType = std::size_t>
-std::vector<IndexedHaplotype<IndexType>>
-index(std::vector<Haplotype>&& haplotypes, const IndexType init = IndexType {0})
-{
-    std::vector<IndexedHaplotype<IndexType>> result {};
-    result.reserve(haplotypes.size());
-    index(std::make_move_iterator(std::begin(haplotypes)), std::make_move_iterator(std::end(haplotypes)),
-          std::back_inserter(result), init);
-    return result;
-}
-
-template <typename IndexType = std::size_t>
+template <typename IndexType = IndexedHaplotype<>::IndexType>
 MappableBlock<IndexedHaplotype<IndexType>>
 index(const MappableBlock<Haplotype>& haplotypes, const IndexType init = IndexType {0})
 {
     MappableBlock<IndexedHaplotype<IndexType>> result {mapped_region(haplotypes)};
     result.reserve(haplotypes.size());
-    index(std::cbegin(haplotypes), std::cend(haplotypes),
-          std::back_inserter(result), init);
-    return result;
-}
-
-template <typename IndexType = std::size_t>
-MappableBlock<IndexedHaplotype<IndexType>>
-index(MappableBlock<Haplotype>&& haplotypes, const IndexType init = IndexType {0})
-{
-    MappableBlock<IndexedHaplotype<IndexType>> result {mapped_region(haplotypes)};
-    result.reserve(haplotypes.size());
-    index(std::make_move_iterator(std::begin(haplotypes)), std::make_move_iterator(std::end(haplotypes)),
-          std::back_inserter(result), init);
-    return result;
-}
-
-template <typename IndexType>
-auto unindex(const IndexedHaplotype<IndexType>& haplotype)
-{
-    return haplotype.haplotype();
-}
-template <typename IndexType>
-auto unindex(IndexedHaplotype<IndexType>&& haplotype)
-{
-    return std::move(haplotype.haplotype());
-}
-
-template <typename InputIterator, typename OutputIterator>
-OutputIterator
-unindex(InputIterator first, InputIterator last, OutputIterator result)
-{
-    return std::transform(first, last, result, [&] (auto&& h) { return unindex(std::forward<decltype(h)>(h)); });
-}
-
-template <typename IndexType>
-std::vector<Haplotype>
-unindex(const std::vector<IndexedHaplotype<IndexType>>& haplotypes)
-{
-    std::vector<Haplotype> result {};
-    result.reserve(haplotypes.size());
-    unindex(std::cbegin(haplotypes), std::cend(haplotypes),
-            std::back_inserter(result));
-    return result;
-}
-
-template <typename IndexType = std::size_t>
-std::vector<Haplotype>
-unindex(std::vector<IndexedHaplotype<IndexType>>&& haplotypes)
-{
-    std::vector<Haplotype> result {};
-    result.reserve(haplotypes.size());
-    unindex(std::make_move_iterator(std::begin(haplotypes)), std::make_move_iterator(std::end(haplotypes)),
-            std::back_inserter(result));
-    return result;
-}
-
-template <typename IndexType>
-MappableBlock<Haplotype>
-unindex(const MappableBlock<IndexedHaplotype<IndexType>>& haplotypes)
-{
-    MappableBlock<Haplotype> result {};
-    result.reserve(haplotypes.size());
-    unindex(std::cbegin(haplotypes), std::cend(haplotypes),
-            std::back_inserter(result));
-    return result;
-}
-
-template <typename IndexType = std::size_t>
-MappableBlock<Haplotype>
-unindex(MappableBlock<IndexedHaplotype<IndexType>>&& haplotypes)
-{
-    MappableBlock<Haplotype> result {};
-    result.reserve(haplotypes.size());
-    unindex(std::make_move_iterator(std::begin(haplotypes)), std::make_move_iterator(std::end(haplotypes)),
-            std::back_inserter(result));
+    index(std::cbegin(haplotypes), std::cend(haplotypes), std::back_inserter(result), init);
     return result;
 }
 
@@ -231,6 +145,44 @@ struct is_indexed_haplotype<IndexedHaplotype<IndexType>> : std::true_type {
 template <typename T>
 constexpr bool is_indexed_haplotype_v = is_indexed_haplotype<T>::value;
 
+template <typename IndexType, typename EqualityPolicy, typename IsSortedIndex, typename MappableType>
+bool contains(const IndexedHaplotype<IndexType, EqualityPolicy, IsSortedIndex>& haplotype, const MappableType& other)
+{
+    return contains(haplotype.haplotype(), other);
+}
+template <typename IndexType, typename EqualityPolicy, typename IsSortedIndex, typename MappableType>
+bool includes(const IndexedHaplotype<IndexType, EqualityPolicy, IsSortedIndex>& haplotype, const MappableType& other)
+{
+    return includes(haplotype.haplotype(), other);
+}
+
 } // namespace octopus
+
+namespace std {
+
+template <typename IndexType, typename EqualityPolicy, typename IsSortedIndex>
+struct hash<octopus::IndexedHaplotype<IndexType, EqualityPolicy, IsSortedIndex>>
+{
+    size_t operator()(const octopus::IndexedHaplotype<IndexType, EqualityPolicy, IsSortedIndex>& haplotpe) const noexcept
+    {
+        return haplotpe.index();
+    }
+};
+
+} // namespace std
+
+namespace boost {
+
+template <typename IndexType, typename EqualityPolicy, typename IsSortedIndex>
+struct hash<octopus::IndexedHaplotype<IndexType, EqualityPolicy, IsSortedIndex>>
+        : std::unary_function<octopus::IndexedHaplotype<IndexType, EqualityPolicy, IsSortedIndex>, std::size_t>
+{
+    std::size_t operator()(const octopus::IndexedHaplotype<IndexType, EqualityPolicy, IsSortedIndex>& h) const noexcept
+    {
+        return std::hash<octopus::IndexedHaplotype<IndexType, EqualityPolicy, IsSortedIndex>>()(h);
+    }
+};
+
+} // namespace boost
 
 #endif

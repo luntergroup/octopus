@@ -117,38 +117,25 @@ auto generate_exhaustive_seeds(const std::size_t n)
 
 std::vector<LogProbabilityVector>
 compute_genotype_likelihoods_with_fixed_mixture_model(const std::vector<SampleName>& samples,
-                                                      const std::vector<CancerGenotype<Haplotype>>& genotypes,
+                                                      const std::vector<CancerGenotype<IndexedHaplotype<>>>& genotypes,
                                                       const HaplotypeLikelihoodArray& haplotype_log_likelihoods,
-                                                      const SomaticSubcloneModel::Priors::GenotypeMixturesDirichletAlphaMap& priors,
-                                                      boost::optional<IndexData<CancerGenotypeIndex>> index_data)
+                                                      const SomaticSubcloneModel::Priors::GenotypeMixturesDirichletAlphaMap& priors)
 {
     VariableMixtureGenotypeLikelihoodModel model {haplotype_log_likelihoods};
-    const bool use_genotype_indices {index_data && index_data->haplotypes};
     std::vector<LogProbabilityVector> result {};
     result.reserve(samples.size());
     for (const auto& sample : samples) {
         const auto& sample_priors = priors.at(sample);
         model.set_mixtures(maths::dirichlet_expectation(sample_priors));
         model.cache().prime(sample);
-        if (use_genotype_indices) {
-            model.prime(*index_data->haplotypes);
-            result.push_back(evaluate(index_data->genotype_indices, model));
-            model.unprime();
-        } else {
-            result.push_back(evaluate(genotypes, model));
-        }
+        result.push_back(evaluate(genotypes, model));
     }
     return result;
 }
 
-auto evaluate(const CancerGenotype<Haplotype>& genotype, const ConstantMixtureGenotypeLikelihoodModel& model)
+auto evaluate(const CancerGenotype<IndexedHaplotype<>>& genotype, const ConstantMixtureGenotypeLikelihoodModel& model)
 {
     return model.evaluate(demote(genotype));
-}
-
-auto evaluate(const CancerGenotypeIndex& genotype, const ConstantMixtureGenotypeLikelihoodModel& model)
-{
-    return model.evaluate(concat(genotype.germline, genotype.somatic));
 }
 
 template <typename G>
@@ -162,62 +149,32 @@ LogProbabilityVector evaluate(const std::vector<G>& genotypes, const ConstantMix
 
 std::vector<LogProbabilityVector>
 compute_genotype_likelihoods_with_germline_model(const std::vector<SampleName>& samples,
-                                                 const std::vector<CancerGenotype<Haplotype>>& genotypes,
-                                                 const HaplotypeLikelihoodArray& haplotype_log_likelihoods,
-                                                 boost::optional<IndexData<CancerGenotypeIndex>> index_data)
+                                                 const std::vector<CancerGenotype<IndexedHaplotype<>>>& genotypes,
+                                                 const HaplotypeLikelihoodArray& haplotype_log_likelihoods)
 {
     ConstantMixtureGenotypeLikelihoodModel model {haplotype_log_likelihoods};
-    const bool use_genotype_indices {index_data && index_data->haplotypes};
     std::vector<LogProbabilityVector> result {};
     result.reserve(samples.size());
     for (const auto& sample : samples) {
         model.cache().prime(sample);
-        if (use_genotype_indices) {
-            model.prime(*index_data->haplotypes);
-            result.push_back(evaluate(index_data->genotype_indices, model));
-            model.unprime();
-        } else {
-            result.push_back(evaluate(genotypes, model));
-        }
+        result.push_back(evaluate(genotypes, model));
     }
     return result;
 }
 
-LogProbabilityVector evaluate_germlines(const std::vector<CancerGenotype<Haplotype>>& genotypes, const ConstantMixtureGenotypeLikelihoodModel& model)
+LogProbabilityVector
+evaluate_germlines(const std::vector<CancerGenotype<IndexedHaplotype<>>>& genotypes,
+                   const ConstantMixtureGenotypeLikelihoodModel& model)
 {
-    std::unordered_map<Genotype<Haplotype>, ConstantMixtureGenotypeLikelihoodModel::LogProbability> cache {};
+    std::unordered_map<Genotype<IndexedHaplotype<>>, ConstantMixtureGenotypeLikelihoodModel::LogProbability> cache {};
     cache.reserve(genotypes.size());
     LogProbabilityVector result(genotypes.size());
     std::transform(std::cbegin(genotypes), std::cend(genotypes), std::begin(result),
                    [&] (const auto& genotype) {
-        const auto cache_itr = cache.find(genotype.germline());
-        if (cache_itr != std::cend(cache)) return cache_itr->second;
-        const auto result = model.evaluate(genotype.germline());
-        cache.emplace(genotype.germline(), result);
-        return result;
-    });
-    return result;
-}
-
-struct GenotypeIndexHash
-{
-    std::size_t operator()(const GenotypeIndex genotype) const
-    {
-        return boost::hash_range(std::cbegin(genotype), std::cend(genotype));
-    }
-};
-
-LogProbabilityVector evaluate_germlines(const std::vector<CancerGenotypeIndex>& genotypes, const ConstantMixtureGenotypeLikelihoodModel& model)
-{
-    std::unordered_map<GenotypeIndex, ConstantMixtureGenotypeLikelihoodModel::LogProbability, GenotypeIndexHash> cache {};
-    cache.reserve(genotypes.size());
-    LogProbabilityVector result(genotypes.size());
-    std::transform(std::cbegin(genotypes), std::cend(genotypes), std::begin(result),
-                   [&] (const auto& genotype) {
-                       const auto cache_itr = cache.find(genotype.germline);
+                       const auto cache_itr = cache.find(genotype.germline());
                        if (cache_itr != std::cend(cache)) return cache_itr->second;
-                       const auto result = model.evaluate(genotype.germline);
-                       cache.emplace(genotype.germline, result);
+                       const auto result = model.evaluate(genotype.germline());
+                       cache.emplace(genotype.germline(), result);
                        return result;
                    });
     return result;
@@ -225,23 +182,15 @@ LogProbabilityVector evaluate_germlines(const std::vector<CancerGenotypeIndex>& 
 
 std::vector<LogProbabilityVector>
 compute_germline_genotype_likelihoods_with_germline_model(const std::vector<SampleName>& samples,
-                                                          const std::vector<CancerGenotype<Haplotype>>& genotypes,
-                                                          const HaplotypeLikelihoodArray& haplotype_log_likelihoods,
-                                                          boost::optional<IndexData<CancerGenotypeIndex>> index_data)
+                                                          const std::vector<CancerGenotype<IndexedHaplotype<>>>& genotypes,
+                                                          const HaplotypeLikelihoodArray& haplotype_log_likelihoods)
 {
     ConstantMixtureGenotypeLikelihoodModel model {haplotype_log_likelihoods};
-    const bool use_genotype_indices {index_data && index_data->haplotypes};
     std::vector<LogProbabilityVector> result {};
     result.reserve(samples.size());
     for (const auto& sample : samples) {
         model.cache().prime(sample);
-        if (use_genotype_indices) {
-            model.prime(*index_data->haplotypes);
-            result.push_back(evaluate_germlines(index_data->genotype_indices, model));
-            model.unprime();
-        } else {
-            result.push_back(evaluate_germlines(genotypes, model));
-        }
+        result.push_back(evaluate_germlines(genotypes, model));
     }
     return result;
 }
@@ -279,13 +228,13 @@ auto add_and_normalise(const LogProbabilityVector& lhs, const LogProbabilityVect
 
 std::vector<LogProbabilityVector>
 generate_seeds(const std::vector<SampleName>& samples,
-               const std::vector<Genotype<Haplotype>>& genotypes,
+               const std::vector<Genotype<IndexedHaplotype<>>>& genotypes,
                const LogProbabilityVector& genotype_log_priors,
                const HaplotypeLikelihoodArray& haplotype_log_likelihoods,
                const SubcloneModel::Priors& priors,
                std::size_t max_seeds,
                std::vector<LogProbabilityVector> hints,
-               boost::optional<IndexData<GenotypeIndex>> index_data)
+               const MappableBlock<Haplotype>* haplotypes)
 {
     if (genotypes.size() <= max_seeds) {
         return generate_exhaustive_seeds(genotypes.size());
@@ -296,28 +245,24 @@ generate_seeds(const std::vector<SampleName>& samples,
     result.reserve(max_seeds);
     result.push_back(genotype_log_priors);
     IndividualModel germline_model {priors.genotype_prior_model};
+    if (haplotypes) germline_model.prime(*haplotypes);
     for (const auto& sample : samples) {
         haplotype_log_likelihoods.prime(sample);
-        IndividualModel::InferredLatents latents;
-        if (index_data) {
-            latents = germline_model.evaluate(genotypes, index_data->genotype_indices, haplotype_log_likelihoods);
-        } else {
-            latents = germline_model.evaluate(genotypes, haplotype_log_likelihoods);
-        }
-        result.push_back(latents.posteriors.genotype_log_probabilities);
+        auto latents = germline_model.evaluate(genotypes, haplotype_log_likelihoods);
+        result.push_back(std::move(latents.posteriors.genotype_log_probabilities));
     }
     return result;
 }
 
 std::vector<LogProbabilityVector>
 generate_seeds(const std::vector<SampleName>& samples,
-               const std::vector<CancerGenotype<Haplotype>>& genotypes,
+               const std::vector<CancerGenotype<IndexedHaplotype<>>>& genotypes,
                const LogProbabilityVector& genotype_log_priors,
                const HaplotypeLikelihoodArray& haplotype_log_likelihoods,
                const SomaticSubcloneModel::Priors& priors,
                std::size_t max_seeds,
                std::vector<LogProbabilityVector> hints,
-               boost::optional<IndexData<CancerGenotypeIndex>> index_data)
+               const MappableBlock<Haplotype>* haplotypes)
 {
     if (genotypes.size() <= max_seeds) {
         return generate_exhaustive_seeds(genotypes.size());
@@ -327,13 +272,13 @@ generate_seeds(const std::vector<SampleName>& samples,
     max_seeds -= result.size();
     result.reserve(max_seeds);
     if (max_seeds == 0) return result;
-    auto sample_prior_mixture_likelihoods = compute_genotype_likelihoods_with_fixed_mixture_model(samples, genotypes, haplotype_log_likelihoods, priors.alphas, index_data);
+    auto sample_prior_mixture_likelihoods = compute_genotype_likelihoods_with_fixed_mixture_model(samples, genotypes, haplotype_log_likelihoods, priors.alphas);
     auto prior_mixture_likelihoods = add_all_and_normalise(sample_prior_mixture_likelihoods);
     auto prior_mixture_posteriors = add_and_normalise(genotype_log_priors, prior_mixture_likelihoods);
     result.push_back(prior_mixture_posteriors); // 1
     --max_seeds;
     if (max_seeds == 0) return result;
-    auto sample_normal_likelihoods = compute_genotype_likelihoods_with_germline_model(samples, genotypes, haplotype_log_likelihoods, index_data);
+    auto sample_normal_likelihoods = compute_genotype_likelihoods_with_germline_model(samples, genotypes, haplotype_log_likelihoods);
     auto normal_likelihoods = add_all_and_normalise(sample_prior_mixture_likelihoods);
     auto normal_posteriors = add_and_normalise(genotype_log_priors, normal_likelihoods);
     result.push_back(normal_posteriors); // 2
@@ -349,7 +294,7 @@ generate_seeds(const std::vector<SampleName>& samples,
     if (max_seeds == 0) return result;
     result.push_back(combined_model_likelihoods); // 6
     if (max_seeds == 0) return result;
-    auto sample_germline_likelihoods = compute_germline_genotype_likelihoods_with_germline_model(samples, genotypes, haplotype_log_likelihoods, index_data);
+    auto sample_germline_likelihoods = compute_germline_genotype_likelihoods_with_germline_model(samples, genotypes, haplotype_log_likelihoods);
     result.push_back(add_all_and_normalise(sample_germline_likelihoods)); // 7
     --max_seeds;
     if (max_seeds == 0) return result;

@@ -39,7 +39,7 @@ const DeNovoModel& SingleCellPriorModel::denovo_model() const noexcept
 }
 
 SingleCellPriorModel::LogProbability
-SingleCellPriorModel::evaluate(const std::vector<Genotype<Haplotype>>& genotypes) const
+SingleCellPriorModel::evaluate(const std::vector<Genotype<IndexedHaplotype<>>>& genotypes) const
 {
     LogProbability result {0};
     for (std::size_t id {0}; id < genotypes.size(); ++id) {
@@ -67,13 +67,7 @@ SingleCellPriorModel::evaluate(const std::vector<GenotypeReference>& genotypes) 
 }
 
 SingleCellPriorModel::LogProbability
-SingleCellPriorModel::evaluate(const std::vector<GenotypeIndex>& genotypes) const
-{
-    return 0;
-}
-
-SingleCellPriorModel::LogProbability
-SingleCellPriorModel::compute_cnv_log_prior(const Genotype<Haplotype>& ancestor) const
+SingleCellPriorModel::compute_cnv_log_prior(const Genotype<IndexedHaplotype<>>& ancestor) const
 {
     // This is the prior probability that an entire haplotype is gained or lost from the ancestor genotype
     // We assume that the length distribution is such that any copy number event will affect the whole haplotype.
@@ -82,7 +76,7 @@ SingleCellPriorModel::compute_cnv_log_prior(const Genotype<Haplotype>& ancestor)
 }
 
 SingleCellPriorModel::LogProbability
-SingleCellPriorModel::log_probability(const Genotype<Haplotype>& ancestor, const Genotype<Haplotype>& descendant) const
+SingleCellPriorModel::log_probability(const Genotype<IndexedHaplotype<>>& ancestor, const Genotype<IndexedHaplotype<>>& descendant) const
 {
     const auto cnv_log_prior = compute_cnv_log_prior(ancestor);
     LogProbability result {0};

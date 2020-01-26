@@ -5,6 +5,9 @@
 
 #include <utility>
 #include <cassert>
+#include <deque>
+
+#include "utils/erase_if.hpp"
 
 namespace octopus {
 
@@ -12,8 +15,10 @@ namespace octopus {
 
 HaplotypeLikelihoodArray::HaplotypeLikelihoodArray(const unsigned max_haplotypes,
                                                    const std::vector<SampleName>& samples)
-: cache_ {max_haplotypes}
+: likelihoods_ {}
+, haplotype_indices_ {max_haplotypes}
 , sample_indices_ {samples.size()}
+, samples_ {samples}
 {
     mapping_positions_.resize(maxMappingPositions);
 }
@@ -22,8 +27,10 @@ HaplotypeLikelihoodArray::HaplotypeLikelihoodArray(HaplotypeLikelihoodModel like
                                                    unsigned max_haplotypes,
                                                    const std::vector<SampleName>& samples)
 : likelihood_model_ {std::move(likelihood_model)}
-, cache_ {max_haplotypes}
+, likelihoods_ {}
+, haplotype_indices_ {max_haplotypes}
 , sample_indices_ {samples.size()}
+, samples_ {samples}
 {
     mapping_positions_.resize(maxMappingPositions);
 }
@@ -46,9 +53,9 @@ void HaplotypeLikelihoodArray::populate(const ReadMap& reads,
 {
     // This code is not very pretty because it is a bottleneck for the entire application.
     // We want to try a minimise memory allocations for the mapping.
-    cache_.clear();
-    if (cache_.bucket_count() < haplotypes.size()) {
-        cache_.rehash(haplotypes.size());
+    haplotype_indices_.clear();
+    if (haplotype_indices_.bucket_count() < haplotypes.size()) {
+        haplotype_indices_.rehash(haplotypes.size());
     }
     set_read_iterators_and_sample_indices(reads);
     assert(reads.size() == read_iterators_.size());
@@ -65,17 +72,17 @@ void HaplotypeLikelihoodArray::populate(const ReadMap& reads,
     }
     auto haplotype_hashes = init_kmer_hash_table<mapperKmerSize>();
     const auto first_mapping_position = std::begin(mapping_positions_);
-    for (const auto& haplotype : haplotypes) {
+    likelihoods_.resize(haplotypes.size(), std::vector<LikelihoodVector>(num_samples));
+    for (std::size_t haplotype_idx {0}; haplotype_idx < haplotypes.size(); ++haplotype_idx) {
+        const auto& haplotype = haplotypes[haplotype_idx];
         populate_kmer_hash_table<mapperKmerSize>(haplotype.sequence(), haplotype_hashes);
         auto haplotype_mapping_counts = init_mapping_counts(haplotype_hashes);
-        auto itr = std::begin(cache_.emplace(std::piecewise_construct,
-                                             std::forward_as_tuple(haplotype),
-                                             std::forward_as_tuple(num_samples)).first->second);
         likelihood_model_.reset(haplotype, flank_state);
-        auto read_hash_itr = std::cbegin(read_hashes);
-        for (const auto& t : read_iterators_) { // for each sample
-            *itr = std::vector<LogProbability>(t.num_reads);
-            std::transform(t.first, t.last, std::cbegin(*read_hash_itr), std::begin(*itr),
+        for (std::size_t sample_idx {0}; sample_idx < num_samples; ++sample_idx) {
+            auto& likelihoods = likelihoods_[haplotype_idx][sample_idx];
+            const auto& t = read_iterators_[sample_idx];
+            likelihoods.resize(t.num_reads);
+            std::transform(t.first, t.last, std::cbegin(read_hashes[sample_idx]), std::begin(likelihoods),
                            [&] (const AlignedRead& read, const auto& read_hashes) {
                                const auto last_mapping_position = map_query_to_target(read_hashes, haplotype_hashes,
                                                                                       haplotype_mapping_counts,
@@ -84,21 +91,22 @@ void HaplotypeLikelihoodArray::populate(const ReadMap& reads,
                                reset_mapping_counts(haplotype_mapping_counts);
                                return likelihood_model_.evaluate(read, first_mapping_position, last_mapping_position);
                            });
-            ++read_hash_itr;
-            ++itr;
         }
         clear_kmer_hash_table(haplotype_hashes);
+        haplotype_indices_.emplace(haplotype, haplotype_idx);
     }
     likelihood_model_.clear();
     read_iterators_.clear();
+    haplotypes_ = haplotypes;
 }
 
-void HaplotypeLikelihoodArray::populate(const TemplateMap& reads, const MappableBlock<Haplotype>& haplotypes,
+void HaplotypeLikelihoodArray::populate(const TemplateMap& reads,
+                                        const MappableBlock<Haplotype>& haplotypes,
                                         boost::optional<FlankState> flank_state)
 {
-    cache_.clear();
-    if (cache_.bucket_count() < haplotypes.size()) {
-        cache_.rehash(haplotypes.size());
+    haplotype_indices_.clear();
+    if (haplotype_indices_.bucket_count() < haplotypes.size()) {
+        haplotype_indices_.rehash(haplotypes.size());
     }
     set_template_iterators_and_sample_indices(reads);
     assert(reads.size() == template_iterators_.size());
@@ -119,17 +127,17 @@ void HaplotypeLikelihoodArray::populate(const TemplateMap& reads, const Mappable
     }
     auto haplotype_hashes = init_kmer_hash_table<mapperKmerSize>();
     thread_local std::vector<HaplotypeLikelihoodModel::MappingPositionVector> mapping_positions {};
-    for (const auto& haplotype : haplotypes) {
+    likelihoods_.resize(haplotypes.size(), std::vector<LikelihoodVector>(num_samples));
+    for (std::size_t haplotype_idx {0}; haplotype_idx < haplotypes.size(); ++haplotype_idx) {
+        const auto& haplotype = haplotypes[haplotype_idx];
         populate_kmer_hash_table<mapperKmerSize>(haplotype.sequence(), haplotype_hashes);
         auto haplotype_mapping_counts = init_mapping_counts(haplotype_hashes);
-        auto itr = std::begin(cache_.emplace(std::piecewise_construct,
-                                             std::forward_as_tuple(haplotype),
-                                             std::forward_as_tuple(num_samples)).first->second);
         likelihood_model_.reset(haplotype, flank_state);
-        auto template_hash_itr = std::cbegin(template_hashes);
-        for (const auto& t : template_iterators_) { // for each sample
-            *itr = std::vector<LogProbability>(t.num_templates);
-            std::transform(t.first, t.last, std::cbegin(*template_hash_itr), std::begin(*itr),
+        for (std::size_t sample_idx {0}; sample_idx < num_samples; ++sample_idx) {
+            auto& likelihoods = likelihoods_[haplotype_idx][sample_idx];
+            const auto& t = template_iterators_[sample_idx];
+            likelihoods.resize(t.num_templates);
+            std::transform(t.first, t.last, std::cbegin(template_hashes[sample_idx]), std::begin(likelihoods),
                            [&] (const AlignedTemplate& read_template, const auto& template_hashes) {
                                mapping_positions.resize(read_template.size());
                                assert(read_template.size() == template_hashes.size());
@@ -144,57 +152,90 @@ void HaplotypeLikelihoodArray::populate(const TemplateMap& reads, const Mappable
                                }
                                return likelihood_model_.evaluate(read_template, mapping_positions);
                            });
-            ++template_hash_itr;
-            ++itr;
         }
         clear_kmer_hash_table(haplotype_hashes);
+        haplotype_indices_.emplace(haplotype, haplotype_idx);
     }
     likelihood_model_.clear();
     read_iterators_.clear();
+    haplotypes_ = haplotypes;
 }
 
 std::size_t HaplotypeLikelihoodArray::num_likelihoods(const SampleName& sample) const
 {
-    return std::cbegin(cache_)->second.at(sample_indices_.at(sample)).size();
+    return likelihoods_.front()[sample_indices_.at(sample)].size();
+}
+
+std::size_t HaplotypeLikelihoodArray::num_likelihoods() const // if primed
+{
+    assert(is_primed());
+    return likelihoods_.front()[*primed_sample_].size();
 }
 
 const HaplotypeLikelihoodArray::LikelihoodVector&
 HaplotypeLikelihoodArray::operator()(const SampleName& sample, const Haplotype& haplotype) const
 {
-    return cache_.at(haplotype)[sample_indices_.at(sample)];
+    return likelihoods_[haplotype_indices_.at(haplotype)][sample_indices_.at(sample)];
+}
+
+const HaplotypeLikelihoodArray::LikelihoodVector&
+HaplotypeLikelihoodArray::operator()(const SampleName& sample, const IndexedHaplotype<>& haplotype) const
+{
+    return likelihoods_[index_of(haplotype)][sample_indices_.at(sample)];
 }
 
 const HaplotypeLikelihoodArray::LikelihoodVector&
 HaplotypeLikelihoodArray::operator[](const Haplotype& haplotype) const
 {
-    return cache_.at(haplotype)[*primed_sample_];
+    assert(is_primed());
+    return likelihoods_[haplotype_indices_.at(haplotype)][*primed_sample_];
+}
+
+const HaplotypeLikelihoodArray::LikelihoodVector&
+HaplotypeLikelihoodArray::operator[](const IndexedHaplotype<>& haplotype) const noexcept
+{
+    assert(is_primed());
+    return likelihoods_[index_of(haplotype)][*primed_sample_];
+}
+
+std::vector<SampleName> HaplotypeLikelihoodArray::samples() const
+{
+    return samples_;
+}
+
+MappableBlock<Haplotype> HaplotypeLikelihoodArray::haplotypes() const
+{
+    return haplotypes_;
 }
 
 HaplotypeLikelihoodArray::SampleLikelihoodMap
 HaplotypeLikelihoodArray::extract_sample(const SampleName& sample) const
 {
     const auto sample_index = sample_indices_.at(sample);
-    SampleLikelihoodMap result {cache_.size()};
-    for (const auto& p : cache_) {
-        result.emplace(p.first, p.second[sample_index]);
+    SampleLikelihoodMap result {haplotype_indices_.size()};
+    for (const auto& p : haplotype_indices_) {
+        result.emplace(p.first, likelihoods_[p.second][sample_index]);
     }
     return result;
 }
 
 bool HaplotypeLikelihoodArray::contains(const Haplotype& haplotype) const noexcept
 {
-    return cache_.count(haplotype) == 1;
+    return haplotype_indices_.count(haplotype) == 1;
 }
 
 bool HaplotypeLikelihoodArray::is_empty() const noexcept
 {
-    return cache_.empty();
+    return likelihoods_.empty();
 }
 
 void HaplotypeLikelihoodArray::clear() noexcept
 {
-    cache_.clear();
+    likelihoods_.clear();
+    haplotype_indices_.clear();
     sample_indices_.clear();
+    samples_.clear();
+    haplotypes_.clear();
     unprime();
 }
 
@@ -251,52 +292,91 @@ void HaplotypeLikelihoodArray::set_template_iterators_and_sample_indices(const T
     }
 }
 
-// non-member methods
+void HaplotypeLikelihoodArray::reset(MappableBlock<Haplotype> haplotypes)
+{
+    if (haplotypes.empty()) {
+        clear();
+    } else if (haplotypes.size() < haplotypes_.size()) {
+        std::deque<std::size_t> indices_to_keep {};
+        for (std::size_t haplotype_idx {0}; haplotype_idx < haplotypes.size(); ++haplotype_idx) {
+            auto& old_haplotype_idx = haplotype_indices_.at(haplotypes[haplotype_idx]);
+            indices_to_keep.push_back(old_haplotype_idx);
+            old_haplotype_idx = haplotype_idx;
+        }
+        assert(!indices_to_keep.empty());
+        std::size_t idx {0};
+        const auto remover = [&] (const auto&) noexcept {
+            if (indices_to_keep.empty()) return true;
+            if (idx++ != indices_to_keep.front()) return true;
+            indices_to_keep.pop_front();
+            return false;
+        };
+        erase_if(likelihoods_, remover);
+        haplotypes_ = std::move(haplotypes);
+    }
+}
 
 HaplotypeLikelihoodArray
-merge_samples(const std::vector<SampleName>& samples,
-              const SampleName& new_sample,
-              const MappableBlock<Haplotype>& haplotypes,
-              const HaplotypeLikelihoodArray& haplotype_likelihoods)
+HaplotypeLikelihoodArray::merge_samples(const std::vector<SampleName>& samples, boost::optional<SampleName> new_sample) const
 {
-    HaplotypeLikelihoodArray result {static_cast<unsigned>(haplotypes.size()), {new_sample}};
-    for (const auto& haplotype : haplotypes) {
-        HaplotypeLikelihoodArray::LikelihoodVector likelihoods {};
+    if (!new_sample) {
+        new_sample = SampleName {};
+        for (const auto& sample : samples) *new_sample += sample;
+    }
+    HaplotypeLikelihoodArray result {static_cast<unsigned>(haplotypes_.size()), {std::move(*new_sample)}};
+    result.haplotypes_ = haplotypes_;
+    std::size_t total_num_likelihoods {0};
+    for (const auto& sample : samples) {
+        total_num_likelihoods += this->num_likelihoods(sample);
+    }
+    result.likelihoods_.resize(haplotypes_.size(), std::vector<LikelihoodVector>(1, LikelihoodVector(total_num_likelihoods)));
+    for (std::size_t haplotype_idx {0}; haplotype_idx < haplotypes_.size(); ++haplotype_idx) {
+        auto dst_likelihood_itr = std::begin(result.likelihoods_[haplotype_idx][0]);
         for (const auto& sample : samples) {
-            const auto& m = haplotype_likelihoods(sample, haplotype);
-            likelihoods.insert(std::end(likelihoods), std::cbegin(m), std::cend(m));
+            const auto& src_likelihoods = likelihoods_[haplotype_idx][sample_indices_.at(sample)];
+            dst_likelihood_itr = std::copy(std::cbegin(src_likelihoods), std::cend(src_likelihoods), dst_likelihood_itr);
         }
-        likelihoods.shrink_to_fit();
-        result.insert(new_sample, haplotype, std::move(likelihoods));
     }
-    result.prime(new_sample);
+    result.haplotype_indices_ = haplotype_indices_;
+    result.sample_indices_.emplace(result.samples_.front(), 0);
+    result.prime(result.samples_.front());
     return result;
 }
 
 HaplotypeLikelihoodArray
-merge_samples(const HaplotypeLikelihoodArray& haplotype_likelihoods)
+HaplotypeLikelihoodArray::merge_samples(boost::optional<SampleName> new_sample) const
 {
-    SampleName merged_sample_name {};
-    for (const auto& p : haplotype_likelihoods.sample_indices_) merged_sample_name += p.first;
-    HaplotypeLikelihoodArray result {static_cast<unsigned>(haplotype_likelihoods.cache_.size()), {merged_sample_name}};
-    for (const auto& p : haplotype_likelihoods.cache_) {
-        const auto& haplotype = p.first;
-        HaplotypeLikelihoodArray::LikelihoodVector likelihoods {};
-        for (const auto& s : haplotype_likelihoods.sample_indices_) {
-            const auto& m = haplotype_likelihoods(s.first, haplotype);
-            likelihoods.insert(std::end(likelihoods), std::cbegin(m), std::cend(m));
-        }
-        likelihoods.shrink_to_fit();
-        result.insert(merged_sample_name, haplotype, std::move(likelihoods));
+    if (!new_sample) {
+        new_sample = SampleName {};
+        for (const auto& sample : samples_) *new_sample += sample;
     }
-    result.prime(merged_sample_name);
+    HaplotypeLikelihoodArray result {static_cast<unsigned>(haplotypes_.size()), {std::move(*new_sample)}};
+    result.haplotypes_ = haplotypes_;
+    std::size_t total_num_likelihoods {0};
+    for (const auto& s : likelihoods_.front()) {
+        total_num_likelihoods += s.size();
+    }
+    result.likelihoods_.resize(haplotypes_.size(), std::vector<LikelihoodVector>(1, LikelihoodVector(total_num_likelihoods)));
+    for (std::size_t haplotype_idx {0}; haplotype_idx < haplotypes_.size(); ++haplotype_idx) {
+        auto dst_likelihood_itr = std::begin(result.likelihoods_[haplotype_idx][0]);
+        for (std::size_t sample_idx {0}; sample_idx < samples_.size(); ++sample_idx) {
+            const auto& src_likelihoods = likelihoods_[haplotype_idx][sample_idx];
+            dst_likelihood_itr = std::copy(std::cbegin(src_likelihoods), std::cend(src_likelihoods), dst_likelihood_itr);
+        }
+    }
+    result.haplotype_indices_ = haplotype_indices_;
+    result.sample_indices_.emplace(result.samples_.front(), 0);
+    result.prime(result.samples_.front());
     return result;
 }
+
+// non-member methods
 
 namespace debug {
 
 std::vector<std::reference_wrapper<const Haplotype>>
-rank_haplotypes(const MappableBlock<Haplotype>& haplotypes, const SampleName& sample,
+rank_haplotypes(const MappableBlock<Haplotype>& haplotypes,
+                const SampleName& sample,
                 const HaplotypeLikelihoodArray& haplotype_likelihoods)
 {
     std::vector<std::pair<std::reference_wrapper<const Haplotype>, HaplotypeLikelihoodArray::LogProbability>> ranks {};

@@ -20,6 +20,7 @@
 #include "basics/read_pileup.hpp"
 #include "core/types/variant.hpp"
 #include "core/types/haplotype.hpp"
+#include "core/types/indexed_haplotype.hpp"
 #include "core/tools/coretools.hpp"
 #include "core/models/haplotype_likelihood_array.hpp"
 #include "core/tools/vcf_record_factory.hpp"
@@ -98,7 +99,6 @@ public:
     std::vector<VcfRecord> regenotype(const std::vector<Variant>& variants, ProgressMeter& progress_meter) const;
     
 protected:
-    using HaplotypeReference = std::reference_wrapper<const Haplotype>;
     using HaplotypeBlock = HaplotypeGenerator::HaplotypeBlock;
     
     std::reference_wrapper<const ReferenceGenome> reference_;
@@ -110,8 +110,8 @@ protected:
     
     struct Latents
     {
-        using HaplotypeProbabilityMap = std::unordered_map<HaplotypeReference, double>;
-        using GenotypeProbabilityMap  = ProbabilityMatrix<Genotype<Haplotype>>;
+        using HaplotypeProbabilityMap = std::unordered_map<IndexedHaplotype<>, double>;
+        using GenotypeProbabilityMap  = ProbabilityMatrix<Genotype<IndexedHaplotype<>>>;
         
         virtual ~Latents() noexcept = default;
         
@@ -155,7 +155,7 @@ private:
     infer_latents(const HaplotypeBlock& haplotypes,
                   const HaplotypeLikelihoodArray& haplotype_likelihoods) const = 0;
     
-    virtual Genotype<Haplotype> call_genotype(const Latents& latents, const SampleName& sample) const;
+    virtual Genotype<IndexedHaplotype<>> call_genotype(const Latents& latents, const SampleName& sample) const;
     
     virtual boost::optional<double>
     calculate_model_posterior(const HaplotypeBlock& haplotypes,

@@ -13,6 +13,7 @@
 #include <limits>
 
 #include "concepts/mappable.hpp"
+#include "basics/aligned_template.hpp"
 #include "core/types/calls/call.hpp"
 #include "core/types/calls/call_wrapper.hpp"
 #include "core/types/calls/variant_call.hpp"
@@ -25,8 +26,6 @@
 #include "utils/read_stats.hpp"
 #include "utils/maths.hpp"
 #include "utils/append.hpp"
-
-#include "basics/aligned_template.hpp"
 
 namespace octopus {
 
@@ -607,7 +606,7 @@ bool Caller::filter_haplotypes(HaplotypeBlock& haplotypes,
         haplotype_likelihoods.clear();
     } else {
         haplotypes.shrink_to_fit();
-        haplotype_likelihoods.erase(removed_haplotypes);
+        haplotype_likelihoods.reset(haplotypes);
         has_removal_impact = haplotype_generator.removal_has_impact();
         if (has_removal_impact) {
             haplotype_generator.remove(removed_haplotypes);
@@ -664,8 +663,9 @@ void Caller::filter_haplotypes(const bool prefilter_had_removal_impact,
     if (prefilter_had_removal_impact) { // if there was no impact before then there can't be now either
         if (haplotype_generator.removal_has_impact()) {
             const auto max_to_remove = haplotype_generator.max_removal_impact();
+            const auto& haplotype_posteriors = *latents.haplotype_posteriors();
             auto removable_haplotypes = get_removable_haplotypes(haplotypes, haplotype_likelihoods,
-                                                                 *latents.haplotype_posteriors(),
+                                                                 haplotype_posteriors,
                                                                  protected_haplotypes,
                                                                  max_to_remove);
             if (debug_log_) {
@@ -709,8 +709,10 @@ find_common_phase_regions(const Phaser::PhaseSet::PhaseRegions& phasings)
 }
 
 boost::optional<GenomicRegion>
-Caller::find_phased_head(const MappableBlock<Haplotype>& haplotypes, const MappableFlatSet<Variant>& candidates,
-                         const GenomicRegion& active_region, const Latents& latents) const
+Caller::find_phased_head(const MappableBlock<Haplotype>& haplotypes,
+                         const MappableFlatSet<Variant>& candidates,
+                         const GenomicRegion& active_region,
+                         const Latents& latents) const
 {
     if (debug_log_) stream(*debug_log_) << "Trying to find complete phase regions in " << active_region;
     const auto active_candidates = contained_range(candidates, active_region);
@@ -879,7 +881,7 @@ void Caller::call_variants(const GenomicRegion& active_region,
     completed_region = encompassing_region(completed_region, passed_region);
 }
 
-Genotype<Haplotype> Caller::call_genotype(const Latents& latents, const SampleName& sample) const
+Genotype<IndexedHaplotype<>> Caller::call_genotype(const Latents& latents, const SampleName& sample) const
 {
     const auto genotype_posteriors_ptr = latents.genotype_posteriors();
     const auto& genotype_posteriors = (*genotype_posteriors_ptr)[sample];
@@ -893,8 +895,10 @@ std::deque<Haplotype> Caller::get_called_haplotypes(const Latents& latents) cons
 {
     std::deque<Haplotype> result {};
     for (const auto& sample : samples_) {
-        auto called_genotype = call_genotype(latents, sample);
-        std::copy(std::begin(called_genotype), std::cend(called_genotype), std::back_inserter(result));
+        const auto called_genotype = call_genotype(latents, sample);
+        for (const auto& haplotype : called_genotype) {
+            result.push_back(haplotype.haplotype());
+        }
     }
     std::sort(std::begin(result), std::end(result));
     result.erase(std::unique(std::begin(result), std::end(result)), std::end(result));
@@ -974,10 +978,10 @@ void set_phasing(std::vector<CallWrapper>& calls, const Phaser::PhaseSet& phase_
 
 namespace debug {
 
-template <typename S>
+template <typename S, typename Map>
 void print_genotype_posteriors(S&& stream,
                                const SampleName& sample,
-                               const ProbabilityMatrix<Genotype<Haplotype>>::InnerMap& genotype_posteriors,
+                               const Map& genotype_posteriors,
                                const std::size_t n)
 {
     const auto m = std::min(n, genotype_posteriors.size());
@@ -986,23 +990,23 @@ void print_genotype_posteriors(S&& stream,
     } else {
         stream << "Printing top " << m << " genotype posteriors for sample " << sample << '\n';
     }
-    using GenotypeReference = std::reference_wrapper<const Genotype<Haplotype>>;
+    using GenotypeReference = std::reference_wrapper<const Genotype<IndexedHaplotype<>>>;
     std::vector<std::pair<GenotypeReference, double>> v {};
     v.reserve(genotype_posteriors.size());
-    std::copy(std::cbegin(genotype_posteriors), std::cend(genotype_posteriors), std::back_inserter(v));
+    for (const auto& p : genotype_posteriors) {
+        v.emplace_back(p.first, p.second);
+    }
     const auto mth = std::next(std::begin(v), m);
-    std::partial_sort(std::begin(v), mth, std::end(v),
-                      [] (const auto& lhs, const auto& rhs) { return lhs.second > rhs.second; });
-    std::for_each(std::begin(v), mth,
-                  [&] (const auto& p) {
-                      print_variant_alleles(stream, p.first);
-                      stream << " " << p.second << '\n';
-                  });
+    std::partial_sort(std::begin(v), mth, std::end(v), [] (const auto& lhs, const auto& rhs) { return lhs.second > rhs.second; });
+    std::for_each(std::begin(v), mth, [&] (const auto& p) {
+        print_variant_alleles(stream, p.first.get());
+        stream << " " << p.second << '\n';
+    });
 }
 
-template <typename S>
+template <typename S, typename G>
 void print_genotype_posteriors(S&& stream,
-                               const ProbabilityMatrix<Genotype<Haplotype>>& genotype_posteriors,
+                               const ProbabilityMatrix<G>& genotype_posteriors,
                                const std::size_t n = std::numeric_limits<std::size_t>::max())
 {
     for (const auto& p : genotype_posteriors) {
@@ -1012,7 +1016,8 @@ void print_genotype_posteriors(S&& stream,
 
 } // namespace debug
 
-void Caller::set_phasing(std::vector<CallWrapper>& calls, const Latents& latents,
+void Caller::set_phasing(std::vector<CallWrapper>& calls,
+                         const Latents& latents,
                          const HaplotypeBlock& haplotypes,
                          const GenomicRegion& call_region) const
 {
@@ -1149,7 +1154,8 @@ bool Caller::compute_haplotype_likelihoods(HaplotypeLikelihoodArray& haplotype_l
 }
 
 std::vector<Haplotype>
-Caller::filter(HaplotypeBlock& haplotypes, const HaplotypeLikelihoodArray& haplotype_likelihoods,
+Caller::filter(HaplotypeBlock& haplotypes,
+               const HaplotypeLikelihoodArray& haplotype_likelihoods,
                const std::deque<Haplotype>& protected_haplotypes) const
 {
     std::vector<Haplotype> removed_haplotypes {};
@@ -1209,15 +1215,22 @@ Caller::get_removable_haplotypes(const HaplotypeBlock& haplotypes,
     if (debug_log_) {
         stream(*debug_log_) << "Protecting " << protected_haplotypes.size() << " haplotypes from filtering";
     }
+    HaplotypeReferenceProbabilityMap haplotype_ref_posteriors {};
+    haplotype_ref_posteriors.reserve(haplotype_posteriors.size());
+    for (const auto& p : haplotype_posteriors) {
+        haplotype_ref_posteriors.emplace(p.first.haplotype(), p.second);
+    }
+    std::vector<std::reference_wrapper<const Haplotype>> result {};
     if (protected_haplotypes.empty()) {
-        return extract_removable(haplotypes, haplotype_posteriors, samples_, haplotype_likelihoods,
+        result = extract_removable(haplotypes, haplotype_ref_posteriors, samples_, haplotype_likelihoods,
                                  max_to_remove, parameters_.haplotype_extension_threshold);
-    } else if (protected_haplotypes.size() == 1 && parameters_.protect_reference_haplotype && is_reference(protected_haplotypes.front())) {
-        auto result = extract_removable(haplotypes, haplotype_posteriors, samples_, haplotype_likelihoods,
+    } else if (protected_haplotypes.size() == 1
+            && parameters_.protect_reference_haplotype
+            && is_reference(protected_haplotypes.front())) {
+        result = extract_removable(haplotypes, haplotype_ref_posteriors, samples_, haplotype_likelihoods,
                                         max_to_remove, parameters_.haplotype_extension_threshold);
         auto reference_itr = find_reference(result);
         if (reference_itr != std::cend(result)) result.erase(reference_itr);
-        return result;
     } else {
         std::vector<Haplotype> removable_haplotypes {};
         removable_haplotypes.reserve(haplotypes.size());
@@ -1226,9 +1239,10 @@ Caller::get_removable_haplotypes(const HaplotypeBlock& haplotypes,
         std::set_difference(std::cbegin(haplotypes), std::cend(haplotypes),
                             std::cbegin(protected_haplotypes), std::cend(protected_haplotypes),
                             std::back_inserter(removable_haplotypes));
-        return extract_removable(removable_haplotypes, haplotype_posteriors, samples_, haplotype_likelihoods,
+        result = extract_removable(removable_haplotypes, haplotype_ref_posteriors, samples_, haplotype_likelihoods,
                                  max_to_remove, parameters_.haplotype_extension_threshold);
     }
+    return result;
 }
 
 Caller::GenotypeCallMap Caller::get_genotype_calls(const Latents& latents) const
@@ -1418,7 +1432,7 @@ Caller::ReadPileupMap Caller::make_pileups(const ReadMap& reads, const Latents& 
     ReadPileupMap result {};
     result.reserve(samples_.size());
     for (const auto& sample : samples_) {
-        const auto called_genotype = call_genotype(latents, sample);
+        const auto called_genotype = genotype_cast<Haplotype>(call_genotype(latents, sample));
         result.emplace(sample, octopus::make_pileups(reads.at(sample), called_genotype, region));
     }
     return result;
@@ -1659,8 +1673,9 @@ void print_haplotype_posteriors(S&& stream, const Map& haplotype_posteriors, std
     }
     std::vector<std::pair<std::reference_wrapper<const Haplotype>, double>> v {};
     v.reserve(haplotype_posteriors.size());
-    std::copy(std::cbegin(haplotype_posteriors), std::cend(haplotype_posteriors),
-              std::back_inserter(v));
+    for (const auto& p : haplotype_posteriors) {
+        v.emplace_back(p.first.haplotype(), p.second);
+    }
     const auto mth = std::next(std::begin(v), m);
     std::partial_sort(std::begin(v), mth, std::end(v),
                       [] (const auto& lhs, const auto& rhs) {

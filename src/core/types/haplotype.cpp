@@ -539,6 +539,11 @@ bool contains(const Haplotype& lhs, const Haplotype& rhs)
     return contains(mapped_region(lhs), mapped_region(rhs)) && lhs.sequence(rhs.region_) == rhs.sequence();
 }
 
+bool includes(const Haplotype& lhs, const Allele& rhs)
+{
+    return lhs.includes(rhs);
+}
+
 namespace detail {
 
 Haplotype do_copy(const Haplotype& haplotype, const GenomicRegion& region, std::true_type)

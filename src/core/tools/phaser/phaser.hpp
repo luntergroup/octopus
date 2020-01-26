@@ -20,6 +20,7 @@
 #include "containers/probability_matrix.hpp"
 #include "containers/mappable_block.hpp"
 #include "core/types/haplotype.hpp"
+#include "core/types/indexed_haplotype.hpp"
 #include "core/types/genotype.hpp"
 #include "utils/mappable_algorithms.hpp"
 
@@ -28,9 +29,9 @@ namespace octopus {
 class Phaser
 {
 public:
-    using GenotypePosteriorMap       = ProbabilityMatrix<Genotype<Haplotype>>;
+    using GenotypePosteriorMap       = ProbabilityMatrix<Genotype<IndexedHaplotype<>>>;
     using SampleGenotypePosteriorMap = GenotypePosteriorMap::InnerMap;
-    using GenotypeCallMap            = std::unordered_map<SampleName, Genotype<Haplotype>>;
+    using GenotypeCallMap            = std::unordered_map<SampleName, Genotype<IndexedHaplotype<>>>;
     
     enum class GenotypeMatchType { exact, unique };
     
@@ -85,14 +86,14 @@ public:
           boost::optional<GenotypeCallMap> genotype_calls = boost::none) const;
     
 private:
-    using GenotypeReference = std::reference_wrapper<const Genotype<Haplotype>>;
+    using CompressedGenotype = Genotype<IndexedHaplotype<>>;
     
     Config config_;
     
     PhaseSet::SamplePhaseRegions
     phase_sample(const GenomicRegion& region,
                  const std::vector<GenomicRegion>& partitions,
-                 const std::vector<GenotypeReference>& genotypes,
+                 const std::vector<CompressedGenotype>& genotypes,
                  const SampleGenotypePosteriorMap& genotype_posteriors) const;
 };
 

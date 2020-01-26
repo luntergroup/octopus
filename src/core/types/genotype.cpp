@@ -3,8 +3,6 @@
 
 #include "genotype.hpp"
 
-#include <iostream>
-
 #include <boost/math/special_functions/binomial.hpp>
 #include <boost/numeric/conversion/cast.hpp>
 
@@ -13,26 +11,6 @@
 namespace octopus {
 
 // non-member methods
-
-bool contains(const Genotype<Haplotype>& genotype, const Allele& allele)
-{
-    return any_of(genotype, [&] (const Haplotype& haplotype) { return haplotype.contains(allele); });
-}
-
-bool includes(const Genotype<Haplotype>& genotype, const Allele& allele)
-{
-    return any_of(genotype, [&] (const Haplotype& haplotype) { return haplotype.includes(allele); });
-}
-
-bool is_homozygous(const Genotype<Haplotype>& genotype, const Allele& allele)
-{
-    return is_homozygous(genotype, allele, [] (const Haplotype& haplotype, const Allele& allele) { return haplotype.contains(allele); });
-}
-
-bool is_heterozygous(const Genotype<Haplotype>& genotype, const Allele& allele)
-{
-    return !is_homozygous(genotype, allele);
-}
 
 Genotype<Haplotype> remap(const Genotype<Haplotype>& genotype, const GenomicRegion& region)
 {
@@ -75,12 +53,6 @@ std::size_t element_cardinality_in_genotypes(const unsigned num_elements, const 
     return ploidy * (num_genotypes(num_elements, ploidy) / num_elements);
 }
 
-std::vector<Genotype<Haplotype>>
-generate_all_genotypes(const std::vector<std::shared_ptr<Haplotype>>& haplotypes, const unsigned ploidy)
-{
-    return detail::generate_all_genotypes(haplotypes, ploidy, std::false_type {});
-}
-
 std::size_t num_max_zygosity_genotypes(const unsigned num_elements, const unsigned ploidy)
 {
     namespace bmp = boost::math::policies;
@@ -101,19 +73,5 @@ boost::optional<std::size_t> num_max_zygosity_genotypes_noexcept(unsigned num_el
     } catch (...) {}
     return result;
 }
-
-namespace debug {
-
-void print_alleles(const Genotype<Haplotype>& genotype)
-{
-    print_alleles(std::cout, genotype);
-}
-
-void print_variant_alleles(const Genotype<Haplotype>& genotype)
-{
-    print_variant_alleles(std::cout, genotype);
-}
-
-} // namespace debug
 
 } // namespace octopus
