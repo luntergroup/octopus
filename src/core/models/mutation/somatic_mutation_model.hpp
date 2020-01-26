@@ -8,6 +8,7 @@
 #include <functional>
 
 #include "core/types/haplotype.hpp"
+#include "core/types/indexed_haplotype.hpp"
 #include "containers/mappable_block.hpp"
 #include "denovo_model.hpp"
 
@@ -39,7 +40,7 @@ public:
     
     // ln p(somatic | germline)
     LogProbability evaluate(const Haplotype& somatic, const Haplotype& germline) const;
-    LogProbability evaluate(unsigned somatic, unsigned germline) const;
+    LogProbability evaluate(const IndexedHaplotype<>& somatic, const IndexedHaplotype<>& germline) const;
     
 private:
     DeNovoModel model_;

@@ -46,7 +46,7 @@ CancerGenotypePriorModel::LogProbability CancerGenotypePriorModel::evaluate(cons
 CancerGenotypePriorModel::LogProbability
 CancerGenotypePriorModel::ln_probability_of_somatic_given_haplotype(const IndexedHaplotype<>& somatic, const IndexedHaplotype<>& germline) const
 {
-    return mutation_model_.evaluate(index_of(somatic), index_of(germline));
+    return mutation_model_.evaluate(somatic, germline);
 }
 
 } // namespace octopus

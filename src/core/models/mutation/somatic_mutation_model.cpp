@@ -37,7 +37,7 @@ SomaticMutationModel::LogProbability SomaticMutationModel::evaluate(const Haplot
     return model_.evaluate(somatic, germline);
 }
 
-SomaticMutationModel::LogProbability SomaticMutationModel::evaluate(unsigned somatic, unsigned germline) const
+SomaticMutationModel::LogProbability SomaticMutationModel::evaluate(const IndexedHaplotype<>& somatic, const IndexedHaplotype<>& germline) const
 {
     return model_.evaluate(somatic, germline);
 }
