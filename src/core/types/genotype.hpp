@@ -885,14 +885,12 @@ bool is_homozygous(const Genotype<MappableType>& genotype, const MappableType& e
 template <typename MappableType, std::enable_if_t<detail::is_haplotype_like_v<MappableType>, int> = 0>
 bool is_homozygous(const Genotype<MappableType>& genotype, const Allele& allele)
 {
-    if (!contains(mapped_region(genotype), allele)) return true;
-    if (is_homozygous(genotype)) return true;
     return all_of(genotype, [&] (const auto& haplotype) { return contains(haplotype, allele); });
 }
 template <typename MappableType, std::enable_if_t<detail::is_haplotype_like_v<MappableType>, int> = 0>
 bool is_heterozygous(const Genotype<MappableType>& genotype, const Allele& allele)
 {
-    return !is_homozygous(genotype, allele);
+    return any_of(genotype, [&] (const auto& haplotype) { return contains(haplotype, allele); });
 }
 
 template <typename InputIterator, typename MappableType, typename BinaryFunction, typename UnaryFunction>
