@@ -23,10 +23,10 @@
         #include <boost/graph/bron_kerbosch_all_cliques.hpp>
     #pragma clang diagnostic pop
 #elif defined(__GNUG__)
-    #pragma gcc diagnostic push
-    #pragma gcc diagnostic ignored "-Wunused-variable"
+    #pragma GCC diagnostic push
+    #pragma GCC diagnostic ignored "-Wunused-variable"
         #include <boost/graph/bron_kerbosch_all_cliques.hpp>
-    #pragma gcc diagnostic pop
+    #pragma GCC diagnostic pop
 #endif // defined (__clang__)
 
 #include "utils/mappable_algorithms.hpp"
