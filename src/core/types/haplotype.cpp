@@ -630,7 +630,7 @@ Haplotype copy(const Haplotype& haplotype, const std::vector<GenomicRegion>& reg
                 }
             } else {
                 if (!contains(region.contig_region(), overlapped_alleles.front())) {
-                    result.push_front(copy(overlapped_alleles.front(), *overlapped_region(overlapped_alleles.front(), region.contig_region())));
+                    result.push_back(copy(overlapped_alleles.front(), *overlapped_region(overlapped_alleles.front(), region.contig_region())));
                     overlapped_alleles.advance_begin(1);
                 }
                 if (!overlapped_alleles.empty()) {

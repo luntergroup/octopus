@@ -22,6 +22,12 @@ public:
     
     SharedHaplotype() = delete;
     
+    SharedHaplotype(const Haplotype& haplotype)
+    : haplotype_ {std::make_shared<Haplotype>(haplotype)}
+    {}
+    SharedHaplotype(Haplotype&& haplotype)
+    : haplotype_ {std::make_shared<Haplotype>(std::move(haplotype))}
+    {}
     SharedHaplotype(const std::shared_ptr<Haplotype>& haplotype)
     : haplotype_ {haplotype}
     {}

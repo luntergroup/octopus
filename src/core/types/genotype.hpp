@@ -60,6 +60,7 @@ template <typename MappableType> class Genotype;
 namespace detail {
 
 template <typename MappableType> Genotype<MappableType> collapse(const Genotype<MappableType>& genotype, std::true_type);
+template <typename MappableType> void collapse(Genotype<MappableType>& genotype, std::true_type);
 
 } // namespace detail
 
@@ -103,6 +104,7 @@ public:
     void reorder(const std::vector<unsigned>& order) { reorder(order, ordered {}); }
     
     friend Genotype detail::collapse(const Genotype& genotype, std::true_type);
+    friend void detail::collapse(Genotype& genotype, std::true_type);
     
 private:
     std::vector<MappableType> elements_;
@@ -311,6 +313,12 @@ Genotype<MappableType> collapse(const Genotype<MappableType>& genotype, std::tru
     return result;
 }
 
+template <typename MappableType>
+void collapse(Genotype<MappableType>& genotype, std::true_type)
+{
+    genotype.elements_.erase(std::unique(std::begin(genotype), std::end(genotype)), std::end(genotype));
+}
+
 //template <typename MappableType>
 //std::vector<unsigned> unique_counts(const Genotype<MappableType>& genotype, std::false_type)
 //{
@@ -379,6 +387,12 @@ template <typename MappableType>
 Genotype<MappableType> collapse(const Genotype<MappableType>& genotype)
 {
     return detail::collapse(genotype, is_ordered<MappableType> {});
+}
+
+template <typename MappableType>
+void collapse(Genotype<MappableType>& genotype)
+{
+    detail::collapse(genotype, is_ordered<MappableType> {});
 }
 
 template <typename MappableType>
@@ -573,6 +587,31 @@ auto copy_each(const MappableBlock<Genotype<MappableType_>>& genotypes, const Ge
     return result;
 }
 
+template <typename MappableType, typename MappableType_>
+Genotype<MappableType> copy(const Genotype<MappableType_>& genotype, const std::vector<GenomicRegion>& regions)
+{
+    static_assert(is_ordered_v<MappableType_>, "");
+    return transform(genotype, [&] (const auto& element) { return copy<MappableType>(element, regions); });
+}
+
+template <typename MappableType, typename MappableType_>
+auto copy_each(const std::vector<Genotype<MappableType_>>& genotypes, const std::vector<GenomicRegion>& regions)
+{
+    std::vector<Genotype<MappableType>> result {};
+    result.reserve(genotypes.size());
+    transform_each(genotypes, [&] (const auto& element) -> MappableType { return copy(element, regions); }, std::back_inserter(result));
+    return result;
+}
+template <typename MappableType, typename MappableType_>
+auto copy_each(const MappableBlock<Genotype<MappableType_>>& genotypes, const std::vector<GenomicRegion>& regions)
+{
+    auto copy_region = genotypes.empty() ? mapped_region(genotypes) : closed_region(regions.front(), regions.back());
+    MappableBlock<Genotype<MappableType>> result {std::move(copy_region)};
+    result.reserve(genotypes.size());
+    transform_each(genotypes, [&] (const auto& element) -> MappableType { return copy(element, regions); }, std::back_inserter(result));
+    return result;
+}
+
 namespace detail {
 
 template <typename MappableType, typename UnaryPredicate>
@@ -622,44 +661,6 @@ bool all_of(const Genotype<MappableType>& genotype, UnaryPredicate&& pred)
 
 template <typename T, std::enable_if_t<detail::is_haplotype_like_v<T>, int> = 0>
 bool contains(const Genotype<T>& genotype, const Allele& allele)
-Genotype<Haplotype> copy(const Genotype<Haplotype>& genotype, const std::vector<GenomicRegion>& regions);
-
-namespace detail {
-
-template <typename Map>
-Genotype<Haplotype> copy_shared(const Genotype<Haplotype>& genotype, const std::vector<GenomicRegion>& regions, Map& cache)
-{
-    Genotype<Haplotype> result {get(genotype).ploidy()};
-    for (const auto& haplotype : get(genotype)) {
-        const auto itr = cache.find(haplotype);
-        if (itr == std::cend(cache)) {
-            auto copy_ptr = std::make_shared<Haplotype>(copy(haplotype, regions));
-            cache.emplace(std::piecewise_construct, std::forward_as_tuple(haplotype), std::forward_as_tuple(copy_ptr));
-            emplace(copy_ptr, result);
-        } else {
-            emplace(itr->second, result);
-        }
-    }
-    return result;
-}
-
-} // namespace detail
-
-template <typename Range>
-std::vector<Genotype<Haplotype>> copy_each(const Range& genotypes, const std::vector<GenomicRegion>& regions)
-{
-    std::vector<Genotype<Haplotype>> result {};
-    if (genotypes.empty()) return result;
-    result.reserve(genotypes.size());
-    std::unordered_map<Haplotype, std::shared_ptr<Haplotype>> cache {};
-    cache.reserve(genotypes.size());
-    std::transform(std::cbegin(genotypes), std::cend(genotypes), std::back_inserter(result),
-                   [&] (const auto& genotype) { return detail::copy_shared(genotype, regions, cache); });
-    return result;
-}
-
-template <typename UnaryPredicate>
-bool any_of(const Genotype<Haplotype>& genotype, UnaryPredicate&& pred)
 {
     return any_of(genotype, [&] (const T& haplotype) { return haplotype.contains(allele); });
 }
@@ -918,12 +919,22 @@ bool any_of_any_of(InputIterator first, InputIterator last,
 template <typename MappableType>
 bool is_homozygous(const Genotype<MappableType>& genotype, const MappableType& element)
 {
-    return genotype.count(element) == genotype.ploidy();
+    return count(genotype, element) == ploidy(genotype);
+}
+template <typename MappableType, std::enable_if_t<detail::is_haplotype_like_v<MappableType>, int> = 0>
+bool is_homozygous(const Genotype<MappableType>& genotype, const GenomicRegion& region)
+{
+    return is_homozygous(copy<Allele>(genotype, region));
 }
 template <typename MappableType, std::enable_if_t<detail::is_haplotype_like_v<MappableType>, int> = 0>
 bool is_homozygous(const Genotype<MappableType>& genotype, const Allele& allele)
 {
     return all_of(genotype, [&] (const auto& haplotype) { return contains(haplotype, allele); });
+}
+template <typename MappableType, std::enable_if_t<detail::is_haplotype_like_v<MappableType>, int> = 0>
+bool is_heterozygous(const Genotype<MappableType>& genotype, const GenomicRegion& region)
+{
+    return is_heterozygous(copy<Allele>(genotype, region));
 }
 template <typename MappableType, std::enable_if_t<detail::is_haplotype_like_v<MappableType>, int> = 0>
 bool is_heterozygous(const Genotype<MappableType>& genotype, const Allele& allele)
