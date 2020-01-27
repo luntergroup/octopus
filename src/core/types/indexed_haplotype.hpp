@@ -46,10 +46,8 @@ public:
     
     ~IndexedHaplotype() = default;
     
-    Haplotype& haplotype() noexcept { return haplotype_; }
     const Haplotype& haplotype() const noexcept { return haplotype_; }
     
-    operator Haplotype&() noexcept { return haplotype(); }
     operator const Haplotype&() const noexcept { return haplotype(); }
     
     IndexType index() const noexcept { return index_; }

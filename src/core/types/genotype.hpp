@@ -59,8 +59,7 @@ template <typename MappableType> class Genotype;
 
 namespace detail {
 
-template <typename MappableType> Genotype<MappableType> collapse(const Genotype<MappableType>& genotype, std::true_type);
-template <typename MappableType> void collapse(Genotype<MappableType>& genotype, std::true_type);
+template <typename T> Genotype<T> collapse(const Genotype<T>& genotype, std::true_type);
 
 } // namespace detail
 
@@ -102,9 +101,9 @@ public:
     unsigned ploidy() const noexcept;
     
     void reorder(const std::vector<unsigned>& order) { reorder(order, ordered {}); }
+    void collapse() { collapse(ordered {}); }
     
-    friend Genotype detail::collapse(const Genotype& genotype, std::true_type);
-    friend void detail::collapse(Genotype& genotype, std::true_type);
+    template <typename T> friend Genotype<T> detail::collapse(const Genotype<T>& genotype, std::true_type);
     
 private:
     std::vector<MappableType> elements_;
@@ -116,6 +115,7 @@ private:
     template <typename T> void emplace(T&& element, std::false_type);
     template <typename T> void emplace(T&& element, std::true_type);
     void reorder(const std::vector<unsigned>& order, std::false_type);
+    void collapse(std::true_type);
 
 public:
     using iterator       = typename decltype(elements_)::iterator;
@@ -224,6 +224,12 @@ void Genotype<MappableType>::reorder(const std::vector<unsigned>& order, std::fa
     octopus::reorder(std::cbegin(order), std::cend(order), std::begin(elements_));
 }
 
+template <typename MappableType>
+void Genotype<MappableType>::collapse(std::true_type)
+{
+    elements_.erase(std::unique(std::begin(elements_), std::end(elements_)), std::end(elements_));
+}
+
 // free functions
 
 template <typename MappableType>
@@ -313,12 +319,6 @@ Genotype<MappableType> collapse(const Genotype<MappableType>& genotype, std::tru
     return result;
 }
 
-template <typename MappableType>
-void collapse(Genotype<MappableType>& genotype, std::true_type)
-{
-    genotype.elements_.erase(std::unique(std::begin(genotype), std::end(genotype)), std::end(genotype));
-}
-
 //template <typename MappableType>
 //std::vector<unsigned> unique_counts(const Genotype<MappableType>& genotype, std::false_type)
 //{
@@ -392,7 +392,7 @@ Genotype<MappableType> collapse(const Genotype<MappableType>& genotype)
 template <typename MappableType>
 void collapse(Genotype<MappableType>& genotype)
 {
-    detail::collapse(genotype, is_ordered<MappableType> {});
+    genotype.collapse();
 }
 
 template <typename MappableType>
@@ -913,7 +913,7 @@ template <typename InputIterator, typename UnaryPredicate>
 bool any_of_any_of(InputIterator first, InputIterator last,
                    UnaryPredicate&& pred)
 {
-    any_of_any_of(first, last, std::forward<UnaryPredicate>(pred), [] (const auto& g) { return g; });
+    return any_of_any_of(first, last, std::forward<UnaryPredicate>(pred), [] (const auto& g) { return g; });
 }
 
 template <typename MappableType>
