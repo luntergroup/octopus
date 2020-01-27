@@ -42,7 +42,7 @@ public:
     
     LogProbability evaluate(std::initializer_list<GenotypeReference> genotypes) const
     {
-        buffer_.assign({genotypes});
+        buffer_.assign(genotypes);
         return evaluate(buffer_);
     }
     
