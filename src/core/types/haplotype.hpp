@@ -296,7 +296,7 @@ Haplotype remap(const Haplotype& haplotype, const GenomicRegion& region);
 
 std::vector<Variant> difference(const Haplotype& lhs, const Haplotype& rhs);
 
-bool operator==(const Haplotype& lhs, const Haplotype& rhs);
+bool operator==(const Haplotype& lhs, const Haplotype& rhs) noexcept;
 bool operator<(const Haplotype& lhs, const Haplotype& rhs);
 
 struct HaveSameAlleles

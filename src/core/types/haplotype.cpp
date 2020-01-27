@@ -694,7 +694,7 @@ std::vector<Variant> difference(const Haplotype& lhs, const Haplotype& rhs)
     return result;
 }
 
-bool operator==(const Haplotype& lhs, const Haplotype& rhs)
+bool operator==(const Haplotype& lhs, const Haplotype& rhs) noexcept
 {
     return lhs.mapped_region() == rhs.mapped_region() && lhs.sequence() == rhs.sequence();
 }

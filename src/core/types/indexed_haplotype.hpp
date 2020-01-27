@@ -85,7 +85,7 @@ bool operator==(const IndexedHaplotype<IndexType, std::true_type>& lhs,
 }
 template <typename IndexType>
 bool operator==(const IndexedHaplotype<IndexType, std::false_type>& lhs,
-                const IndexedHaplotype<IndexType, std::false_type>& rhs)
+                const IndexedHaplotype<IndexType, std::false_type>& rhs) noexcept
 {
     return lhs.haplotype() == rhs.haplotype();
 }

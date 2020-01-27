@@ -63,7 +63,7 @@ public:
     decltype(auto) difference(const SharedHaplotype& other) const { return haplotype().difference(other.haplotype()); }
     decltype(auto) cigar() const { return haplotype().cigar(); }
     
-    friend bool operator==(const SharedHaplotype& lhs, const SharedHaplotype& rhs)
+    friend bool operator==(const SharedHaplotype& lhs, const SharedHaplotype& rhs) noexcept
     {
         return lhs.haplotype_ == rhs.haplotype_ || lhs.haplotype() == rhs.haplotype();
     }
