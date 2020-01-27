@@ -6,6 +6,8 @@
 
 #include <vector>
 #include <deque>
+#include <map>
+#include <unordered_map>
 #include <algorithm>
 #include <iterator>
 #include <utility>
@@ -34,6 +36,30 @@ template <typename T, typename Alloc, typename UnaryPredicate>
 void erase_if(std::deque<T, Alloc>& c, UnaryPredicate&& pred)
 {
     c.erase(std::remove_if(std::begin(c), std::end(c), std::forward<UnaryPredicate>(pred)), std::end(c));
+}
+
+template <typename Key, typename T, typename Compare, typename Alloc, typename Pred>
+void erase_if(std::map<Key, T ,Compare, Alloc>& c, Pred pred)
+{
+    for (auto i = std::cbegin(c), last = std::cend(c); i != last;) {
+        if (pred(*i)) {
+            i = c.erase(i);
+        } else {
+            ++i;
+        }
+    }
+}
+
+template <typename Key, typename T, typename Hash, typename KeyEqual, typename Alloc, typename Pred>
+void erase_if(std::unordered_map<Key, T, Hash, KeyEqual, Alloc>& c, Pred pred)
+{
+    for (auto i = std::cbegin(c), last = std::cend(c); i != last;) {
+        if (pred(*i)) {
+            i = c.erase(i);
+        } else {
+            ++i;
+        }
+    }
 }
 
 } // namespace
