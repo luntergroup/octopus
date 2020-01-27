@@ -26,6 +26,8 @@
 #include "utils/read_stats.hpp"
 #include "utils/maths.hpp"
 #include "utils/append.hpp"
+#include "utils/erase_if.hpp"
+#include "utils/map_utils.hpp"
 
 namespace octopus {
 
@@ -692,20 +694,18 @@ bool Caller::try_early_detect_phase_regions(const MappableBlock<Haplotype>& hapl
         && haplotypes.size() > parameters_.max_haplotypes / 2;
 }
 
-std::vector<GenomicRegion>
-find_common_phase_regions(const Phaser::PhaseSet::PhaseRegions& phasings)
+std::vector<decltype(Phaser::PhaseSet::site_indices)>
+find_common_phase_regions(const Phaser::PhaseSetMap& phasings)
 {
-    auto result = extract_regions(std::cbegin(phasings)->second);
-    std::for_each(std::next(std::cbegin(phasings)), std::cend(phasings), [&] (const auto& p) {
-        const auto sample_phase_regions = extract_regions(p.second);
-        std::vector<GenomicRegion> intersect {};
-        intersect.reserve(std::min(result.size(), sample_phase_regions.size()));
-        std::set_intersection(std::cbegin(result), std::cend(result),
-                              std::cbegin(sample_phase_regions), std::cend(sample_phase_regions),
-                              std::back_inserter(intersect));
-        result = std::move(intersect);
-    });
-    return result;
+    std::map<decltype(Phaser::PhaseSet::site_indices), unsigned> phase_set_sample_assignment_counts {};
+    for (const auto& p : phasings) {
+        for (const Phaser::PhaseSet& phase_set : p.second) {
+            ++phase_set_sample_assignment_counts[phase_set.site_indices];
+        }
+    }
+    const auto num_samples = phasings.size();
+    erase_if(phase_set_sample_assignment_counts, [=] (const auto& p) { return p.second < num_samples; });
+    return extract_keys(phase_set_sample_assignment_counts);
 }
 
 boost::optional<GenomicRegion>
@@ -716,12 +716,14 @@ Caller::find_phased_head(const MappableBlock<Haplotype>& haplotypes,
 {
     if (debug_log_) stream(*debug_log_) << "Trying to find complete phase regions in " << active_region;
     const auto active_candidates = contained_range(candidates, active_region);
-    const auto viable_phase_regions = extract_mutually_exclusive_regions(active_candidates);
+    const auto viable_phase_regions = extract_regions(active_candidates);
     const auto phasings = phaser_.phase(haplotypes, *latents.genotype_posteriors(),
                                         viable_phase_regions, get_genotype_calls(latents));
-    auto common_phase_regions = find_common_phase_regions(phasings.phase_regions);
-    if (common_phase_regions.size() > 1) {
-        return closed_region(active_region, head_region(common_phase_regions.back()));
+    auto common_phase_regions = find_common_phase_regions(phasings);
+    if (common_phase_regions.size() > 1
+     && common_phase_regions.front().front() == 0
+     && common_phase_regions.front().back() < candidates.size() - 1) {
+        return closed_region(viable_phase_regions.front(), head_region(viable_phase_regions[common_phase_regions.front().back()]));
     } else {
         return boost::none;
     }
@@ -928,47 +930,16 @@ void Caller::set_model_posteriors(std::vector<CallWrapper>& calls, const Latents
 
 namespace {
 
-auto get_phase_regions(const MappableFlatSet<Variant>& candidates,
-                       const GenomicRegion& active_region)
+void set_phasing(std::vector<CallWrapper>& calls, const Phaser::PhaseSetMap& phasings, const GenomicRegion& calling_region)
 {
-    return extract_regions(contained_range(candidates, active_region));
-}
-
-void set_phase(const SampleName& sample, const Phaser::PhaseSet::PhaseRegion& phase,
-               const std::vector<GenomicRegion>& call_regions, CallWrapper& call)
-{
-    const auto overlapped = overlap_range(call_regions, phase.mapped_region(), BidirectionallySortedTag {});
-    if (!overlapped.empty()) {
-        call->set_phase(sample, Call::PhaseCall {encompassing_region(overlapped.front(), call), phase.score});
-    } else {
-        call->set_phase(sample, Call::PhaseCall {mapped_region(call), phase.score});
-    }
-}
-
-void set_phasing(std::vector<CallWrapper>& calls, const Phaser::PhaseSet& phase_set, const GenomicRegion& calling_region)
-{
-    if (!calls.empty()) {
-        const auto call_regions = extract_regions(calls);
-        for (auto& call : calls) {
-            const auto& call_region = mapped_region(call);
-            for (const auto& p : phase_set.phase_regions) {
-                const SampleName& sample {p.first};
-                const auto phase = find_phase_region(p.second, call_region);
-                if (phase && overlaps(calling_region, phase->get().region)) {
-                    if (begins_before(phase->get().region, calling_region)) {
-                        const auto output_call_region = *overlapped_region(calling_region, phase->get().region);
-                        const auto output_calls = overlap_range(call_regions, output_call_region);
-                        if (!output_calls.empty()) {
-                            const Phaser::PhaseSet::PhaseRegion clipped_phase {
-                            expand_lhs(phase->get().region, begin_distance(output_calls.front(), phase->get().region)),
-                            phase->get().score
-                            };
-                            set_phase(sample, clipped_phase, call_regions, call);
-                        }
-                    } else {
-                        set_phase(sample, *phase, call_regions, call);
-                    }
-                }
+    for (const auto& p : phasings) {
+        const SampleName& sample {p.first};
+        for (const Phaser::PhaseSet& phase_set : p.second) {
+            const auto phase_set_region = closed_region(calls[phase_set.site_indices.front()],
+                                                        calls[phase_set.site_indices.back()]);
+            for (const auto call_idx : phase_set.site_indices) {
+                assert(call_idx < calls.size());
+                calls[call_idx]->set_phase(sample, {phase_set_region, phase_set.quality});
             }
         }
     }
@@ -1023,10 +994,10 @@ void Caller::set_phasing(std::vector<CallWrapper>& calls,
 {
     if (debug_log_) stream(*debug_log_) << "Phasing " << calls.size() << " calls in " << call_region;
     if (trace_log_) debug::print_genotype_posteriors(stream(*trace_log_), *latents.genotype_posteriors());
-    const auto phasings = phaser_.phase(haplotypes, *latents.genotype_posteriors(),
-                                        extract_regions(calls), get_genotype_calls(latents));
-    if (debug_log_) debug::print_phase_sets(stream(*debug_log_), phasings);
-    octopus::set_phasing(calls, phasings, call_region);
+    const auto call_regions = extract_regions(calls);
+    const auto phase_sets = phaser_.phase(haplotypes, *latents.genotype_posteriors(), call_regions, get_genotype_calls(latents));
+    if (debug_log_) debug::print_phase_sets(stream(*debug_log_), phase_sets, call_regions);
+    octopus::set_phasing(calls, phase_sets, call_region);
 }
 
 bool Caller::refcalls_requested() const noexcept
