@@ -72,6 +72,7 @@ public:
         boost::optional<MemoryFootprint> target_max_memory;
         ExecutionPolicy execution_policy;
         ReadLinkageType read_linkage;
+        bool try_early_phase_detection;
     };
     
     using ReadMap = octopus::ReadMap;

@@ -64,6 +64,7 @@ public:
     CallerBuilder& set_haplotype_extension_threshold(double p) noexcept;
     CallerBuilder& set_model_posterior_policy(Caller::ModelPosteriorPolicy policy) noexcept;
     CallerBuilder& set_min_phase_score(Phred<double> score) noexcept;
+    CallerBuilder& set_early_phase_detection_policy(bool use) noexcept;
     CallerBuilder& set_snp_heterozygosity(double heterozygosity) noexcept;
     CallerBuilder& set_indel_heterozygosity(double heterozygosity) noexcept;
     CallerBuilder& set_max_genotypes(boost::optional<std::size_t> max) noexcept;

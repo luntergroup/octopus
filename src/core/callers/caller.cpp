@@ -689,7 +689,8 @@ bool Caller::try_early_detect_phase_regions(const MappableBlock<Haplotype>& hapl
                                             const Latents& latents,
                                             const boost::optional<GenomicRegion>& backtrack_region) const
 {
-    return !backtrack_region
+    return parameters_.try_early_phase_detection
+        && !backtrack_region
         && count_overlapped(candidates, active_region) > 10
         && haplotypes.size() > parameters_.max_haplotypes / 2;
 }

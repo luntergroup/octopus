@@ -583,6 +583,10 @@ OptionMap parse_options(const int argc, const char** argv)
     ("min-phase-score",
      po::value<Phred<double>>()->default_value(Phred<double> {10.0}),
      "Minimum phase score (phred scale) required to report sites as phased")
+    
+    ("disable-early-phase-detection",
+     po::bool_switch()->default_value(false),
+     "Disable phase detection before haplotypes fully extended")
     ;
     
     po::options_description cancer("Cancer calling model");
