@@ -415,24 +415,29 @@ bool has_variation(const Allele& allele, const GenotypeProbabilityMap& genotype_
                                  [] (const auto& p) { return p.first; });
 }
 
-auto marginalise_homozygous(const Allele& allele, const GenotypeProbabilityMap& genotype_posteriors)
+auto marginalise_homozygous(const Allele& allele, const GenotypeProbabilityMap& genotype_log_posteriors)
 {
-    double mass_not_hom {0};
-    for_each_is_homozygous(std::cbegin(genotype_posteriors), std::cend(genotype_posteriors), allele,
-                           [&] (const auto& p, bool is_hom) { if (!is_hom) mass_not_hom += p.second; },
+    std::deque<double> buffer {};
+    for_each_is_homozygous(std::cbegin(genotype_log_posteriors), std::cend(genotype_log_posteriors), allele,
+                           [&] (const auto& p, bool is_hom) { if (!is_hom) buffer.push_back(p.second); },
                            [] (const auto& p) { return p.first; });
-    return probability_false_to_phred(mass_not_hom);
+    if (!buffer.empty()) {
+        return log_probability_false_to_phred(std::min(maths::log_sum_exp(buffer), 0.0));
+    } else {
+        return Phred<> {std::numeric_limits<double>::infinity()};
+    }
 }
 
 using ReadPileupRange = ContainedRange<ReadPileups::const_iterator>;
 
 auto compute_homozygous_posterior(const Allele& allele,
                                   const GenotypeProbabilityMap& genotype_posteriors,
+                                  const GenotypeProbabilityMap& genotype_log_posteriors,
                                   const ReadPileupRange& pileups)
 {
     assert(!empty(pileups));
     if (has_variation(allele, genotype_posteriors)) {
-        return marginalise_homozygous(allele, genotype_posteriors);
+        return marginalise_homozygous(allele, genotype_log_posteriors);
     } else {
         std::vector<AlignedRead::BaseQuality> reference_qualities {}, non_reference_qualities {};
         Allele::NucleotideSequence reference_sequence {};
@@ -459,14 +464,14 @@ auto compute_homozygous_posterior(const Allele& allele,
         auto het_alt_ln_likelihood = std::inner_product(std::cbegin(reference_ln_likelihoods), std::cend(reference_ln_likelihoods),
                                                         std::cbegin(non_reference_ln_likelihoods), 0.0, std::plus<> {},
                                                         [] (auto ref, auto alt) { return maths::log_sum_exp(ref, alt) - std::log(2); });
-        const auto hom_ref_ln_posterior = hom_ref_ln_likelihood - maths::log_sum_exp(hom_ref_ln_likelihood, het_alt_ln_likelihood);
-        
-        return probability_false_to_phred(1.0 - std::exp(hom_ref_ln_posterior));
+        const auto het_ln_posterior = het_alt_ln_likelihood - maths::log_sum_exp(hom_ref_ln_likelihood, het_alt_ln_likelihood);
+        return log_probability_false_to_phred(het_ln_posterior);
     }
 }
 
 auto call_reference(const std::vector<Allele>& reference_alleles,
                     const GenotypeProbabilityMap& genotype_posteriors,
+                    const GenotypeProbabilityMap& genotype_log_posteriors,
                     const ReadPileups& pileups,
                     const Phred<double> min_call_posterior)
 {
@@ -476,7 +481,7 @@ auto call_reference(const std::vector<Allele>& reference_alleles,
     auto active_pileup_itr = std::cbegin(pileups);
     for (const auto& allele : reference_alleles) {
         const auto active_pileups = contained_range(active_pileup_itr, std::cend(pileups), contig_region(allele));
-        const auto posterior = compute_homozygous_posterior(allele, genotype_posteriors, active_pileups);
+        const auto posterior = compute_homozygous_posterior(allele, genotype_posteriors, genotype_log_posteriors, active_pileups);
         if (posterior >= min_call_posterior) {
             result.push_back({allele, posterior});
         }
@@ -514,8 +519,9 @@ IndividualCaller::call_reference(const std::vector<Allele>& alleles,
                                  const ReadPileupMap& pileups) const
 {
     const auto& genotype_posteriors = (*latents.genotype_posteriors_)[sample()];
-    auto calls = octopus::call_reference(alleles, genotype_posteriors, pileups.at(sample()),
-                                         parameters_.min_refcall_posterior);
+    const auto& genotype_log_posteriors = (*latents.genotype_log_posteriors_)[sample()];
+    auto calls = octopus::call_reference(alleles, genotype_posteriors, genotype_log_posteriors,
+                                         pileups.at(sample()),parameters_.min_refcall_posterior);
     return transform_calls(std::move(calls), sample(), parameters_.ploidy);
 }
 
