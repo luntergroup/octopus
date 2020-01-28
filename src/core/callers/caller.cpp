@@ -718,6 +718,13 @@ find_common_phase_regions(Phaser::PhaseSetMap& phasings)
     }
 }
 
+bool is_contiguous(const decltype(Phaser::PhaseSet::site_indices)& sites)
+{
+    if (sites.size() < 2) return true;
+    const static auto is_discontiguous = [] (auto lhs, auto rhs) { return lhs + 1 < rhs; };
+    return std::adjacent_find(std::cbegin(sites), std::cend(sites), is_discontiguous) == std::cend(sites);
+}
+
 boost::optional<GenomicRegion>
 Caller::find_phased_head(const MappableBlock<Haplotype>& haplotypes,
                          const MappableFlatSet<Variant>& candidates,
@@ -731,8 +738,9 @@ Caller::find_phased_head(const MappableBlock<Haplotype>& haplotypes,
     auto common_phase_regions = find_common_phase_regions(phasings);
     if (common_phase_regions.size() > 1
      && common_phase_regions.front().front() == 0
-     && common_phase_regions.front().back() < candidates.size() - 1) {
-        return closed_region(viable_phase_regions.front(), viable_phase_regions[common_phase_regions.front().back()]);
+     && common_phase_regions.front().back() < candidates.size() - 1
+     && is_contiguous(common_phase_regions.front())) {
+        return closed_region(viable_phase_regions.front(), head_region(viable_phase_regions[common_phase_regions.front().back() + 1]));
     } else {
         return boost::none;
     }
