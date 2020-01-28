@@ -409,11 +409,10 @@ bool contains_helper(const Haplotype& haplotype, const Allele& allele)
 
 bool has_variation(const Allele& allele, const GenotypeProbabilityMap& genotype_posteriors)
 {
-    if (!genotype_posteriors.empty() && !contains(mapped_region(genotype_posteriors), allele)) {
-        return false;
-    }
-    return any_of_is_heterozygous(std::cbegin(genotype_posteriors), std::cend(genotype_posteriors), allele,
-                                  [] (const auto& p) { return p.first; });
+    return !genotype_posteriors.empty()
+        && !contains(mapped_region(genotype_posteriors), allele)
+        && !all_of_is_homozygous(std::cbegin(genotype_posteriors), std::cend(genotype_posteriors), allele,
+                                 [] (const auto& p) { return p.first; });
 }
 
 auto marginalise_homozygous(const Allele& allele, const GenotypeProbabilityMap& genotype_posteriors)

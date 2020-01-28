@@ -646,6 +646,27 @@ bool all_of(const Genotype<MappableType>& genotype, UnaryPredicate&& pred, std::
     return std::all_of(std::cbegin(genotype), std::cend(genotype), std::forward<UnaryPredicate>(pred));
 }
 
+template <typename MappableType, typename UnaryPredicate, typename CacheType>
+unsigned count_if(const Genotype<MappableType>& genotype, UnaryPredicate&& pred, std::true_type)
+{
+    unsigned result {0};
+    for (auto element_itr = std::cbegin(genotype); element_itr != std::cend(genotype);) {
+        if (pred(*element_itr++)) {
+            ++result;
+            for (; element_itr != std::cend(genotype) && *element_itr == *std::prev(element_itr); ++element_itr, ++result);
+        } else {
+            for (; element_itr != std::cend(genotype) && *element_itr == *std::prev(element_itr); ++element_itr);
+        }
+    }
+    return result;
+}
+
+template <typename MappableType, typename UnaryPredicate, typename CacheType>
+unsigned count_if(const Genotype<MappableType>& genotype, UnaryPredicate&& pred, std::false_type)
+{
+    return std::count_if(std::cbegin(genotype), std::cend(genotype), std::forward<UnaryPredicate>(pred));
+}
+
 } // namespace detail
 
 template <typename MappableType, typename UnaryPredicate>
@@ -695,6 +716,22 @@ bool all_of(const Genotype<MappableType>& genotype, UnaryPredicate&& pred, Cache
         for (; element_itr != std::cend(genotype) && *element_itr == *std::prev(element_itr); ++element_itr);
     }
     return true;
+}
+
+template <typename MappableType, typename UnaryPredicate, typename CacheType>
+unsigned count_if(const Genotype<MappableType>& genotype, UnaryPredicate&& pred, CacheType& cache)
+{
+    static_assert(is_ordered_v<MappableType>, "");
+    unsigned result {0};
+    for (auto element_itr = std::cbegin(genotype); element_itr != std::cend(genotype);) {
+        if (copy_from_cache(*element_itr++, pred, cache)) {
+            ++result;
+            for (; element_itr != std::cend(genotype) && *element_itr == *std::prev(element_itr); ++element_itr, ++result);
+        } else {
+            for (; element_itr != std::cend(genotype) && *element_itr == *std::prev(element_itr); ++element_itr);
+        }
+    }
+    return result;
 }
 
 } // namespace detail
@@ -895,7 +932,7 @@ bool are_equal_in_region(const Genotype<MappableType1>& lhs, const Genotype<Mapp
 }
 
 template <typename InputIterator, typename UnaryPredicate, typename UnaryFunction>
-bool any_of_any_of(InputIterator first, InputIterator last,
+bool all_of_all_of(InputIterator first, InputIterator last,
                    UnaryPredicate&& pred,
                    UnaryFunction&& adaptor)
 {
@@ -906,14 +943,14 @@ bool any_of_any_of(InputIterator first, InputIterator last,
     if (first == last) return false;
     const auto cache_hint = std::min(static_cast<std::size_t>(std::distance(first, last)), std::size_t {100});
     auto cache = detail::init_cache<InputElementType, decltype(pred)>(cache_hint);
-    return std::any_of(first, last, [&] (const auto& value) { return detail::any_of(adaptor(value), pred, cache); });
+    return std::all_of(first, last, [&] (const auto& value) { return detail::all_of(adaptor(value), pred, cache); });
 }
 
 template <typename InputIterator, typename UnaryPredicate>
-bool any_of_any_of(InputIterator first, InputIterator last,
+bool all_of_all_of(InputIterator first, InputIterator last,
                    UnaryPredicate&& pred)
 {
-    return any_of_any_of(first, last, std::forward<UnaryPredicate>(pred), [] (const auto& g) { return g; });
+    return all_of_all_of(first, last, std::forward<UnaryPredicate>(pred), [] (const auto& g) { return g; });
 }
 
 template <typename MappableType>
@@ -939,7 +976,8 @@ bool is_heterozygous(const Genotype<MappableType>& genotype, const GenomicRegion
 template <typename MappableType, std::enable_if_t<detail::is_haplotype_like_v<MappableType>, int> = 0>
 bool is_heterozygous(const Genotype<MappableType>& genotype, const Allele& allele)
 {
-    return any_of(genotype, [&] (const auto& haplotype) { return contains(haplotype, allele); });
+    auto occ = count_if(genotype, [&] (const auto& haplotype) { return contains(haplotype, allele); });
+    return occ > 0 && occ < ploidy(genotype);
 }
 
 template <typename InputIterator, typename MappableType, typename BinaryFunction, typename UnaryFunction>
@@ -958,22 +996,6 @@ void for_each_is_homozygous(InputIterator first, InputIterator last,
 {
     for_each_homozygous(first, last, target, std::forward<BinaryFunction>(visitor), [] (const auto& g) { return g; });
 }
-template <typename InputIterator, typename MappableType, typename BinaryFunction, typename UnaryFunction>
-void for_each_is_heterozygous(InputIterator first, InputIterator last,
-                              const MappableType& target,
-                              BinaryFunction&& visitor,
-                              UnaryFunction&& adaptor)
-{
-    for_each_any_of(first, last, [&] (const auto& element) { return contains(element, target); },
-                    std::forward<BinaryFunction>(visitor), std::forward<UnaryFunction>(adaptor));
-}
-template <typename InputIterator, typename MappableType, typename BinaryFunction>
-void for_each_is_heterozygous(InputIterator first, InputIterator last,
-                              const MappableType& target,
-                              BinaryFunction&& visitor)
-{
-    for_each_is_heterozygous(first, last, target, std::forward<BinaryFunction>(visitor), [] (const auto& g) { return g; });
-}
 
 template <typename InputIterator, typename MappableType, typename OutputIterator, typename BinaryFunction, typename UnaryFunction>
 void transform_is_homozygous(InputIterator first, InputIterator last,
@@ -987,12 +1009,12 @@ void transform_is_homozygous(InputIterator first, InputIterator last,
                           std::forward<UnaryFunction>(adaptor));
 }
 
-template <typename InputIterator, typename MappableType, typename UnaryFunction>
-bool any_of_is_heterozygous(InputIterator first, InputIterator last,
-                            const MappableType& target,
-                            UnaryFunction&& adaptor)
+template <typename InputIterator, typename UnaryFunction>
+bool all_of_is_homozygous(InputIterator first, InputIterator last,
+                          const Allele& target,
+                          UnaryFunction&& adaptor)
 {
-    return any_of_any_of(first, last, [&] (const auto& element) { return contains(element, target); },
+    return all_of_all_of(first, last, [&] (const auto& element) { return contains(element, target); },
                          std::forward<UnaryFunction>(adaptor));
 }
 
