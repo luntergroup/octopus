@@ -696,17 +696,26 @@ bool Caller::try_early_detect_phase_regions(const MappableBlock<Haplotype>& hapl
 }
 
 std::vector<decltype(Phaser::PhaseSet::site_indices)>
-find_common_phase_regions(const Phaser::PhaseSetMap& phasings)
+find_common_phase_regions(Phaser::PhaseSetMap& phasings)
 {
-    std::map<decltype(Phaser::PhaseSet::site_indices), unsigned> phase_set_sample_assignment_counts {};
-    for (const auto& p : phasings) {
-        for (const Phaser::PhaseSet& phase_set : p.second) {
-            ++phase_set_sample_assignment_counts[phase_set.site_indices];
+    if (phasings.size() > 1) {
+        std::map<decltype(Phaser::PhaseSet::site_indices), unsigned> phase_set_sample_assignment_counts {};
+        for (auto& p : phasings) {
+            for (Phaser::PhaseSet& phase_set : p.second) {
+                ++phase_set_sample_assignment_counts[std::move(phase_set.site_indices)];
+            }
         }
+        const auto num_samples = phasings.size();
+        erase_if(phase_set_sample_assignment_counts, [=] (const auto& p) { return p.second < num_samples; });
+        return extract_keys(phase_set_sample_assignment_counts);
+    } else {
+        std::vector<decltype(Phaser::PhaseSet::site_indices)> result {};
+        result.reserve(std::cbegin(phasings)->second.size());
+        for (auto& phase_set : std::cbegin(phasings)->second) {
+            result.push_back(std::move(phase_set.site_indices));
+        }
+        return result;
     }
-    const auto num_samples = phasings.size();
-    erase_if(phase_set_sample_assignment_counts, [=] (const auto& p) { return p.second < num_samples; });
-    return extract_keys(phase_set_sample_assignment_counts);
 }
 
 boost::optional<GenomicRegion>
@@ -718,13 +727,12 @@ Caller::find_phased_head(const MappableBlock<Haplotype>& haplotypes,
     if (debug_log_) stream(*debug_log_) << "Trying to find complete phase regions in " << active_region;
     const auto active_candidates = contained_range(candidates, active_region);
     const auto viable_phase_regions = extract_regions(active_candidates);
-    const auto phasings = phaser_.phase(haplotypes, *latents.genotype_posteriors(),
-                                        viable_phase_regions, get_genotype_calls(latents));
+    auto phasings = phaser_.phase(haplotypes, *latents.genotype_posteriors(), viable_phase_regions, get_genotype_calls(latents));
     auto common_phase_regions = find_common_phase_regions(phasings);
     if (common_phase_regions.size() > 1
      && common_phase_regions.front().front() == 0
      && common_phase_regions.front().back() < candidates.size() - 1) {
-        return closed_region(viable_phase_regions.front(), head_region(viable_phase_regions[common_phase_regions.front().back()]));
+        return closed_region(viable_phase_regions.front(), viable_phase_regions[common_phase_regions.front().back()]);
     } else {
         return boost::none;
     }
