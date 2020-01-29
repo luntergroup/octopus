@@ -264,6 +264,12 @@ unsigned zygosity(const Genotype<MappableType>& genotype, std::false_type)
         return 1;
     } else if (genotype.ploidy() == 2) {
         return 2;
+    } else if (genotype.ploidy == 3) {
+        if (genotype[0] == genotype[1] || genotype[0] == genotype[2]) {
+            return 2;
+        } else {
+            return 3;
+        }
     }
     return copy_unique(genotype, std::false_type {}).size();
 }
@@ -478,10 +484,16 @@ Genotype<MappableType> copy(const Genotype<MappableType_>& genotype, const Genom
 
 namespace detail {
 
-template <typename ForwardIterator, typename UnaryFunction, typename OutputIterator>
-auto transform_each_naive(ForwardIterator first, ForwardIterator last, UnaryFunction&& f, OutputIterator result)
+template <typename ForwardIterator,
+          typename UnaryFunction1,
+          typename UnaryFunction2,
+          typename OutputIterator>
+auto transform_each_naive(ForwardIterator first, ForwardIterator last,
+                          UnaryFunction1&& element_f,
+                          UnaryFunction2&& genotype_f,
+                          OutputIterator result)
 {
-    return std::transform(first, last, result, [&] (const auto& genotype) { return transform(genotype, f); });
+    return std::transform(first, last, result, [&] (const auto& genotype) { return genotype_f(transform(genotype, element_f)); });
 }
 
 template <typename MappableType, typename UnaryFunction>
@@ -542,26 +554,44 @@ transform(const Genotype<MappableType>& genotype, UnaryFunction&& f, CacheType& 
     return result;
 }
 
-template <typename ForwardIterator, typename UnaryFunction, typename OutputIterator>
-auto transform_each_cached(ForwardIterator first, ForwardIterator last, UnaryFunction&& f, OutputIterator result)
+template <typename ForwardIterator,
+          typename UnaryFunction1,
+          typename UnaryFunction2,
+          typename OutputIterator>
+auto transform_each_cached(ForwardIterator first, ForwardIterator last,
+                          UnaryFunction1&& element_f,
+                          UnaryFunction2&& genotype_f,
+                          OutputIterator result)
 {
     if (first == last) return result;
     using ElementType = typename std::iterator_traits<ForwardIterator>::value_type::value_type;
     const auto cache_hint = std::min(static_cast<std::size_t>(std::distance(first, last)), std::size_t {100});
-    auto cache = init_cache<ElementType, UnaryFunction>(cache_hint);
-    return std::transform(first, last, result, [&] (const auto& genotype) { return transform(genotype, f, cache); });
+    auto cache = init_cache<ElementType, UnaryFunction1>(cache_hint);
+    return std::transform(first, last, result, [&] (const auto& genotype) { return genotype_f(transform(genotype, element_f, cache)); });
 }
 
 } // namespace detail
 
-template <typename ForwardIterator, typename UnaryFunction, typename OutputIterator>
-auto transform_each(ForwardIterator first, ForwardIterator last, UnaryFunction&& f, OutputIterator result)
+template <typename ForwardIterator,
+          typename UnaryFunction1,
+          typename UnaryFunction2,
+          typename OutputIterator>
+auto transform_each(ForwardIterator first, ForwardIterator last,
+                    UnaryFunction1&& element_f, 
+                    UnaryFunction2&& genotype_f,
+                    OutputIterator result)
 {
     if (std::distance(first, last) < 5) {
-        return detail::transform_each_naive(first, last, std::forward<UnaryFunction>(f), result);
+        return detail::transform_each_naive(first, last, std::forward<UnaryFunction1>(element_f), std::forward<UnaryFunction2>(genotype_f), result);
     } else {
-        return detail::transform_each_cached(first, last, std::forward<UnaryFunction>(f), result);
+        return detail::transform_each_cached(first, last, std::forward<UnaryFunction1>(element_f), std::forward<UnaryFunction2>(genotype_f), result);
     }
+}
+
+template <typename ForwardIterator, typename UnaryFunction, typename OutputIterator>
+auto transform_each(ForwardIterator first, ForwardIterator last, UnaryFunction&& element_f, OutputIterator result)
+{
+    return transform_each(first, last, std::forward<UnaryFunction>(element_f), [] (auto g) { return g; }, result);
 }
 
 template <typename Range, typename UnaryFunction, typename OutputIterator>

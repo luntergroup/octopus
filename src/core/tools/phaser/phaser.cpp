@@ -227,26 +227,53 @@ namespace {
 using GenotypeChunk = SharedGenotype;
 using GenotypeChunkPosteriorMap = std::unordered_map<GenotypeChunk, double>;
 
-bool is_very_likely_homozygous(const GenomicRegion& region, const Phaser::SampleGenotypePosteriorMap& genotype_posteriors)
+using BoolMatrix = std::vector<std::vector<bool>>;
+
+auto check_heterozygous(const std::vector<CompressedGenotype>& genotypes, const GenomicRegion& region)
+{
+    std::vector<bool> result(genotypes.size());
+    transform_each(std::cbegin(genotypes), std::cend(genotypes),
+                  [&] (const auto& element) { return copy<Allele>(element, region); }, 
+                  [] (const auto& genotype) { return is_heterozygous(genotype); },
+                  std::begin(result));
+    return result;
+}
+
+BoolMatrix check_heterozygous(const std::vector<CompressedGenotype>& genotypes, const std::vector<GenomicRegion>& regions)
+{
+    BoolMatrix result {};
+    result.reserve(regions.size());
+    for (const auto& region : regions) {
+        result.push_back(check_heterozygous(genotypes, region));
+    }
+    return result;
+}
+
+bool is_very_likely_homozygous(const GenomicRegion& region, 
+                               const Phaser::SampleGenotypePosteriorMap& genotype_posteriors, 
+                               const std::vector<bool>& heterozygotes)
 {
     assert(!genotype_posteriors.empty());
     const static auto posterior_less = [] (const auto& lhs, const auto& rhs) { return lhs.second < rhs.second; };
     const auto map_posterior_itr = std::max_element(std::cbegin(genotype_posteriors), std::cend(genotype_posteriors), posterior_less);
     const auto map_posterior = map_posterior_itr->second;
-    return map_posterior > 0.9999 && is_homozygous(map_posterior_itr->first, region);
+    return map_posterior > 0.9999 && !heterozygotes[std::distance(std::cbegin(genotype_posteriors), map_posterior_itr)];
 }
 
 auto marginalise(const std::vector<CompressedGenotype>& genotypes,
-                 const std::vector<GenomicRegion>& regions,
-                 const Phaser::SampleGenotypePosteriorMap& genotype_posteriors)
+                 const std::vector<GenomicRegion>& partitions,
+                 const std::size_t lhs, const std::size_t rhs,
+                 const Phaser::SampleGenotypePosteriorMap& genotype_posteriors,
+                 const BoolMatrix& heterozygotes)
 {
-    auto chunks = copy_each<GenotypeChunk::ElementType>(genotypes, regions);
-    for (auto& genotype : chunks) {
-        collapse(genotype);
-    }
+    const std::vector<GenomicRegion> partitions_tmp {partitions[lhs], partitions[rhs]};
+    auto chunks = copy_each<GenotypeChunk::ElementType>(genotypes, partitions_tmp);
     GenotypeChunkPosteriorMap chunk_posteriors {genotypes.size()};
     for (std::size_t g {0}; g < genotypes.size(); ++g) {
-        chunk_posteriors[chunks[g]] += genotype_posteriors[genotypes[g]];
+        if (heterozygotes[lhs][g] && heterozygotes[rhs][g]) {
+            collapse(chunks[g]);
+            chunk_posteriors[chunks[g]] += genotype_posteriors[genotypes[g]];
+        }
     }
     auto result = extract_values(chunk_posteriors);
     maths::normalise(result);
@@ -254,15 +281,16 @@ auto marginalise(const std::vector<CompressedGenotype>& genotypes,
 }
 
 auto compute_phase_quality(const std::vector<CompressedGenotype>& genotypes,
-                           const std::vector<GenomicRegion>& regions,
-                           const Phaser::SampleGenotypePosteriorMap& genotype_posteriors)
+                           const std::vector<GenomicRegion>& partitions,
+                           const std::size_t lhs, const std::size_t rhs,
+                           const Phaser::SampleGenotypePosteriorMap& genotype_posteriors,
+                           const BoolMatrix& heterozygotes)
 {
-    assert(regions.size() == 2);
-    if (is_very_likely_homozygous(regions.front(), genotype_posteriors)
-     || is_very_likely_homozygous(regions.back(), genotype_posteriors)) {
+    if (is_very_likely_homozygous(partitions[lhs], genotype_posteriors, heterozygotes[lhs])
+     || is_very_likely_homozygous(partitions[rhs], genotype_posteriors, heterozygotes[rhs])) {
         return probability_false_to_phred(0.0);
     }
-    const auto marginal_posteriors = marginalise(genotypes, regions, genotype_posteriors);
+    const auto marginal_posteriors = marginalise(genotypes, partitions, lhs, rhs, genotype_posteriors, heterozygotes);
     assert(!marginal_posteriors.empty());
     const auto map_marginal_posterior_itr = std::max_element(std::cbegin(marginal_posteriors), std::cend(marginal_posteriors));
     const auto not_map_posterior = std::accumulate(std::cbegin(marginal_posteriors), map_marginal_posterior_itr,
@@ -358,9 +386,9 @@ Phaser::phase_sample(const std::vector<GenomicRegion>& partitions,
                      const SampleGenotypePosteriorMap& genotype_posteriors) const
 {
     using std::cbegin; using std::cend;
-    std::vector<GenomicRegion> partition_pair {};
     using CompletePhaseGraph = boost::adjacency_list<boost::listS, boost::listS, boost::undirectedS, std::size_t>;
     using CompletePhaseGraphVertex = boost::graph_traits<CompletePhaseGraph>::vertex_descriptor;
+    const auto heterozygotes = check_heterozygous(genotypes, partitions);
     CompletePhaseGraph phase_graph {};
     std::vector<CompletePhaseGraphVertex> vertices(partitions.size());
     for (std::size_t idx {0}; idx < partitions.size(); ++idx) {
@@ -369,8 +397,8 @@ Phaser::phase_sample(const std::vector<GenomicRegion>& partitions,
     PhaseQualityTable pairwise_phase_qualities(partitions.size(), PhaseQualityTable::value_type(partitions.size()));
     for (std::size_t lhs_partition_idx {0}; lhs_partition_idx < partitions.size() - 1; ++lhs_partition_idx) {
         for (auto rhs_partition_idx = lhs_partition_idx + 1; rhs_partition_idx < partitions.size(); ++rhs_partition_idx) {
-            partition_pair.assign({partitions[lhs_partition_idx], partitions[rhs_partition_idx]});
-            const auto phase_quality = compute_phase_quality(genotypes, partition_pair, genotype_posteriors);
+            const auto phase_quality = compute_phase_quality(genotypes, partitions, lhs_partition_idx, rhs_partition_idx,
+                                                             genotype_posteriors, heterozygotes);
             if (phase_quality >= config_.min_phase_quality) {
                 boost::add_edge(vertices[lhs_partition_idx], vertices[rhs_partition_idx], phase_graph);
             }
