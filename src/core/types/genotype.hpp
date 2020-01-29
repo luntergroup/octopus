@@ -281,23 +281,23 @@ unsigned zygosity(const Genotype<MappableType>& genotype, std::true_type)
 }
 
 template <typename MappableType>
-bool contains(const Genotype<MappableType>& genotype, const MappableType& element, std::true_type)
+bool contains(const Genotype<MappableType>& genotype, const MappableType& element, std::false_type)
 {
     return std::find(std::cbegin(genotype), std::cend(genotype), element) != std::cend(genotype);
 }
 template <typename MappableType>
-bool contains(const Genotype<MappableType>& genotype, const MappableType& element, std::false_type)
+bool contains(const Genotype<MappableType>& genotype, const MappableType& element, std::true_type)
 {
     return std::binary_search(std::cbegin(genotype), std::cend(genotype), element);
 }
 
 template <typename MappableType>
-unsigned count(const Genotype<MappableType>& genotype, const MappableType& element, std::true_type)
+unsigned count(const Genotype<MappableType>& genotype, const MappableType& element, std::false_type)
 {
     return std::count(std::cbegin(genotype), std::cend(genotype), element);
 }
 template <typename MappableType>
-unsigned count(const Genotype<MappableType>& genotype, const MappableType& element, std::false_type)
+unsigned count(const Genotype<MappableType>& genotype, const MappableType& element, std::true_type)
 {
     const auto equal_range = std::equal_range(std::cbegin(genotype), std::cend(genotype), element);
     return std::distance(equal_range.first, equal_range.second);
@@ -378,7 +378,7 @@ bool contains(const Genotype<MappableType>& genotype, const MappableType& elemen
 }
 
 template <typename MappableType>
-bool count(const Genotype<MappableType>& genotype, const MappableType& element)
+unsigned count(const Genotype<MappableType>& genotype, const MappableType& element)
 {
     return detail::count(genotype, element, is_ordered<MappableType> {});
 }
@@ -1425,12 +1425,12 @@ void print_alleles(S&& stream, const Genotype<MappableType>& genotype)
     const auto haplotype_counts = make_element_count_map(genotype);
     std::vector<std::pair<MappableType, unsigned>> p {haplotype_counts.begin(), haplotype_counts.end()};
     stream << "[";
-    for (unsigned i {0}; i < p.size() - 1; ++i) {
+    for (unsigned i {0}; i < p.size(); ++i) {
         print_alleles(stream, p[i].first);
-        stream << "(" << p[i].second << "),";
+        stream << "(" << p[i].second << ")";
+        if (i < p.size() - 1) stream << ",";
     }
-    print_alleles(stream, p.back().first);
-    stream << "(" << p.back().second << ")]";
+    stream << "]";
 }
 
 template <typename S, typename MappableType>
@@ -1441,12 +1441,12 @@ void print_variant_alleles(S&& stream, const Genotype<MappableType>& genotype)
     }
     const auto simplified = collapse(genotype);
     stream << "[";
-    for (unsigned i {0}; i < simplified.ploidy() - 1; ++i) {
+    for (unsigned i {0}; i < simplified.ploidy(); ++i) {
         print_variant_alleles(stream, simplified[i]);
-        stream << "(" << count(genotype, simplified[i]) << "),";
+        stream << "(" << count(genotype, simplified[i]) << ")";
+        if (i < simplified.ploidy() - 1) stream << ",";
     }
-    print_variant_alleles(stream, simplified[simplified.ploidy() - 1]);
-    stream << "(" << count(genotype, simplified[simplified.ploidy() - 1]) << ")]";
+    stream << "]";
 }
 
 template <typename MappableType>
