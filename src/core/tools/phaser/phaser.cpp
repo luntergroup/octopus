@@ -276,7 +276,7 @@ auto marginalise(const std::vector<CompressedGenotype>& genotypes,
         }
     }
     auto result = extract_values(chunk_posteriors);
-    maths::normalise(result);
+    if (!result.empty()) maths::normalise(result);
     return result;
 }
 
@@ -291,11 +291,14 @@ auto compute_phase_quality(const std::vector<CompressedGenotype>& genotypes,
         return probability_false_to_phred(0.0);
     }
     const auto marginal_posteriors = marginalise(genotypes, partitions, lhs, rhs, genotype_posteriors, heterozygotes);
-    assert(!marginal_posteriors.empty());
-    const auto map_marginal_posterior_itr = std::max_element(std::cbegin(marginal_posteriors), std::cend(marginal_posteriors));
-    const auto not_map_posterior = std::accumulate(std::cbegin(marginal_posteriors), map_marginal_posterior_itr,
-                                   std::accumulate(std::next(map_marginal_posterior_itr), std::cend(marginal_posteriors), 0.0));
-    return probability_false_to_phred(not_map_posterior);
+    if (!marginal_posteriors.empty()) {
+        const auto map_marginal_posterior_itr = std::max_element(std::cbegin(marginal_posteriors), std::cend(marginal_posteriors));
+        const auto not_map_posterior = std::accumulate(std::cbegin(marginal_posteriors), map_marginal_posterior_itr,
+                                       std::accumulate(std::next(map_marginal_posterior_itr), std::cend(marginal_posteriors), 0.0));
+        return probability_false_to_phred(not_map_posterior);
+    } else {
+        return probability_false_to_phred(0.0);
+    }
 }
 
 } // namespace
