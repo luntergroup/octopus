@@ -301,6 +301,20 @@ bool is_very_likely_homozygous(const GenomicRegion& region,
     return map_posterior > 0.9999 && !is_heterozygous(std::distance(std::cbegin(genotype_posteriors), map_posterior_itr), info);
 }
 
+auto copy_each_helper(const std::vector<CompressedGenotype>& genotypes,
+                      const std::vector<GenomicRegion>& sites,
+                      const std::size_t lhs, const std::size_t rhs)
+{
+    if (!are_adjacent(sites[lhs], sites[rhs])) {
+        const std::vector<GenomicRegion> sites_tmp {sites[lhs], sites[rhs]};
+        return copy_each<GenotypeChunk::ElementType>(genotypes, sites_tmp);
+    } else {
+        assert(is_before(sites[lhs], sites[rhs]));
+        const auto site = closed_region(sites[lhs], sites[rhs]);
+        return copy_each<GenotypeChunk::ElementType>(genotypes, site);
+    }
+}
+
 auto
 compute_chunk_set_posteriors(const std::vector<CompressedGenotype>& genotypes,
                              const std::vector<GenomicRegion>& sites,
@@ -308,8 +322,7 @@ compute_chunk_set_posteriors(const std::vector<CompressedGenotype>& genotypes,
                              const Phaser::SampleGenotypePosteriorMap& genotype_posteriors,
                              const GenotypeInfoMatrix& info)
 {
-    const std::vector<GenomicRegion> sites_tmp {sites[lhs], sites[rhs]};
-    auto chunks = copy_each<GenotypeChunk::ElementType>(genotypes, sites_tmp);
+    auto chunks = copy_each_helper(genotypes, sites, lhs, rhs);
     using AlleleIndexSetRef = std::reference_wrapper<const GenotypeInfo::AlleleIndexSet>;
     using AlleleIndexSetRefPair = std::pair<AlleleIndexSetRef, AlleleIndexSetRef>;
     const static auto allele_index_pair_hasher = [] (const auto& p) {
