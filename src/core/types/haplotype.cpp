@@ -604,6 +604,21 @@ ContigAllele copy(const Haplotype& haplotype, const ContigRegion& region)
     return ContigAllele {region, haplotype.sequence(region)};
 }
 
+Haplotype::Builder& try_push_back(const ContigAllele& allele, Haplotype::Builder& builder)
+{
+    if (builder.can_push_back(allele)) {
+        builder.push_back(allele);
+    }
+    return builder;
+}
+Haplotype::Builder& try_push_back(ContigAllele&& allele, Haplotype::Builder& builder)
+{
+    if (builder.can_push_back(allele)) {
+        builder.push_back(std::move(allele));
+    }
+    return builder;
+}
+
 Haplotype copy(const Haplotype& haplotype, const std::vector<GenomicRegion>& regions)
 {
     if (regions.empty()) return {haplotype.region_, haplotype.reference_.get()};
@@ -624,21 +639,21 @@ Haplotype copy(const Haplotype& haplotype, const std::vector<GenomicRegion>& reg
                     overlapped_alleles.advance_begin(1);
                 }
                 if (!overlapped_alleles.empty() && is_empty_region(overlapped_alleles.front())) {
-                    result.push_back(overlapped_alleles.front());
+                    try_push_back(overlapped_alleles.front(), result);
                 } else {
-                    result.push_back(ContigAllele {region.contig_region(), ""});
+                    try_push_back(ContigAllele {region.contig_region(), ""}, result);
                 }
             } else {
                 if (!contains(region.contig_region(), overlapped_alleles.front())) {
-                    result.push_back(copy(overlapped_alleles.front(), *overlapped_region(overlapped_alleles.front(), region.contig_region())));
+                    try_push_back(copy(overlapped_alleles.front(), *overlapped_region(overlapped_alleles.front(), region.contig_region())), result);
                     overlapped_alleles.advance_begin(1);
                 }
                 if (!overlapped_alleles.empty()) {
                     if (contains(region.contig_region(), overlapped_alleles.back())) {
                         for (const auto& allele : overlapped_alleles) result.push_back(allele);
                     } else {
-                        std::for_each(cbegin(overlapped_alleles), prev(cend(overlapped_alleles)), [&] (const auto& allele) { result.push_back(allele); });
-                        result.push_back(copy(overlapped_alleles.back(), *overlapped_region(overlapped_alleles.back(), region.contig_region())));
+                        std::for_each(cbegin(overlapped_alleles), prev(cend(overlapped_alleles)), [&] (const auto& allele) { try_push_back(allele, result); });
+                        try_push_back(copy(overlapped_alleles.back(), *overlapped_region(overlapped_alleles.back(), region.contig_region())), result);
                     }
                 }
             }
