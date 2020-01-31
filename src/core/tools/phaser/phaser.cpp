@@ -244,17 +244,18 @@ struct GenotypeInfo
 using GenotypeInfoVector = std::vector<GenotypeInfo>;
 using GenotypeInfoMatrix = std::vector<GenotypeInfoVector>;
 
-using AlleleIndexMap = std::unordered_map<Allele, GenotypeInfo::AlleleIndex>;
+using AlleleVector = std::vector<Allele>;
 
-GenotypeInfo compute_genotype_info(const Genotype<Allele>& genotype, AlleleIndexMap& all_allele_indices)
+GenotypeInfo compute_genotype_info(const Genotype<Allele>& genotype, AlleleVector& alleles)
 {
     GenotypeInfo::AlleleIndexSet indices(genotype.ploidy());
-    const auto get_allele_index = [&] (const Allele& allele) {
-        const auto result_itr = all_allele_indices.find(allele);
-        if (result_itr != std::cend(all_allele_indices)) return result_itr->second;
-        const auto result = static_cast<GenotypeInfo::AlleleIndex>(all_allele_indices.size());
-        all_allele_indices.emplace(allele, result);
-        return result;
+    const auto get_allele_index = [&] (const Allele& allele) -> GenotypeInfo::AlleleIndex {
+        const auto allele_itr = std::find(std::cbegin(alleles), std::cend(alleles), allele);
+        if (allele_itr != std::cend(alleles)) {
+            return std::distance(std::cbegin(alleles), allele_itr);
+        }
+        alleles.push_back(allele);
+        return alleles.size() - 1;
     };
     std::transform(std::cbegin(genotype), std::cend(genotype), std::begin(indices), get_allele_index);
     std::sort(std::begin(indices), std::end(indices));
@@ -265,11 +266,11 @@ GenotypeInfo compute_genotype_info(const Genotype<Allele>& genotype, AlleleIndex
 GenotypeInfoVector compute_genotype_info(const std::vector<CompressedGenotype>& genotypes, const GenomicRegion& region)
 {
     GenotypeInfoVector result(genotypes.size());
-    AlleleIndexMap allele_indices {};
-    allele_indices.reserve(10);
+    AlleleVector alleles {};
+    alleles.reserve(5);
     transform_each(std::cbegin(genotypes), std::cend(genotypes),
                   [&] (const auto& element) { return copy<Allele>(element, region); }, 
-                  [&] (const auto& genotype) { return compute_genotype_info(genotype, allele_indices); },
+                  [&] (const auto& genotype) { return compute_genotype_info(genotype, alleles); },
                   std::begin(result));
     return result;
 }
@@ -309,19 +310,24 @@ compute_chunk_set_posteriors(const std::vector<CompressedGenotype>& genotypes,
 {
     const std::vector<GenomicRegion> sites_tmp {sites[lhs], sites[rhs]};
     auto chunks = copy_each<GenotypeChunk::ElementType>(genotypes, sites_tmp);
-    using AlleleIndexSetPair = std::pair<GenotypeInfo::AlleleIndexSet, GenotypeInfo::AlleleIndexSet>;
+    using AlleleIndexSetRef = std::reference_wrapper<const GenotypeInfo::AlleleIndexSet>;
+    using AlleleIndexSetRefPair = std::pair<AlleleIndexSetRef, AlleleIndexSetRef>;
     const static auto allele_index_pair_hasher = [] (const auto& p) {
         std::size_t result {};
-        boost::hash_combine(result, p.first);
-        boost::hash_combine(result, p.second);
+        boost::hash_combine(result, p.first.get());
+        boost::hash_combine(result, p.second.get());
         return result;
     };
-    using AlleleIndexSetPairPosteriorMap = std::unordered_map<AlleleIndexSetPair, GenotypeChunkPosteriorMap, decltype(allele_index_pair_hasher)>;
-    AlleleIndexSetPairPosteriorMap chunk_set_posteriors {10, allele_index_pair_hasher};
+    const static auto allele_index_pair_equal = [] (const auto& lhs, const auto& rhs) {
+        return lhs.first.get() == rhs.first.get() && lhs.second.get() == rhs.second.get();
+    };
+    using AlleleIndexSetPairPosteriorMap = std::unordered_map<AlleleIndexSetRefPair, GenotypeChunkPosteriorMap,
+                                                              decltype(allele_index_pair_hasher), decltype(allele_index_pair_equal)>;
+    AlleleIndexSetPairPosteriorMap chunk_set_posteriors {10, allele_index_pair_hasher, allele_index_pair_equal};
     for (std::size_t g {0}; g < genotypes.size(); ++g) {
         if (is_heterozygous(g, info[lhs]) && is_heterozygous(g, info[rhs])) {
             collapse(chunks[g]);
-            const auto index_pair = std::make_pair(info[lhs][g].alleles, info[rhs][g].alleles);
+            const auto index_pair = std::make_pair(std::cref(info[lhs][g].alleles), std::cref(info[rhs][g].alleles));
             chunk_set_posteriors[index_pair][chunks[g]] += genotype_posteriors[genotypes[g]];
         }
     }
