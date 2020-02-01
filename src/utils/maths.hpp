@@ -1085,7 +1085,7 @@ auto normalise(const ForwardIterator first, const ForwardIterator last)
 {
     using T = typename std::iterator_traits<ForwardIterator>::value_type;
     const auto norm = std::accumulate(first, last, T {});
-    std::for_each(first, last, [norm] (auto& value) { value /= norm; });
+    if (norm > 0) std::for_each(first, last, [norm] (auto& value) { value /= norm; });
     return norm;
 }
 
