@@ -725,6 +725,21 @@ bool is_contiguous(const decltype(Phaser::PhaseSet::site_indices)& sites)
     return std::adjacent_find(std::cbegin(sites), std::cend(sites), is_discontiguous) == std::cend(sites);
 }
 
+auto
+encompassing_region(const decltype(Phaser::PhaseSet::site_indices)& phase_set,
+                    const std::vector<GenomicRegion>& sites)
+{
+    assert(!phase_set.empty());
+    auto result = sites[phase_set.front()];
+    std::for_each(std::next(std::cbegin(phase_set)), std::cend(phase_set), [&] (auto site_idx) {
+        assert(!begins_before(sites[site_idx], result));
+        if (ends_before(result, sites[site_idx])) {
+            result = closed_region(result, sites[site_idx]);
+        }
+    });
+    return result;
+}
+
 boost::optional<GenomicRegion>
 Caller::find_phased_head(const MappableBlock<Haplotype>& haplotypes,
                          const MappableFlatSet<Variant>& candidates,
@@ -739,7 +754,9 @@ Caller::find_phased_head(const MappableBlock<Haplotype>& haplotypes,
     if (common_phase_regions.size() > 1
      && common_phase_regions.front().front() == 0
      && common_phase_regions.front().back() < viable_phase_regions.size() - 1
-     && is_contiguous(common_phase_regions.front())) {
+     && is_contiguous(common_phase_regions.front())
+     && !overlaps(encompassing_region(common_phase_regions.front(), viable_phase_regions), 
+                  viable_phase_regions[common_phase_regions.front().back() + 1])) {
         return closed_region(viable_phase_regions.front(), head_region(viable_phase_regions[common_phase_regions.front().back() + 1]));
     } else {
         return boost::none;
