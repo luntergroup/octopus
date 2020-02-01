@@ -738,7 +738,7 @@ Caller::find_phased_head(const MappableBlock<Haplotype>& haplotypes,
     auto common_phase_regions = find_common_phase_regions(phasings);
     if (common_phase_regions.size() > 1
      && common_phase_regions.front().front() == 0
-     && common_phase_regions.front().back() < candidates.size() - 1
+     && common_phase_regions.front().back() < viable_phase_regions.size() - 1
      && is_contiguous(common_phase_regions.front())) {
         return closed_region(viable_phase_regions.front(), head_region(viable_phase_regions[common_phase_regions.front().back() + 1]));
     } else {
