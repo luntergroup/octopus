@@ -581,7 +581,7 @@ OptionMap parse_options(const int argc, const char** argv)
      "Read linkage information to use for calling [NONE, PAIRED, LINKED]")
      
     ("min-phase-score",
-     po::value<Phred<double>>()->default_value(Phred<double> {10.0}),
+     po::value<Phred<double>>()->default_value(Phred<double> {5.0}),
      "Minimum phase score (phred scale) required to report sites as phased")
     
     ("disable-early-phase-detection",
