@@ -198,6 +198,7 @@ set(UTILS_SOURCES
     utils/array_tricks.hpp
     utils/reorder.hpp
     utils/free_memory.hpp
+    utils/erase_if.hpp
 )
 
 set(CORE_SOURCES
