@@ -16,9 +16,10 @@
 #include "basics/contig_region.hpp"
 #include "basics/genomic_region.hpp"
 #include "concepts/mappable.hpp"
-#include "utils/mappable_algorithms.hpp"
 #include "core/types/allele.hpp"
 #include "core/types/variant.hpp"
+#include "utils/mappable_algorithms.hpp"
+#include "erase_if.hpp"
 #include "io/variant/vcf_header.hpp"
 #include "io/variant/vcf_spec.hpp"
 #include "io/reference/reference_genome.hpp"
@@ -284,9 +285,34 @@ auto wrap_calls(const std::vector<VcfRecord>& calls, const SampleName& sample)
 }
 
 std::vector<std::vector<CallWrapper>>
-segment_into_contiguous_phase_blocks(const std::vector<VcfRecord>& calls, const SampleName& sample)
+segment_into_contiguous_phase_blocks(const std::vector<VcfRecord>& calls, const SampleName& sample,
+                                     const bool merge_unphased_refcalls = true)
 {
-    return segment_overlapped_copy(wrap_calls(calls, sample));
+    auto result = segment_overlapped_copy(wrap_calls(calls, sample));
+    if (merge_unphased_refcalls) {
+        bool found_refcall {false};
+        for (auto first_refcall_itr = std::begin(result); first_refcall_itr != std::end(result);) {
+            const static auto is_refcall_block = [] (const auto& block) { return block.size() == 1 && is_refcall(block[0].get()); };
+            first_refcall_itr = std::find_if(first_refcall_itr, std::end(result), is_refcall_block);
+            if (first_refcall_itr == std::end(result)) break;
+            const auto last_refcall_itr = std::find_if_not(std::next(first_refcall_itr), std::end(result), is_refcall_block);
+            first_refcall_itr->reserve(std::distance(first_refcall_itr, last_refcall_itr));
+            std::for_each(std::next(first_refcall_itr), last_refcall_itr, [&] (auto& refcall) {
+                first_refcall_itr->push_back(std::move(refcall[0]));
+                refcall.clear();
+            });
+            const auto block_region = encompassing_region(*first_refcall_itr);
+            for (auto& call : *first_refcall_itr) {
+                call.phase_region = block_region;
+            }
+            first_refcall_itr = last_refcall_itr;
+            found_refcall = true;
+        }
+        if (found_refcall) {
+            erase_if(result, [] (const auto& block) { return block.empty(); });
+        }
+    }
+    return result;
 }
 
 auto get_max_ploidy(const std::vector<CallWrapper>& calls, const SampleName& sample)

@@ -151,6 +151,14 @@ bool VcfRecord::is_homozygous_ref(const SampleName& sample) const
                        [this] (const auto& allele) { return allele == ref_; });
 }
 
+bool VcfRecord::is_refcall() const
+{
+    const auto is_ref = [this] (const auto& allele) { return allele == ref_; };
+    const auto is_hom_ref = [&] (const auto& p) {
+        return std::all_of(std::cbegin(p.second.first), std::cend(p.second.first), is_ref); };
+    return std::all_of(std::cbegin(genotypes_), std::cend(genotypes_), is_hom_ref);
+}
+
 bool VcfRecord::is_homozygous_non_ref(const SampleName& sample) const
 {
     const auto& genotype = genotypes_.at(sample).first;
@@ -331,10 +339,9 @@ bool is_info_missing(const VcfRecord::KeyType& key, const VcfRecord& record)
     return !record.has_info(key) || is_missing(record.info_value(key));
 }
 
-bool is_refcall(const VcfRecord& record) noexcept
+bool is_refcall(const VcfRecord& record)
 {
-    const static std::vector<VcfRecord::NucleotideSequence> refcall_alts {vcfspec::allele::nonref};
-    return record.alt() == refcall_alts;
+    return record.is_refcall();
 }
 
 bool is_filtered(const VcfRecord& record) noexcept

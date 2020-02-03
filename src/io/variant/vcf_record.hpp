@@ -104,6 +104,7 @@ public:
     bool is_homozygous(const SampleName& sample) const;
     bool is_heterozygous(const SampleName& sample) const;
     bool is_homozygous_ref(const SampleName& sample) const;
+    bool is_refcall() const;
     bool is_homozygous_non_ref(const SampleName& sample) const;
     bool has_ref_allele(const SampleName& sample) const;
     bool has_alt_allele(const SampleName& sample) const;
@@ -148,7 +149,7 @@ std::vector<double> get_allele_frequency(const VcfRecord& record);
 
 bool is_info_missing(const VcfRecord::KeyType& key, const VcfRecord& record);
 
-bool is_refcall(const VcfRecord& record) noexcept;
+bool is_refcall(const VcfRecord& record);
 bool is_filtered(const VcfRecord& record) noexcept;
 bool is_dbsnp_member(const VcfRecord& record) noexcept;
 bool is_hapmap2_member(const VcfRecord& record) noexcept;
