@@ -64,7 +64,7 @@ Measure::ResultType IsDenovo::do_evaluate(const VcfRecord& call, const FacetMap&
 Measure::ResultCardinality IsDenovo::do_cardinality() const noexcept
 {
     if (report_sample_status_) {
-        return ResultCardinality::num_samples;
+        return ResultCardinality::samples;
     } else {
         return ResultCardinality::one;
     }

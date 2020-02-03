@@ -46,7 +46,7 @@ Measure::ResultType DuplicateAlleleFraction::do_evaluate(const VcfRecord& call, 
 
 Measure::ResultCardinality DuplicateAlleleFraction::do_cardinality() const noexcept
 {
-    return ResultCardinality::num_samples;
+    return ResultCardinality::samples;
 }
 
 const std::string& DuplicateAlleleFraction::do_name() const

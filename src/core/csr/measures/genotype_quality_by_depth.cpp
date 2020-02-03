@@ -45,7 +45,7 @@ Measure::ResultType GenotypeQualityByDepth::do_evaluate(const VcfRecord& call, c
 
 Measure::ResultCardinality GenotypeQualityByDepth::do_cardinality() const noexcept
 {
-    return ResultCardinality::num_samples;
+    return ResultCardinality::samples;
 }
 
 const std::string& GenotypeQualityByDepth::do_name() const

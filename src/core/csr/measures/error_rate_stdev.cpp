@@ -95,7 +95,7 @@ Measure::ResultType ErrorRateStdev::do_evaluate(const VcfRecord& call, const Fac
 
 Measure::ResultCardinality ErrorRateStdev::do_cardinality() const noexcept
 {
-    return ResultCardinality::num_samples;
+    return ResultCardinality::samples;
 }
 
 const std::string& ErrorRateStdev::do_name() const

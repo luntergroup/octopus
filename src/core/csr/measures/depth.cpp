@@ -63,7 +63,7 @@ Measure::ResultCardinality Depth::do_cardinality() const noexcept
     if (aggregate_) {
         return ResultCardinality::one;
     } else {
-        return ResultCardinality::num_samples;
+        return ResultCardinality::samples;
     }
 }
 

@@ -79,7 +79,7 @@ Measure::ResultType MismatchCount::do_evaluate(const VcfRecord& call, const Face
 
 Measure::ResultCardinality MismatchCount::do_cardinality() const noexcept
 {
-    return ResultCardinality::num_samples;
+    return ResultCardinality::samples;
 }
 
 const std::string& MismatchCount::do_name() const

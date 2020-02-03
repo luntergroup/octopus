@@ -87,7 +87,7 @@ Measure::ResultType AlleleDepth::do_evaluate(const VcfRecord& call, const FacetM
 
 Measure::ResultCardinality AlleleDepth::do_cardinality() const noexcept
 {
-    return ResultCardinality::num_samples;
+    return ResultCardinality::samples;
 }
 
 const std::string& AlleleDepth::do_name() const

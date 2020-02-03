@@ -57,7 +57,7 @@ Measure::ResultType AssignedDepth::do_evaluate(const VcfRecord& call, const Face
 
 Measure::ResultCardinality AssignedDepth::do_cardinality() const noexcept
 {
-    return ResultCardinality::num_samples;
+    return ResultCardinality::samples;
 }
 
 const std::string& AssignedDepth::do_name() const

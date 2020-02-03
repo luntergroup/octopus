@@ -44,7 +44,7 @@ Measure::ResultType MismatchFraction::do_evaluate(const VcfRecord& call, const F
 
 Measure::ResultCardinality MismatchFraction::do_cardinality() const noexcept
 {
-    return ResultCardinality::num_samples;
+    return ResultCardinality::samples;
 }
 
 const std::string& MismatchFraction::do_name() const

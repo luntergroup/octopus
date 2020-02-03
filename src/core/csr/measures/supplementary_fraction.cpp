@@ -57,7 +57,7 @@ Measure::ResultType SupplementaryFraction::do_evaluate(const VcfRecord& call, co
 
 Measure::ResultCardinality SupplementaryFraction::do_cardinality() const noexcept
 {
-    return ResultCardinality::num_samples;
+    return ResultCardinality::samples;
 }
 
 const std::string& SupplementaryFraction::do_name() const

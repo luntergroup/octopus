@@ -154,7 +154,7 @@ Measure::ResultType ReadEndBias::do_evaluate(const VcfRecord& call, const FacetM
 
 Measure::ResultCardinality ReadEndBias::do_cardinality() const noexcept
 {
-    return ResultCardinality::num_samples;
+    return ResultCardinality::samples;
 }
 
 const std::string& ReadEndBias::do_name() const

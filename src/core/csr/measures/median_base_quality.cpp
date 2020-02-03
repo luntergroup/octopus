@@ -107,7 +107,7 @@ Measure::ResultType MedianBaseQuality::do_evaluate(const VcfRecord& call, const 
 
 Measure::ResultCardinality MedianBaseQuality::do_cardinality() const noexcept
 {
-    return ResultCardinality::num_samples;
+    return ResultCardinality::samples;
 }
 
 const std::string& MedianBaseQuality::do_name() const

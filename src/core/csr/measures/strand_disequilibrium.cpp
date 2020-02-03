@@ -63,7 +63,7 @@ Measure::ResultType StrandDisequilibrium::do_evaluate(const VcfRecord& call, con
 
 Measure::ResultCardinality StrandDisequilibrium::do_cardinality() const noexcept
 {
-    return ResultCardinality::num_samples;
+    return ResultCardinality::samples;
 }
 
 const std::string& StrandDisequilibrium::do_name() const

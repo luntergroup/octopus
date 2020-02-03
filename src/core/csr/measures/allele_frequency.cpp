@@ -46,7 +46,7 @@ Measure::ResultType AlleleFrequency::do_evaluate(const VcfRecord& call, const Fa
 
 Measure::ResultCardinality AlleleFrequency::do_cardinality() const noexcept
 {
-    return ResultCardinality::num_samples;
+    return ResultCardinality::samples;
 }
 
 const std::string& AlleleFrequency::do_name() const

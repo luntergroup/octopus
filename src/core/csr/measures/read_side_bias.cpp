@@ -134,7 +134,7 @@ Measure::ResultType ReadSideBias::do_evaluate(const VcfRecord& call, const Facet
 
 Measure::ResultCardinality ReadSideBias::do_cardinality() const noexcept
 {
-    return ResultCardinality::num_samples;
+    return ResultCardinality::samples;
 }
 
 const std::string& ReadSideBias::do_name() const

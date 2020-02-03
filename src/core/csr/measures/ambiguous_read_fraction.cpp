@@ -56,7 +56,7 @@ Measure::ResultType AmbiguousReadFraction::do_evaluate(const VcfRecord& call, co
 
 Measure::ResultCardinality AmbiguousReadFraction::do_cardinality() const noexcept
 {
-    return ResultCardinality::num_samples;
+    return ResultCardinality::samples;
 }
 
 const std::string& AmbiguousReadFraction::do_name() const

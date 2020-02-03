@@ -148,7 +148,7 @@ Measure::ResultType DuplicateConcordance::do_evaluate(const VcfRecord& call, con
 
 Measure::ResultCardinality DuplicateConcordance::do_cardinality() const noexcept
 {
-    return ResultCardinality::num_samples;
+    return ResultCardinality::samples;
 }
 
 const std::string& DuplicateConcordance::do_name() const

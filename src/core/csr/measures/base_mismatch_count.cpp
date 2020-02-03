@@ -104,7 +104,7 @@ Measure::ResultType BaseMismatchCount::do_evaluate(const VcfRecord& call, const 
 
 Measure::ResultCardinality BaseMismatchCount::do_cardinality() const noexcept
 {
-    return ResultCardinality::num_samples;
+    return ResultCardinality::samples;
 }
 
 const std::string& BaseMismatchCount::do_name() const

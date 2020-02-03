@@ -102,9 +102,9 @@ void Measure::annotate(VcfHeader::Builder& header) const
     if (!is_required_vcf_field()) {
         const auto vcf_typename = get_vcf_typename(this->get_default_result());
         using namespace vcfspec::header::meta::number;
-        if (this->cardinality() == Measure::ResultCardinality::num_samples) {
+        if (this->cardinality() == Measure::ResultCardinality::samples) {
             header.add_format(this->name(), one, vcf_typename, this->describe());
-        } else if (this->cardinality() == Measure::ResultCardinality::num_alleles) {
+        } else if (this->cardinality() == Measure::ResultCardinality::alleles) {
             header.add_info(this->name(), per_allele, vcf_typename, this->describe());
         } else {
             header.add_info(this->name(), one, vcf_typename, this->describe());
@@ -132,7 +132,7 @@ private:
 void Measure::annotate(VcfRecord::Builder& record, const ResultType& value, const VcfHeader& header) const
 {
     if (!is_required_vcf_field()) {
-        if (this->cardinality() == Measure::ResultCardinality::num_samples) {
+        if (this->cardinality() == Measure::ResultCardinality::samples) {
             record.add_format(this->name());
             const auto samples = header.samples();
             for (std::size_t sample_idx {0}; sample_idx < samples.size(); ++sample_idx) {
@@ -187,7 +187,7 @@ std::vector<std::string> get_all_requirements(const std::vector<MeasureWrapper>&
 
 Measure::ResultType get_sample_value(const Measure::ResultType& value, const MeasureWrapper& measure, const std::size_t sample_idx)
 {
-    if (measure.cardinality() == Measure::ResultCardinality::num_samples) {
+    if (measure.cardinality() == Measure::ResultCardinality::samples) {
         return boost::apply_visitor(VectorIndexGetterVisitor {sample_idx}, value);
     } else {
         return value;

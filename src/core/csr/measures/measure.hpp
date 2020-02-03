@@ -35,7 +35,7 @@ public:
                                       bool,
                                       std::vector<bool>,
                                       boost::any>;
-    enum class ResultCardinality { one, num_alleles, num_samples };
+    enum class ResultCardinality { one, alleles, samples };
     
     Measure() = default;
     

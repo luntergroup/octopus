@@ -29,7 +29,7 @@ Measure::ResultType FilteredReadFraction::get_default_result() const
 
 Measure::ResultType FilteredReadFraction::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
-    if (filtering_depth_.cardinality() == Measure::ResultCardinality::num_samples) {
+    if (filtering_depth_.cardinality() == Measure::ResultCardinality::samples) {
         const auto calling_depth   = boost::get<std::vector<std::size_t>>(calling_depth_.evaluate(call, facets));
         const auto filtering_depth = boost::get<std::vector<std::size_t>>(filtering_depth_.evaluate(call, facets));
         assert(calling_depth.size() == filtering_depth.size());

@@ -42,7 +42,7 @@ Measure::ResultType VariantLength::do_evaluate(const VcfRecord& call, const Face
 
 Measure::ResultCardinality VariantLength::do_cardinality() const noexcept
 {
-    return ResultCardinality::num_samples;
+    return ResultCardinality::samples;
 }
 
 const std::string& VariantLength::do_name() const

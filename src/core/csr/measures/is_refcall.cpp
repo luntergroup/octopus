@@ -39,7 +39,7 @@ Measure::ResultType IsRefcall::do_evaluate(const VcfRecord& call, const FacetMap
 Measure::ResultCardinality IsRefcall::do_cardinality() const noexcept
 {
     if (report_sample_status_) {
-        return ResultCardinality::num_samples;
+        return ResultCardinality::samples;
     } else {
         return ResultCardinality::one;
     }
