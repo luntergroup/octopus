@@ -252,6 +252,15 @@ get_called_alleles(const VcfRecord& call, const VcfRecord::SampleName& sample, c
     return std::make_pair(std::move(result), has_ref);
 }
 
+std::vector<Allele> 
+get_called_alt_alleles(const VcfRecord& call, const VcfRecord::SampleName& sample)
+{
+    std::vector<Allele> result; bool has_ref;
+    std::tie(result, has_ref) = get_called_alleles(call, sample);
+    if (has_ref) result.erase(std::cbegin(result));
+    return result;
+}
+
 namespace {
 
 auto extract_phase_region(const VcfRecord& call, const SampleName& sample)
