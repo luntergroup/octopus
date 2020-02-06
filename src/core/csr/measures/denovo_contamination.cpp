@@ -35,16 +35,16 @@ std::unique_ptr<Measure> DeNovoContamination::do_clone() const
     return std::make_unique<DeNovoContamination>(*this);
 }
 
-Measure::ResultType DeNovoContamination::get_default_result() const
+Measure::ValueType DeNovoContamination::get_value_type() const
 {
-    return boost::optional<int> {};
+    return int {};
 }
 
 namespace {
 
 bool is_denovo(const VcfRecord& call, const Measure::FacetMap& facets)
 {
-    return boost::get<bool>(IsDenovo(false).evaluate(call, facets));
+    return get_value_type<bool>(IsDenovo(false).evaluate(call, facets));
 }
 
 auto find_child_idx(const std::vector<SampleName>& samples, const octopus::Pedigree& pedigree)
@@ -136,7 +136,7 @@ auto copy_overlapped_to_vector(const AmbiguousReadList& reads, const MappableTyp
 
 Measure::ResultType DeNovoContamination::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
-    boost::optional<int> result {};
+    Optional<ValueType> result {};
     if (is_denovo(call, facets)) {
         const auto& samples = get_value<Samples>(facets.at("Samples"));
         const auto& pedigree = get_value<Pedigree>(facets.at("Pedigree"));
@@ -157,7 +157,7 @@ Measure::ResultType DeNovoContamination::do_evaluate(const VcfRecord& call, cons
             haplotype_priors[haplotype] = -1;
         }
         const std::array<SampleName, 2> parents {trio.mother(), trio.father()};
-        result = 0;
+        int contamination {0};
         for (const auto& sample : parents) {
             for (const auto& p : assignments.support.at(sample)) {
                 auto supporting_reads = copy_overlapped(p.second, call);
@@ -171,12 +171,12 @@ Measure::ResultType DeNovoContamination::do_evaluate(const VcfRecord& call, cons
                         haplotype_priors.erase(assigned_haplotype);
                         for (const auto& denovo : denovo_haplotypes) {
                             if (support.count(denovo) == 1) {
-                                *result += support.at(denovo).size();
+                                contamination += support.at(denovo).size();
                             }
                         }
                     } else {
                         // This could happen if we don't call all 'de novo' alleles on the called de novo haplotype.
-                        *result += supporting_reads.size();
+                        contamination += supporting_reads.size();
                     }
                 }
             }
@@ -199,13 +199,14 @@ Measure::ResultType DeNovoContamination::do_evaluate(const VcfRecord& call, cons
                         }
                         for (const auto& denovo : denovo_haplotypes) {
                             if (support.count(denovo) == 1) {
-                                *result += support.at(denovo).size();
+                                contamination += support.at(denovo).size();
                             }
                         }
                     }
                 }
             }
         }
+        result = contamination;
     }
     return result;
 }

@@ -31,9 +31,9 @@ std::unique_ptr<Measure> DuplicateConcordance::do_clone() const
     return std::make_unique<DuplicateConcordance>(*this);
 }
 
-Measure::ResultType DuplicateConcordance::get_default_result() const
+Measure::ValueType DuplicateConcordance::get_value_type() const
 {
-    return std::vector<boost::optional<double>> {};
+    return double {};
 }
 
 namespace {
@@ -125,17 +125,17 @@ Measure::ResultType DuplicateConcordance::do_evaluate(const VcfRecord& call, con
     const auto& samples = get_value<Samples>(facets.at("Samples"));
     const auto& reads = get_value<OverlappingReads>(facets.at("OverlappingReads"));
     const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments"));
-    std::vector<boost::optional<double>> result {};
+    Array<Optional<ValueType>> result {};
     result.reserve(samples.size());
     for (const auto& sample : samples) {
-        boost::optional<double> sample_result {};
+        Optional<ValueType> sample_result {};
         if (has_called_alt_allele(call, sample)) {
             const auto duplicate_reads = find_duplicate_overlapped_reads(reads.at(sample), mapped_region(call));
             if (!duplicate_reads.empty()) {
                 const auto allele_support = compute_allele_support(get_called_alleles(call, sample).first, assignments, sample);
                 for (const auto& duplicates : duplicate_reads) {
                     const auto concordance = calculate_support_concordance(duplicates, allele_support);
-                    if (!sample_result || concordance < *sample_result) {
+                    if (!sample_result || concordance < boost::get<double>(*sample_result)) {
                         sample_result = concordance;
                     }
                 }

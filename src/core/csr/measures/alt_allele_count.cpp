@@ -21,9 +21,9 @@ std::unique_ptr<Measure> AltAlleleCount::do_clone() const
     return std::make_unique<AltAlleleCount>(*this);
 }
 
-Measure::ResultType AltAlleleCount::get_default_result() const
+Measure::ValueType AltAlleleCount::get_value_type() const
 {
-    return std::vector<int> {};
+    return int {};
 }
 
 namespace {
@@ -39,10 +39,10 @@ int count_non_ref_alleles(const VcfRecord& call, const VcfRecord::SampleName& sa
 Measure::ResultType AltAlleleCount::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     const auto& samples = get_value<Samples>(facets.at("Samples"));
-    std::vector<int> result {};
+    Array<ValueType> result {};
     result.reserve(samples.size());
     for (const auto& sample : samples) {
-        result.push_back(count_non_ref_alleles(call, sample));
+        result.emplace_back(count_non_ref_alleles(call, sample));
     }
     return result;
 }

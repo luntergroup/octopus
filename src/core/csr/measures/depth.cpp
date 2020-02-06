@@ -4,6 +4,7 @@
 #include "depth.hpp"
 
 #include <boost/variant.hpp>
+#include <boost/lexical_cast.hpp>
 
 #include "io/variant/vcf_record.hpp"
 #include "io/variant/vcf_spec.hpp"
@@ -26,32 +27,34 @@ std::unique_ptr<Measure> Depth::do_clone() const
     return std::make_unique<Depth>(*this);
 }
 
-Measure::ResultType Depth::get_default_result() const
+Measure::ValueType Depth::get_value_type() const
 {
-    return std::vector<std::size_t> {};
+    return std::size_t {};
 }
 
 Measure::ResultType Depth::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     if (aggregate_) {
+        ValueType result {};
         if (recalculate_) {
             const auto& reads = get_value<OverlappingReads>(facets.at("OverlappingReads"));
-            return static_cast<std::size_t>(count_overlapped(reads, call));
+            result = static_cast<std::size_t>(count_overlapped(reads, call));
         } else {
-            return static_cast<std::size_t>(std::stoull(call.info_value(vcfspec::info::combinedReadDepth).front()));
+            result = boost::lexical_cast<std::size_t>(call.info_value(vcfspec::info::combinedReadDepth).front());
         }
+        return result;
     } else {
         const auto& samples = get_value<Samples>(facets.at("Samples"));
-        std::vector<std::size_t> result {};
+        Array<ValueType> result {};
         result.reserve(samples.size());
         if (recalculate_) {
             const auto& reads = get_value<OverlappingReads>(facets.at("OverlappingReads"));
             for (const auto& sample : samples) {
-                result.push_back(count_overlapped(reads.at(sample), call));
+                result.emplace_back(static_cast<std::size_t>(count_overlapped(reads.at(sample), call)));
             }
         } else {
             for (const auto& sample : samples) {
-                result.push_back(std::stoull(call.get_sample_value(sample, vcfspec::format::combinedReadDepth).front()));
+                result.emplace_back(boost::lexical_cast<std::size_t>(call.get_sample_value(sample, vcfspec::format::combinedReadDepth).front()));
             }
         }
         return result;

@@ -24,9 +24,9 @@ std::unique_ptr<Measure> MismatchCount::do_clone() const
     return std::make_unique<MismatchCount>(*this);
 }
 
-Measure::ResultType MismatchCount::get_default_result() const
+Measure::ValueType MismatchCount::get_value_type() const
 {
-    return std::vector<int> {};
+    return int {};
 }
 
 namespace {
@@ -58,11 +58,10 @@ Measure::ResultType MismatchCount::do_evaluate(const VcfRecord& call, const Face
 {
     const auto& samples = get_value<Samples>(facets.at("Samples"));
     const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments"));
-    std::vector<int> result {};
+    Array<ValueType> result {};
     result.reserve(samples.size());
     for (const auto& sample : samples) {
-        std::vector<Allele> alleles; bool has_ref;
-        std::tie(alleles, has_ref) = get_called_alleles(call, sample);
+        const auto alleles = get_called_alleles(call, sample).first;
         int sample_result {0};
         if (!alleles.empty()) {
             const auto sample_allele_support = compute_allele_support(alleles, assignments, sample);
@@ -72,7 +71,7 @@ Measure::ResultType MismatchCount::do_evaluate(const VcfRecord& call, const Face
                 }
             }
         }
-        result.push_back(sample_result);
+        result.emplace_back(sample_result);
     }
     return result;
 }

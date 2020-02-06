@@ -18,24 +18,23 @@ std::unique_ptr<Measure> VariantLength::do_clone() const
     return std::make_unique<VariantLength>(*this);
 }
 
-Measure::ResultType VariantLength::get_default_result() const
+Measure::ValueType VariantLength::get_value_type() const
 {
-    return std::vector<int> {};
+    return int {};
 }
 
 Measure::ResultType VariantLength::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     const auto& samples = get_value<Samples>(facets.at("Samples"));
-    std::vector<int> result {};
+    Array<ValueType> result {};
     result.reserve(samples.size());
     for (const auto& sample : samples) {
-        std::vector<Allele> alleles; bool has_ref;
-        std::tie(alleles, has_ref) = get_called_alleles(call, sample);
+        const auto alleles = get_called_alleles(call, sample).first;
         int sample_result {0};
         for (const auto& allele : alleles) {
             sample_result = std::max({sample_result, static_cast<int>(region_size(allele)), static_cast<int>(sequence_size(allele))});
         }
-        result.push_back(sample_result);
+        result.emplace_back(sample_result);
     }
     return result;
 }

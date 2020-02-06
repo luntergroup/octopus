@@ -21,9 +21,9 @@ std::unique_ptr<Measure> ClippedReadFraction::do_clone() const
     return std::make_unique<ClippedReadFraction>(*this);
 }
 
-Measure::ResultType ClippedReadFraction::get_default_result() const
+Measure::ValueType ClippedReadFraction::get_value_type() const
 {
-    return boost::optional<double> {};
+    return double {};
 }
 
 namespace {
@@ -39,28 +39,23 @@ bool is_significantly_clipped(const AlignedRead& read) noexcept
     return is_soft_clipped(read) && clip_fraction(read) > 0.25;
 }
 
-Measure::ResultType clipped_fraction(const ReadMap& reads, const GenomicRegion& region)
-{
-    unsigned num_reads {0}, num_soft_clipped_reads {0};
-    for (const auto& p : reads) {
-        for (const auto& read : overlap_range(p.second, region)) {
-            if (is_significantly_clipped(read)) ++num_soft_clipped_reads;
-            ++num_reads;
-        }
-    }
-    boost::optional<double> result {};
-    if (num_reads > 0) {
-        result = static_cast<double>(num_soft_clipped_reads) / num_reads;
-    }
-    return result;
-}
-
 } // namespace
 
 Measure::ResultType ClippedReadFraction::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     const auto& reads = get_value<OverlappingReads>(facets.at("OverlappingReads"));
-    return clipped_fraction(reads, mapped_region(call));
+    unsigned num_reads {0}, num_soft_clipped_reads {0};
+    for (const auto& p : reads) {
+        for (const auto& read : overlap_range(p.second, call)) {
+            if (is_significantly_clipped(read)) ++num_soft_clipped_reads;
+            ++num_reads;
+        }
+    }
+    Optional<ValueType> result {};
+    if (num_reads > 0) {
+        result = static_cast<double>(num_soft_clipped_reads) / num_reads;
+    }
+    return result;
 }
 
 Measure::ResultCardinality ClippedReadFraction::do_cardinality() const noexcept

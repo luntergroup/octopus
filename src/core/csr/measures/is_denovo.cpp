@@ -20,7 +20,7 @@ std::unique_ptr<Measure> IsDenovo::do_clone() const
     return std::make_unique<IsDenovo>(*this);
 }
 
-Measure::ResultType IsDenovo::get_default_result() const
+Measure::ValueType IsDenovo::get_value_type() const
 {
     return bool {};
 }
@@ -50,14 +50,14 @@ Measure::ResultType IsDenovo::do_evaluate(const VcfRecord& call, const FacetMap&
 {
     if (report_sample_status_) {
         const auto& samples = get_value<Samples>(facets.at("Samples"));
-        std::vector<bool> result(samples.size(), false);
+        Array<ValueType> result(samples.size(), false);
         if (is_denovo(call)) {
             const auto& pedigree = get_value<Pedigree>(facets.at("Pedigree"));
             result[child_idx(samples, pedigree)] = true;
         }
         return result;
     } else {
-        return is_denovo(call);
+        return ValueType {is_denovo(call)};
     }
 }
 

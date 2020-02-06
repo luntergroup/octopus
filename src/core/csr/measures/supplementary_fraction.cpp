@@ -24,33 +24,30 @@ std::unique_ptr<Measure> SupplementaryFraction::do_clone() const
     return std::make_unique<SupplementaryFraction>(*this);
 }
 
-Measure::ResultType SupplementaryFraction::get_default_result() const
+Measure::ValueType SupplementaryFraction::get_value_type() const
 {
-    return std::vector<boost::optional<double>> {};
+    return double {};
 }
 
 Measure::ResultType SupplementaryFraction::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     const auto& samples = get_value<Samples>(facets.at("Samples"));
     const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments"));
-    std::vector<boost::optional<double>> result {};
-    result.reserve(samples.size());
-    for (const auto& sample : samples) {
-        std::vector<Allele> alleles; bool has_ref;
-        std::tie(alleles, has_ref) = get_called_alleles(call, sample);
-        if (has_ref) alleles.erase(std::cbegin(alleles));
-        boost::optional<double> sample_result {};
+    Array<Optional<ValueType>> result(samples.size());
+    for (std::size_t s {0}; s < samples.size(); ++s) {
+        const auto& sample = samples[s];
+        const auto alleles = get_called_alt_alleles(call, sample);
         if (!alleles.empty()) {
             const auto sample_allele_support = compute_allele_support(alleles, assignments, sample);
-            sample_result = 0;
+            double sample_result {0};
             for (const auto& p : sample_allele_support) {
                 if (!p.second.empty()) {
                     auto allele_supplementary_fraction = static_cast<double>(count_supplementary(p.second)) / p.second.size();
-                    *sample_result += std::max(*sample_result, allele_supplementary_fraction);
+                    sample_result += std::max(sample_result, allele_supplementary_fraction);
                 }
             }
+            result[s] = sample_result;
         }
-        result.push_back(sample_result);
     }
     return result;
 }

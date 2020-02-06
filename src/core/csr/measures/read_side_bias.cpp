@@ -29,9 +29,9 @@ std::unique_ptr<Measure> ReadSideBias::do_clone() const
     return std::make_unique<ReadSideBias>(*this);
 }
 
-Measure::ResultType ReadSideBias::get_default_result() const
+Measure::ValueType ReadSideBias::get_value_type() const
 {
-    return std::vector<double> {};
+    return double {};
 }
 
 namespace {
@@ -116,18 +116,16 @@ Measure::ResultType ReadSideBias::do_evaluate(const VcfRecord& call, const Facet
 {
     const auto& samples = get_value<Samples>(facets.at("Samples"));
     const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments"));
-    std::vector<double> result {};
+    Array<ValueType> result {};
     result.reserve(samples.size());
     for (const auto& sample : samples) {
-        std::vector<Allele> alleles; bool has_ref;
-        std::tie(alleles, has_ref) = get_called_alleles(call, sample);
+        const auto alleles = get_called_alleles(call, sample).first;
+        double position_bias {0};
         if (!alleles.empty()) {
             const auto allele_support = compute_allele_support(alleles, assignments, sample);
-            auto position_bias = calculate_position_bias(allele_support);
-            result.push_back(position_bias);
-        } else {
-            result.push_back(0);
+            position_bias = calculate_position_bias(allele_support);
         }
+        result.emplace_back(position_bias);
     }
     return result;
 }

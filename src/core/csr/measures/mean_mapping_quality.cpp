@@ -23,20 +23,22 @@ std::unique_ptr<Measure> MeanMappingQuality::do_clone() const
     return std::make_unique<MeanMappingQuality>(*this);
 }
 
-Measure::ResultType MeanMappingQuality::get_default_result() const
+Measure::ValueType MeanMappingQuality::get_value_type() const
 {
     return double {};
 }
 
 Measure::ResultType MeanMappingQuality::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
+    ValueType result {};
     if (recalculate_) {
         const auto& reads = get_value<OverlappingReads>(facets.at("OverlappingReads"));
         assert(!reads.empty());
-        return rmq_mapping_quality(reads, mapped_region(call));
+        result = rmq_mapping_quality(reads, mapped_region(call));
     } else {
-        return std::stod(call.info_value(vcfspec::info::rmsMappingQuality).front());
+        result = std::stod(call.info_value(vcfspec::info::rmsMappingQuality).front());
     }
+    return result;
 }
 
 Measure::ResultCardinality MeanMappingQuality::do_cardinality() const noexcept

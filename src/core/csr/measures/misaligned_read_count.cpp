@@ -25,9 +25,9 @@ std::unique_ptr<Measure> MisalignedReadCount::do_clone() const
     return std::make_unique<MisalignedReadCount>(*this);
 }
 
-Measure::ResultType MisalignedReadCount::get_default_result() const
+Measure::ValueType MisalignedReadCount::get_value_type() const
 {
-    return std::vector<int> {};
+    return int {};
 }
 
 double error_expectation(const AlignedRead::BaseQualityVector& qualities)
@@ -63,7 +63,7 @@ Measure::ResultType MisalignedReadCount::do_evaluate(const VcfRecord& call, cons
 {
     const auto& samples = get_value<Samples>(facets.at("Samples"));
     const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments"));
-    std::vector<int> result {};
+    Array<ValueType> result {};
     result.reserve(samples.size());
     for (const auto& sample : samples) {
         int sample_result {0};
@@ -74,7 +74,7 @@ Measure::ResultType MisalignedReadCount::do_evaluate(const VcfRecord& call, cons
                 sample_result += count_likely_misaligned(realigned_reads);
             }
         }
-        result.push_back(sample_result);
+        result.emplace_back(sample_result);
     }
     return result;
 }

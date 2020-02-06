@@ -18,7 +18,7 @@ std::unique_ptr<Measure> IsRefcall::do_clone() const
     return std::make_unique<IsRefcall>(*this);
 }
 
-Measure::ResultType IsRefcall::get_default_result() const
+Measure::ValueType IsRefcall::get_value_type() const
 {
     return bool {};
 }
@@ -27,12 +27,12 @@ Measure::ResultType IsRefcall::do_evaluate(const VcfRecord& call, const FacetMap
 {
     if (report_sample_status_) {
         const auto& samples = get_value<Samples>(facets.at("Samples"));
-        std::vector<bool> result(samples.size());
+        Array<ValueType> result(samples.size());
         std::transform(std::cbegin(samples), std::cend(samples), std::begin(result),
                        [&call] (const auto& sample) { return call.is_homozygous_ref(sample); });
         return result;
     } else {
-        return is_refcall(call);
+        return ValueType {is_refcall(call)};
     }
 }
 

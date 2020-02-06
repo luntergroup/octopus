@@ -33,9 +33,9 @@ std::unique_ptr<Measure> MedianSomaticMappingQuality::do_clone() const
     return std::make_unique<MedianSomaticMappingQuality>(*this);
 }
 
-Measure::ResultType MedianSomaticMappingQuality::get_default_result() const
+Measure::ValueType MedianSomaticMappingQuality::get_value_type() const
 {
-    return std::vector<boost::optional<int>> {};
+    return int {};
 }
 
 namespace {
@@ -105,13 +105,13 @@ auto get_somatic_haplotypes(const VcfRecord& somatic, const Facet::GenotypeMap& 
 Measure::ResultType MedianSomaticMappingQuality::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     const auto& samples = get_value<Samples>(facets.at("Samples"));
-    std::vector<boost::optional<int>> result(samples.size(), boost::none);
+    Array<Optional<ValueType>> result(samples.size());
     if (is_somatic(call)) {
-        const auto somatic_status = boost::get<std::vector<bool>>(IsSomatic(true).evaluate(call, facets));
+        const auto somatic_status = boost::get<Array<ValueType>>(IsSomatic(true).evaluate(call, facets));
         std::vector<SampleName> somatic_samples {}, normal_samples {};
         somatic_samples.reserve(samples.size()); normal_samples.reserve(samples.size());
         for (auto tup : boost::combine(samples, somatic_status)) {
-            if (tup.get<1>()) {
+            if (boost::get<bool>(tup.get<1>())) {
                 somatic_samples.push_back(tup.get<0>());
             } else {
                 normal_samples.push_back(tup.get<0>());
@@ -122,13 +122,16 @@ Measure::ResultType MedianSomaticMappingQuality::do_evaluate(const VcfRecord& ca
         const auto somatic_haplotypes = get_somatic_haplotypes(call, genotypes, somatic_samples, normal_samples);
         if (somatic_haplotypes.empty()) return result;
         const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments")).support;
-        std::transform(std::cbegin(samples), std::cend(samples), std::begin(result), [&] (const auto& sample) -> boost::optional<int> {
+        for (std::size_t s {0}; s < samples.size(); ++s) {
+            const auto& sample = samples[s];
             if (normal_samples.empty()
                 || std::find(std::cbegin(somatic_samples), std::cend(somatic_samples), sample) != std::cend(somatic_samples)) {
                 std::vector<AlignedRead::MappingQuality> somatic_mqs {};
                 for (const auto& haplotype : somatic_haplotypes) {
                     if (assignments.at(sample).count(haplotype) == 0) {
-                        return boost::none; // TODO: This should never happen...
+                        // TODO: This should never happen...
+                        somatic_mqs.clear();
+                        break;
                     }
                     const auto& somatic_support = assignments.at(sample).at(haplotype);
                     somatic_mqs.reserve(somatic_mqs.size() + somatic_support.size());
@@ -136,11 +139,10 @@ Measure::ResultType MedianSomaticMappingQuality::do_evaluate(const VcfRecord& ca
                                    [] (const AlignedRead& read) { return read.mapping_quality(); });
                 }
                 if (!somatic_mqs.empty()) {
-                    return maths::median(somatic_mqs);
+                    result[s] = static_cast<int>(maths::median(somatic_mqs));
                 }
             }
-            return boost::none;
-        });
+        }
     }
     return result;
 }

@@ -27,24 +27,28 @@ std::unique_ptr<Measure> BaseMismatchFraction::do_clone() const
     return std::make_unique<BaseMismatchFraction>(*this);
 }
 
-Measure::ResultType BaseMismatchFraction::get_default_result() const
+Measure::ValueType BaseMismatchFraction::get_value_type() const
 {
-    return std::vector<double> {};
+    return double {};
 }
 
 Measure::ResultType BaseMismatchFraction::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
-    const auto depths = boost::get<std::vector<std::size_t>>(depth_.evaluate(call, facets));
-    const auto mismatch_counts = boost::get<std::vector<int>>(BaseMismatchCount{}.evaluate(call, facets));
-    const auto variant_lengths = boost::get<std::vector<int>>(VariantLength{}.evaluate(call, facets));
+    const auto depths = boost::get<Array<ValueType>>(depth_.evaluate(call, facets));
+    const auto mismatch_counts = boost::get<Array<ValueType>>(BaseMismatchCount{}.evaluate(call, facets));
+    const auto variant_lengths = boost::get<Array<ValueType>>(VariantLength{}.evaluate(call, facets));
     assert(depths.size() == mismatch_counts.size());
     assert(mismatch_counts.size() == variant_lengths.size());
-    std::vector<int> bases(depths.size());
-    std::transform(std::cbegin(depths), std::cend(depths), std::cbegin(variant_lengths), std::begin(bases),
-                   [] (const auto& depth, const auto& allele_length) { return depth * allele_length; });
-    std::vector<double> result(depths.size());
-    std::transform(std::cbegin(mismatch_counts), std::cend(mismatch_counts), std::cbegin(bases), std::begin(result),
-                   [] (auto mismatches, auto bases) { return bases > 0 ? static_cast<double>(mismatches) / bases : 0.0; });
+    std::vector<std::size_t> base_counts(depths.size());
+    std::transform(std::cbegin(depths), std::cend(depths), std::cbegin(variant_lengths), std::begin(base_counts),
+                   [] (const auto& depth, const auto& allele_length) {
+                        return boost::get<std::size_t>(depth) * boost::get<std::size_t>(allele_length);
+                   });
+    Array<ValueType> result(depths.size());
+    std::transform(std::cbegin(mismatch_counts), std::cend(mismatch_counts), std::cbegin(base_counts), std::begin(result),
+                   [] (auto mismatches, auto bases) {
+                        return bases > 0 ? static_cast<double>(boost::get<int>(mismatches)) / bases : 0.0;
+                   });
     return result;
 }
 

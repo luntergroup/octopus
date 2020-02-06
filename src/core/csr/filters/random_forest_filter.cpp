@@ -240,36 +240,48 @@ double lexical_cast_to_double(const T& value)
     return result;
 }
 
-struct MeasureDoubleVisitor : boost::static_visitor<>
+struct MeasureDoubleVisitor : boost::static_visitor<double>
 {
-    double result;
-    template <typename T> void operator()(const T& value)
+    static constexpr double default_missing_values = -1.0;
+    template <typename T> auto operator()(const T& value)
     {
-        result = lexical_cast_to_double(value);
+        return lexical_cast_to_double(value);
     }
-    template <typename T> void operator()(const boost::optional<T>& value)
+    template <typename T> auto operator()(const boost::optional<T>& value)
     {
-        if (value) {
-            (*this)(*value);
-        } else {
-            result = -1;
+        return value ? (*this)(*value) : default_missing_values;
+    }
+    auto operator()(const std::vector<bool>& values)
+    {
+        // Per-allele type values.
+        return std::find(std::cbegin(values), std::cend(values), true) != std::cend(values); // any-of
+    }
+    template <typename T> auto operator()(const std::vector<T>& values)
+    {
+        if (values.empty()) return default_missing_values;
+        // Per-allele type values.
+        return maths::mean(values, [this] (const auto& value) { return (*this)(value); });
+    }       
+    template <typename T> auto operator()(const std::vector<boost::optional<T>>& values)
+    {
+        // Per-allele type values.
+        if (values.empty()) return default_missing_values;
+        if (values.size() == 1) return (*this)(values.front());
+        std::vector<T> set_values {};
+        set_values.reserve(values.size());
+        for (const auto& value : values) {
+            if (value) set_values.push_back(*value);
         }
+        return (*this)(set_values);
     }
-    template <typename T> void operator()(const std::vector<T>& values)
-    {
-        throw std::runtime_error {"Vector cast not supported"};
-    }
-    void operator()(boost::any value)
-    {
-        throw std::runtime_error {"Any cast not supported"};
-    }
+    MeasureDoubleVisitor(const MeasureWrapper& measure) : measure {measure} {}
+    const MeasureWrapper& measure;
 };
 
-auto cast_to_double(const Measure::ResultType& value)
+auto cast_to_double(const Measure::ResultType& value, const MeasureWrapper& measure)
 {
-    MeasureDoubleVisitor vis {};
-    boost::apply_visitor(vis, value);
-    return vis.result;
+    MeasureDoubleVisitor vis {measure};
+    return boost::apply_visitor(vis, value);
 }
 
 class NanMeasure : public ProgramError
@@ -290,7 +302,7 @@ void skip_lines(std::istream& in, int n = 1)
 {
     for (; n > 0; --n) in.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 }
-    
+
 } // namespace
 
 void RandomForestFilter::record(const std::size_t call_idx, std::size_t sample_idx, MeasureVector measures) const
@@ -304,6 +316,7 @@ void RandomForestFilter::record(const std::size_t call_idx, std::size_t sample_i
         const auto first_measure = std::next(std::cbegin(measures), info.start_index);
         buffer.reserve(info.number);
         std::transform(first_measure, std::next(first_measure, info.number),
+                       std::next(std::cbegin(this->measures_), info.start_index),
                        std::back_inserter(buffer), cast_to_double);
         buffer.push_back(0); // dummy TP value
         check_nan(buffer);

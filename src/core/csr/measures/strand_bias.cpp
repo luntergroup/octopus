@@ -41,9 +41,9 @@ std::unique_ptr<Measure> StrandBias::do_clone() const
     return std::make_unique<StrandBias>(*this);
 }
 
-Measure::ResultType StrandBias::get_default_result() const
+Measure::ValueType StrandBias::get_value_type() const
 {
-    return std::vector<boost::optional<double>> {};
+    return double {};
 }
 
 void StrandBias::do_set_parameters(std::vector<std::string> params)
@@ -182,14 +182,11 @@ Measure::ResultType StrandBias::do_evaluate(const VcfRecord& call, const FacetMa
 {
     const auto& samples = get_value<Samples>(facets.at("Samples"));
     const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments"));
-    std::vector<boost::optional<double>> result {};
-    result.reserve(samples.size());
-    for (const auto& sample : samples) {
-        boost::optional<double> sample_result {};
+    Array<Optional<ValueType>> result(samples.size());
+    for (std::size_t s {0}; s < samples.size(); ++s) {
+        const auto& sample = samples[s];
         if (is_evaluable(call, sample)) {
-            std::vector<Allele> alleles; bool has_ref;
-            std::tie(alleles, has_ref) = get_called_alleles(call, sample);
-            assert(!alleles.empty());
+            const auto alleles = get_called_alleles(call, sample).first;
             const auto sample_allele_support = compute_allele_support(alleles, assignments, sample);
             const auto direction_counts = get_direction_counts(sample_allele_support, mapped_region(call));
             double prob;
@@ -209,9 +206,8 @@ Measure::ResultType StrandBias::do_evaluate(const VcfRecord& call, const FacetMa
             } else {
                 prob = calculate_max_prob_different(direction_counts, big_sample_size_, min_difference_);
             }
-            sample_result = prob;
+            result[s] = ValueType {prob};
         }
-        result.push_back(sample_result);
     }
     return result;
 }

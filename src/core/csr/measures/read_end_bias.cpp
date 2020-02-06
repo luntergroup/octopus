@@ -29,9 +29,9 @@ std::unique_ptr<Measure> ReadEndBias::do_clone() const
     return std::make_unique<ReadEndBias>(*this);
 }
 
-Measure::ResultType ReadEndBias::get_default_result() const
+Measure::ValueType ReadEndBias::get_value_type() const
 {
-    return std::vector<double> {};
+    return double {};
 }
 
 void ReadEndBias::do_set_parameters(std::vector<std::string> params)
@@ -136,18 +136,17 @@ Measure::ResultType ReadEndBias::do_evaluate(const VcfRecord& call, const FacetM
 {
     const auto& samples = get_value<Samples>(facets.at("Samples"));
     const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments"));
-    std::vector<double> result {};
+    Array<ValueType> result {};
     result.reserve(samples.size());
     const EndDefinition end_def {end_fraction_};
     for (const auto& sample : samples) {
-        std::vector<Allele> alleles; bool has_ref;
-        std::tie(alleles, has_ref) = get_called_alleles(call, sample);
+        const auto alleles = get_called_alleles(call, sample).first;
+        double tail_bias {0};
         if (!alleles.empty()) {
             const auto allele_support = compute_allele_support(alleles, assignments, sample);
-            result.push_back(calculate_max_tail_bias(allele_support, end_def));
-        } else {
-            result.push_back(0);
+            tail_bias = calculate_max_tail_bias(allele_support, end_def);
         }
+        result.emplace_back();
     }
     return result;
 }

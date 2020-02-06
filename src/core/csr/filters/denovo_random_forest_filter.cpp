@@ -20,7 +20,7 @@ DeNovoRandomForestVariantCallFilter::DeNovoRandomForestVariantCallFilter(FacetFa
 : RandomForestFilter {
     std::move(facet_factory),
     {make_wrapped_measure<IsDenovo>(true)},
-    [] (const MeasureVector& measures) -> std::int8_t { return !boost::get<bool>(measures.front()); },
+    [] (const MeasureVector& measures) -> std::int8_t { return !get_value_type<bool>(measures.front()); },
     {std::move(germline_forest), std::move(denovo_forest)},
     std::move(output_config),
     std::move(threading),
@@ -39,7 +39,7 @@ DeNovoRandomForestVariantCallFilter::DeNovoRandomForestVariantCallFilter(FacetFa
 : RandomForestFilter {
     std::move(facet_factory),
     {make_wrapped_measure<IsDenovo>(false)},
-    [] (const MeasureVector& measures) -> std::int8_t { return !boost::get<bool>(measures.front()); },
+    [] (const MeasureVector& measures) -> std::int8_t { return !get_value_type<bool>(measures.front()); },
     {std::move(denovo_forest)},
     std::move(output_config),
     std::move(threading),

@@ -25,9 +25,9 @@ std::unique_ptr<Measure> AlleleDepth::do_clone() const
     return std::make_unique<AlleleDepth>(*this);
 }
 
-Measure::ResultType AlleleDepth::get_default_result() const
+Measure::ValueType AlleleDepth::get_value_type() const
 {
-    return std::vector<boost::optional<int>> {};
+    return std::size_t {};
 }
 
 namespace {
@@ -51,43 +51,29 @@ bool is_evaluable(const VcfRecord& call, const VcfRecord::SampleName& sample)
     return has_called_alt_allele(call, sample);
 }
 
-template <typename T>
-void pop_front(std::vector<T>& v)
-{
-    v.erase(std::cbegin(v));
-}
-
-auto min_support_count(const AlleleSupportMap& support)
-{
-    const static auto support_less = [] (const auto& lhs, const auto& rhs) { return lhs.second.size() < rhs.second.size(); };
-    return std::min_element(std::cbegin(support), std::cend(support), support_less)->second.size();
-}
-
 } // namespace
 
 Measure::ResultType AlleleDepth::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     const auto& samples = get_value<Samples>(facets.at("Samples"));
     const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments"));
-    std::vector<boost::optional<int>> result {};
-    result.reserve(samples.size());
-    for (const auto& sample : samples) {
-        boost::optional<int> sample_result {};
+    Array<Optional<Array<ValueType>>> result(samples.size());
+    for (std::size_t s {0}; s < samples.size(); ++s) {
+        const auto& sample = samples[s];
         if (is_evaluable(call, sample)) {
-            std::vector<Allele> alleles; bool has_ref;
-            std::tie(alleles, has_ref) = get_called_alleles(call, sample);
-            if (has_ref) pop_front(alleles); // ref always first
+            const auto alleles = get_called_alt_alleles(call, sample);
             const auto allele_support = compute_allele_support(alleles, assignments, sample);
-            sample_result = min_support_count(allele_support);
+            result[s] = Array<ValueType>(alleles.size());
+            std::transform(std::cbegin(alleles), std::cend(alleles), std::begin(*result[s]),
+                           [&] (const auto& allele) { return allele_support.at(allele).size(); });
         }
-        result.push_back(sample_result);
     }
     return result;
 }
 
 Measure::ResultCardinality AlleleDepth::do_cardinality() const noexcept
 {
-    return ResultCardinality::samples;
+    return ResultCardinality::samples_and_alt_alleles;
 }
 
 const std::string& AlleleDepth::do_name() const

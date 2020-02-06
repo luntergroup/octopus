@@ -31,9 +31,9 @@ std::unique_ptr<Measure> NormalContamination::do_clone() const
     return std::make_unique<NormalContamination>(*this);
 }
 
-Measure::ResultType NormalContamination::get_default_result() const
+Measure::ValueType NormalContamination::get_value_type() const
 {
-    return boost::optional<int> {};
+    return int {};
 }
 
 namespace {
@@ -113,15 +113,15 @@ auto copy_overlapped_to_vector(const AmbiguousReadList& reads, const MappableTyp
 
 Measure::ResultType NormalContamination::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
-    boost::optional<int> result {};
+    Optional<ValueType> result {};
     if (is_somatic(call)) {
-        result = 0;
+        int contamination {0};
         const auto& samples = get_value<Samples>(facets.at("Samples"));
-        const auto somatic_status = boost::get<std::vector<bool>>(IsSomatic(true).evaluate(call, facets));
+        const auto somatic_status = boost::get<Array<ValueType>>(IsSomatic(true).evaluate(call, facets));
         std::vector<SampleName> somatic_samples {}, normal_samples {};
         somatic_samples.reserve(samples.size()); normal_samples.reserve(samples.size());
         for (auto tup : boost::combine(samples, somatic_status)) {
-            if (tup.get<1>()) {
+            if (boost::get<bool>(tup.get<1>())) {
                 somatic_samples.push_back(tup.get<0>());
             } else {
                 normal_samples.push_back(tup.get<0>());
@@ -152,12 +152,12 @@ Measure::ResultType NormalContamination::do_evaluate(const VcfRecord& call, cons
                         haplotype_priors.erase(assigned_haplotype);
                         for (const auto& somatic : somatic_haplotypes) {
                             if (support.count(somatic) == 1) {
-                                *result += support.at(somatic).size();
+                                contamination += support.at(somatic).size();
                             }
                         }
                     } else {
                         // This could happen if we don't call all 'somatic' alleles on the called somatic haplotype.
-                        *result += overlapped_reads.size();
+                        contamination += overlapped_reads.size();
                     }
                 }
             }
@@ -177,13 +177,14 @@ Measure::ResultType NormalContamination::do_evaluate(const VcfRecord& call, cons
                         const auto support = compute_haplotype_support(dummy, ambiguous_reads, haplotype_priors);
                         for (const auto& somatic : somatic_haplotypes) {
                             if (support.count(somatic) == 1) {
-                                *result += support.at(somatic).size();
+                                contamination += support.at(somatic).size();
                             }
                         }
                     }
                 }
             }
         }
+        result = contamination;
     }
     return result;
 }

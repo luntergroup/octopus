@@ -25,7 +25,7 @@ std::unique_ptr<Measure> STRPeriod::do_clone() const
     return std::make_unique<STRPeriod>(*this);
 }
 
-Measure::ResultType STRPeriod::get_default_result() const
+Measure::ValueType STRPeriod::get_value_type() const
 {
     return int {};
 }
@@ -95,7 +95,7 @@ Measure::ResultType STRPeriod::do_evaluate(const VcfRecord& call, const FacetMap
     const auto alleles = copy_unique_overlapped(get_value<Alleles>(facets.at("Alleles")), call, samples);
     const auto repeat_context = find_repeat_context(call, alleles, reference);
     if (repeat_context) result = repeat_context->period();
-    return result;
+    return ValueType {result};
 }
 
 Measure::ResultCardinality STRPeriod::do_cardinality() const noexcept

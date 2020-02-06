@@ -18,7 +18,7 @@ std::unique_ptr<Measure> OverlapsTandemRepeat::do_clone() const
     return std::make_unique<OverlapsTandemRepeat>(*this);
 }
 
-Measure::ResultType OverlapsTandemRepeat::get_default_result() const
+Measure::ValueType OverlapsTandemRepeat::get_value_type() const
 {
     return bool {};
 }
@@ -27,7 +27,7 @@ Measure::ResultType OverlapsTandemRepeat::do_evaluate(const VcfRecord& call, con
 {
     const auto& reference = get_value<ReferenceContext>(facets.at("ReferenceContext"));
     const auto repeats = find_exact_tandem_repeats(reference.sequence(), reference.mapped_region(), 1, 6);
-    return has_overlapped(repeats, call);
+    return ValueType {has_overlapped(repeats, call)};
 }
 
 Measure::ResultCardinality OverlapsTandemRepeat::do_cardinality() const noexcept
