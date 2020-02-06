@@ -205,9 +205,10 @@ Phaser::phase(const MappableBlock<Haplotype>& haplotypes,
                         auto& site_indices = unique_index_to_input_index_table[*site_index_itr];
                         if (site_indices.empty()) {
                             // lazy evaluate this
-                            const auto overlapped_sites = bases(overlap_range(variation_sites, unique_variation_sites[*site_index_itr]));
-                            auto first_site_index = static_cast<std::size_t>(std::distance(std::cbegin(variation_sites), std::cbegin(overlapped_sites)));
-                            site_indices.resize(size(overlapped_sites));
+                            const auto& target_site = unique_variation_sites[*site_index_itr];
+                            const auto overlapped_sites = std::equal_range(std::cbegin(variation_sites), std::cend(variation_sites), target_site);
+                            auto first_site_index = static_cast<std::size_t>(std::distance(std::cbegin(variation_sites), overlapped_sites.first));
+                            site_indices.resize(std::distance(overlapped_sites.first, overlapped_sites.second));
                             std::iota(std::begin(site_indices), std::end(site_indices), first_site_index);
                         }
                         assert(!site_indices.empty());
