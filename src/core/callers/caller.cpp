@@ -563,7 +563,6 @@ Caller::generate_active_haplotypes(const GenomicRegion& call_region,
         }
     }
     if (debug_log_) stream(*debug_log_) << "Active region is " << active_region;
-    
     if ((is_after(active_region, call_region) && !backtrack_region) || haplotypes.empty()) {
         if (debug_log_) {
             if (haplotypes.empty()) {
@@ -578,6 +577,7 @@ Caller::generate_active_haplotypes(const GenomicRegion& call_region,
         return GeneratorStatus::done;
     }
     if (debug_log_) stream(*debug_log_) << "Generated " << haplotypes.size() << " haplotypes in " << mapped_region(haplotypes);
+    std::sort(std::begin(haplotypes), std::end(haplotypes));
     remove_duplicates(haplotypes);
     if (debug_log_) stream(*debug_log_) << "There are " << haplotypes.size() << " haplotypes after removing duplicates";
     return GeneratorStatus::good;
@@ -602,6 +602,7 @@ bool Caller::filter_haplotypes(HaplotypeBlock& haplotypes,
 {
     bool has_removal_impact {false};
     auto removed_haplotypes = filter(haplotypes, haplotype_likelihoods, protected_haplotypes);
+    std::sort(std::begin(haplotypes), std::end(haplotypes));
     if (haplotypes.empty()) {
         // This can only happen if all haplotypes have equal likelihood
         haplotype_generator.clear_progress();

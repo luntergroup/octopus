@@ -294,6 +294,7 @@ void HaplotypeLikelihoodArray::set_template_iterators_and_sample_indices(const T
 
 void HaplotypeLikelihoodArray::reset(MappableBlock<Haplotype> haplotypes)
 {
+    assert(haplotypes.size() <= haplotypes_.size());
     if (haplotypes.empty()) {
         clear();
     } else if (haplotypes.size() < haplotypes_.size()) {
@@ -304,6 +305,7 @@ void HaplotypeLikelihoodArray::reset(MappableBlock<Haplotype> haplotypes)
             old_haplotype_idx = haplotype_idx;
         }
         assert(!indices_to_keep.empty());
+        assert(std::is_sorted(std::cbegin(indices_to_keep), std::cend(indices_to_keep)));
         std::size_t idx {0};
         const auto remover = [&] (const auto&) noexcept {
             if (indices_to_keep.empty()) return true;
