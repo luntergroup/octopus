@@ -13,6 +13,7 @@
 #include <limits>
 
 #include "concepts/mappable.hpp"
+#include "basics/aligned_template.hpp"
 #include "core/types/calls/call.hpp"
 #include "core/types/calls/call_wrapper.hpp"
 #include "core/types/calls/variant_call.hpp"
@@ -25,8 +26,8 @@
 #include "utils/read_stats.hpp"
 #include "utils/maths.hpp"
 #include "utils/append.hpp"
-
-#include "basics/aligned_template.hpp"
+#include "utils/erase_if.hpp"
+#include "utils/map_utils.hpp"
 
 namespace octopus {
 
@@ -562,7 +563,6 @@ Caller::generate_active_haplotypes(const GenomicRegion& call_region,
         }
     }
     if (debug_log_) stream(*debug_log_) << "Active region is " << active_region;
-    
     if ((is_after(active_region, call_region) && !backtrack_region) || haplotypes.empty()) {
         if (debug_log_) {
             if (haplotypes.empty()) {
@@ -577,6 +577,7 @@ Caller::generate_active_haplotypes(const GenomicRegion& call_region,
         return GeneratorStatus::done;
     }
     if (debug_log_) stream(*debug_log_) << "Generated " << haplotypes.size() << " haplotypes in " << mapped_region(haplotypes);
+    std::sort(std::begin(haplotypes), std::end(haplotypes));
     remove_duplicates(haplotypes);
     if (debug_log_) stream(*debug_log_) << "There are " << haplotypes.size() << " haplotypes after removing duplicates";
     return GeneratorStatus::good;
@@ -601,13 +602,14 @@ bool Caller::filter_haplotypes(HaplotypeBlock& haplotypes,
 {
     bool has_removal_impact {false};
     auto removed_haplotypes = filter(haplotypes, haplotype_likelihoods, protected_haplotypes);
+    std::sort(std::begin(haplotypes), std::end(haplotypes));
     if (haplotypes.empty()) {
         // This can only happen if all haplotypes have equal likelihood
         haplotype_generator.clear_progress();
         haplotype_likelihoods.clear();
     } else {
         haplotypes.shrink_to_fit();
-        haplotype_likelihoods.erase(removed_haplotypes);
+        haplotype_likelihoods.reset(haplotypes);
         has_removal_impact = haplotype_generator.removal_has_impact();
         if (has_removal_impact) {
             haplotype_generator.remove(removed_haplotypes);
@@ -664,8 +666,9 @@ void Caller::filter_haplotypes(const bool prefilter_had_removal_impact,
     if (prefilter_had_removal_impact) { // if there was no impact before then there can't be now either
         if (haplotype_generator.removal_has_impact()) {
             const auto max_to_remove = haplotype_generator.max_removal_impact();
+            const auto& haplotype_posteriors = *latents.haplotype_posteriors();
             auto removable_haplotypes = get_removable_haplotypes(haplotypes, haplotype_likelihoods,
-                                                                 *latents.haplotype_posteriors(),
+                                                                 haplotype_posteriors,
                                                                  protected_haplotypes,
                                                                  max_to_remove);
             if (debug_log_) {
@@ -687,39 +690,81 @@ bool Caller::try_early_detect_phase_regions(const MappableBlock<Haplotype>& hapl
                                             const Latents& latents,
                                             const boost::optional<GenomicRegion>& backtrack_region) const
 {
-    return !backtrack_region
+    return parameters_.try_early_phase_detection
+        && !backtrack_region
         && count_overlapped(candidates, active_region) > 10
         && haplotypes.size() > parameters_.max_haplotypes / 2;
 }
 
-std::vector<GenomicRegion>
-find_common_phase_regions(const Phaser::PhaseSet::PhaseRegions& phasings)
+std::vector<decltype(Phaser::PhaseSet::site_indices)>
+find_common_phase_regions(Phaser::PhaseSetMap& phasings)
 {
-    auto result = extract_regions(std::cbegin(phasings)->second);
-    std::for_each(std::next(std::cbegin(phasings)), std::cend(phasings), [&] (const auto& p) {
-        const auto sample_phase_regions = extract_regions(p.second);
-        std::vector<GenomicRegion> intersect {};
-        intersect.reserve(std::min(result.size(), sample_phase_regions.size()));
-        std::set_intersection(std::cbegin(result), std::cend(result),
-                              std::cbegin(sample_phase_regions), std::cend(sample_phase_regions),
-                              std::back_inserter(intersect));
-        result = std::move(intersect);
+    if (phasings.size() > 1) {
+        std::map<decltype(Phaser::PhaseSet::site_indices), unsigned> phase_set_sample_assignment_counts {};
+        for (auto& p : phasings) {
+            for (Phaser::PhaseSet& phase_set : p.second) {
+                ++phase_set_sample_assignment_counts[std::move(phase_set.site_indices)];
+            }
+        }
+        const auto num_samples = phasings.size();
+        erase_if(phase_set_sample_assignment_counts, [=] (const auto& p) { return p.second < num_samples; });
+        return extract_keys(phase_set_sample_assignment_counts);
+    } else {
+        std::vector<decltype(Phaser::PhaseSet::site_indices)> result {};
+        result.reserve(std::cbegin(phasings)->second.size());
+        for (auto& phase_set : std::cbegin(phasings)->second) {
+            result.push_back(std::move(phase_set.site_indices));
+        }
+        return result;
+    }
+}
+
+bool is_contiguous(const decltype(Phaser::PhaseSet::site_indices)& sites)
+{
+    if (sites.size() < 2) return true;
+    const static auto is_discontiguous = [] (auto lhs, auto rhs) { return lhs + 1 < rhs; };
+    return std::adjacent_find(std::cbegin(sites), std::cend(sites), is_discontiguous) == std::cend(sites);
+}
+
+auto
+encompassing_region(const decltype(Phaser::PhaseSet::site_indices)& phase_set,
+                    const std::vector<GenomicRegion>& sites)
+{
+    assert(!phase_set.empty());
+    auto result = sites[phase_set.front()];
+    std::for_each(std::next(std::cbegin(phase_set)), std::cend(phase_set), [&] (auto site_idx) {
+        assert(!begins_before(sites[site_idx], result));
+        if (ends_before(result, sites[site_idx])) {
+            result = closed_region(result, sites[site_idx]);
+        }
     });
     return result;
 }
 
+bool 
+is_suitable_head_phase_set(const decltype(Phaser::PhaseSet::site_indices)& phase_set,
+                           const std::vector<GenomicRegion>& sites)
+{
+    if (phase_set.front() > 0) return false;
+    if (phase_set.back() >= sites.size() - 1) return false;
+    if (!is_contiguous(phase_set)) return false;
+    const auto phase_region = encompassing_region(phase_set, sites);
+    return !(overlaps(phase_region, sites[phase_set.back() + 1]) || are_adjacent(phase_region, sites[phase_set.back() + 1]));
+}
+
 boost::optional<GenomicRegion>
-Caller::find_phased_head(const MappableBlock<Haplotype>& haplotypes, const MappableFlatSet<Variant>& candidates,
-                         const GenomicRegion& active_region, const Latents& latents) const
+Caller::find_phased_head(const MappableBlock<Haplotype>& haplotypes,
+                         const MappableFlatSet<Variant>& candidates,
+                         const GenomicRegion& active_region,
+                         const Latents& latents) const
 {
     if (debug_log_) stream(*debug_log_) << "Trying to find complete phase regions in " << active_region;
     const auto active_candidates = contained_range(candidates, active_region);
-    const auto viable_phase_regions = extract_mutually_exclusive_regions(active_candidates);
-    const auto phasings = phaser_.phase(haplotypes, *latents.genotype_posteriors(),
-                                        viable_phase_regions, get_genotype_calls(latents));
-    auto common_phase_regions = find_common_phase_regions(phasings.phase_regions);
-    if (common_phase_regions.size() > 1) {
-        return closed_region(active_region, head_region(common_phase_regions.back()));
+    const auto viable_phase_regions = extract_regions(active_candidates);
+    auto phasings = phaser_.phase(haplotypes, *latents.genotype_posteriors(), viable_phase_regions, get_genotype_calls(latents));
+    auto common_phase_regions = find_common_phase_regions(phasings);
+    if (common_phase_regions.size() > 1 && is_suitable_head_phase_set(common_phase_regions.front(), viable_phase_regions)) {
+        return closed_region(viable_phase_regions.front(), head_region(viable_phase_regions[common_phase_regions.front().back() + 1]));
     } else {
         return boost::none;
     }
@@ -879,7 +924,7 @@ void Caller::call_variants(const GenomicRegion& active_region,
     completed_region = encompassing_region(completed_region, passed_region);
 }
 
-Genotype<Haplotype> Caller::call_genotype(const Latents& latents, const SampleName& sample) const
+Genotype<IndexedHaplotype<>> Caller::call_genotype(const Latents& latents, const SampleName& sample) const
 {
     const auto genotype_posteriors_ptr = latents.genotype_posteriors();
     const auto& genotype_posteriors = (*genotype_posteriors_ptr)[sample];
@@ -893,8 +938,10 @@ std::deque<Haplotype> Caller::get_called_haplotypes(const Latents& latents) cons
 {
     std::deque<Haplotype> result {};
     for (const auto& sample : samples_) {
-        auto called_genotype = call_genotype(latents, sample);
-        std::copy(std::begin(called_genotype), std::cend(called_genotype), std::back_inserter(result));
+        const auto called_genotype = call_genotype(latents, sample);
+        for (const auto& haplotype : called_genotype) {
+            result.push_back(haplotype.haplotype());
+        }
     }
     std::sort(std::begin(result), std::end(result));
     result.erase(std::unique(std::begin(result), std::end(result)), std::end(result));
@@ -924,47 +971,16 @@ void Caller::set_model_posteriors(std::vector<CallWrapper>& calls, const Latents
 
 namespace {
 
-auto get_phase_regions(const MappableFlatSet<Variant>& candidates,
-                       const GenomicRegion& active_region)
+void set_phasing(std::vector<CallWrapper>& calls, const Phaser::PhaseSetMap& phasings, const GenomicRegion& calling_region)
 {
-    return extract_regions(contained_range(candidates, active_region));
-}
-
-void set_phase(const SampleName& sample, const Phaser::PhaseSet::PhaseRegion& phase,
-               const std::vector<GenomicRegion>& call_regions, CallWrapper& call)
-{
-    const auto overlapped = overlap_range(call_regions, phase.mapped_region(), BidirectionallySortedTag {});
-    if (!overlapped.empty()) {
-        call->set_phase(sample, Call::PhaseCall {encompassing_region(overlapped.front(), call), phase.score});
-    } else {
-        call->set_phase(sample, Call::PhaseCall {mapped_region(call), phase.score});
-    }
-}
-
-void set_phasing(std::vector<CallWrapper>& calls, const Phaser::PhaseSet& phase_set, const GenomicRegion& calling_region)
-{
-    if (!calls.empty()) {
-        const auto call_regions = extract_regions(calls);
-        for (auto& call : calls) {
-            const auto& call_region = mapped_region(call);
-            for (const auto& p : phase_set.phase_regions) {
-                const SampleName& sample {p.first};
-                const auto phase = find_phase_region(p.second, call_region);
-                if (phase && overlaps(calling_region, phase->get().region)) {
-                    if (begins_before(phase->get().region, calling_region)) {
-                        const auto output_call_region = *overlapped_region(calling_region, phase->get().region);
-                        const auto output_calls = overlap_range(call_regions, output_call_region);
-                        if (!output_calls.empty()) {
-                            const Phaser::PhaseSet::PhaseRegion clipped_phase {
-                            expand_lhs(phase->get().region, begin_distance(output_calls.front(), phase->get().region)),
-                            phase->get().score
-                            };
-                            set_phase(sample, clipped_phase, call_regions, call);
-                        }
-                    } else {
-                        set_phase(sample, *phase, call_regions, call);
-                    }
-                }
+    for (const auto& p : phasings) {
+        const SampleName& sample {p.first};
+        for (const Phaser::PhaseSet& phase_set : p.second) {
+            const auto phase_set_region = closed_region(calls[phase_set.site_indices.front()],
+                                                        calls[phase_set.site_indices.back()]);
+            for (const auto call_idx : phase_set.site_indices) {
+                assert(call_idx < calls.size());
+                calls[call_idx]->set_phase(sample, {phase_set_region, phase_set.quality});
             }
         }
     }
@@ -974,10 +990,10 @@ void set_phasing(std::vector<CallWrapper>& calls, const Phaser::PhaseSet& phase_
 
 namespace debug {
 
-template <typename S>
+template <typename S, typename Map>
 void print_genotype_posteriors(S&& stream,
                                const SampleName& sample,
-                               const ProbabilityMatrix<Genotype<Haplotype>>::InnerMap& genotype_posteriors,
+                               const Map& genotype_posteriors,
                                const std::size_t n)
 {
     const auto m = std::min(n, genotype_posteriors.size());
@@ -986,23 +1002,23 @@ void print_genotype_posteriors(S&& stream,
     } else {
         stream << "Printing top " << m << " genotype posteriors for sample " << sample << '\n';
     }
-    using GenotypeReference = std::reference_wrapper<const Genotype<Haplotype>>;
+    using GenotypeReference = std::reference_wrapper<const Genotype<IndexedHaplotype<>>>;
     std::vector<std::pair<GenotypeReference, double>> v {};
     v.reserve(genotype_posteriors.size());
-    std::copy(std::cbegin(genotype_posteriors), std::cend(genotype_posteriors), std::back_inserter(v));
+    for (const auto& p : genotype_posteriors) {
+        v.emplace_back(p.first, p.second);
+    }
     const auto mth = std::next(std::begin(v), m);
-    std::partial_sort(std::begin(v), mth, std::end(v),
-                      [] (const auto& lhs, const auto& rhs) { return lhs.second > rhs.second; });
-    std::for_each(std::begin(v), mth,
-                  [&] (const auto& p) {
-                      print_variant_alleles(stream, p.first);
-                      stream << " " << p.second << '\n';
-                  });
+    std::partial_sort(std::begin(v), mth, std::end(v), [] (const auto& lhs, const auto& rhs) { return lhs.second > rhs.second; });
+    std::for_each(std::begin(v), mth, [&] (const auto& p) {
+        print_variant_alleles(stream, p.first.get());
+        stream << " " << p.second << '\n';
+    });
 }
 
-template <typename S>
+template <typename S, typename G>
 void print_genotype_posteriors(S&& stream,
-                               const ProbabilityMatrix<Genotype<Haplotype>>& genotype_posteriors,
+                               const ProbabilityMatrix<G>& genotype_posteriors,
                                const std::size_t n = std::numeric_limits<std::size_t>::max())
 {
     for (const auto& p : genotype_posteriors) {
@@ -1012,16 +1028,17 @@ void print_genotype_posteriors(S&& stream,
 
 } // namespace debug
 
-void Caller::set_phasing(std::vector<CallWrapper>& calls, const Latents& latents,
+void Caller::set_phasing(std::vector<CallWrapper>& calls,
+                         const Latents& latents,
                          const HaplotypeBlock& haplotypes,
                          const GenomicRegion& call_region) const
 {
     if (debug_log_) stream(*debug_log_) << "Phasing " << calls.size() << " calls in " << call_region;
     if (trace_log_) debug::print_genotype_posteriors(stream(*trace_log_), *latents.genotype_posteriors());
-    const auto phasings = phaser_.phase(haplotypes, *latents.genotype_posteriors(),
-                                        extract_regions(calls), get_genotype_calls(latents));
-    if (debug_log_) debug::print_phase_sets(stream(*debug_log_), phasings);
-    octopus::set_phasing(calls, phasings, call_region);
+    const auto call_regions = extract_regions(calls);
+    const auto phase_sets = phaser_.phase(haplotypes, *latents.genotype_posteriors(), call_regions, get_genotype_calls(latents));
+    if (debug_log_) debug::print_phase_sets(stream(*debug_log_), phase_sets, call_regions);
+    octopus::set_phasing(calls, phase_sets, call_region);
 }
 
 bool Caller::refcalls_requested() const noexcept
@@ -1149,7 +1166,8 @@ bool Caller::compute_haplotype_likelihoods(HaplotypeLikelihoodArray& haplotype_l
 }
 
 std::vector<Haplotype>
-Caller::filter(HaplotypeBlock& haplotypes, const HaplotypeLikelihoodArray& haplotype_likelihoods,
+Caller::filter(HaplotypeBlock& haplotypes,
+               const HaplotypeLikelihoodArray& haplotype_likelihoods,
                const std::deque<Haplotype>& protected_haplotypes) const
 {
     std::vector<Haplotype> removed_haplotypes {};
@@ -1209,15 +1227,22 @@ Caller::get_removable_haplotypes(const HaplotypeBlock& haplotypes,
     if (debug_log_) {
         stream(*debug_log_) << "Protecting " << protected_haplotypes.size() << " haplotypes from filtering";
     }
+    HaplotypeReferenceProbabilityMap haplotype_ref_posteriors {};
+    haplotype_ref_posteriors.reserve(haplotype_posteriors.size());
+    for (const auto& p : haplotype_posteriors) {
+        haplotype_ref_posteriors.emplace(p.first.haplotype(), p.second);
+    }
+    std::vector<std::reference_wrapper<const Haplotype>> result {};
     if (protected_haplotypes.empty()) {
-        return extract_removable(haplotypes, haplotype_posteriors, samples_, haplotype_likelihoods,
+        result = extract_removable(haplotypes, haplotype_ref_posteriors, samples_, haplotype_likelihoods,
                                  max_to_remove, parameters_.haplotype_extension_threshold);
-    } else if (protected_haplotypes.size() == 1 && parameters_.protect_reference_haplotype && is_reference(protected_haplotypes.front())) {
-        auto result = extract_removable(haplotypes, haplotype_posteriors, samples_, haplotype_likelihoods,
+    } else if (protected_haplotypes.size() == 1
+            && parameters_.protect_reference_haplotype
+            && is_reference(protected_haplotypes.front())) {
+        result = extract_removable(haplotypes, haplotype_ref_posteriors, samples_, haplotype_likelihoods,
                                         max_to_remove, parameters_.haplotype_extension_threshold);
         auto reference_itr = find_reference(result);
         if (reference_itr != std::cend(result)) result.erase(reference_itr);
-        return result;
     } else {
         std::vector<Haplotype> removable_haplotypes {};
         removable_haplotypes.reserve(haplotypes.size());
@@ -1226,9 +1251,10 @@ Caller::get_removable_haplotypes(const HaplotypeBlock& haplotypes,
         std::set_difference(std::cbegin(haplotypes), std::cend(haplotypes),
                             std::cbegin(protected_haplotypes), std::cend(protected_haplotypes),
                             std::back_inserter(removable_haplotypes));
-        return extract_removable(removable_haplotypes, haplotype_posteriors, samples_, haplotype_likelihoods,
+        result = extract_removable(removable_haplotypes, haplotype_ref_posteriors, samples_, haplotype_likelihoods,
                                  max_to_remove, parameters_.haplotype_extension_threshold);
     }
+    return result;
 }
 
 Caller::GenotypeCallMap Caller::get_genotype_calls(const Latents& latents) const
@@ -1418,7 +1444,7 @@ Caller::ReadPileupMap Caller::make_pileups(const ReadMap& reads, const Latents& 
     ReadPileupMap result {};
     result.reserve(samples_.size());
     for (const auto& sample : samples_) {
-        const auto called_genotype = call_genotype(latents, sample);
+        const auto called_genotype = genotype_cast<Haplotype>(call_genotype(latents, sample));
         result.emplace(sample, octopus::make_pileups(reads.at(sample), called_genotype, region));
     }
     return result;
@@ -1659,8 +1685,9 @@ void print_haplotype_posteriors(S&& stream, const Map& haplotype_posteriors, std
     }
     std::vector<std::pair<std::reference_wrapper<const Haplotype>, double>> v {};
     v.reserve(haplotype_posteriors.size());
-    std::copy(std::cbegin(haplotype_posteriors), std::cend(haplotype_posteriors),
-              std::back_inserter(v));
+    for (const auto& p : haplotype_posteriors) {
+        v.emplace_back(p.first.haplotype(), p.second);
+    }
     const auto mth = std::next(std::begin(v), m);
     std::partial_sort(std::begin(v), mth, std::end(v),
                       [] (const auto& lhs, const auto& rhs) {

@@ -50,9 +50,7 @@ void clear(Container& c)
     c.shrink_to_fit();
 }
 
-using GenotypeReference = std::reference_wrapper<const Genotype<Haplotype>>;
-using GenotypeIndiceVector = GenotypeIndex;
-using GenotypeIndiceVectorReference = std::reference_wrapper<const GenotypeIndiceVector>;
+using GenotypeReference = std::reference_wrapper<const Genotype<IndexedHaplotype<>>>;
 
 bool operator==(const GenotypeReference lhs, const GenotypeReference rhs)
 {
@@ -68,7 +66,6 @@ struct GenotypeRefProbabilityPair
 {
     GenotypeReference genotype;
     double probability;
-    const GenotypeIndiceVector* indices = nullptr;
 };
 
 bool operator==(const GenotypeRefProbabilityPair& lhs, const GenotypeRefProbabilityPair& rhs) noexcept
@@ -108,7 +105,6 @@ struct ParentsProbabilityPair
 {
     GenotypeReference maternal, paternal;
     double probability, maternal_likelihood, paternal_likelihood;
-    const GenotypeIndiceVector* maternal_indices = nullptr, *paternal_indices = nullptr;
 };
 
 bool operator==(const ParentsProbabilityPair& lhs, const ParentsProbabilityPair& rhs) noexcept
@@ -128,15 +124,13 @@ bool operator>(const ParentsProbabilityPair& lhs, const ParentsProbabilityPair& 
     return lhs.probability > rhs.probability;
 }
 
-auto compute_likelihoods(const std::vector<Genotype<Haplotype>>& genotypes,
+auto compute_likelihoods(const TrioModel::GenotypeVector& genotypes,
                          const ConstantMixtureGenotypeLikelihoodModel& model)
 {
     std::vector<GenotypeRefProbabilityPair> result {};
     result.reserve(genotypes.size());
     std::transform(std::cbegin(genotypes), std::cend(genotypes), std::back_inserter(result),
-                   [&model] (const auto& genotype) {
-                       return GenotypeRefProbabilityPair {genotype, model.evaluate(genotype)};
-                   });
+                   [&] (const auto& genotype) { return GenotypeRefProbabilityPair {genotype, model.evaluate(genotype)}; });
     return result;
 }
 
@@ -144,17 +138,8 @@ auto compute_posteriors(const std::vector<GenotypeRefProbabilityPair>& likelihoo
                         const PopulationPriorModel& prior_model)
 {
     std::vector<double> posteriors(likelihoods.size());
-    if (prior_model.is_primed()) {
-        std::transform(std::cbegin(likelihoods), std::cend(likelihoods), std::begin(posteriors),
-                       [&] (const auto& p) {
-                           return p.probability + prior_model.evaluate(std::vector<GenotypeIndiceVectorReference> {*p.indices});
-                       });
-    } else {
-        std::transform(std::cbegin(likelihoods), std::cend(likelihoods), std::begin(posteriors),
-                       [&] (const auto& p) {
-                           return p.probability + prior_model.evaluate(std::vector<GenotypeReference> {p.genotype});
-                       });
-    }
+    std::transform(std::cbegin(likelihoods), std::cend(likelihoods), std::begin(posteriors),
+                   [&] (const auto& p) { return p.probability + prior_model.evaluate({p.genotype}); });
     maths::normalise_exp(posteriors);
     std::vector<GenotypeRefProbabilityPair> result {};
     result.reserve(posteriors.size());
@@ -341,7 +326,7 @@ using ParentsProbabilityPairIterator = std::vector<ParentsProbabilityPair>::iter
 
 bool is_represented(const Haplotype& haplotype, const ParentsProbabilityPair& parent)
 {
-    return parent.maternal.get().contains(haplotype) || parent.paternal.get().contains(haplotype);
+    return contains(parent.maternal.get(), haplotype) || contains(parent.paternal.get(), haplotype);
 }
 
 bool is_represented(const Haplotype& haplotype,
@@ -453,28 +438,16 @@ auto reduce(std::vector<GenotypeRefProbabilityPair>& likelihoods,
     }
 }
 
-double joint_probability(const Genotype<Haplotype>& mother, const Genotype<Haplotype>& father,
-                         const PopulationPriorModel& model)
+auto joint_probability(const Genotype<IndexedHaplotype<>>& mother, const Genotype<IndexedHaplotype<>>& father,
+                       const PopulationPriorModel& model)
 {
-    const std::vector<std::reference_wrapper<const Genotype<Haplotype>>> parental_genotypes {mother, father};
-    return model.evaluate(parental_genotypes);
+    return model.evaluate({std::cref(mother), std::cref(father)});
 }
 
-double joint_probability(const GenotypeIndiceVector& mother, const GenotypeIndiceVector& father,
-                         const PopulationPriorModel& model)
+auto joint_probability(const GenotypeRefProbabilityPair& mother, const GenotypeRefProbabilityPair& father,
+                       const PopulationPriorModel& model)
 {
-    const std::vector<GenotypeIndiceVectorReference> parental_genotypes {mother, father};
-    return model.evaluate(parental_genotypes);
-}
-
-double joint_probability(const GenotypeRefProbabilityPair& mother, const GenotypeRefProbabilityPair& father,
-                         const PopulationPriorModel& model)
-{
-    if (mother.indices && father.indices) {
-        return mother.probability + father.probability + joint_probability(*mother.indices, *father.indices, model);
-    } else {
-        return mother.probability + father.probability + joint_probability(mother.genotype, father.genotype, model);
-    }
+    return mother.probability + father.probability + joint_probability(mother.genotype, father.genotype, model);
 }
 
 template <typename T1, typename T2>
@@ -497,37 +470,22 @@ auto join(const ReducedVectorMap<GenotypeRefProbabilityPair>& maternal,
     std::for_each(maternal.first, maternal.last_to_join, [&] (const auto& m) {
         std::for_each(paternal.first, paternal.last_to_join, [&] (const auto& p) {
             result.push_back({m.genotype, p.genotype, joint_probability(m, p, model),
-                              m.probability, m.probability, m.indices, p.indices});
+                              m.probability, m.probability});
         });
     });
     std::for_each(maternal.last_to_join, maternal.last, [&] (const auto& m) {
         std::for_each(paternal.first, paternal.last_to_partially_join, [&] (const auto& p) {
             result.push_back({m.genotype, p.genotype, joint_probability(m, p, model),
-                              m.probability, m.probability, m.indices, p.indices});
+                              m.probability, m.probability});
         });
     });
     std::for_each(paternal.last_to_join, paternal.last, [&] (const auto& p) {
         std::for_each(maternal.first, maternal.last_to_partially_join, [&] (const auto& m) {
             result.push_back({m.genotype, p.genotype, joint_probability(m, p, model),
-                              m.probability, m.probability, m.indices, p.indices});
+                              m.probability, m.probability});
         });
     });
     return result;
-}
-
-bool is_haploid(const GenotypeIndex& genotype) noexcept
-{
-    return genotype.size() == 1;
-}
-
-bool is_diploid(const GenotypeIndex& genotype) noexcept
-{
-    return genotype.size() == 2;
-}
-
-bool is_triploid(const GenotypeIndex& genotype) noexcept
-{
-    return genotype.size() == 3;
 }
 
 template <typename G>
@@ -714,13 +672,8 @@ auto joint_probability(const ParentsProbabilityPair& parents,
                        const GenotypeRefProbabilityPair& child,
                        F joint_probability_function)
 {
-    if (child.indices && parents.maternal_indices && parents.paternal_indices) {
-        return parents.probability + child.probability
-               + joint_probability_function(*child.indices, *parents.maternal_indices, *parents.paternal_indices);
-    } else {
-        return parents.probability + child.probability
-               + joint_probability_function(child.genotype.get(), parents.maternal.get(), parents.paternal.get());
-    }
+    return parents.probability + child.probability
+           + joint_probability_function(child.genotype.get(), parents.maternal.get(), parents.paternal.get());
 }
 
 template <typename F>
@@ -867,51 +820,14 @@ TrioModel::evaluate(const GenotypeVector& genotypes, const HaplotypeLikelihoodAr
     return evaluate(genotypes, genotypes, genotypes, haplotype_likelihoods);
 }
 
-TrioModel::InferredLatents
-TrioModel::evaluate(const GenotypeVector& genotypes,
-                    std::vector<GenotypeIndex>& genotype_indices,
-                    const HaplotypeLikelihoodArray& haplotype_likelihoods) const
-{
-    assert(prior_model_.is_primed() && mutation_model_.is_primed());
-    const ConstantMixtureGenotypeLikelihoodModel likelihood_model {haplotype_likelihoods};
-    haplotype_likelihoods.prime(trio_.mother());
-    auto maternal_likelihoods = compute_likelihoods(genotypes, likelihood_model);
-    haplotype_likelihoods.prime(trio_.father());
-    auto paternal_likelihoods = compute_likelihoods(genotypes, likelihood_model);
-    haplotype_likelihoods.prime(trio_.child());
-    auto child_likelihoods = compute_likelihoods(genotypes, likelihood_model);
-    for (std::size_t i {0}; i < genotypes.size(); ++i) {
-        maternal_likelihoods[i].indices = &genotype_indices[i];
-        paternal_likelihoods[i].indices = &genotype_indices[i];
-        child_likelihoods[i].indices    = &genotype_indices[i];
-    }
-    if (debug_log_) {
-        debug::print(stream(*debug_log_), "maternal", maternal_likelihoods);
-        debug::print(stream(*debug_log_), "paternal", paternal_likelihoods);
-        debug::print(stream(*debug_log_), "child", child_likelihoods);
-    }
-    boost::optional<double> lost_log_mass {};
-    const auto reduced_maternal_likelihoods = reduce(maternal_likelihoods, prior_model_, lost_log_mass, options_);
-    const auto reduced_paternal_likelihoods = reduce(paternal_likelihoods, prior_model_, lost_log_mass, options_);
-    const auto reduced_child_likelihoods    = reduce(child_likelihoods, prior_model_, lost_log_mass, options_);
-    auto parental_likelihoods = join(reduced_maternal_likelihoods, reduced_paternal_likelihoods, prior_model_);
-    if (debug_log_) debug::print(stream(*debug_log_), parental_likelihoods);
-    const auto reduced_parental_likelihoods = reduce(parental_likelihoods, reduced_child_likelihoods, lost_log_mass, options_);
-    auto joint_likelihoods = join(reduced_parental_likelihoods, reduced_child_likelihoods, mutation_model_);
-    if (debug_log_) debug::print(stream(*debug_log_), joint_likelihoods);
-    const auto evidence = normalise_exp(joint_likelihoods);
-    if (lost_log_mass) *lost_log_mass *= 2 * std::distance(reduced_child_likelihoods.first, reduced_child_likelihoods.last_to_join);
-    return {std::move(joint_likelihoods), evidence, lost_log_mass};
-}
-
-double probability_of_child_given_parent(const Genotype<Haplotype>& child,
-                                         const Genotype<Haplotype>& parent,
-                                         const DeNovoModel& mutation_model)
+auto probability_of_child_given_parent(const Genotype<IndexedHaplotype<>>& child,
+                                       const Genotype<IndexedHaplotype<>>& parent,
+                                       const DeNovoModel& mutation_model)
 {
     if (is_haploid(child) && is_haploid(parent)) {
         return mutation_model.evaluate(child[0], parent[0]);
     }
-    return 0; // TODO
+    return 0.0; // TODO
 }
 
 auto joint_probability(const GenotypeRefProbabilityPair& parent,
@@ -985,7 +901,7 @@ void print(S&& stream, const std::string& sample, std::vector<GenotypeRefProbabi
                       });
     std::for_each(std::begin(ps), nth, [&] (const auto& p) {
         using octopus::debug::print_variant_alleles;
-        print_variant_alleles(stream, p.genotype);
+        print_variant_alleles(stream, p.genotype.get());
         stream << " " << p.probability << "\n";
     });
 }
@@ -1007,9 +923,9 @@ void print(S&& stream, std::vector<ParentsProbabilityPair> ps, const std::size_t
                       });
     std::for_each(std::begin(ps), nth, [&] (const auto& p) {
         using octopus::debug::print_variant_alleles;
-        print_variant_alleles(stream, p.maternal);
+        print_variant_alleles(stream, p.maternal.get());
         stream << " | ";
-        print_variant_alleles(stream, p.paternal);
+        print_variant_alleles(stream, p.paternal.get());
         stream << " " << p.probability << "\n";
     });
 }
@@ -1030,11 +946,11 @@ void print(S&& stream, std::vector<JointProbability> ps, const std::size_t n)
                       });
     std::for_each(std::begin(ps), nth, [&] (const auto& p) {
         using octopus::debug::print_variant_alleles;
-        print_variant_alleles(stream, p.maternal);
+        print_variant_alleles(stream, p.maternal.get());
         stream << " | ";
-        print_variant_alleles(stream, p.paternal);
+        print_variant_alleles(stream, p.paternal.get());
         stream << " | ";
-        print_variant_alleles(stream, p.child);
+        print_variant_alleles(stream, p.child.get());
         stream << " " << p.probability << "\n";
     });
 }

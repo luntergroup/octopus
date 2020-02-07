@@ -36,6 +36,7 @@ set(CONCEPTS_SOURCES
     concepts/comparable.hpp
     concepts/mappable.hpp
     concepts/mappable_range.hpp
+    concepts/indexed.hpp
 )
 
 set(BASICS_SOURCES
@@ -547,6 +548,8 @@ set(CORE_SOURCES
     core/types/variant.cpp
     core/types/phylogeny.hpp
     core/types/phylogeny.cpp
+    core/types/indexed_haplotype.hpp
+    core/types/shared_haplotype.hpp
 
     core/calling_components.hpp
     core/calling_components.cpp

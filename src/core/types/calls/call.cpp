@@ -100,7 +100,7 @@ boost::optional<Phred<double>> Call::model_posterior() const noexcept
 
 void Call::reorder_genotype(const SampleName& sample, const std::vector<unsigned>& order)
 {
-    genotype_calls_.at(sample).genotype.reorder_alleles(order);
+    genotype_calls_.at(sample).genotype.reorder(order);
     reorder_genotype_fields(sample, order);
 }
 

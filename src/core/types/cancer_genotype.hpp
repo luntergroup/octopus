@@ -10,6 +10,8 @@
 #include <functional>
 #include <iterator>
 #include <algorithm>
+#include <cassert>
+#include <iostream>
 
 #include <boost/functional/hash.hpp>
 
@@ -36,8 +38,6 @@ public:
                    MappableType&& somatic);
     template <typename G, typename S>
     CancerGenotype(G&& germline, S&& somatic);
-    template <typename G>
-    CancerGenotype(G&& germline, const std::shared_ptr<MappableType>& somatic);
     
     CancerGenotype(const CancerGenotype&)            = default;
     CancerGenotype& operator=(const CancerGenotype&) = default;
@@ -48,7 +48,8 @@ public:
     
     const GenomicRegion& mapped_region() const noexcept;
     
-    const MappableType& operator[](unsigned n) const;
+    const MappableType& operator[](unsigned n) const noexcept;
+    MappableType& operator[](unsigned n) noexcept;
     
     const Genotype<MappableType>& germline() const noexcept;
     Genotype<MappableType>& germline() noexcept;
@@ -58,12 +59,6 @@ public:
     unsigned germline_ploidy() const noexcept;
     unsigned somatic_ploidy() const noexcept;
     unsigned ploidy() const noexcept;
-    bool contains(const MappableType& element) const;
-    unsigned count(const MappableType& element) const;
-    bool is_homozygous() const;
-    unsigned zygosity() const;
-    
-    std::vector<MappableType> copy_unique() const;
     
 private:
     Genotype<MappableType> germline_, somatic_;
@@ -88,13 +83,6 @@ CancerGenotype<MappableType>::CancerGenotype(std::initializer_list<MappableType>
 {}
 
 template <typename MappableType>
-template <typename G>
-CancerGenotype<MappableType>::CancerGenotype(G&& germline, const std::shared_ptr<MappableType>& somatic)
-: germline_ {std::forward<G>(germline)}
-, somatic_ {somatic}
-{}
-
-template <typename MappableType>
 template <typename G, typename S>
 CancerGenotype<MappableType>::CancerGenotype(G&& germline, S&& somatic)
 : germline_ {std::forward<G>(germline)}
@@ -109,7 +97,13 @@ const GenomicRegion& CancerGenotype<MappableType>::mapped_region() const noexcep
 }
 
 template <typename MappableType>
-const MappableType& CancerGenotype<MappableType>::operator[](unsigned n) const
+const MappableType& CancerGenotype<MappableType>::operator[](unsigned n) const noexcept
+{
+    return (n < germline_ploidy()) ? germline_[n] : somatic_[n];
+}
+
+template <typename MappableType>
+MappableType& CancerGenotype<MappableType>::operator[](unsigned n) noexcept
 {
     return (n < germline_ploidy()) ? germline_[n] : somatic_[n];
 }
@@ -156,48 +150,55 @@ unsigned CancerGenotype<MappableType>::ploidy() const noexcept
     return germline_ploidy() + somatic_ploidy();
 }
 
+// free functions
+
 template <typename MappableType>
-bool CancerGenotype<MappableType>::contains(const MappableType& element) const
+auto count(const CancerGenotype<MappableType>& genotype)
 {
-    return germline_.contains(element) || somatic_.contains(element);
+    return count(genotype.germline()) + genotype(genotype.somatic());
 }
 
 template <typename MappableType>
-unsigned CancerGenotype<MappableType>::count(const MappableType& element) const
+bool is_homozygous(const CancerGenotype<MappableType>& genotype)
 {
-    return germline_.count(element) + somatic_.count(element);
+    return is_homozygous(genotype.germline()) && count(genotype.somatic(), genotype.germline()[0]) == genotype.somatic_ploidy();
 }
 
 template <typename MappableType>
-bool CancerGenotype<MappableType>::is_homozygous() const
+auto zygosity(const CancerGenotype<MappableType>& genotype)
 {
-    return germline_.is_homozygous() && somatic_.count(germline_[0]) == somatic_.ploidy();
-}
-
-template <typename MappableType>
-unsigned CancerGenotype<MappableType>::zygosity() const
-{
-    if (somatic_.ploidy() == 1) {
-        return germline_.zygosity() + ((germline_.contains(somatic_)) ? 0 : 1);
+    if (genotype.somatic_ploidy() == 1) {
+        return zygosity(genotype.germline()) + ((contains(genotype.germline(), genotype.somatic()[0])) ? 0 : 1);
     } else {
-        return copy_unique().size();
+        auto result = zygosity(genotype.germline());
+        for (const auto& element : collapse(genotype.somatic())) {
+            if (!contains(genotype.germline()), element) {
+                ++result;
+            }
+        }
+        return result;
     }
 }
 
 template <typename MappableType>
-std::vector<MappableType> CancerGenotype<MappableType>::copy_unique() const
+CancerGenotype<MappableType> collapse(const CancerGenotype<MappableType>& genotype)
 {
-    auto result = germline_.copy_unique();
-    auto itr = utils::append(somatic_.copy_unique(), result);
-    std::inplace_merge(std::begin(result), itr, std::end(result));
-    result.erase(std::unique(std::begin(result), std::end(result)), std::end(result));
-    return result;
+    return {collapse(genotype.germline()), collapse(genotype.somatic())};
 }
 
 // non-member methods
 
-bool contains(const CancerGenotype<Haplotype>& genotype, const Allele& allele);
-bool includes(const CancerGenotype<Haplotype>& genotype, const Allele& allele);
+template <typename MappableType1, typename MappableType2>
+bool contains(const CancerGenotype<MappableType1>& genotype, const MappableType2& element)
+{
+    return contains(genotype.germline(), element) || contains(genotype.somatic(), element);
+}
+
+template <typename MappableType1, typename MappableType2>
+bool includes(const CancerGenotype<MappableType1>& genotype, const MappableType2& element)
+{
+    return includes(genotype.germline(), element) || includes(genotype.somatic(), element);
+}
 
 template <typename MappableType2, typename MappableType1>
 CancerGenotype<MappableType2> copy(const CancerGenotype<MappableType1>& genotype, const GenomicRegion& region)
@@ -212,34 +213,47 @@ bool contains(const CancerGenotype<MappableType1>& lhs, const CancerGenotype<Map
     return copy<MappableType2>(lhs, rhs.mapped_region()) == rhs;
 }
 
-struct CancerGenotypeIndex
+template <typename MappableType>
+MappableBlock<CancerGenotype<MappableType>>
+generate_all_cancer_genotypes(const MappableBlock<Genotype<MappableType>>& germline_genotypes,
+                              const MappableBlock<MappableType>& elements,
+                              unsigned somatic_ploidy = 1,
+                              bool allow_shared = false)
 {
-    GenotypeIndex germline, somatic;
-};
+    const auto somatic_genotypes = generate_all_max_zygosity_genotypes(elements, somatic_ploidy);
+    MappableBlock<CancerGenotype<MappableType>> result {mapped_region(elements)};
+    result.reserve(germline_genotypes.size() * somatic_genotypes.size());
+    for (const auto& germline : germline_genotypes) {
+        for (const auto& somatic : somatic_genotypes) {
+            if (allow_shared || !have_shared(germline, somatic)) {
+                result.emplace_back(germline, somatic);
+            }
+        }
+    }
+    return result;
+}
 
-std::vector<CancerGenotype<Haplotype>>
-generate_all_cancer_genotypes(const std::vector<Genotype<Haplotype>>& germline_genotypes,
-                              const std::vector<Haplotype>& somatic_haplotypes,
-                              unsigned somatic_ploidy = 1, bool allow_shared = false);
-
-std::vector<CancerGenotype<Haplotype>>
-generate_all_cancer_genotypes(const std::vector<Genotype<Haplotype>>& germline_genotypes,
-                              const std::vector<GenotypeIndex>& germline_genotype_indices,
-                              const std::vector<Haplotype>& somatic_haplotypes,
-                              std::vector<CancerGenotypeIndex>& cancer_genotype_indices,
-                              unsigned somatic_ploidy = 1, bool allow_shared = false);
-
-std::vector<CancerGenotype<Haplotype>>
-extend_somatic_genotypes(const std::vector<CancerGenotype<Haplotype>>& old_genotypes,
-                         const std::vector<Haplotype>& somatic_haplotypes,
-                         bool allow_shared = false);
-
-std::vector<CancerGenotype<Haplotype>>
-extend_somatic_genotypes(const std::vector<CancerGenotype<Haplotype>>& old_genotypes,
-                         const std::vector<CancerGenotypeIndex>& old_genotype_indices,
-                         const std::vector<Haplotype>& somatic_haplotypes,
-                         std::vector<CancerGenotypeIndex>& new_genotype_indices,
-                         bool allow_shared = false);
+template <typename MappableType>
+MappableBlock<CancerGenotype<MappableType>>
+extend_somatic(const MappableBlock<CancerGenotype<MappableType>>& old_genotypes,
+               const MappableBlock<MappableType>& elements,
+               bool allow_shared = false)
+{
+    MappableBlock<CancerGenotype<MappableType>> result {mapped_region(elements)};
+    result.reserve(old_genotypes.size() * elements.size());
+    for (const auto& old_genotype : old_genotypes) {
+        for (const auto& element : elements) {
+            if (allow_shared || !contains(old_genotype.germline(), element)) {
+                auto new_somatic_genotype = old_genotype.somatic();
+                new_somatic_genotype.emplace(element);
+                if (is_max_zygosity(new_somatic_genotype)) {
+                    result.emplace_back(old_genotype.germline(), std::move(new_somatic_genotype));
+                }
+            }
+        }
+    }
+    return result;
+}
 
 template <typename MappableType>
 Genotype<MappableType> demote(const CancerGenotype<MappableType>& genotype)
@@ -282,25 +296,33 @@ struct CancerGenotypeHash
 
 namespace debug {
 
-template <typename S>
-void print_alleles(S&& stream, const CancerGenotype<Haplotype>& genotype)
+template <typename S, typename T>
+void print_alleles(S&& stream, const CancerGenotype<T>& genotype)
 {
     print_alleles(stream, genotype.germline());
     stream << " + ";
     print_alleles(stream, genotype.somatic());
 }
 
-void print_alleles(const CancerGenotype<Haplotype>& genotype);
-
-template <typename S>
-void print_variant_alleles(S&& stream, const CancerGenotype<Haplotype>& genotype)
+template <typename S, typename T>
+void print_variant_alleles(S&& stream, const CancerGenotype<T>& genotype)
 {
     print_variant_alleles(stream, genotype.germline());
     stream << " + ";
     print_variant_alleles(stream, genotype.somatic());
 }
 
-void print_variant_alleles(const CancerGenotype<Haplotype>& genotype);
+template <typename T>
+void print_alleles(const CancerGenotype<T>& genotype)
+{
+    print_alleles(std::cout, genotype);
+}
+
+template <typename T>
+void print_variant_alleles(const CancerGenotype<T>& genotype)
+{
+    print_variant_alleles(std::cout, genotype);
+}
 
 } // namespace debug
 

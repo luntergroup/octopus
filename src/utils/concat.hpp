@@ -7,6 +7,7 @@
 #include <vector>
 #include <iterator>
 
+#include "containers/mappable_block.hpp"
 #include "append.hpp"
 
 namespace octopus {
@@ -72,6 +73,19 @@ std::vector<T> concat(std::vector<std::vector<T>>&& values)
     std::vector<T> result {};
     result.reserve(detail::sum_sizes(values));
     for (auto& v : values) utils::append(std::move(v), result);
+    return result;
+}
+
+template <typename T>
+MappableBlock<T> concat(const MappableBlock<T>& lhs, const MappableBlock<T>& rhs)
+{
+    assert(is_same_region(lhs, rhs));
+    if (lhs.empty()) return rhs;
+    if (rhs.empty()) return lhs;
+    MappableBlock<T> result {mapped_region(lhs)};
+    result.reserve(lhs.size() + rhs.size());
+    result.insert(result.cend(), lhs.cbegin(), lhs.cend());
+    result.insert(result.cend(), rhs.cbegin(), rhs.cend());
     return result;
 }
 

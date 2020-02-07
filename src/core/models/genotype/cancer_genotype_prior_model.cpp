@@ -32,7 +32,7 @@ const SomaticMutationModel& CancerGenotypePriorModel::mutation_model() const noe
     return mutation_model_;
 }
 
-CancerGenotypePriorModel::LogProbability CancerGenotypePriorModel::evaluate(const CancerGenotype<Haplotype>& genotype) const
+CancerGenotypePriorModel::LogProbability CancerGenotypePriorModel::evaluate(const CancerGenotype<IndexedHaplotype<>>& genotype) const
 {
     const auto& germline_genotype = genotype.germline();
     auto result = germline_model_.get().evaluate(germline_genotype);
@@ -43,27 +43,10 @@ CancerGenotypePriorModel::LogProbability CancerGenotypePriorModel::evaluate(cons
     return result;
 }
 
-CancerGenotypePriorModel::LogProbability CancerGenotypePriorModel::evaluate(const CancerGenotypeIndex& genotype) const
-{
-    const auto germline_indices = genotype.germline;
-    auto result = germline_model_.get().evaluate(germline_indices);
-    // Model assumes independence between somatic haplotypes given germline genotype
-    for (const auto& somatic_index : genotype.somatic) {
-        result += ln_probability_of_somatic_given_genotype(somatic_index, germline_indices);
-    }
-    return result;
-}
-
 CancerGenotypePriorModel::LogProbability
-CancerGenotypePriorModel::ln_probability_of_somatic_given_haplotype(const Haplotype& somatic, const Haplotype& germline) const
+CancerGenotypePriorModel::ln_probability_of_somatic_given_haplotype(const IndexedHaplotype<>& somatic, const IndexedHaplotype<>& germline) const
 {
     return mutation_model_.evaluate(somatic, germline);
-}
-
-CancerGenotypePriorModel::LogProbability
-CancerGenotypePriorModel::ln_probability_of_somatic_given_haplotype(unsigned somatic_index, unsigned germline_index) const
-{
-    return mutation_model_.evaluate(somatic_index, germline_index);
 }
 
 } // namespace octopus

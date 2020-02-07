@@ -54,12 +54,7 @@ public:
     bool is_primed() const noexcept;
     
     InferredLatents
-    evaluate(const MappableBlock<Genotype<Haplotype>>& genotypes,
-             const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
-    
-    InferredLatents
-    evaluate(const MappableBlock<Genotype<Haplotype>>& genotypes,
-             const std::vector<GenotypeIndex>& genotype_indices,
+    evaluate(const MappableBlock<Genotype<IndexedHaplotype<>>>& genotypes,
              const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
     
 private:

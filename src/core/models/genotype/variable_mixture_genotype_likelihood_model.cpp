@@ -19,30 +19,14 @@ namespace octopus { namespace model {
 VariableMixtureGenotypeLikelihoodModel::VariableMixtureGenotypeLikelihoodModel(const HaplotypeLikelihoodArray& likelihoods)
 : likelihoods_ {likelihoods}
 , mixtures_ {}
-, indexed_likelihoods_ {}
 , likelihood_refs_ {}
 , buffer_ {}
 {}
-
-VariableMixtureGenotypeLikelihoodModel::VariableMixtureGenotypeLikelihoodModel(const HaplotypeLikelihoodArray& likelihoods,
-                                                                         const std::vector<Haplotype>& haplotypes)
-: VariableMixtureGenotypeLikelihoodModel {likelihoods}
-{
-    this->prime(haplotypes);
-}
 
 VariableMixtureGenotypeLikelihoodModel::VariableMixtureGenotypeLikelihoodModel(const HaplotypeLikelihoodArray& likelihoods, MixtureVector mixtures)
 : VariableMixtureGenotypeLikelihoodModel {likelihoods}
 {
     this->set_mixtures(std::move(mixtures));
-}
-
-VariableMixtureGenotypeLikelihoodModel::VariableMixtureGenotypeLikelihoodModel(const HaplotypeLikelihoodArray& likelihoods,
-                                                                         MixtureVector mixtures,
-                                                                         const std::vector<Haplotype>& haplotypes)
-: VariableMixtureGenotypeLikelihoodModel {likelihoods, std::move(mixtures)}
-{
-    this->prime(haplotypes);
 }
 
 const HaplotypeLikelihoodArray& VariableMixtureGenotypeLikelihoodModel::cache() const noexcept
@@ -53,26 +37,6 @@ const HaplotypeLikelihoodArray& VariableMixtureGenotypeLikelihoodModel::cache() 
 const VariableMixtureGenotypeLikelihoodModel::MixtureVector& VariableMixtureGenotypeLikelihoodModel::mixtures() const noexcept
 {
     return mixtures_;
-}
-
-void VariableMixtureGenotypeLikelihoodModel::prime(const std::vector<Haplotype>& haplotypes)
-{
-    assert(likelihoods_.is_primed());
-    indexed_likelihoods_.reserve(haplotypes.size());
-    std::transform(std::cbegin(haplotypes), std::cend(haplotypes), std::back_inserter(indexed_likelihoods_),
-                   [this] (const auto& haplotype) -> const HaplotypeLikelihoodArray::LikelihoodVector& {
-                       return likelihoods_[haplotype]; });
-}
-
-void VariableMixtureGenotypeLikelihoodModel::unprime() noexcept
-{
-    indexed_likelihoods_.clear();
-    indexed_likelihoods_.shrink_to_fit();
-}
-
-bool VariableMixtureGenotypeLikelihoodModel::is_primed() const noexcept
-{
-    return !indexed_likelihoods_.empty();
 }
 
 void VariableMixtureGenotypeLikelihoodModel::set_mixtures(MixtureVector mixtures)
@@ -106,17 +70,15 @@ VariableMixtureGenotypeLikelihoodModel::evaluate(const Genotype<Haplotype>& geno
 }
 
 VariableMixtureGenotypeLikelihoodModel::LogProbability
-VariableMixtureGenotypeLikelihoodModel::evaluate(const GenotypeIndex& genotype) const
+VariableMixtureGenotypeLikelihoodModel::evaluate(const Genotype<IndexedHaplotype<>>& genotype) const
 {
-    assert(is_primed());
-    assert(genotype.size() == mixtures_.size());
-    assert(buffer_.size() == mixtures_.size());
+    assert(genotype.ploidy() == mixtures_.size());
     LogProbability result {0};
-    const auto num_reads = indexed_likelihoods_.front().get().size();
-    for (std::size_t read_idx {0}; read_idx < num_reads; ++read_idx) {
+    const auto num_likelihoods = likelihoods_.num_likelihoods();
+    for (std::size_t read_idx {0}; read_idx < num_likelihoods; ++read_idx) {
         std::transform(std::cbegin(genotype), std::cend(genotype), std::cbegin(log_mixtures_), std::begin(buffer_),
-                       [this, read_idx] (auto haplotype_idx, auto log_mixture) noexcept {
-                           return log_mixture + indexed_likelihoods_[haplotype_idx].get()[read_idx]; });
+                       [this, read_idx] (const auto& haplotype, auto log_mixture) noexcept {
+                           return log_mixture + likelihoods_[haplotype][read_idx]; });
         result += maths::log_sum_exp(buffer_);
     }
     return result;
@@ -145,22 +107,21 @@ VariableMixtureGenotypeLikelihoodModel::evaluate(const CancerGenotype<Haplotype>
 }
 
 VariableMixtureGenotypeLikelihoodModel::LogProbability
-VariableMixtureGenotypeLikelihoodModel::evaluate(const CancerGenotypeIndex& genotype) const
+VariableMixtureGenotypeLikelihoodModel::evaluate(const CancerGenotype<IndexedHaplotype<>>& genotype) const
 {
-    assert(is_primed());
-    assert((genotype.germline.size() + genotype.somatic.size()) == mixtures_.size());
+    assert((genotype.germline_ploidy() + genotype.somatic_ploidy()) == mixtures_.size());
     assert(buffer_.size() == mixtures_.size());
     LogProbability result {0};
-    const auto num_reads = indexed_likelihoods_.front().get().size();
-    for (std::size_t read_idx {0}; read_idx < num_reads; ++read_idx) {
-        auto buffer_itr = std::transform(std::cbegin(genotype.germline), std::cend(genotype.germline),
+    const auto num_likelihoods = likelihoods_.num_likelihoods();
+    for (std::size_t read_idx {0}; read_idx < num_likelihoods; ++read_idx) {
+        auto buffer_itr = std::transform(std::cbegin(genotype.germline()), std::cend(genotype.germline()),
                                          std::cbegin(log_mixtures_), std::begin(buffer_),
-                                         [=] (auto haplotype_idx, auto log_mixture) noexcept {
-                                             return log_mixture + indexed_likelihoods_[haplotype_idx].get()[read_idx]; });
-        std::transform(std::cbegin(genotype.somatic), std::cend(genotype.somatic),
-                       std::next(std::cbegin(log_mixtures_), genotype.germline.size()), buffer_itr,
-                       [this, read_idx] (auto haplotype_idx, auto log_mixture) noexcept {
-                           return log_mixture + indexed_likelihoods_[haplotype_idx].get()[read_idx]; });
+                                         [=] (const auto& haplotype, auto log_mixture) noexcept {
+                                             return log_mixture + likelihoods_[haplotype][read_idx]; });
+        std::transform(std::cbegin(genotype.somatic()), std::cend(genotype.somatic()),
+                       std::next(std::cbegin(log_mixtures_), genotype.germline_ploidy()), buffer_itr,
+                       [this, read_idx] (const auto& haplotype, auto log_mixture) noexcept {
+                           return log_mixture + likelihoods_[haplotype][read_idx]; });
         result += maths::log_sum_exp(buffer_);
     }
     return result;

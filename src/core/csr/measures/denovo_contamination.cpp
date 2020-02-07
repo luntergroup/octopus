@@ -104,7 +104,7 @@ auto get_denovo_haplotypes(const Facet::GenotypeMap& genotypes, const std::vecto
 
 bool contains(const MappableFlatSet<Genotype<Haplotype>>& genotypes, const Haplotype& haplotype)
 {
-    return std::any_of(std::cbegin(genotypes), std::cend(genotypes), [&] (const auto& genotype) { return genotype.contains(haplotype); });
+    return std::any_of(std::cbegin(genotypes), std::cend(genotypes), [&] (const auto& genotype) { return contains(genotype, haplotype); });
 }
 
 bool is_parental_haplotype(const Haplotype& haplotype, const Facet::GenotypeMap& genotypes, const Trio& trio)
@@ -163,7 +163,7 @@ Measure::ResultType DeNovoContamination::do_evaluate(const VcfRecord& call, cons
                 auto supporting_reads = copy_overlapped(p.second, call);
                 if (!supporting_reads.empty()) {
                     const Haplotype& assigned_haplotype {p.first};
-                    if (!denovo_genotype.contains(assigned_haplotype)) {
+                    if (!contains(denovo_genotype, assigned_haplotype)) {
                         auto dummy = denovo_genotype;
                         dummy.emplace(assigned_haplotype);
                         haplotype_priors[assigned_haplotype] = 0;

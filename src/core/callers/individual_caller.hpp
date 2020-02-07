@@ -57,11 +57,8 @@ public:
 private:
     class Latents;
     
-    struct GenotypeVectorPair
-    {
-        std::vector<Genotype<Haplotype>> genotypes;
-        std::vector<GenotypeIndex> indices;
-    };
+    using IndexedHaplotypeBlock = MappableBlock<IndexedHaplotype<>>;
+    using GenotypeBlock = MappableBlock<Genotype<IndexedHaplotype<>>>;
     
     Parameters parameters_;
     
@@ -102,12 +99,16 @@ private:
     const SampleName& sample() const noexcept;
     
     std::unique_ptr<GenotypePriorModel> make_prior_model(const HaplotypeBlock& haplotypes) const;
-    GenotypeVectorPair propose_genotypes(const HaplotypeBlock& haplotypes, const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
+    GenotypeBlock propose_genotypes(const HaplotypeBlock& haplotypes,
+                                    const IndexedHaplotypeBlock& indexed_haplotypes,
+                                    const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
 };
 
 class IndividualCaller::Latents : public Caller::Latents
 {
 public:
+    using IndexedHaplotypeBlock = MappableBlock<IndexedHaplotype<>>;
+    
     using ModelInferences = model::IndividualModel::InferredLatents;
     
     using Caller::Latents::HaplotypeProbabilityMap;
@@ -117,8 +118,10 @@ public:
     
     Latents() = delete;
     
-    Latents(const SampleName& sample, const HaplotypeBlock& haplotypes,
-            std::vector<Genotype<Haplotype>>&& genotypes, ModelInferences&& latents);
+    Latents(const SampleName& sample,
+            const IndexedHaplotypeBlock& haplotypes,
+            IndividualCaller::GenotypeBlock genotypes,
+            ModelInferences&& latents);
     
     std::shared_ptr<HaplotypeProbabilityMap> haplotype_posteriors() const noexcept override;
     std::shared_ptr<GenotypeProbabilityMap> genotype_posteriors() const noexcept override;
@@ -128,7 +131,7 @@ private:
     std::shared_ptr<HaplotypeProbabilityMap> haplotype_posteriors_;
     double model_log_evidence_;
     
-    HaplotypeProbabilityMap calculate_haplotype_posteriors(const HaplotypeBlock& haplotypes);
+    HaplotypeProbabilityMap calculate_haplotype_posteriors(const IndexedHaplotypeBlock& haplotypes);
 };
 
 } // namespace octopus

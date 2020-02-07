@@ -6,8 +6,10 @@
 
 #include <vector>
 #include <functional>
+#include <initializer_list>
 
 #include "core/types/haplotype.hpp"
+#include "core/types/indexed_haplotype.hpp"
 #include "core/types/genotype.hpp"
 #include "containers/mappable_block.hpp"
 
@@ -18,8 +20,9 @@ class PopulationPriorModel
 public:
     using LogProbability = double;
     using HaplotypeBlock = MappableBlock<Haplotype>;
-    using GenotypeReference = std::reference_wrapper<const Genotype<Haplotype>>;
-    using GenotypeIndiceVectorReference = std::reference_wrapper<const std::vector<unsigned>>;
+    using GenotypeVector = std::vector<Genotype<IndexedHaplotype<>>>;
+    using GenotypeReference = std::reference_wrapper<const Genotype<IndexedHaplotype<>>>;
+    using GenotypeReferenceVector = std::vector<GenotypeReference>;
     
     PopulationPriorModel() = default;
     
@@ -34,18 +37,29 @@ public:
     void unprime() noexcept { do_unprime(); }
     bool is_primed() const noexcept { return check_is_primed(); }
     
-    LogProbability evaluate(const std::vector<Genotype<Haplotype>>& genotypes) const { return do_evaluate(genotypes); }
-    LogProbability evaluate(const std::vector<GenotypeReference>& genotypes) const { return do_evaluate(genotypes); }
-    LogProbability evaluate(const std::vector<GenotypeIndex>& indices) const { return do_evaluate(indices); }
-    LogProbability evaluate(const std::vector<GenotypeIndiceVectorReference>& genotypes) const { return do_evaluate(genotypes); }
+    LogProbability evaluate(const GenotypeVector& genotypes) const { return do_evaluate(genotypes); }
+    LogProbability evaluate(const GenotypeReferenceVector& genotypes) const { return do_evaluate(genotypes); }
+    
+    LogProbability evaluate(std::initializer_list<GenotypeReference> genotypes) const
+    {
+        buffer_.assign(genotypes);
+        return evaluate(buffer_);
+    }
     
 private:
     std::vector<Haplotype> haplotypes_;
+    mutable std::vector<GenotypeReference> buffer_;
     
-    virtual LogProbability do_evaluate(const std::vector<Genotype<Haplotype>>& genotypes) const = 0;
-    virtual LogProbability do_evaluate(const std::vector<GenotypeReference>& genotypes) const = 0;
-    virtual LogProbability do_evaluate(const std::vector<GenotypeIndex>& genotypes) const = 0;
-    virtual LogProbability do_evaluate(const std::vector<GenotypeIndiceVectorReference>& indices) const = 0;
+    virtual LogProbability do_evaluate(const GenotypeVector& genotypes) const
+    {
+        buffer_.clear();
+        buffer_.reserve(genotypes.size());
+        for (const auto& genotype : genotypes) {
+            buffer_.push_back(std::cref(genotype));
+        }
+        return evaluate(buffer_);
+    }
+    virtual LogProbability do_evaluate(const GenotypeReferenceVector& genotypes) const = 0;
     virtual void do_prime(const HaplotypeBlock& haplotypes) {};
     virtual void do_unprime() noexcept {};
     virtual bool check_is_primed() const noexcept = 0;

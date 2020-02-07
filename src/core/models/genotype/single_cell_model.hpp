@@ -12,6 +12,7 @@
 
 #include "config/common.hpp"
 #include "core/types/haplotype.hpp"
+#include "core/types/indexed_haplotype.hpp"
 #include "core/types/genotype.hpp"
 #include "core/types/phylogeny.hpp"
 #include "core/models/haplotype_likelihood_array.hpp"
@@ -60,7 +61,7 @@ public:
         std::string do_why() const override { return "No viable genotype combinations found"; };
     };
     
-    using GenotypeVector = std::vector<Genotype<Haplotype>>;
+    using GenotypeVector = std::vector<Genotype<IndexedHaplotype<>>>;
     using PhylogenyNodePloidyMap = std::unordered_map<SingleCellPriorModel::CellPhylogeny::LabelType, unsigned>;
     
     SingleCellModel() = delete;
@@ -82,9 +83,6 @@ public:
     
     Inferences
     evaluate(const GenotypeVector& genotypes,
-             const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
-    Inferences
-    evaluate(const std::vector<GenotypeIndex>& genotypes,
              const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
     
     Inferences

@@ -71,11 +71,8 @@ private:
         double clonal, subclonal;
     };
     
-    struct IndexedGenotypeVectorPair
-    {
-        std::vector<Genotype<Haplotype>> raw;
-        std::vector<GenotypeIndex> indices;
-    };
+    using IndexedHaplotypeBlock = MappableBlock<IndexedHaplotype<>>;
+    using GenotypeBlock = MappableBlock<Genotype<IndexedHaplotype<>>>;
     
     std::string do_name() const override;
     CallTypeSet do_call_types() const override;
@@ -113,11 +110,12 @@ private:
                    const ReadPileupMap& pileup) const;
     
     const SampleName& sample() const noexcept;
-    void fit_sublone_model(const MappableBlock<Haplotype>& haplotypes,
+    void fit_sublone_model(const HaplotypeBlock& haplotypes,
+                           const IndexedHaplotypeBlock& indexed_haplotypes,
                            const HaplotypeLikelihoodArray& haplotype_likelihoods,
                            GenotypePriorModel& genotype_prior_model,
                            const model::IndividualModel::InferredLatents& haploid_latents,
-                           IndexedGenotypeVectorPair& prev_genotypes,
+                           GenotypeBlock& prev_genotypes,
                            model::SubcloneModel::InferredLatents& sublonal_inferences) const;
     
     std::unique_ptr<GenotypePriorModel> make_prior_model(const HaplotypeBlock& haplotypes) const;
@@ -129,6 +127,8 @@ private:
 class PolycloneCaller::Latents : public Caller::Latents
 {
 public:
+    using GenotypeBlock = MappableBlock<Genotype<IndexedHaplotype<>>>;
+    
     using HaploidModelInferences = model::IndividualModel::InferredLatents;
     using SubloneModelInferences = model::SubcloneModel::InferredLatents;
     
@@ -137,15 +137,18 @@ public:
     
     Latents() = delete;
     
-    Latents(std::vector<Genotype<Haplotype>> haploid_genotypes, std::vector<Genotype<Haplotype>> polyploid_genotypes,
-            HaploidModelInferences haploid_model_inferences, SubloneModelInferences subclone_model_inferences,
-            const SampleName& sample, const std::function<double(unsigned)>& clonality_prior);
+    Latents(GenotypeBlock haploid_genotypes,
+            GenotypeBlock polyploid_genotypes,
+            HaploidModelInferences haploid_model_inferences,
+            SubloneModelInferences subclone_model_inferences,
+            const SampleName& sample,
+            const std::function<double(unsigned)>& clonality_prior);
     
     std::shared_ptr<HaplotypeProbabilityMap> haplotype_posteriors() const noexcept override;
     std::shared_ptr<GenotypeProbabilityMap> genotype_posteriors() const noexcept override;
 
 private:
-    std::vector<Genotype<Haplotype>> haploid_genotypes_, polyploid_genotypes_;
+    GenotypeBlock haploid_genotypes_, polyploid_genotypes_;
     HaploidModelInferences haploid_model_inferences_;
     SubloneModelInferences subclone_model_inferences_;
     PolycloneCaller::ModelProbabilities model_log_posteriors_;

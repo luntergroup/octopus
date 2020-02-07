@@ -16,8 +16,9 @@ class UniformPopulationPriorModel : public PopulationPriorModel
 {
 public:
     using PopulationPriorModel::LogProbability;
+    using PopulationPriorModel::GenotypeVector;
     using PopulationPriorModel::GenotypeReference;
-    using PopulationPriorModel::GenotypeIndiceVectorReference;
+    using PopulationPriorModel::GenotypeReferenceVector;
     
     UniformPopulationPriorModel() = default;
     
@@ -31,21 +32,13 @@ public:
 private:
     bool is_primed_ = false;
     
-    LogProbability do_evaluate(const std::vector<Genotype<Haplotype>>& genotypes) const override
+    LogProbability do_evaluate(const GenotypeVector& genotypes) const override
     {
-        return 1.0;
+        return 1;
     }
-    LogProbability do_evaluate(const std::vector<GenotypeReference>& genotypes) const override
+    LogProbability do_evaluate(const GenotypeReferenceVector& genotypes) const override
     {
-        return 1.0;
-    }
-    LogProbability do_evaluate(const std::vector<GenotypeIndex>& genotypes) const override
-    {
-        return 1.0;
-    }
-    LogProbability do_evaluate(const std::vector<GenotypeIndiceVectorReference>& indices) const override
-    {
-        return 1.0;
+        return 1;
     }
     void do_prime(const HaplotypeBlock& haplotypes) override
     {

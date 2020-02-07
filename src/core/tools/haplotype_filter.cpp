@@ -375,7 +375,7 @@ filter_to_n(std::vector<Haplotype>& haplotypes, const std::vector<SampleName>& s
 
 std::vector<HaplotypeReference>
 extract_removable(const std::vector<Haplotype>& haplotypes,
-                  const HaplotypePosteriorMap& haplotype_posteriors,
+                  const HaplotypeReferenceProbabilityMap& haplotype_posteriors,
                   const std::vector<SampleName>& samples,
                   const HaplotypeLikelihoodArray& haplotype_likelihoods,
                   const std::size_t max_to_remove,

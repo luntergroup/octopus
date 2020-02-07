@@ -183,6 +183,12 @@ CallerBuilder& CallerBuilder::set_min_phase_score(Phred<double> score) noexcept
     return *this;
 }
 
+CallerBuilder& CallerBuilder::set_early_phase_detection_policy(bool use) noexcept
+{
+    params_.general.try_early_phase_detection = use;
+    return *this;
+}
+
 CallerBuilder& CallerBuilder::set_snp_heterozygosity(double heterozygosity) noexcept
 {
     params_.snp_heterozygosity = heterozygosity;

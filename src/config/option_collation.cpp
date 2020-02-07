@@ -2080,6 +2080,7 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
     vc_builder.set_likelihood_model(make_haplotype_likelihood_model(options, read_profile));
     auto min_phase_score = options.at("min-phase-score").as<Phred<double>>();
     vc_builder.set_min_phase_score(min_phase_score);
+    vc_builder.set_early_phase_detection_policy(!options.at("disable-early-phase-detection").as<bool>());
     if (!options.at("use-uniform-genotype-priors").as<bool>()) {
         vc_builder.set_snp_heterozygosity(options.at("snp-heterozygosity").as<float>());
         vc_builder.set_indel_heterozygosity(options.at("indel-heterozygosity").as<float>());

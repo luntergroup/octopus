@@ -106,11 +106,12 @@ std::size_t TrioCaller::do_remove_duplicates(HaplotypeBlock& haplotypes) const
 
 // TrioCaller::Latents
 
-TrioCaller::Latents::Latents(const HaplotypeBlock& haplotypes,
-                             std::vector<Genotype<Haplotype>>&& genotypes,
-                             model::TrioModel::InferredLatents&& latents,
+TrioCaller::Latents::Latents(IndexedHaplotypeBlock haplotypes,
+                             GenotypeBlock genotypes,
+                             model::TrioModel::InferredLatents latents,
                              const Trio& trio)
 : trio {trio}
+, haplotypes {std::move(haplotypes)}
 , maternal_genotypes {std::move(genotypes)}
 , model_latents {std::move(latents)}
 , concatenated_genotypes_ {}
@@ -120,16 +121,17 @@ TrioCaller::Latents::Latents(const HaplotypeBlock& haplotypes,
 , child_ploidy_ {maternal_genotypes.front().ploidy()}
 {
     set_genotype_posteriors_shared_genotypes(trio);
-    set_haplotype_posteriors_shared_genotypes(haplotypes);
+    set_haplotype_posteriors_shared_genotypes();
 }
 
-TrioCaller::Latents::Latents(const HaplotypeBlock& haplotypes,
-                             std::vector<Genotype<Haplotype>>&& maternal_genotypes,
-                             std::vector<Genotype<Haplotype>>&& paternal_genotypes,
+TrioCaller::Latents::Latents(IndexedHaplotypeBlock haplotypes,
+                             GenotypeBlock maternal_genotypes,
+                             GenotypeBlock paternal_genotypes,
                              const unsigned child_ploidy,
-                             ModelInferences&& latents,
+                             ModelInferences latents,
                              const Trio& trio)
 : trio {trio}
+, haplotypes {std::move(haplotypes)}
 , maternal_genotypes {std::move(maternal_genotypes)}
 , paternal_genotypes {std::move(paternal_genotypes)}
 , model_latents {std::move(latents)}
@@ -140,7 +142,7 @@ TrioCaller::Latents::Latents(const HaplotypeBlock& haplotypes,
 , child_ploidy_ {child_ploidy}
 {
     set_genotype_posteriors_unique_genotypes(trio);
-    set_haplotype_posteriors_unique_genotypes(haplotypes);
+    set_haplotype_posteriors_unique_genotypes();
     concatenated_genotypes_.clear();
     concatenated_genotypes_.shrink_to_fit();
     padded_marginal_maternal_posteriors_.clear();
@@ -168,10 +170,10 @@ namespace {
 using model::TrioModel;
 using JointProbability = TrioModel::Latents::JointProbability;
 
-using GenotypeReference = std::reference_wrapper<const Genotype<Haplotype>>;
+using GenotypeReference = std::reference_wrapper<const Genotype<IndexedHaplotype<>>>;
 
 template <typename Function>
-auto marginalise(const std::vector<Genotype<Haplotype>>& genotypes,
+auto marginalise(const std::vector<Genotype<IndexedHaplotype<>>>& genotypes,
                  const std::vector<JointProbability>& joint_posteriors,
                  Function who)
 {
@@ -184,19 +186,19 @@ auto marginalise(const std::vector<Genotype<Haplotype>>& genotypes,
     return result;
 }
 
-auto marginalise_mother(const std::vector<Genotype<Haplotype>>& genotypes,
+auto marginalise_mother(const std::vector<Genotype<IndexedHaplotype<>>>& genotypes,
                         const std::vector<JointProbability>& joint_posteriors)
 {
     return marginalise(genotypes, joint_posteriors, [] (const JointProbability& p) -> GenotypeReference { return p.maternal; });
 }
 
-auto marginalise_father(const std::vector<Genotype<Haplotype>>& genotypes,
+auto marginalise_father(const std::vector<Genotype<IndexedHaplotype<>>>& genotypes,
                         const std::vector<JointProbability>& joint_posteriors)
 {
     return marginalise(genotypes, joint_posteriors, [] (const JointProbability& p) -> GenotypeReference { return p.paternal; });
 }
 
-auto marginalise_child(const std::vector<Genotype<Haplotype>>& genotypes,
+auto marginalise_child(const std::vector<Genotype<IndexedHaplotype<>>>& genotypes,
                        const std::vector<JointProbability>& joint_posteriors)
 {
     return marginalise(genotypes, joint_posteriors, [] (const JointProbability& p) -> GenotypeReference { return p.child; });
@@ -234,7 +236,7 @@ void TrioCaller::Latents::set_genotype_posteriors_unique_genotypes(const Trio& t
     if (!maternal_genotypes.empty()) {
         marginal_maternal_posteriors = marginalise_mother(maternal_genotypes, trio_posteriors);
     } else {
-        maternal_genotypes.assign({Genotype<Haplotype> {}});
+        maternal_genotypes.assign({Genotype<IndexedHaplotype<>> {}});
         marginal_maternal_posteriors.assign({1.0});
     }
     const bool child_shares_paternal_genotypes {child_ploidy_ == paternal_genotypes->front().ploidy()};
@@ -276,42 +278,32 @@ using JointProbability      = TrioModel::Latents::JointProbability;
 using TrioProbabilityVector = std::vector<JointProbability>;
 using InverseGenotypeTable  = std::vector<std::vector<std::size_t>>;
 
-auto make_inverse_genotype_table(const MappableBlock<Haplotype>& haplotypes, const std::vector<Genotype<Haplotype>>& genotypes)
+auto make_inverse_genotype_table(const MappableBlock<Genotype<IndexedHaplotype<>>>& genotypes,
+                                 const std::size_t num_haplotypes)
 {
-    assert(!haplotypes.empty() && !genotypes.empty());
-    using HaplotypeReference = std::reference_wrapper<const Haplotype>;
-    std::unordered_map<HaplotypeReference, std::vector<std::size_t>> result_map {haplotypes.size()};
-    const auto cardinality = element_cardinality_in_genotypes(static_cast<unsigned>(haplotypes.size()), genotypes.front().ploidy());
-    for (const auto& haplotype : haplotypes) {
-        auto itr = result_map.emplace(std::piecewise_construct,
-                                      std::forward_as_tuple(std::cref(haplotype)),
-                                      std::forward_as_tuple());
-        itr.first->second.reserve(cardinality);
-    }
-    for (std::size_t i {0}; i < genotypes.size(); ++i) {
-        for (const auto& haplotype : genotypes[i]) {
-            result_map.at(haplotype).emplace_back(i);
+    InverseGenotypeTable result(num_haplotypes);
+    for (auto& indices : result) indices.reserve(genotypes.size() / num_haplotypes);
+    for (std::size_t genotype_idx {0}; genotype_idx < genotypes.size(); ++genotype_idx) {
+        for (const auto& haplotype : genotypes[genotype_idx]) {
+            result[index_of(haplotype)].push_back(genotype_idx);
         }
     }
-    InverseGenotypeTable result {};
-    result.reserve(haplotypes.size());
-    for (const auto& haplotype : haplotypes) {
-        auto& indices = result_map.at(haplotype);
+    for (auto& indices : result) {
         std::sort(std::begin(indices), std::end(indices));
         indices.erase(std::unique(std::begin(indices), std::end(indices)), std::end(indices));
-        result.emplace_back(std::move(indices));
+        indices.shrink_to_fit();
     }
     return result;
 }
 
 using GenotypeMarginalPosteriorMatrix = std::vector<std::vector<double>>;
 
-auto calculate_haplotype_posteriors(const MappableBlock<Haplotype>& haplotypes,
-                                    const std::vector<Genotype<Haplotype>>& genotypes,
-                                    const GenotypeMarginalPosteriorMatrix& genotype_posteriors,
-                                    const InverseGenotypeTable& inverse_genotypes)
+auto calculate_haplotype_posteriors(const MappableBlock<IndexedHaplotype<>>& haplotypes,
+                                    const MappableBlock<Genotype<IndexedHaplotype<>>>& genotypes,
+                                    const GenotypeMarginalPosteriorMatrix& genotype_posteriors)
 {
-    std::unordered_map<std::reference_wrapper<const Haplotype>, double> result {haplotypes.size()};
+    const auto inverse_genotypes = make_inverse_genotype_table(genotypes, haplotypes.size());
+    std::vector<double> result(haplotypes.size());
     auto itr = std::cbegin(inverse_genotypes);
     std::vector<std::size_t> genotype_indices(genotypes.size());
     std::iota(std::begin(genotype_indices), std::end(genotype_indices), 0);
@@ -324,14 +316,12 @@ auto calculate_haplotype_posteriors(const MappableBlock<Haplotype>& haplotypes,
                             std::begin(noncontaining_genotype_indices));
         double prob_not_observed {1};
         for (const auto& sample_genotype_posteriors : genotype_posteriors) {
-            prob_not_observed *= std::accumulate(std::cbegin(noncontaining_genotype_indices),
-                                                 std::cend(noncontaining_genotype_indices),
-                                                 0.0, [&sample_genotype_posteriors]
-                                                 (const auto curr, const auto i) {
-                return curr + sample_genotype_posteriors[i];
+            prob_not_observed *= std::accumulate(std::cbegin(noncontaining_genotype_indices), std::cend(noncontaining_genotype_indices),
+                                                 0.0, [&] (const auto total, const auto i) {
+                return total + sample_genotype_posteriors[i];
             });
         }
-        result.emplace(haplotype, 1.0 - prob_not_observed);
+        result[index_of(haplotype)] = 1.0 - prob_not_observed;
         ++itr;
     }
     return result;
@@ -339,36 +329,40 @@ auto calculate_haplotype_posteriors(const MappableBlock<Haplotype>& haplotypes,
 
 } // namespace
 
-void TrioCaller::Latents::set_haplotype_posteriors(const HaplotypeBlock& haplotypes)
+void TrioCaller::Latents::set_haplotype_posteriors()
 {
     if (paternal_genotypes) {
-        set_haplotype_posteriors_unique_genotypes(haplotypes);
+        set_haplotype_posteriors_unique_genotypes();
     } else {
-        set_haplotype_posteriors_shared_genotypes(haplotypes);
+        set_haplotype_posteriors_shared_genotypes();
     }
 }
 
-void TrioCaller::Latents::set_haplotype_posteriors_shared_genotypes(const HaplotypeBlock& haplotypes)
+void TrioCaller::Latents::set_haplotype_posteriors_shared_genotypes()
 {
-    auto inverse_genotypes = make_inverse_genotype_table(haplotypes, maternal_genotypes);
     const GenotypeMarginalPosteriorMatrix genotype_posteriors {marginal_maternal_posteriors,
                                                                marginal_paternal_posteriors,
                                                                marginal_child_posteriors};
-    auto haplotype_posteriors = calculate_haplotype_posteriors(haplotypes, maternal_genotypes, genotype_posteriors, inverse_genotypes);
-    marginal_haplotype_posteriors = std::make_shared<HaplotypeProbabilityMap>(haplotype_posteriors);
+    auto haplotype_posteriors = calculate_haplotype_posteriors(haplotypes, maternal_genotypes, genotype_posteriors);
+    marginal_haplotype_posteriors = std::make_shared<HaplotypeProbabilityMap>();
+    marginal_haplotype_posteriors->reserve(haplotypes.size());
+    for (const auto& haplotype : haplotypes) {
+        marginal_haplotype_posteriors->emplace(haplotype, haplotype_posteriors[index_of(haplotype)]);
+    }
 }
 
-void TrioCaller::Latents::set_haplotype_posteriors_unique_genotypes(const HaplotypeBlock& haplotypes)
+void TrioCaller::Latents::set_haplotype_posteriors_unique_genotypes()
 {
-    auto inverse_genotypes = make_inverse_genotype_table(haplotypes, concatenated_genotypes_);
     const GenotypeMarginalPosteriorMatrix genotype_posteriors {padded_marginal_maternal_posteriors_,
                                                                padded_marginal_paternal_posteriors_,
                                                                padded_marginal_child_posteriors_};
-    auto haplotype_posteriors = calculate_haplotype_posteriors(haplotypes, concatenated_genotypes_, genotype_posteriors, inverse_genotypes);
-    marginal_haplotype_posteriors = std::make_shared<HaplotypeProbabilityMap>(haplotype_posteriors);
+    auto haplotype_posteriors = calculate_haplotype_posteriors(haplotypes, concatenated_genotypes_, genotype_posteriors);
+    marginal_haplotype_posteriors = std::make_shared<HaplotypeProbabilityMap>();
+    marginal_haplotype_posteriors->reserve(haplotypes.size());
+    for (const auto& haplotype : haplotypes) {
+        marginal_haplotype_posteriors->emplace(haplotype, haplotype_posteriors[index_of(haplotype)]);
+    }
 }
-
-
 
 // TrioCaller
 
@@ -376,16 +370,18 @@ std::unique_ptr<Caller::Latents>
 TrioCaller::infer_latents(const HaplotypeBlock& haplotypes,
                           const HaplotypeLikelihoodArray& haplotype_likelihoods) const
 {
+    const auto indexed_haplotypes = index(haplotypes);
     if (parameters_.child_ploidy == 0) {
         assert(parameters_.maternal_ploidy == 0 || parameters_.paternal_ploidy == 0);
-        std::vector<Genotype<Haplotype>> parent_genotypes {}, empty_genotypes {};
         const auto prior_model = make_single_sample_prior_model(haplotypes);
+        prior_model->prime(haplotypes);
         const model::IndividualModel sample_model {*prior_model};
+        GenotypeBlock parent_genotypes {mapped_region(haplotypes)}, empty_genotypes {mapped_region(haplotypes)};
         if (parameters_.maternal_ploidy > 0) {
-            parent_genotypes = generate_all_genotypes(haplotypes, parameters_.maternal_ploidy);
+            parent_genotypes = generate_all_genotypes(indexed_haplotypes, parameters_.maternal_ploidy);
             haplotype_likelihoods.prime(parameters_.trio.mother());
         } else {
-            parent_genotypes = generate_all_genotypes(haplotypes, parameters_.paternal_ploidy);
+            parent_genotypes = generate_all_genotypes(indexed_haplotypes, parameters_.paternal_ploidy);
             haplotype_likelihoods.prime(parameters_.trio.father());
         }
         auto sample_latents = sample_model.evaluate(parent_genotypes, haplotype_likelihoods);
@@ -399,7 +395,7 @@ TrioCaller::infer_latents(const HaplotypeBlock& haplotypes,
             return {genotype, genotype, genotype, std::exp(log_posterior), log_posterior};
         });
         if (parameters_.maternal_ploidy == 0) std::swap(parent_genotypes, empty_genotypes);
-        return std::make_unique<Latents>(haplotypes, std::move(parent_genotypes), std::move(empty_genotypes),
+        return std::make_unique<Latents>(std::move(indexed_haplotypes), std::move(parent_genotypes), std::move(empty_genotypes),
                                          parameters_.child_ploidy, std::move(trio_latents), parameters_.trio);
     }
     auto germline_prior_model = make_prior_model(haplotypes);
@@ -409,25 +405,24 @@ TrioCaller::infer_latents(const HaplotypeBlock& haplotypes,
         TrioModel::Options {parameters_.max_genotype_combinations},
         debug_log_
     };
-    std::vector<std::vector<unsigned>> genotype_indices {};
-    auto maternal_genotypes = generate_all_genotypes(haplotypes, parameters_.maternal_ploidy, genotype_indices);
+    auto maternal_genotypes = generate_all_genotypes(indexed_haplotypes, parameters_.maternal_ploidy);
     if (parameters_.maternal_ploidy == parameters_.paternal_ploidy) {
         germline_prior_model->prime(haplotypes);
         denovo_model.prime(haplotypes);
-        auto latents = model.evaluate(maternal_genotypes, genotype_indices, haplotype_likelihoods);
-        return std::make_unique<Latents>(haplotypes, std::move(maternal_genotypes),
+        auto latents = model.evaluate(maternal_genotypes, haplotype_likelihoods);
+        return std::make_unique<Latents>(std::move(indexed_haplotypes), std::move(maternal_genotypes),
                                          std::move(latents), parameters_.trio);
     } else {
-        auto paternal_genotypes = generate_all_genotypes(haplotypes, parameters_.paternal_ploidy);
+        auto paternal_genotypes = generate_all_genotypes(indexed_haplotypes, parameters_.paternal_ploidy);
         if (parameters_.maternal_ploidy == parameters_.child_ploidy) {
             auto latents = model.evaluate(maternal_genotypes, paternal_genotypes,
                                           maternal_genotypes, haplotype_likelihoods);
-            return std::make_unique<Latents>(haplotypes, std::move(maternal_genotypes), std::move(maternal_genotypes),
+            return std::make_unique<Latents>(std::move(indexed_haplotypes), std::move(maternal_genotypes), std::move(maternal_genotypes),
                                              parameters_.child_ploidy, std::move(latents), parameters_.trio);
         } else {
             auto latents = model.evaluate(maternal_genotypes, paternal_genotypes,
                                           paternal_genotypes, haplotype_likelihoods);
-            return std::make_unique<Latents>(haplotypes, std::move(maternal_genotypes), std::move(paternal_genotypes),
+            return std::make_unique<Latents>(std::move(indexed_haplotypes), std::move(maternal_genotypes), std::move(paternal_genotypes),
                                              parameters_.child_ploidy, std::move(latents), parameters_.trio);
         }
     }
@@ -461,10 +456,10 @@ TrioCaller::calculate_model_posterior(const HaplotypeBlock& haplotypes,
                                       const HaplotypeLikelihoodArray& haplotype_likelihoods,
                                       const Latents& latents) const
 {
+    const auto indexed_haplotypes = index(haplotypes);
     const auto max_ploidy = std::max({parameters_.maternal_ploidy, parameters_.paternal_ploidy, parameters_.child_ploidy});
     if (max_ploidy + 1 <= model::TrioModel::max_ploidy()) {
-        std::vector<std::vector<unsigned>> genotype_indices {};
-        const auto genotypes = generate_all_genotypes(haplotypes, max_ploidy + 1, genotype_indices);
+        const auto genotypes = generate_all_genotypes(indexed_haplotypes, max_ploidy + 1);
         const auto germline_prior_model = make_prior_model(haplotypes);
         DeNovoModel denovo_model {parameters_.denovo_model_params};
         germline_prior_model->prime(haplotypes);
@@ -473,7 +468,7 @@ TrioCaller::calculate_model_posterior(const HaplotypeBlock& haplotypes,
         const model::TrioModel model {parameters_.trio, *germline_prior_model, denovo_model,
                                       TrioModel::Options {parameters_.max_genotype_combinations},
                                       debug_log_};
-        const auto inferences = model.evaluate(genotypes, genotype_indices, haplotype_likelihoods);
+        const auto inferences = model.evaluate(genotypes, haplotype_likelihoods);
         return octopus::calculate_model_posterior(latents.model_latents.log_evidence, inferences.log_evidence);
     } else {
         return boost::none;
@@ -497,7 +492,7 @@ bool contains_helper(const Haplotype& haplotype, const Allele& allele)
     }
 }
 
-bool contains_helper(const Genotype<Haplotype>& genotype, const Allele& allele)
+bool contains_helper(const Genotype<IndexedHaplotype<>>& genotype, const Allele& allele)
 {
     if (!is_indel(allele)) {
         return contains(genotype, allele);
@@ -513,40 +508,37 @@ bool contains(const JointProbability& trio, const Allele& allele)
            || contains_helper(trio.child, allele);
 }
 
-using HaplotypePtrBoolMap = std::unordered_map<const Haplotype*, bool>;
-using GenotypePtrCountMap  = std::unordered_map<const Genotype<Haplotype>*, unsigned>;
+using HaplotypeBoolCache = std::vector<boost::optional<bool>>;
+using GenotypePtrCountMap = std::unordered_map<const Genotype<IndexedHaplotype<>>*, unsigned>;
 
 // allele posterior calculation
 
-bool contains(const Haplotype& haplotype, const Allele& allele, HaplotypePtrBoolMap& cache)
+bool contains(const IndexedHaplotype<>& haplotype, const Allele& allele, HaplotypeBoolCache& cache)
 {
-    const auto itr = cache.find(std::addressof(haplotype));
-    if (itr == std::cend(cache)) {
-        const auto result = contains_helper(haplotype, allele);
-        cache.emplace(std::piecewise_construct,
-                      std::forward_as_tuple(std::addressof(haplotype)),
-                      std::forward_as_tuple(result));
-        return result;
-    } else {
-        return itr->second;
+    if (index_of(haplotype) >= cache.size()) {
+        cache.resize(2 * index_of(haplotype));
     }
+    if (!cache[index_of(haplotype)]) {
+        cache[index_of(haplotype)] = contains_helper(haplotype, allele);
+    }
+    return *cache[index_of(haplotype)];
 }
 
-unsigned count_occurrences(const Allele& allele, const Genotype<Haplotype>& genotype,
-                           HaplotypePtrBoolMap& cache)
+unsigned count_occurrences(const Allele& allele, const Genotype<IndexedHaplotype<>>& genotype,
+                           HaplotypeBoolCache& cache)
 {
 	return std::count_if(std::cbegin(genotype), std::cend(genotype),
                         [&] (const auto& haplotype) { return contains(haplotype, allele, cache); });
 }
 
-bool contains(const Genotype<Haplotype>& genotype, const Allele& allele, HaplotypePtrBoolMap& cache)
+bool contains(const Genotype<IndexedHaplotype<>>& genotype, const Allele& allele, HaplotypeBoolCache& cache)
 {
     return std::any_of(std::cbegin(genotype), std::cend(genotype),
                       [&] (const auto& haplotype) { return contains(haplotype, allele, cache); });
 }
 
-auto count_occurrences(const Allele& allele, const Genotype<Haplotype>& genotype,
-                       HaplotypePtrBoolMap& haplotype_cache,
+auto count_occurrences(const Allele& allele, const Genotype<IndexedHaplotype<>>& genotype,
+                       HaplotypeBoolCache& haplotype_cache,
                        GenotypePtrCountMap& genotype_cache)
 {
     const auto itr = genotype_cache.find(std::addressof(genotype));
@@ -561,15 +553,15 @@ auto count_occurrences(const Allele& allele, const Genotype<Haplotype>& genotype
     }
 }
 
-bool contains(const Genotype<Haplotype>& genotype, const Allele& allele,
-              HaplotypePtrBoolMap& haplotype_cache,
+bool contains(const Genotype<IndexedHaplotype<>>& genotype, const Allele& allele,
+              HaplotypeBoolCache& haplotype_cache,
               GenotypePtrCountMap& genotype_cache)
 {
     return count_occurrences(allele, genotype, haplotype_cache, genotype_cache) > 0;
 }
 
 bool contains(const JointProbability& trio, const Allele& allele,
-              HaplotypePtrBoolMap& haplotype_cache,
+              HaplotypeBoolCache& haplotype_cache,
               GenotypePtrCountMap& genotype_cache)
 {
     return contains(trio.maternal, allele, haplotype_cache, genotype_cache)
@@ -602,7 +594,7 @@ auto compute_segregation_posterior_uncached(const Allele& allele, const TrioProb
 
 auto compute_segregation_posterior_cached(const Allele& allele, const TrioProbabilityVector& trio_posteriors)
 {
-    HaplotypePtrBoolMap haplotype_cache {};
+    HaplotypeBoolCache haplotype_cache {};
     haplotype_cache.reserve(trio_posteriors.size());
     GenotypePtrCountMap genotype_cache {};
     genotype_cache.reserve(trio_posteriors.size());
@@ -640,7 +632,7 @@ auto call_alleles(const AllelePosteriorMap& allele_posteriors, const Phred<doubl
 
 // de novo posterior calculation
 
-unsigned count_occurrences(const Allele& allele, const Genotype<Haplotype>& genotype)
+unsigned count_occurrences(const Allele& allele, const Genotype<IndexedHaplotype<>>& genotype)
 {
 	return std::count_if(std::cbegin(genotype), std::cend(genotype),
                         [&] (const auto& haplotype) { return contains_helper(haplotype, allele); });
@@ -664,7 +656,7 @@ bool is_denovo(const Allele& allele, const JointProbability& trio)
 }
 
 bool is_denovo(const Allele& allele, const JointProbability& trio,
-               HaplotypePtrBoolMap& haplotype_cache,
+               HaplotypeBoolCache& haplotype_cache,
                GenotypePtrCountMap& genotype_cache)
 {
 	const auto child_occurrences = count_occurrences(allele, trio.child, haplotype_cache, genotype_cache);
@@ -689,10 +681,8 @@ auto compute_denovo_posterior_uncached(const Allele& allele, const TrioProbabili
 
 auto compute_denovo_posterior_cached(const Allele& allele, const TrioProbabilityVector& trio_posteriors)
 {
-    HaplotypePtrBoolMap haplotype_cache {};
-    haplotype_cache.reserve(trio_posteriors.size());
-    GenotypePtrCountMap genotype_cache {};
-    genotype_cache.reserve(trio_posteriors.size());
+    HaplotypeBoolCache haplotype_cache(trio_posteriors.size());
+    GenotypePtrCountMap genotype_cache(trio_posteriors.size());
     return marginalise_condition(trio_posteriors, [&] (const auto& trio) { return is_denovo(allele, trio, haplotype_cache, genotype_cache); });
 }
 
@@ -802,7 +792,7 @@ auto call_germline_variants(const std::vector<AllelePosteriorMap::value_type>& g
 
 struct TrioCall
 {
-    Genotype<Haplotype> mother, father, child;
+    Genotype<IndexedHaplotype<>> mother, father, child;
 };
 
 bool includes(const TrioCall& trio, const Allele& allele)
@@ -813,13 +803,13 @@ bool includes(const TrioCall& trio, const Allele& allele)
 bool none_mendilian_errors(const JointProbability& call, const std::vector<CalledGermlineVariant>& germline_calls)
 {
     return std::none_of(std::cbegin(germline_calls), std::cend(germline_calls),
-                        [&call] (const auto& germline) { return is_denovo(germline.variant.alt_allele(), call); });
+                        [&] (const auto& germline) { return is_denovo(germline.variant.alt_allele(), call); });
 }
 
 bool all_mendilian_errors(const JointProbability& call, const std::vector<CalledDenovo>& denovo_calls)
 {
     return std::all_of(std::cbegin(denovo_calls), std::cend(denovo_calls),
-                       [&call] (const auto& denovo) { return is_denovo(denovo.allele, call); });
+                       [&] (const auto& denovo) { return is_denovo(denovo.allele, call); });
 }
 
 bool is_viable_genotype_call(const JointProbability& call,
@@ -889,12 +879,12 @@ void remove_ungenotyped_allele(std::vector<CalledGermlineVariant>& germline_call
     remove_ungenotyped_allele(denovo_calls, trio);
 }
 
-using GenotypeProbabilityMap = ProbabilityMatrix<Genotype<Haplotype>>;
+using GenotypeProbabilityMap = ProbabilityMatrix<Genotype<IndexedHaplotype<>>>;
 
 auto compute_posterior(const Genotype<Allele>& genotype, const GenotypeProbabilityMap::InnerMap& posteriors)
 {
     auto p = std::accumulate(std::cbegin(posteriors), std::cend(posteriors), 0.0,
-                             [&genotype] (const double curr, const auto& p) {
+                             [&] (const double curr, const auto& p) {
                                  return curr + (contains(p.first, genotype) ? 0.0 : p.second);
                              });
     return probability_false_to_phred(p);
@@ -1050,9 +1040,9 @@ TrioCaller::call_variants(const std::vector<Variant>& candidates, const Latents&
     auto germline_variants = call_germline_variants(germline_alleles, candidates, parameters_.min_variant_posterior);
     auto called_trio = call_trio(trio_posteriors, germline_variants, denovos);
     remove_ungenotyped_allele(germline_variants, denovos, called_trio);
-    if (parameters_.maternal_ploidy == 0) called_trio.mother = Genotype<Haplotype> {};
-    if (parameters_.paternal_ploidy == 0) called_trio.father = Genotype<Haplotype> {};
-    if (parameters_.child_ploidy == 0) called_trio.child = Genotype<Haplotype> {};
+    if (parameters_.maternal_ploidy == 0) called_trio.mother = Genotype<IndexedHaplotype<>> {};
+    if (parameters_.paternal_ploidy == 0) called_trio.father = Genotype<IndexedHaplotype<>> {};
+    if (parameters_.child_ploidy == 0) called_trio.child = Genotype<IndexedHaplotype<>> {};
     auto denovo_genotypes = call_genotypes(parameters_.trio, called_trio, *latents.genotype_posteriors(), extract_regions(denovos));
     auto germline_genotypes = call_genotypes(parameters_.trio, called_trio, *latents.genotype_posteriors(), extract_regions(germline_variants));
     boost::optional<Phred<double>> max_quality {};
@@ -1121,11 +1111,11 @@ void print(S&& stream, const TrioProbabilityVector& posteriors, const std::size_
     std::for_each(std::begin(v), mth,
                   [&] (const auto& p) {
                       using octopus::debug::print_variant_alleles;
-                      print_variant_alleles(stream, p.maternal);
+                      print_variant_alleles(stream, p.maternal.get());
                       stream << " | ";
-                      print_variant_alleles(stream, p.paternal);
+                      print_variant_alleles(stream, p.paternal.get());
                       stream << " | ";
-                      print_variant_alleles(stream, p.child);
+                      print_variant_alleles(stream, p.child.get());
                       stream << " " << p.probability << "\n";
                   });
 }

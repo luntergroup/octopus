@@ -22,7 +22,7 @@ class CoalescentPopulationPriorModel : public PopulationPriorModel
 public:
     using PopulationPriorModel::LogProbability;
     using PopulationPriorModel::GenotypeReference;
-    using PopulationPriorModel::GenotypeIndiceVectorReference;
+    using PopulationPriorModel::GenotypeReferenceVector;
     
     CoalescentPopulationPriorModel() = delete;
     
@@ -37,29 +37,13 @@ public:
     virtual ~CoalescentPopulationPriorModel() = default;
 
 private:
-    using HaplotypeReference = std::reference_wrapper<const Haplotype>;
-    
     CoalescentModel segregation_model_;
     HardyWeinbergModel genotype_model_;
     
-    mutable std::vector<unsigned> index_buffer_;
+    mutable std::vector<IndexedHaplotype<>> haplotype_buffer_;
     
-    LogProbability do_evaluate(const std::vector<Genotype<Haplotype>>& genotypes) const override
-    {
-        return evaluate_helper(genotypes);
-    }
-    LogProbability do_evaluate(const std::vector<GenotypeReference>& genotypes) const override
-    {
-        return evaluate_helper(genotypes);
-    }
-    LogProbability do_evaluate(const std::vector<GenotypeIndex>& indices) const override
-    {
-        return evaluate_helper(indices);
-    }
-    LogProbability do_evaluate(const std::vector<GenotypeIndiceVectorReference>& indices) const override
-    {
-        return evaluate_helper(indices);
-    }
+    LogProbability do_evaluate(const GenotypeReferenceVector& genotypes) const override;
+    
     void do_prime(const HaplotypeBlock& haplotypes) override
     {
         segregation_model_.prime(haplotypes);
@@ -73,88 +57,8 @@ private:
         return segregation_model_.is_primed();
     }
     
-    template <typename Range>
-    LogProbability evaluate_helper(const Range& genotypes) const;
-    template <typename Range>
-    LogProbability evaluate_segregation_model(const Range& genotypes) const;
-    LogProbability evaluate_segregation_model(const std::vector<std::vector<unsigned>>& indices) const;
-    LogProbability evaluate_segregation_model(const std::vector<GenotypeIndiceVectorReference>& indices) const;
+    LogProbability evaluate_segregation_model(const GenotypeReferenceVector& genotypes) const;
 };
-
-template <typename Range>
-CoalescentPopulationPriorModel::LogProbability CoalescentPopulationPriorModel::evaluate_helper(const Range& genotypes) const
-{
-    // p({g_1, ..., g_n}) = p(g_1 u ... u g_n) p({g_1, ..., g_n} | g_1 u ... u g_n)
-    // => ln p({g_1, ..., g_n}) = ln p(g_1 u ... u g_n) + ln p({g_1, ..., g_n} | g_1 u ... u g_n)
-    // i.e The prior probability of observing a particular combination of genotypes is the
-    // probability the haplotypes defined by the set of genotypes segregate, times the probability
-    // of the particular genotypes given the haplotypes segregate.
-    return evaluate_segregation_model(genotypes) + genotype_model_.evaluate(genotypes);
-}
-
-namespace detail {
-
-template <typename Container>
-void append(const Genotype<Haplotype>& genotype, Container& haplotypes)
-{
-    std::copy(std::cbegin(genotype), std::cend(genotype), std::back_inserter(haplotypes));
-}
-
-inline const Genotype<Haplotype>& get(const Genotype<Haplotype>& genotype) noexcept
-{
-    return genotype;
-}
-
-inline const Genotype<Haplotype>& get(const CoalescentPopulationPriorModel::GenotypeReference& genotype) noexcept
-{
-    return genotype.get();
-}
-
-inline const Haplotype& get(const Genotype<Haplotype>& genotype, const unsigned i) noexcept
-{
-    return genotype[i];
-}
-
-inline const Haplotype& get(const CoalescentPopulationPriorModel::GenotypeReference& genotype, const unsigned i) noexcept
-{
-    return genotype.get()[i];
-}
-
-inline auto ploidy(const Genotype<Haplotype>& genotype) noexcept
-{
-    return genotype.ploidy();
-}
-
-} // namespace detail
-
-template <typename Range>
-CoalescentPopulationPriorModel::LogProbability
-CoalescentPopulationPriorModel::evaluate_segregation_model(const Range& genotypes) const
-{
-    if (genotypes.size() == 1) return segregation_model_.evaluate(detail::get(genotypes.front()));
-    if (genotypes.size() == 2) {
-        const auto ploidy1 = detail::ploidy(genotypes[0]);
-        const auto ploidy2 = detail::ploidy(genotypes[1]);
-        if (ploidy1 == ploidy2) {
-            if (ploidy1 == 1) {
-                using detail::get;
-                const std::array<HaplotypeReference, 2> haplotypes {get(genotypes[0], 0), get(genotypes[0], 0)};
-                return  segregation_model_.evaluate(haplotypes);
-            } else if (ploidy1 == 2) {
-                using detail::get;
-                const std::array<HaplotypeReference, 4> haplotypes {get(genotypes[0], 0), get(genotypes[0], 1),
-                                                                    get(genotypes[1], 0), get(genotypes[1], 1)};
-                return segregation_model_.evaluate(haplotypes);
-            }
-        }
-    }
-    std::vector<HaplotypeReference> haplotypes {};
-    haplotypes.reserve(10 * genotypes.size());
-    for (const auto& genotype : genotypes) {
-        detail::append(genotype, haplotypes);
-    }
-    return segregation_model_.evaluate(haplotypes);
-}
 
 } // namespace octopus
 

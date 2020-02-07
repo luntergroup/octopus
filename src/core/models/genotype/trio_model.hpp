@@ -12,10 +12,11 @@
 
 #include "basics/trio.hpp"
 #include "core/types/haplotype.hpp"
-#include "population_prior_model.hpp"
+#include "core/types/indexed_haplotype.hpp"
 #include "core/models/mutation/denovo_model.hpp"
 #include "core/models/haplotype_likelihood_array.hpp"
 #include "core/types/genotype.hpp"
+#include "population_prior_model.hpp"
 #include "logging/logging.hpp"
 
 namespace octopus { namespace model {
@@ -23,13 +24,13 @@ namespace octopus { namespace model {
 class TrioModel
 {
 public:
-    using GenotypeVector = std::vector<Genotype<Haplotype>>;
+    using GenotypeVector = MappableBlock<Genotype<IndexedHaplotype<>>>;
     
     struct Latents
     {
         struct JointProbability
         {
-            using GenotypeReference = std::reference_wrapper<const Genotype<Haplotype>>;
+            using GenotypeReference = std::reference_wrapper<const GenotypeVector::value_type>;
             GenotypeReference maternal, paternal, child;
             double log_probability, probability;
         };
@@ -69,18 +70,16 @@ public:
     
     const PopulationPriorModel& prior_model() const noexcept;
     
-    InferredLatents evaluate(const GenotypeVector& maternal_genotypes,
-                             const GenotypeVector& paternal_genotypes,
-                             const GenotypeVector& child_genotypes,
-                             const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
+    InferredLatents
+    evaluate(const GenotypeVector& maternal_genotypes,
+             const GenotypeVector& paternal_genotypes,
+             const GenotypeVector& child_genotypes,
+             const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
     
     // Use if all samples have same ploidy
-    InferredLatents evaluate(const GenotypeVector& genotypes,
-                             const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
-    
-    InferredLatents evaluate(const GenotypeVector& genotypes,
-                             std::vector<GenotypeIndex>& genotype_indices,
-                             const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
+    InferredLatents
+    evaluate(const GenotypeVector& genotypes,
+             const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
     
 private:
     const Trio& trio_;

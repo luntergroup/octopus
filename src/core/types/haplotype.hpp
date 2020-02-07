@@ -20,12 +20,12 @@
 #include "basics/contig_region.hpp"
 #include "basics/cigar_string.hpp"
 #include "allele.hpp"
+#include "variant.hpp"
 
 namespace octopus {
 
 class GenomicRegion;
 class ReferenceGenome;
-class Variant;
 
 /*
     A Haplotype is an ordered, non-overlapping, set of Alleles, and therefore implictly
@@ -100,6 +100,7 @@ public:
     
     friend bool contains(const Haplotype& lhs, const Haplotype& rhs);
     friend Haplotype detail::do_copy(const Haplotype& haplotype, const GenomicRegion& region, std::true_type);
+    friend Haplotype copy(const Haplotype&, const std::vector<GenomicRegion>&);
     friend bool is_reference(const Haplotype& haplotype);
     friend Haplotype expand(const Haplotype& haplotype, MappingDomain::Position n);
     friend Haplotype remap(const Haplotype& haplotype, const GenomicRegion& region);
@@ -228,8 +229,8 @@ public:
     
     Haplotype build();
     
-    friend Haplotype detail::do_copy(const Haplotype& haplotype, const GenomicRegion& region,
-                                     std::true_type);
+    friend Haplotype detail::do_copy(const Haplotype& haplotype, const GenomicRegion& region, std::true_type);
+    friend Haplotype copy(const Haplotype&, const std::vector<GenomicRegion>&);
     
 private:
     GenomicRegion region_;
@@ -249,6 +250,7 @@ bool is_sequence_empty(const Haplotype& haplotype) noexcept;
 
 bool contains(const Haplotype& lhs, const Allele& rhs);
 bool contains(const Haplotype& lhs, const Haplotype& rhs);
+bool includes(const Haplotype& lhs, const Allele& rhs);
 
 template <typename MappableType>
 MappableType copy(const Haplotype& haplotype, const GenomicRegion& region)
@@ -257,6 +259,8 @@ MappableType copy(const Haplotype& haplotype, const GenomicRegion& region)
 }
 
 ContigAllele copy(const Haplotype& haplotype, const ContigRegion& region);
+
+Haplotype copy(const Haplotype& haplotype, const std::vector<GenomicRegion>& regions);
 
 template <typename MappableType, typename Container,
           typename = std::enable_if_t<std::is_same<typename Container::value_type, Haplotype>::value>>
@@ -292,7 +296,7 @@ Haplotype remap(const Haplotype& haplotype, const GenomicRegion& region);
 
 std::vector<Variant> difference(const Haplotype& lhs, const Haplotype& rhs);
 
-bool operator==(const Haplotype& lhs, const Haplotype& rhs);
+bool operator==(const Haplotype& lhs, const Haplotype& rhs) noexcept;
 bool operator<(const Haplotype& lhs, const Haplotype& rhs);
 
 struct HaveSameAlleles

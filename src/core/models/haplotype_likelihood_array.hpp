@@ -20,6 +20,7 @@
 #include "basics/aligned_template.hpp"
 #include "containers/mappable_block.hpp"
 #include "core/types/haplotype.hpp"
+#include "core/types/indexed_haplotype.hpp"
 #include "utils/kmer_mapper.hpp"
 #include "haplotype_likelihood_model.hpp"
 
@@ -58,24 +59,29 @@ public:
     
     ~HaplotypeLikelihoodArray() = default;
     
-    void populate(const ReadMap& reads, const MappableBlock<Haplotype>& haplotypes,
+    void populate(const ReadMap& reads,
+                  const MappableBlock<Haplotype>& haplotypes,
                   boost::optional<FlankState> flank_state = boost::none);
-    void populate(const TemplateMap& reads, const MappableBlock<Haplotype>& haplotypes,
+    void populate(const TemplateMap& reads,
+                  const MappableBlock<Haplotype>& haplotypes,
                   boost::optional<FlankState> flank_state = boost::none);
     
     std::size_t num_likelihoods(const SampleName& sample) const;
+    std::size_t num_likelihoods() const; // if prmed
     
     const LikelihoodVector& operator()(const SampleName& sample, const Haplotype& haplotype) const;
+    const LikelihoodVector& operator()(const SampleName& sample, const IndexedHaplotype<>& haplotype) const;
     const LikelihoodVector& operator[](const Haplotype& haplotype) const; // when primed with a sample
+    const LikelihoodVector& operator[](const IndexedHaplotype<>& haplotype) const noexcept; // when primed with a sample
+    
+    std::vector<SampleName> samples() const;
+    MappableBlock<Haplotype> haplotypes() const;
     
     SampleLikelihoodMap extract_sample(const SampleName& sample) const;
     
     bool contains(const Haplotype& haplotype) const noexcept;
     
-    template <typename S, typename Container>
-    void insert(S&& sample, const Haplotype& haplotype, Container&& likelihoods);
-    
-    template <typename Container> void erase(const Container& haplotypes);
+    void reset(MappableBlock<Haplotype> haplotypes);
     
     bool is_empty() const noexcept;
     
@@ -85,8 +91,8 @@ public:
     void prime(const SampleName& sample) const;
     void unprime() const noexcept;
     
-    friend HaplotypeLikelihoodArray
-    merge_samples(const HaplotypeLikelihoodArray& haplotype_likelihoods);
+    HaplotypeLikelihoodArray merge_samples(const std::vector<SampleName>& samples, boost::optional<SampleName> new_sample = boost::none) const;
+    HaplotypeLikelihoodArray merge_samples(boost::optional<SampleName> new_sample = boost::none) const;
     
 private:
     static constexpr unsigned char mapperKmerSize {6};
@@ -109,8 +115,11 @@ private:
         std::size_t num_templates;
     };
     
-    std::unordered_map<Haplotype, std::vector<LikelihoodVector>, HaplotypeHash> cache_;
+    std::vector<std::vector<LikelihoodVector>> likelihoods_;
+    std::unordered_map<Haplotype, std::size_t, HaplotypeHash> haplotype_indices_;
     std::unordered_map<SampleName, std::size_t> sample_indices_;
+    std::vector<SampleName> samples_;
+    MappableBlock<Haplotype> haplotypes_;
     
     mutable boost::optional<std::size_t> primed_sample_;
     
@@ -123,31 +132,7 @@ private:
     void set_template_iterators_and_sample_indices(const TemplateMap& reads);
 };
 
-template <typename S, typename Container>
-void HaplotypeLikelihoodArray::insert(S&& sample, const Haplotype& haplotype,
-                                      Container&& likelihoods)
-{
-    sample_indices_.emplace(std::forward<S>(sample), sample_indices_.size());
-    cache_[haplotype].emplace_back(std::forward<Container>(likelihoods));
-}
-
-template <typename Container>
-void HaplotypeLikelihoodArray::erase(const Container& haplotypes)
-{
-    for (const auto& haplotype : haplotypes) {
-        cache_.erase(haplotype);
-    }
-}
-
 // non-member methods
-
-HaplotypeLikelihoodArray 
-merge_samples(const std::vector<SampleName>& samples,
-              const SampleName& new_sample,
-              const MappableBlock<Haplotype>& haplotypes,
-              const HaplotypeLikelihoodArray& haplotype_likelihoods);
-HaplotypeLikelihoodArray
-merge_samples(const HaplotypeLikelihoodArray& haplotype_likelihoods);
 
 namespace debug {
 

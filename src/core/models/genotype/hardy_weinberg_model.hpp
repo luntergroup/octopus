@@ -11,6 +11,7 @@
 #include <boost/optional.hpp>
 
 #include "core/types/haplotype.hpp"
+#include "core/types/indexed_haplotype.hpp"
 #include "core/types/genotype.hpp"
 
 namespace octopus {
@@ -18,21 +19,13 @@ namespace octopus {
 class HardyWeinbergModel
 {
 public:
-    using LogProbability               = double;
-    using GenotypeReference            = std::reference_wrapper<const Genotype<Haplotype>>;
-    using GenotypeReferenceVector      = std::vector<GenotypeReference>;
-    using GenotypeIndexReference       = std::reference_wrapper<const GenotypeIndex>;
-    using GenotypeIndexVector          = std::vector<GenotypeIndex>;
-    using GenotypeIndexReferenceVector = std::vector<GenotypeIndexReference>;
-    
-    using HaplotypeFrequencyMap    = std::unordered_map<Haplotype, double>;
+    using LogProbability = double;
+    using GenotypeReference = std::reference_wrapper<const Genotype<IndexedHaplotype<>>>;
     using HaplotypeFrequencyVector = std::vector<double>;
     
     HardyWeinbergModel() = default;
     
-    HardyWeinbergModel(Haplotype reference);
-    HardyWeinbergModel(unsigned reference_idx);
-    HardyWeinbergModel(HaplotypeFrequencyMap haplotype_frequencies);
+    HardyWeinbergModel(IndexedHaplotype<> reference);
     HardyWeinbergModel(HaplotypeFrequencyVector haplotype_frequencies);
     
     HardyWeinbergModel(const HardyWeinbergModel&)            = default;
@@ -42,25 +35,18 @@ public:
     
     ~HardyWeinbergModel() = default;
     
-    void set_frequencies(HaplotypeFrequencyMap haplotype_frequencies);
     void set_frequencies(HaplotypeFrequencyVector haplotype_frequencies);
     
-    HaplotypeFrequencyMap& frequencies() noexcept;
-    HaplotypeFrequencyVector& index_frequencies() noexcept;
+    HaplotypeFrequencyVector& frequencies() noexcept;
+    const HaplotypeFrequencyVector& frequencies() const noexcept;
     
-    LogProbability evaluate(const Genotype<Haplotype>& genotype) const;
-    LogProbability evaluate(const GenotypeIndex& genotype) const;
-    
-    LogProbability evaluate(const std::vector<Genotype<Haplotype>>& genotypes) const;
-    LogProbability evaluate(const GenotypeReferenceVector& genotypes) const;
-    LogProbability evaluate(const GenotypeIndexVector& genotypes) const;
-    LogProbability evaluate(const GenotypeIndexReferenceVector& genotypes) const;
+    LogProbability evaluate(const Genotype<IndexedHaplotype<>>& genotype) const;
+    LogProbability evaluate(const std::vector<Genotype<IndexedHaplotype<>>>& genotypes) const;
+    LogProbability evaluate(const std::vector<GenotypeReference>& genotypes) const;
     
 private:
-    boost::optional<Haplotype> reference_;
-    boost::optional<unsigned> reference_idx_;
-    mutable HaplotypeFrequencyMap haplotype_frequencies_;
-    mutable HaplotypeFrequencyVector haplotype_idx_frequencies_;
+    boost::optional<IndexedHaplotype<>> reference_;
+    mutable HaplotypeFrequencyVector haplotype_frequencies_;
     mutable bool empirical_;
 };
 

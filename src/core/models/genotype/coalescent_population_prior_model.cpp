@@ -15,48 +15,39 @@ CoalescentPopulationPriorModel::CoalescentPopulationPriorModel(CoalescentModel s
 , genotype_model_ {std::move(genotype_model)}
 {}
 
-template <typename T>
-auto sum_sizes(const std::vector<std::vector<T>>& values) noexcept
+CoalescentPopulationPriorModel::LogProbability
+CoalescentPopulationPriorModel::do_evaluate(const GenotypeReferenceVector& genotypes) const
 {
-    return std::accumulate(std::cbegin(values), std::cend(values), std::size_t {0},
-                           [] (auto curr, const auto& v) noexcept { return curr + v.size(); });
+    // p({g_1, ..., g_n}) = p(g_1 u ... u g_n) p({g_1, ..., g_n} | g_1 u ... u g_n)
+    // => ln p({g_1, ..., g_n}) = ln p(g_1 u ... u g_n) + ln p({g_1, ..., g_n} | g_1 u ... u g_n)
+    // i.e The prior probability of observing a particular combination of genotypes is the
+    // probability the haplotypes defined by the set of genotypes segregate, times the probability
+    // of the particular genotypes given the haplotypes segregate.
+    return evaluate_segregation_model(genotypes) + genotype_model_.evaluate(genotypes);
 }
 
-template <typename T>
-auto sum_sizes(const std::vector<std::reference_wrapper<const std::vector<T>>>& values) noexcept
+template <typename Range>
+auto sum_ploidies(const Range& genotypes) noexcept
 {
-    return std::accumulate(std::cbegin(values), std::cend(values), std::size_t {0},
-                           [] (auto curr, const auto& v) noexcept { return curr + v.get().size(); });
+    return std::accumulate(std::cbegin(genotypes), std::cend(genotypes), 0u,
+                           [] (auto total, const auto& genotype) noexcept { return total + ploidy(genotype.get()); });
 }
 
 CoalescentPopulationPriorModel::LogProbability
-CoalescentPopulationPriorModel::evaluate_segregation_model(const std::vector<GenotypeIndex>& indices) const
+CoalescentPopulationPriorModel::evaluate_segregation_model(const GenotypeReferenceVector& genotypes) const
 {
-    if (indices.size() == 1) {
-        return segregation_model_.evaluate(indices.front());
+    if (genotypes.size() == 1) {
+        return segregation_model_.evaluate(genotypes.front().get());
     }
-    const auto num_indices = sum_sizes(indices);
-    index_buffer_.resize(num_indices);
-    auto itr = std::begin(index_buffer_);
-    for (const auto& i : indices) {
-        itr = std::copy(std::cbegin(i), std::cend(i), itr);
+    const auto total_ploidy = sum_ploidies(genotypes);
+    haplotype_buffer_.clear();
+    haplotype_buffer_.reserve(total_ploidy);
+    for (const auto& genotype : genotypes) {
+        for (const auto& haplotype : genotype.get()) {
+            haplotype_buffer_.push_back(haplotype);
+        }
     }
-    return segregation_model_.evaluate(index_buffer_);
-}
-
-CoalescentPopulationPriorModel::LogProbability
-CoalescentPopulationPriorModel::evaluate_segregation_model(const std::vector<GenotypeIndiceVectorReference>& indices) const
-{
-    if (indices.size() == 1) {
-        return segregation_model_.evaluate(indices.front().get());
-    }
-    const auto num_indices = sum_sizes(indices);
-    index_buffer_.resize(num_indices);
-    auto itr = std::begin(index_buffer_);
-    for (const auto& i : indices) {
-        itr = std::copy(std::cbegin(i.get()), std::cend(i.get()), itr);
-    }
-    return segregation_model_.evaluate(index_buffer_);
+    return segregation_model_.evaluate(haplotype_buffer_);
 }
 
 } // namespace

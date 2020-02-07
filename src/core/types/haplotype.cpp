@@ -539,6 +539,11 @@ bool contains(const Haplotype& lhs, const Haplotype& rhs)
     return contains(mapped_region(lhs), mapped_region(rhs)) && lhs.sequence(rhs.region_) == rhs.sequence();
 }
 
+bool includes(const Haplotype& lhs, const Allele& rhs)
+{
+    return lhs.includes(rhs);
+}
+
 namespace detail {
 
 Haplotype do_copy(const Haplotype& haplotype, const GenomicRegion& region, std::true_type)
@@ -599,6 +604,64 @@ ContigAllele copy(const Haplotype& haplotype, const ContigRegion& region)
     return ContigAllele {region, haplotype.sequence(region)};
 }
 
+Haplotype::Builder& try_push_back(const ContigAllele& allele, Haplotype::Builder& builder)
+{
+    if (builder.can_push_back(allele)) {
+        builder.push_back(allele);
+    }
+    return builder;
+}
+Haplotype::Builder& try_push_back(ContigAllele&& allele, Haplotype::Builder& builder)
+{
+    if (builder.can_push_back(allele)) {
+        builder.push_back(std::move(allele));
+    }
+    return builder;
+}
+
+Haplotype copy(const Haplotype& haplotype, const std::vector<GenomicRegion>& regions)
+{
+    if (regions.empty()) return {haplotype.region_, haplotype.reference_.get()};
+    if (regions.size() == 1) return copy<Haplotype>(haplotype, regions.front());
+    using std::end; using std::cbegin; using std::cend; using std::prev;
+    const auto copy_region = encompassing_region(regions);
+    Haplotype::Builder result {copy_region, haplotype.reference_};
+    if (haplotype.explicit_alleles_.empty()) return result.build();
+    auto copied_region = head_region(haplotype);
+    for (const auto& region : regions) {
+        if (!is_after(region, copied_region)) {
+            throw std::runtime_error {"Haplotype::copy unsorted or overlapping regions provided"};
+        }
+        auto overlapped_alleles = haplotype_overlap_range(haplotype.explicit_alleles_, region.contig_region());
+        if (!overlapped_alleles.empty()) {
+            if (is_empty(region)) {
+                if (!is_empty_region(overlapped_alleles.front()) && are_adjacent(region.contig_region(), overlapped_alleles.front())) {
+                    overlapped_alleles.advance_begin(1);
+                }
+                if (!overlapped_alleles.empty() && is_empty_region(overlapped_alleles.front())) {
+                    try_push_back(overlapped_alleles.front(), result);
+                } else {
+                    try_push_back(ContigAllele {region.contig_region(), ""}, result);
+                }
+            } else {
+                if (!contains(region.contig_region(), overlapped_alleles.front())) {
+                    try_push_back(copy(overlapped_alleles.front(), *overlapped_region(overlapped_alleles.front(), region.contig_region())), result);
+                    overlapped_alleles.advance_begin(1);
+                }
+                if (!overlapped_alleles.empty()) {
+                    if (contains(region.contig_region(), overlapped_alleles.back())) {
+                        for (const auto& allele : overlapped_alleles) result.push_back(allele);
+                    } else {
+                        std::for_each(cbegin(overlapped_alleles), prev(cend(overlapped_alleles)), [&] (const auto& allele) { try_push_back(allele, result); });
+                        try_push_back(copy(overlapped_alleles.back(), *overlapped_region(overlapped_alleles.back(), region.contig_region())), result);
+                    }
+                }
+            }
+        }
+    }
+    return result.build();
+}
+
 bool is_reference(const Haplotype& haplotype)
 {
     if (haplotype.explicit_alleles_.empty()) return true;
@@ -646,7 +709,7 @@ std::vector<Variant> difference(const Haplotype& lhs, const Haplotype& rhs)
     return result;
 }
 
-bool operator==(const Haplotype& lhs, const Haplotype& rhs)
+bool operator==(const Haplotype& lhs, const Haplotype& rhs) noexcept
 {
     return lhs.mapped_region() == rhs.mapped_region() && lhs.sequence() == rhs.sequence();
 }

@@ -24,30 +24,30 @@ namespace {
 
 using HaplotypeLikelihoods = std::vector<std::vector<double>>;
 
-auto vectorise(const std::vector<Haplotype>& haplotypes, const HaplotypeProbabilityMap& priors)
+auto vectorise(const Genotype<Haplotype>& genotype, const HaplotypeProbabilityMap& priors)
 {
-    std::vector<double> result(haplotypes.size());
-    std::transform(std::cbegin(haplotypes), std::cend(haplotypes), std::begin(result),
+    std::vector<double> result(genotype.ploidy());
+    std::transform(std::cbegin(genotype), std::cend(genotype), std::begin(result),
                    [&] (const auto& haplotype) { return priors.at(haplotype); });
     return result;
 }
 
-auto get_priors(const std::vector<Haplotype>& haplotypes, const HaplotypeProbabilityMap& log_priors)
+auto get_priors(const Genotype<Haplotype>& genotype, const HaplotypeProbabilityMap& log_priors)
 {
     if (log_priors.empty()) {
-        return std::vector<double>(haplotypes.size());
+        return std::vector<double>(genotype.ploidy());
     } else {
-        return vectorise(haplotypes, log_priors);
+        return vectorise(genotype, log_priors);
     }
 }
 
-void find_map_haplotypes(const std::vector<Haplotype>& haplotypes, const unsigned read,
+void find_map_haplotypes(const Genotype<Haplotype>& genotype, const unsigned read,
                          const HaplotypeLikelihoods& likelihoods, const std::vector<double>& log_priors,
                          std::vector<unsigned>& result)
 {
     assert(result.empty());
     auto max_likelihood = std::numeric_limits<double>::lowest();
-    for (unsigned k {0}; k < haplotypes.size(); ++k) {
+    for (unsigned k {0}; k < genotype.ploidy(); ++k) {
         const auto curr = likelihoods[k][read] + log_priors[k];
         if (maths::almost_equal(curr, max_likelihood)) {
             result.push_back(k);
@@ -57,14 +57,14 @@ void find_map_haplotypes(const std::vector<Haplotype>& haplotypes, const unsigne
         }
     }
     if (result.empty()) {
-        result.resize(haplotypes.size());
+        result.resize(genotype.ploidy());
         std::iota(std::begin(result), std::end(result), 0);
     }
 }
 
 template <typename Map, typename Aligned, typename Ambiguous>
 void calculate_support(Map& result,
-                       const std::vector<Haplotype>& haplotypes,
+                       const Genotype<Haplotype>& genotype,
                        const std::vector<Aligned>& reads,
                        const std::vector<double>& log_priors,
                        const HaplotypeLikelihoods& likelihoods,
@@ -72,28 +72,28 @@ void calculate_support(Map& result,
                        const AssignmentConfig& config)
 {
     std::vector<unsigned> top {};
-    top.reserve(haplotypes.size());
+    top.reserve(genotype.ploidy());
     std::vector<std::shared_ptr<Haplotype>> haplotype_ptrs {};
     if (config.ambiguous_record != AssignmentConfig::AmbiguousRecord::read_only) {
-        haplotype_ptrs.resize(haplotypes.size());
+        haplotype_ptrs.resize(genotype.ploidy());
     }
     for (unsigned i {0}; i < reads.size(); ++i) {
         const auto& read = reads[i];
-        find_map_haplotypes(haplotypes, i, likelihoods, log_priors, top);
+        find_map_haplotypes(genotype, i, likelihoods, log_priors, top);
         if (top.size() == 1) {
-            result[haplotypes[top.front()]].push_back(read);
+            result[genotype[top.front()]].push_back(read);
         } else {
             using UA = AssignmentConfig::AmbiguousAction;
             switch (config.ambiguous_action) {
                 case UA::first:
-                    result[haplotypes[top.front()]].push_back(read);
+                    result[genotype[top.front()]].push_back(read);
                     break;
                 case UA::all: {
-                    for (auto idx : top) result[haplotypes[idx]].push_back(read);
+                    for (auto idx : top) result[genotype[idx]].push_back(read);
                     break;
                 }
                 case UA::random: {
-                    result[haplotypes[random_select(top)]].push_back(read);
+                    result[genotype[random_select(top)]].push_back(read);
                     break;
                 }
                 case UA::drop:
@@ -107,7 +107,7 @@ void calculate_support(Map& result,
                     ambiguous->back().haplotypes.emplace();
                     ambiguous->back().haplotypes->reserve(top.size());
                     for (auto idx : top) {
-                        if (!haplotype_ptrs[idx]) haplotype_ptrs[idx] = std::make_shared<Haplotype>(haplotypes[idx]);
+                        if (!haplotype_ptrs[idx]) haplotype_ptrs[idx] = std::make_shared<Haplotype>(genotype[idx]);
                         ambiguous->back().haplotypes->push_back(haplotype_ptrs[idx]);
                     }
                 }
@@ -117,7 +117,7 @@ void calculate_support(Map& result,
     }
 }
 
-auto calculate_support(const std::vector<Haplotype>& haplotypes,
+auto calculate_support(const Genotype<Haplotype>& genotypes,
                        const std::vector<AlignedRead>& reads,
                        const std::vector<double>& log_priors,
                        const HaplotypeLikelihoods& likelihoods,
@@ -125,11 +125,11 @@ auto calculate_support(const std::vector<Haplotype>& haplotypes,
                        const AssignmentConfig& config)
 {
     HaplotypeSupportMap result {};
-    calculate_support(result, haplotypes, reads, log_priors, likelihoods, ambiguous, config);
+    calculate_support(result, genotypes, reads, log_priors, likelihoods, ambiguous, config);
     return result;
 }
 
-auto calculate_support(const std::vector<Haplotype>& haplotypes,
+auto calculate_support(const Genotype<Haplotype>& genotype,
                        const std::vector<AlignedTemplate>& reads,
                        const std::vector<double>& log_priors,
                        const HaplotypeLikelihoods& likelihoods,
@@ -137,29 +137,29 @@ auto calculate_support(const std::vector<Haplotype>& haplotypes,
                        const AssignmentConfig& config)
 {
     HaplotypeTemplateSupportMap result {};
-    calculate_support(result, haplotypes, reads, log_priors, likelihoods, ambiguous, config);
+    calculate_support(result, genotype, reads, log_priors, likelihoods, ambiguous, config);
     return result;
 }
 
 template <typename MappableTp>
-GenomicRegion::Size estimate_max_indel_size(const MappableTp& mappable)
+GenomicRegion::Size estimate_max_indel_size_helper(const MappableTp& mappable)
 {
     const auto p = std::minmax({region_size(mappable), static_cast<GenomicRegion::Size>(sequence_size(mappable))});
     return p.second - p.first;
 }
 
-GenomicRegion::Size estimate_max_indel_size(const AlignedTemplate& reads)
+GenomicRegion::Size estimate_max_indel_size_helper(const AlignedTemplate& reads)
 {
     return std::accumulate(std::cbegin(reads), std::cend(reads), GenomicRegion::Size {0},
-                           [] (auto curr, const auto& read) { return curr + estimate_max_indel_size(read); });
+                           [] (auto curr, const auto& read) { return curr + estimate_max_indel_size_helper(read); });
 }
 
-template <typename MappableTp>
-auto estimate_max_indel_size(const std::vector<MappableTp>& mappables)
+template <typename Range>
+auto estimate_max_indel_size(const Range& mappables)
 {
     GenomicRegion::Size result {0};
     for (const auto& mappable : mappables) {
-        result = std::max(result, estimate_max_indel_size(mappable));
+        result = std::max(result, estimate_max_indel_size_helper(mappable));
     }
     return result;
 }
@@ -225,18 +225,18 @@ map_query_to_target_helper(const std::vector<KmerPerfectHashes>& queries, const 
 }
 
 template <typename Container>
-auto calculate_likelihoods(const std::vector<Haplotype>& haplotypes, const Container& reads,
+auto calculate_likelihoods(const Genotype<Haplotype>& genotype,
+                           const Container& reads,
                            HaplotypeLikelihoodModel& model)
 {
-    assert(!haplotypes.empty());
     const auto reads_region = encompassing_region(reads);
     const auto read_hashes = compute_read_hashes(reads);
     static constexpr unsigned char mapperKmerSize {6};
     auto haplotype_hashes = init_kmer_hash_table<mapperKmerSize>();
     HaplotypeLikelihoods result {};
-    result.reserve(haplotypes.size());
-    const auto indel_factor = estimate_max_indel_size(haplotypes) + estimate_max_indel_size(reads);
-    for (const auto& haplotype : haplotypes) {
+    result.reserve(genotype.ploidy());
+    const auto indel_factor = estimate_max_indel_size(genotype) + estimate_max_indel_size(reads);
+    for (const auto& haplotype : genotype) {
         const auto expanded_haplotype = expand_for_alignment(haplotype, reads_region, indel_factor, model);
         populate_kmer_hash_table<mapperKmerSize>(expanded_haplotype.sequence(), haplotype_hashes);
         auto haplotype_mapping_counts = init_mapping_counts(haplotype_hashes);
@@ -254,6 +254,37 @@ auto calculate_likelihoods(const std::vector<Haplotype>& haplotypes, const Conta
     return result;
 }
 
+template <typename ReadType, typename AmbiguousReadListType>
+auto
+compute_haplotype_support_helper2(const Genotype<Haplotype>& genotype,
+                                  const std::vector<ReadType>& reads,
+                                  const HaplotypeProbabilityMap& log_priors,
+                                  HaplotypeLikelihoodModel model,
+                                  boost::optional<AmbiguousReadListType&> ambiguous,
+                                  AssignmentConfig config)
+{
+    assert(genotype.ploidy() > 1);
+    const auto priors = get_priors(genotype, log_priors);
+    const auto likelihoods = calculate_likelihoods(genotype, reads, model);
+    return calculate_support(genotype, reads, priors, likelihoods, ambiguous, config);
+}
+
+template <typename ReadType, typename AmbiguousReadListType>
+auto
+compute_haplotype_support_helper(const Genotype<Haplotype>& genotype,
+                                 const std::vector<ReadType>& reads,
+                                 const HaplotypeProbabilityMap& log_priors,
+                                 HaplotypeLikelihoodModel model,
+                                 boost::optional<AmbiguousReadListType&> ambiguous,
+                                 AssignmentConfig config)
+{
+    if (is_max_zygosity(genotype)) {
+        return compute_haplotype_support_helper2(genotype, reads, log_priors, std::move(model), ambiguous, std::move(config));
+    } else {
+        return compute_haplotype_support_helper2(collapse(genotype), reads, log_priors, std::move(model), ambiguous, std::move(config));
+    }
+}
+
 } // namespace
 
 HaplotypeSupportMap
@@ -265,12 +296,8 @@ compute_haplotype_support(const Genotype<Haplotype>& genotype,
                           AssignmentConfig config)
 {
     if (!reads.empty()) {
-        if (!genotype.is_homozygous()) {
-            const auto unique_haplotypes = genotype.copy_unique();
-            assert(unique_haplotypes.size() > 1);
-            const auto priors = get_priors(unique_haplotypes, log_priors);
-            const auto likelihoods = calculate_likelihoods(unique_haplotypes, reads, model);
-            return calculate_support(unique_haplotypes, reads, priors, likelihoods, ambiguous, config);
+        if (is_heterozygous(genotype)) {
+            return compute_haplotype_support_helper(genotype, reads, log_priors, std::move(model), ambiguous, std::move(config));
         } else if (config.ambiguous_action != AssignmentConfig::AmbiguousAction::drop) {
             HaplotypeSupportMap result {};
             result.emplace(genotype[0], reads);
@@ -378,12 +405,8 @@ compute_haplotype_support(const Genotype<Haplotype>& genotype,
                           AssignmentConfig config)
 {
     if (!reads.empty()) {
-        if (!genotype.is_homozygous()) {
-            const auto unique_haplotypes = genotype.copy_unique();
-            assert(unique_haplotypes.size() > 1);
-            const auto priors = get_priors(unique_haplotypes, log_priors);
-            const auto likelihoods = calculate_likelihoods(unique_haplotypes, reads, model);
-            return calculate_support(unique_haplotypes, reads, priors, likelihoods, ambiguous, config);
+        if (is_heterozygous(genotype)) {
+            return compute_haplotype_support_helper(genotype, reads, log_priors, std::move(model), ambiguous, std::move(config));
         } else if (config.ambiguous_action != AssignmentConfig::AmbiguousAction::drop) {
             HaplotypeTemplateSupportMap result {};
             result.emplace(genotype[0], reads);

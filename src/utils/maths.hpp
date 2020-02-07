@@ -420,10 +420,8 @@ RealType log_factorial(IntegerType x)
     return std::lgamma(x + 1);
 }
 
-namespace detail {
-
 template <typename InputIt, typename Log>
-auto entropy_helper(InputIt first, InputIt last, const Log log)
+auto entropy(InputIt first, InputIt last, Log&& log)
 {
     using RealType = typename std::iterator_traits<InputIt>::value_type;
     static_assert(std::is_floating_point<RealType>::value,
@@ -432,16 +430,20 @@ auto entropy_helper(InputIt first, InputIt last, const Log log)
     return -std::accumulate(first, last, RealType {0}, add_entropy);
 }
 
-} // namespace detail
+template <typename Range, typename Log>
+auto entropy(const Range& values, Log&& log)
+{
+    return entropy(std::cbegin(values), std::cend(values), std::forward<Log>(log));
+}
 
 template <typename InputIt>
 auto entropy(InputIt first, InputIt last)
 {
-    return detail::entropy_helper(first, last, [] (auto x) { return std::log(x); });
+    return entropy(first, last, [] (auto x) { return std::log(x); });
 }
 
-template <typename Container>
-auto entropy(const Container& values)
+template <typename Range>
+auto entropy(const Range& values)
 {
     return entropy(std::cbegin(values), std::cend(values));
 }
@@ -449,11 +451,11 @@ auto entropy(const Container& values)
 template <typename InputIt>
 auto entropy2(InputIt first, InputIt last)
 {
-    return detail::entropy_helper(first, last, [] (auto x) { return std::log2(x); });
+    return entropy(first, last, [] (auto x) { return std::log2(x); });
 }
 
-template <typename Container>
-auto entropy2(const Container& values)
+template <typename Range>
+auto entropy2(const Range& values)
 {
     return entropy2(std::cbegin(values), std::cend(values));
 }
@@ -461,11 +463,11 @@ auto entropy2(const Container& values)
 template <typename InputIt>
 auto entropy10(InputIt first, InputIt last)
 {
-    return detail::entropy_helper(first, last, [] (auto x) { return std::log10(x); });
+    return entropy(first, last, [] (auto x) { return std::log10(x); });
 }
 
-template <typename Container>
-auto entropy10(const Container& values)
+template <typename Range>
+auto entropy10(const Range& values)
 {
     return entropy10(std::cbegin(values), std::cend(values));
 }
@@ -1066,32 +1068,59 @@ RealType dirichlet_marginal_sf(const std::vector<RealType>& alphas, const std::s
     return beta_sf(alphas[k], a_0 - alphas[k], x);
 }
 
-template <typename Container>
-void log_each(Container& values)
+template <typename Range>
+void log_each(Range& values)
 {
     for (auto& v : values) v = std::log(v);
 }
 
-template <typename Container>
-void exp_each(Container& values)
+template <typename Range>
+void exp_each(Range& values)
 {
     for (auto& v : values) v = std::exp(v);
 }
 
-template <typename Container>
-auto normalise_logs(Container& logs)
+template <typename ForwardIterator>
+auto normalise(const ForwardIterator first, const ForwardIterator last)
 {
-    const auto norm = log_sum_exp(logs);
-    for (auto& p : logs) p -= norm;
+    using T = typename std::iterator_traits<ForwardIterator>::value_type;
+    const auto norm = std::accumulate(first, last, T {});
+    if (norm > 0) std::for_each(first, last, [norm] (auto& value) { value /= norm; });
     return norm;
 }
 
-template <typename Container>
-auto normalise_exp(Container& logs)
+template <typename Range>
+auto normalise(Range& values)
 {
-    const auto norm = log_sum_exp(logs);
-    for (auto& p : logs) p = std::exp(p - norm);
+    return normalise(std::begin(values), std::end(values));
+}
+
+template <typename ForwardIterator>
+auto normalise_logs(const ForwardIterator first, const ForwardIterator last)
+{
+    const auto norm = log_sum_exp(first, last);
+    std::for_each(first, last, [norm] (auto& value) { value -= norm; });
     return norm;
+}
+
+template <typename Range>
+auto normalise_logs(Range& logs)
+{
+    return normalise_logs(std::begin(logs), std::end(logs));
+}
+
+template <typename ForwardIterator>
+auto normalise_exp(const ForwardIterator first, const ForwardIterator last)
+{
+    const auto norm = log_sum_exp(first, last);
+    std::transform(first, last, first, [norm] (auto& value) { return std::exp(value - norm); });
+    return norm;
+}
+
+template <typename Range>
+auto normalise_exp(Range& logs)
+{
+    return normalise_exp(std::begin(logs), std::end(logs));
 }
 
 } // namespace maths

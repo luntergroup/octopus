@@ -144,7 +144,7 @@ Measure::ResultType NormalContamination::do_evaluate(const VcfRecord& call, cons
                 const auto overlapped_reads = copy_overlapped(p.second, call);
                 if (!overlapped_reads.empty()) {
                     const Haplotype& assigned_haplotype {p.first};
-                    if (!somatic_genotype.contains(assigned_haplotype)) {
+                    if (!contains(somatic_genotype, assigned_haplotype)) {
                         auto dummy = somatic_genotype;
                         dummy.emplace(assigned_haplotype);
                         haplotype_priors[assigned_haplotype] = 0;

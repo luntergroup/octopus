@@ -9,6 +9,7 @@
 #include <functional>
 
 #include "core/types/haplotype.hpp"
+#include "core/types/indexed_haplotype.hpp"
 #include "core/types/genotype.hpp"
 #include "core/types/phylogeny.hpp"
 #include "core/models/mutation/denovo_model.hpp"
@@ -23,8 +24,7 @@ public:
     
     using CellPhylogeny = Phylogeny<std::size_t>;
     
-    using GenotypeReference = std::reference_wrapper<const Genotype<Haplotype>>;
-    using GenotypeIndiceVectorReference = std::reference_wrapper<const std::vector<unsigned>>;
+    using GenotypeReference = std::reference_wrapper<const Genotype<IndexedHaplotype<>>>;
     
     struct Parameters
     {
@@ -49,9 +49,8 @@ public:
     const GenotypePriorModel& germline_prior_model() const noexcept;
     const DeNovoModel& denovo_model() const noexcept;
     
-    LogProbability evaluate(const std::vector<Genotype<Haplotype>>& genotypes) const;
+    LogProbability evaluate(const std::vector<Genotype<IndexedHaplotype<>>>& genotypes) const;
     LogProbability evaluate(const std::vector<GenotypeReference>& genotypes) const;
-    LogProbability evaluate(const std::vector<GenotypeIndex>& genotypes) const;
 
 private:
     CellPhylogeny phylogeny_;
@@ -59,8 +58,8 @@ private:
     std::reference_wrapper<const DeNovoModel> denovo_model_;
     Parameters parameters_;
     
-    LogProbability compute_cnv_log_prior(const Genotype<Haplotype>& ancestor) const;
-    LogProbability log_probability(const Genotype<Haplotype>& ancestor, const Genotype<Haplotype>& descendant) const;
+    LogProbability compute_cnv_log_prior(const Genotype<IndexedHaplotype<>>& ancestor) const;
+    LogProbability log_probability(const Genotype<IndexedHaplotype<>>& ancestor, const Genotype<IndexedHaplotype<>>& descendant) const;
 };
 
 } // namespace model

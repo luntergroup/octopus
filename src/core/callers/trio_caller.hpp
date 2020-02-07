@@ -54,6 +54,8 @@ public:
 private:
     class Latents;
     
+    using GenotypeBlock = MappableBlock<Genotype<IndexedHaplotype<>>>;
+    
     Parameters parameters_;
     
     std::string do_name() const override;
@@ -98,18 +100,20 @@ private:
 class TrioCaller::Latents : public Caller::Latents
 {
 public:
+    using IndexedHaplotypeBlock = MappableBlock<IndexedHaplotype<>>;
+    using Genotypeblock = MappableBlock<Genotype<IndexedHaplotype<>>>;
     using ModelInferences = model::TrioModel::InferredLatents;
     friend TrioCaller;
     
-    Latents(const HaplotypeBlock& haplotypes,
-            std::vector<Genotype<Haplotype>>&& genotypes,
-            ModelInferences&& latents,
+    Latents(IndexedHaplotypeBlock haplotypes,
+            Genotypeblock genotypes,
+            ModelInferences latents,
             const Trio& trio);
-    Latents(const HaplotypeBlock& haplotypes,
-            std::vector<Genotype<Haplotype>>&& maternal_genotypes,
-            std::vector<Genotype<Haplotype>>&& paternal_genotypes,
+    Latents(IndexedHaplotypeBlock haplotypes,
+            Genotypeblock maternal_genotypes,
+            Genotypeblock paternal_genotypes,
             unsigned child_ploidy,
-            ModelInferences&& latents,
+            ModelInferences latents,
             const Trio& trio);
     
     std::shared_ptr<HaplotypeProbabilityMap> haplotype_posteriors() const noexcept override;
@@ -117,22 +121,23 @@ public:
     
 private:
     Trio trio;
-    std::vector<Genotype<Haplotype>> maternal_genotypes;
-    boost::optional<std::vector<Genotype<Haplotype>>> paternal_genotypes;
+    IndexedHaplotypeBlock haplotypes;
+    Genotypeblock maternal_genotypes;
+    boost::optional<Genotypeblock> paternal_genotypes;
     ModelInferences model_latents;
     std::vector<double> marginal_maternal_posteriors, marginal_paternal_posteriors, marginal_child_posteriors;
     mutable std::shared_ptr<GenotypeProbabilityMap> marginal_genotype_posteriors;
     std::shared_ptr<HaplotypeProbabilityMap> marginal_haplotype_posteriors;
-    std::vector<Genotype<Haplotype>> concatenated_genotypes_;
+    std::vector<Genotypeblock::value_type> concatenated_genotypes_;
     std::vector<double> padded_marginal_maternal_posteriors_, padded_marginal_paternal_posteriors_, padded_marginal_child_posteriors_;
     unsigned child_ploidy_;
     
     void set_genotype_posteriors(const Trio& trio);
     void set_genotype_posteriors_shared_genotypes(const Trio& trio);
     void set_genotype_posteriors_unique_genotypes(const Trio& trio);
-    void set_haplotype_posteriors(const HaplotypeBlock& haplotypes);
-    void set_haplotype_posteriors_shared_genotypes(const HaplotypeBlock& haplotypes);
-    void set_haplotype_posteriors_unique_genotypes(const HaplotypeBlock& haplotypes);
+    void set_haplotype_posteriors();
+    void set_haplotype_posteriors_shared_genotypes();
+    void set_haplotype_posteriors_unique_genotypes();
 };
 
 } // namespace octopus
