@@ -367,12 +367,12 @@ def get_annotation(field, rec, sample=None):
         else:
             res = rec.samples[sample][field]
         if type(res) == tuple:
-            res = res[0]
+            res = np.mean(res)
         return res
     else:
         res = rec.info[field]
         if type(res) == tuple:
-            res = res[0]
+            res = np.mean(res)
         return res
 
 def is_somatic_sample(rec, sample):
