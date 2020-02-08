@@ -13,10 +13,10 @@ namespace octopus {
 
 // public methods
 
-HaplotypeLikelihoodArray::HaplotypeLikelihoodArray(const unsigned max_haplotypes,
+HaplotypeLikelihoodArray::HaplotypeLikelihoodArray(const unsigned num_haplotypes_hint,
                                                    const std::vector<SampleName>& samples)
 : likelihoods_ {}
-, haplotype_indices_ {max_haplotypes}
+, haplotype_indices_ {num_haplotypes_hint}
 , sample_indices_ {samples.size()}
 , samples_ {samples}
 {
@@ -24,11 +24,11 @@ HaplotypeLikelihoodArray::HaplotypeLikelihoodArray(const unsigned max_haplotypes
 }
 
 HaplotypeLikelihoodArray::HaplotypeLikelihoodArray(HaplotypeLikelihoodModel likelihood_model,
-                                                   unsigned max_haplotypes,
+                                                   unsigned num_haplotypes_hint,
                                                    const std::vector<SampleName>& samples)
 : likelihood_model_ {std::move(likelihood_model)}
 , likelihoods_ {}
-, haplotype_indices_ {max_haplotypes}
+, haplotype_indices_ {num_haplotypes_hint}
 , sample_indices_ {samples.size()}
 , samples_ {samples}
 {
@@ -234,7 +234,6 @@ void HaplotypeLikelihoodArray::clear() noexcept
     likelihoods_.clear();
     haplotype_indices_.clear();
     sample_indices_.clear();
-    samples_.clear();
     haplotypes_.clear();
     unprime();
 }

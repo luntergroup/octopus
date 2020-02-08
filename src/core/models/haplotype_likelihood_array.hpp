@@ -46,10 +46,10 @@ public:
     
     HaplotypeLikelihoodArray() = default;
     
-    HaplotypeLikelihoodArray(unsigned max_haplotypes, const std::vector<SampleName>& samples);
+    HaplotypeLikelihoodArray(unsigned num_haplotypes_hint, const std::vector<SampleName>& samples);
     
     HaplotypeLikelihoodArray(HaplotypeLikelihoodModel likelihood_model,
-                             unsigned max_haplotypes,
+                             unsigned num_haplotypes_hint,
                              const std::vector<SampleName>& samples);
     
     HaplotypeLikelihoodArray(const HaplotypeLikelihoodArray&)            = default;
