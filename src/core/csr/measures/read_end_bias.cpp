@@ -141,12 +141,12 @@ Measure::ResultType ReadEndBias::do_evaluate(const VcfRecord& call, const FacetM
     const EndDefinition end_def {end_fraction_};
     for (const auto& sample : samples) {
         const auto alleles = get_called_alleles(call, sample).first;
-        double tail_bias {0};
+        double end_bias {0};
         if (!alleles.empty()) {
             const auto allele_support = compute_allele_support(alleles, assignments, sample);
-            tail_bias = calculate_max_tail_bias(allele_support, end_def);
+            end_bias = calculate_max_tail_bias(allele_support, end_def);
         }
-        result.emplace_back();
+        result.emplace_back(end_bias);
     }
     return result;
 }
