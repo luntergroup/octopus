@@ -240,38 +240,15 @@ bool Assembler::is_unique_reference() const
     return is_reference_unique_path();
 }
 
-void Assembler::try_recover_dangling_branches(const unsigned max_revovery)
+void Assembler::try_recover_dangling_branches()
 {
     const auto p = boost::vertices(graph_);
-    std::for_each(p.first, p.second, [&] (const Vertex& v) {
-        if (is_dangling_tail(v)) {
-            std::for_each(p.first, p.second, [&] (const Vertex& u) {
-            if (u != v && is_dangling_head(u)) {
-                const auto overlap = count_base_overlap(kmer_of(v), kmer_of(u));
-                if (overlap > 0 && kmer_size() - overlap <= max_revovery) {
-                    const auto& lhs_kmer = kmer_of(v);
-                    const auto& rhs_kmer = kmer_of(u);
-                    Vertex prev_kmer_v {v};
-                    for (unsigned k {1}; k < kmer_size() - overlap; ++k) {
-                        kmer_buffer_.emplace_back(kmer_size(), 'N');
-                        auto itr = std::copy(std::next(std::cbegin(lhs_kmer), k), std::cend(lhs_kmer), std::begin(kmer_buffer_.back()));
-                        std::copy(std::next(std::cbegin(rhs_kmer), overlap), std::next(std::cbegin(rhs_kmer), overlap + k), itr);
-                        const Kmer kmer {std::cbegin(kmer_buffer_.back()), std::cend(kmer_buffer_.back())};
-                        const auto kmer_vertex_itr = vertex_cache_.find(kmer);
-                        Vertex kmer_v {};
-                        if (kmer_vertex_itr == std::cend(vertex_cache_)) {
-                            kmer_v = *add_vertex(kmer);
-                        } else {
-                            kmer_v = kmer_vertex_itr->second;
-                            kmer_buffer_.pop_back();
-                        }
-                        add_edge(prev_kmer_v, kmer_v, 1, 0, false, false);
-                        prev_kmer_v = kmer_v;
-                    }
-                    add_edge(prev_kmer_v, u, 1, 0, false, false);
-                }
+    std::for_each(p.first, p.second, [this] (const Vertex& v) {
+        if (is_dangling_branch(v)) {
+            const auto joining_kmer = find_joining_kmer(v);
+            if (joining_kmer) {
+                add_edge(v, *joining_kmer, 1, 0, false, false);
             }
-        });
         }
     });
 }
@@ -346,8 +323,6 @@ void Assembler::clear()
     reference_vertices_.shrink_to_fit();
     reference_edges_.clear();
     reference_edges_.shrink_to_fit();
-    kmer_buffer_.clear();
-    kmer_buffer_.shrink_to_fit();
 }
 
 bool operator<(const Assembler::Variant& lhs, const Assembler::Variant& rhs) noexcept
@@ -762,21 +737,7 @@ std::size_t Assembler::num_reference_kmers() const
     return std::count_if(p.first, p.second, [this] (const Vertex& v) { return is_reference(v); });
 }
 
-unsigned Assembler::count_base_overlap(const Kmer& lhs, const Kmer& rhs) const
-{
-    auto first_lhs = std::next(std::cbegin(lhs));
-    for (auto result = kmer_size() - 1; result > kmer_size() / 2; --result, ++first_lhs) {
-        if (std::equal(first_lhs, std::cend(lhs), std::cbegin(rhs))) return result;
-    }
-    return 0;
-}
-
-bool Assembler::is_dangling_head(const Vertex v) const
-{
-    return !is_reference(v) && boost::in_degree(v, graph_) == 0 && boost::out_degree(v, graph_) > 0;
-}
-
-bool Assembler::is_dangling_tail(const Vertex v) const
+bool Assembler::is_dangling_branch(const Vertex v) const
 {
     return !is_reference(v) && boost::in_degree(v, graph_) > 0 && boost::out_degree(v, graph_) == 0;
 }
