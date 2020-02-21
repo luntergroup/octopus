@@ -470,19 +470,19 @@ auto join(const ReducedVectorMap<GenotypeRefProbabilityPair>& maternal,
     std::for_each(maternal.first, maternal.last_to_join, [&] (const auto& m) {
         std::for_each(paternal.first, paternal.last_to_join, [&] (const auto& p) {
             result.push_back({m.genotype, p.genotype, joint_probability(m, p, model),
-                              m.probability, m.probability});
+                              m.probability, p.probability});
         });
     });
     std::for_each(maternal.last_to_join, maternal.last, [&] (const auto& m) {
         std::for_each(paternal.first, paternal.last_to_partially_join, [&] (const auto& p) {
             result.push_back({m.genotype, p.genotype, joint_probability(m, p, model),
-                              m.probability, m.probability});
+                              m.probability, p.probability});
         });
     });
     std::for_each(paternal.last_to_join, paternal.last, [&] (const auto& p) {
         std::for_each(maternal.first, maternal.last_to_partially_join, [&] (const auto& m) {
             result.push_back({m.genotype, p.genotype, joint_probability(m, p, model),
-                              m.probability, m.probability});
+                              m.probability, p.probability});
         });
     });
     return result;
@@ -942,7 +942,7 @@ void print(S&& stream, std::vector<JointProbability> ps, const std::size_t n)
     const auto nth = std::next(std::begin(ps), std::min(ps.size(), n));
     std::partial_sort(std::begin(ps), nth, std::end(ps),
                       [] (const auto& lhs, const auto& rhs) {
-                          return lhs.probability > rhs.probability;
+                          return lhs.log_probability > rhs.log_probability;
                       });
     std::for_each(std::begin(ps), nth, [&] (const auto& p) {
         using octopus::debug::print_variant_alleles;
@@ -951,7 +951,7 @@ void print(S&& stream, std::vector<JointProbability> ps, const std::size_t n)
         print_variant_alleles(stream, p.paternal.get());
         stream << " | ";
         print_variant_alleles(stream, p.child.get());
-        stream << " " << p.probability << "\n";
+        stream << " " << p.log_probability << "\n";
     });
 }
 
