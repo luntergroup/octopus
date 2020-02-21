@@ -23,7 +23,7 @@ namespace {
 std::int8_t probability_to_penalty(const double probability) noexcept
 {
     static constexpr double max_penalty {127};
-    return std::max(std::min(std::log(probability) / -maths::constants::ln10Div10<>, max_penalty), 1.0);
+    return std::max(std::min(std::round(std::log(probability) / -maths::constants::ln10Div10<>), max_penalty), 1.0);
 }
 
 } // namespace
