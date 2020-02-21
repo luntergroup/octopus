@@ -81,7 +81,7 @@ IndelMutationModel::ContextIndelModel IndelMutationModel::evaluate(const Haploty
         const auto& repeat_state = indel_repeat_model_[repeat.period()][std::min(num_repeats, params_.max_periodicity)];
         assert(repeat_offset + repeat_len <= result.gap_open.size());
         assert(repeat_offset + repeat_len <= result.gap_extend.size());
-        for (auto pos = repeat_offset; pos < (repeat_offset + repeat_len); ++pos) {
+        for (auto pos = repeat_offset; pos < (repeat_offset + repeat.period()); ++pos) {
             if (result.gap_open[pos] < repeat_state.open) {
                 result.gap_open[pos] = repeat_state.open;
                 result.gap_extend[pos] = repeat_state.extend;
