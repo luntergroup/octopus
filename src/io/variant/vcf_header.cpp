@@ -73,10 +73,8 @@ std::vector<VcfHeader::BasicKey> VcfHeader::basic_keys() const
 {
     std::vector<BasicKey> result {};
     result.reserve(basic_fields_.size());
-    
     std::transform(std::cbegin(basic_fields_), std::cend(basic_fields_),
                    std::back_inserter(result), [] (const auto& p) { return p.first; });
-    
     return result;
 }
 
@@ -84,23 +82,17 @@ std::vector<VcfHeader::Tag> VcfHeader::tags() const
 {
     std::vector<Tag> result {};
     result.reserve(structured_fields_.size());
-    
     std::transform(std::cbegin(structured_fields_), std::cend(structured_fields_),
                    std::back_inserter(result), [] (const auto& p) { return p.first; });
-    
     std::sort(std::begin(result), std::end(result));
-    
     result.erase(std::unique(std::begin(result), std::end(result)), std::end(result));
-    
     return result;
 }
 
 std::vector<VcfHeader::StructuredKey> VcfHeader::keys(const Tag& t) const
 {
     std::vector<StructuredKey> result {};
-    
     // TODO
-    
     return result;
 }
 
@@ -113,12 +105,9 @@ std::vector<VcfHeader::StructuredField> VcfHeader::structured_fields(const Tag& 
 {
     std::vector<StructuredField> result {};
     result.reserve(structured_fields_.count(tag));
-    
     const auto er = structured_fields_.equal_range(tag);
-    
     std::transform(er.first, er.second, std::back_inserter(result),
                    [] (const auto& p) { return p.second; });
-    
     return result;
 }
 
@@ -167,12 +156,10 @@ std::vector<VcfType> get_typed_values(const VcfHeader& header, const VcfHeader::
 {
     std::vector<VcfType> result {};
     result.reserve(values.size());
-    
     std::transform(values.cbegin(), values.cend(), std::back_inserter(result),
                    [&header, &format_key, &field_key] (const auto& value) {
                        return get_typed_value(header, format_key, field_key, value);
                    });
-    
     return result;
 }
 
@@ -219,19 +206,15 @@ std::ostream& operator<<(std::ostream& os, const VcfHeader::StructuredField& fie
 std::ostream& operator<<(std::ostream& os, const VcfHeader& header)
 {
     using vcfspec::header::lineOpener;
-    
     os << lineOpener << vcfspec::header::meta::vcfVersion;
     os << header.file_format_ << std::endl;
-    
     for (const auto& field : header.basic_fields_) {
         os << lineOpener << field.first.value << "=" << field.second << std::endl;
     }
     for (const auto& format : header.structured_fields_) {
         os << lineOpener << format.first.value << "=" << format.second << std::endl;
     }
-    
     // TODO
-    
     return os;
 }
 
@@ -275,11 +258,8 @@ VcfHeader::Builder& VcfHeader::Builder::add_structured_field(std::string tag,
 {
     VcfHeader::StructuredField tmp {};
     tmp.reserve(values.size());
-    
     for (auto&& p : values) tmp.emplace(p.first, std::move(p.second));
-    
     structured_fields_.emplace(std::move(tag), std::move(tmp));
-    
     return *this;
 }
 
@@ -296,16 +276,13 @@ VcfHeader::Builder& VcfHeader::Builder::add_info(std::string id, std::string num
                                                  std::unordered_map<std::string, std::string> other_values)
 {
     using namespace vcfspec::header::meta;
-    
     other_values.reserve(other_values.size() + 4);
-    
     other_values.emplace(struc::id, std::move(id));
+    if (type == type::flag && number == number::one) number = number::zero;
     other_values.emplace(struc::number, std::move(number));
     other_values.emplace(struc::type, std::move(type));
     other_values.emplace(struc::description, add_quotes(description));
-    
     add_structured_field(tag::info, std::move(other_values));
-    
     return *this;
 }
 
@@ -313,14 +290,10 @@ VcfHeader::Builder& VcfHeader::Builder::add_filter(std::string id, std::string d
                                                    std::unordered_map<std::string, std::string> other_values)
 {
     using namespace vcfspec::header::meta;
-    
     other_values.reserve(other_values.size() + 2);
-    
     other_values.emplace(struc::id, std::move(id));
     other_values.emplace(struc::description, add_quotes(description));
-    
     add_structured_field(tag::filter, std::move(other_values));
-    
     return *this;
 }
 
@@ -329,16 +302,16 @@ VcfHeader::Builder& VcfHeader::Builder::add_format(std::string id, std::string n
                                                    std::unordered_map<std::string, std::string> other_values)
 {
     using namespace vcfspec::header::meta;
-    
     other_values.reserve(other_values.size() + 4);
-    
     other_values.emplace(struc::id, std::move(id));
+    if (type == type::flag) {
+        type = type::integer; // flags not allowed in FORMAT
+        if (number == number::zero) number = number::one;
+    }
     other_values.emplace(struc::number, std::move(number));
     other_values.emplace(struc::type, std::move(type));
     other_values.emplace(struc::description, add_quotes(description));
-    
     add_structured_field(tag::format, std::move(other_values));
-    
     return *this;
 }
 
@@ -346,11 +319,8 @@ VcfHeader::Builder& VcfHeader::Builder::add_contig(std::string id,
                                                    std::unordered_map<std::string, std::string> other_values)
 {
     using namespace vcfspec::header::meta;
-    
     other_values.emplace(struc::id, std::move(id));
-    
     add_structured_field(tag::contig, std::move(other_values));
-    
     return *this;
 }
 
