@@ -369,11 +369,14 @@ def get_annotation(field, rec, sample=None):
         if type(res) == tuple:
             res = res[0]
         return res
-    else:
+    elif field in rec.info:
         res = rec.info[field]
         if type(res) == tuple:
             res = res[0]
         return res
+    else:
+        # Field must be a flag and not present
+        return 0
 
 def is_somatic_sample(rec, sample):
     return bool(int(get_annotation('SOMATIC', rec, sample)))
