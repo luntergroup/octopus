@@ -107,7 +107,8 @@ void Measure::annotate(VcfHeader::Builder& header) const
         } else if (this->cardinality() == Measure::ResultCardinality::alleles) {
             header.add_info(this->name(), per_allele, vcf_typename, this->describe());
         } else {
-            header.add_info(this->name(), one, vcf_typename, this->describe());
+            using namespace vcfspec::header::meta::type;
+            header.add_info(this->name(), vcf_typename == flag ? zero : one, vcf_typename, this->describe());
         }
     }
 }
