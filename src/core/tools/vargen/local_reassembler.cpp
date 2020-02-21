@@ -990,7 +990,7 @@ LocalReassembler::try_assemble_region(Assembler& assembler, const NucleotideSequ
                                       const GenomicRegion& assemble_region, std::deque<Variant>& result) const
 {
     assert(assembler.is_unique_reference());
-    assembler.try_recover_dangling_branches();
+    assembler.try_recover_dangling_branches(assembler.kmer_size() / 2);
     assembler.prune(min_kmer_observations_);
     auto status = AssemblerStatus::success;
     if (!assembler.is_acyclic()) {

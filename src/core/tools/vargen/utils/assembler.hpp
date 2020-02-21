@@ -85,7 +85,7 @@ public:
     bool is_all_reference() const;
     bool is_unique_reference() const;
     
-    void try_recover_dangling_branches();
+    void try_recover_dangling_branches(unsigned max_recovery = 2);
     
     // Removes edges between kmers with weight less than the given value
     void prune(unsigned min_weight);
@@ -195,6 +195,7 @@ private:
     std::unordered_map<Kmer, Vertex, KmerHash> vertex_cache_;
     Path reference_vertices_;
     std::deque<Edge> reference_edges_;
+    std::deque<NucleotideSequence> kmer_buffer_;
     
     // methods
     
@@ -236,7 +237,9 @@ private:
     Vertex reference_tail() const;
     Vertex next_reference(Vertex u) const;
     Vertex prev_reference(Vertex v) const;
-    bool is_dangling_branch(Vertex v) const;
+    unsigned count_base_overlap(const Kmer& lhs, const Kmer& rhs) const;
+    bool is_dangling_head(Vertex v) const;
+    bool is_dangling_tail(Vertex v) const;
     boost::optional<Vertex> find_joining_kmer(Vertex v) const;
     std::size_t num_reference_kmers() const;
     NucleotideSequence make_sequence(const Path& path) const;
