@@ -275,7 +275,7 @@ def subset_samples(vcf_in_filename, samples, vcf_out_filename=None, drop_uncalle
 
 def complement_vcf(src_vcf_filename, tagret_vcf_filenames, dst_vcf_filename):
     sp.call(['bcftools', 'isec', '-C', str(src_vcf_filename)] + [str(f) for f in tagret_vcf_filenames]
-            + ['-n1', '-w1', '-Oz', '-o', str(dst_vcf_filename)])
+            + ['-w1', '-Oz', '-o', str(dst_vcf_filename)])
     index_vcf(dst_vcf_filename)
 
 def intersect_vcfs(src_vcf_filenames, dst_vcf_filename):
@@ -481,10 +481,13 @@ def subset(vcf_in_path, vcf_out_path, bed_regions):
     sp.call(['bcftools', 'view', '-R', str(bed_regions), '-O', 'z', '-o', str(vcf_out_path), str(vcf_in_path)])
 
 def is_missing(x):
-    return x == '.' or np.isnan(float(x))
+    return x is None or x == '.' or np.isnan(float(x))
+
+def to_str(x):
+    return str(x) if type(x) != bool else str(int(x))
 
 def annotation_to_string(x, missing_value):
-    return str(missing_value) if is_missing(x) else str(x)
+    return to_str(missing_value) if is_missing(x) else to_str(x)
 
 def make_ranger_data(octopus_vcf_filename, out_path, classifcation, measures, missing_value=-1, fraction=1):
     vcf = ps.VariantFile(str(octopus_vcf_filename))
