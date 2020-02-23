@@ -26,7 +26,7 @@ Measure::ResultType GCContent::get_default_result() const
 Measure::ResultType GCContent::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     const auto& reference = get_value<ReferenceContext>(facets.at("ReferenceContext"));
-    return utils::gc_content(reference.sequence());
+    return utils::gc_content(reference.sequence(expand(mapped_region(call), 50)));
 }
 
 Measure::ResultCardinality GCContent::do_cardinality() const noexcept

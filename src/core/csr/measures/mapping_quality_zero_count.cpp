@@ -29,7 +29,7 @@ Measure::ResultType MappingQualityZeroCount::do_evaluate(const VcfRecord& call, 
 {
     if (recalculate_) {
         const auto& reads = get_value<OverlappingReads>(facets.at("OverlappingReads"));
-        return count_mapq_zero(reads);
+        return count_mapq_zero(reads, mapped_region(call));
     } else {
         return static_cast<std::size_t>(std::stoull(call.info_value("MQ0").front()));
     }
