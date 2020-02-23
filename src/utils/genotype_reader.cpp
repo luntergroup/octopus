@@ -263,9 +263,12 @@ auto extract_phase_region(const VcfRecord& call, const SampleName& sample)
 
 struct CallWrapper : public Mappable<CallWrapper>
 {
-    CallWrapper(const VcfRecord& record, const SampleName& sample)
+    CallWrapper(const VcfRecord& record, GenomicRegion phase_region)
     : call {std::cref(record)}
-    , phase_region {extract_phase_region(record, sample)}
+    , phase_region {std::move(phase_region)}
+    {}
+    CallWrapper(const VcfRecord& record, const SampleName& sample)
+    : CallWrapper {record, extract_phase_region(record, sample)}
     {}
     
     std::reference_wrapper<const VcfRecord> call;
@@ -278,8 +281,14 @@ auto wrap_calls(const std::vector<VcfRecord>& calls, const SampleName& sample)
 {
     std::vector<CallWrapper> result {};
     result.reserve(calls.size());
+    const VcfRecord* last_variant = nullptr; 
     for (const auto& call : calls) {
-        result.emplace_back(call, sample);
+        if (last_variant && is_refcall(call)) {
+            result.emplace_back(call, closed_region(*last_variant, call));
+        } else {
+            result.emplace_back(call, sample);
+            last_variant = std::addressof(call);
+        }
     }
     return result;
 }
@@ -289,7 +298,7 @@ segment_into_contiguous_phase_blocks(const std::vector<VcfRecord>& calls, const 
                                      const bool merge_unphased_refcalls = true)
 {
     auto result = segment_overlapped_copy(wrap_calls(calls, sample));
-    if (merge_unphased_refcalls) {
+    if (result.size() > 1 && merge_unphased_refcalls) {
         bool found_refcall {false};
         for (auto first_refcall_itr = std::begin(result); first_refcall_itr != std::end(result);) {
             const static auto is_refcall_block = [] (const auto& block) { return block.size() == 1 && is_refcall(block[0].get()); };
