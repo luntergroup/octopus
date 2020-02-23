@@ -36,14 +36,24 @@ compute_haplotype_order(const std::vector<Genotype<Allele>>& genotypes, const Re
     }
 }
 
-bool are_in_phase(const Call::GenotypeCall& lhs, const Call::GenotypeCall& rhs)
+bool are_same_phase_set(const Call::GenotypeCall& lhs, const Call::GenotypeCall& rhs)
 {
     return lhs.phase && rhs.phase && overlaps(lhs.phase->region(), rhs.phase->region());
 }
 
-bool are_in_phase(const CallWrapper& lhs, const CallWrapper& rhs, const SampleName& sample)
+bool are_same_phase_set(const CallWrapper& lhs, const CallWrapper& rhs, const SampleName& sample)
 {
-    return are_in_phase(lhs->get_genotype_call(sample), rhs->get_genotype_call(sample));
+    return are_same_phase_set(lhs->get_genotype_call(sample), rhs->get_genotype_call(sample));
+}
+
+bool have_different_phase_sets(const Call::GenotypeCall& lhs, const Call::GenotypeCall& rhs)
+{
+    return lhs.phase && rhs.phase && !overlaps(lhs.phase->region(), rhs.phase->region());
+}
+
+bool have_different_phase_sets(const CallWrapper& lhs, const CallWrapper& rhs, const SampleName& sample)
+{
+    return have_different_phase_sets(lhs->get_genotype_call(sample), rhs->get_genotype_call(sample));
 }
 
 } // namespace detail
