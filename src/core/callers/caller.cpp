@@ -1276,18 +1276,21 @@ bool Caller::is_merge_block_refcalling() const noexcept
     return parameters_.refcall_type == RefCallType::blocked && parameters_.refcall_block_merge_threshold;
 }
 
+auto get_safe_haplotype_region(const GenomicRegion& region, const HaplotypeLikelihoodModel& model, const ReadMap& reads)
+{
+    if (has_coverage(reads)) {
+        auto min_safe_pad = model.pad_requirement() + 1;
+        return expand(encompassing_region(reads), min_safe_pad);
+    } else {
+        return region;
+    }
+}
+
 std::vector<CallWrapper> Caller::call_reference(const GenomicRegion& region, const ReadMap& reads) const
 {
     const auto active_reads = copy_overlapped(reads, region);
+    const HaplotypeBlock haplotypes {Haplotype {get_safe_haplotype_region(region, likelihood_model_, active_reads), reference_}};
     auto haplotype_likelihoods = make_haplotype_likelihood_cache();
-    HaplotypeBlock haplotypes {region};
-    if (has_coverage(active_reads)) {
-        const auto active_reads_region = encompassing_region(active_reads);
-        const auto haplotype_region = expand(active_reads_region, HaplotypeLikelihoodModel{}.pad_requirement());
-        haplotypes.emplace_back(haplotype_region, reference_);
-    } else {
-        haplotypes.emplace_back(region, reference_);
-    }
     haplotype_likelihoods.populate(active_reads, haplotypes);
     const auto latents = infer_latents(haplotypes, haplotype_likelihoods);
     const auto pileups = make_pileups(active_reads, *latents, region);
