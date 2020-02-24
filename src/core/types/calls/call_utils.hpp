@@ -81,7 +81,7 @@ segment_by_phase_set(Iterator first_call, Iterator last_call, const SampleName& 
     std::vector<Iterator> phase_set_indicators {};
     while (first_call != last_call) {
         const auto is_phased = [&] (const CallWrapper& call) { return call->is_phased(sample); };
-        const auto first_phased_call = std::find_if(std::next(first_call), last_call, is_phased);
+        const auto first_phased_call = std::find_if(first_call, last_call, is_phased);
         if (first_phased_call != last_call) {
             const auto different_phase_sets = [&] (const CallWrapper& call) { 
                 return detail::have_different_phase_sets(*first_phased_call, call, sample); };
