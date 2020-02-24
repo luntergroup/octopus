@@ -47,6 +47,7 @@
 #include "core/csr/measures/variant_length.hpp"
 #include "core/csr/measures/base_mismatch_count.hpp"
 #include "core/csr/measures/base_mismatch_fraction.hpp"
+#include "core/csr/measures/base_mismatch_quality.hpp"
 #include "core/csr/measures/assigned_depth.hpp"
 #include "core/csr/measures/duplicate_concordance.hpp"
 #include "core/csr/measures/duplicate_allele_depth.hpp"
