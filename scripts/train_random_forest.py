@@ -415,7 +415,7 @@ def read_octopus_header_info(vcf_filename):
 def read_normal_samples(vcf_filename):
     options = read_octopus_header_info(vcf_filename)['options'].split(' ')
     result = []
-    for token in options[options.index('--normal-sample') + 1:]:
+    for token in options[options.index('--normal-samples') + 1:]:
         if token.startswith('--'):
             break
         else:
