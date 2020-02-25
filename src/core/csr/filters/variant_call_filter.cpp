@@ -210,7 +210,7 @@ VariantCallFilter::read_next_block(VcfIterator& first, const VcfIterator& last, 
     for (; first != last; ++first) {
         const VcfRecord& call {*first};
         auto call_phase_region = get_phase_region(call, samples);
-        if (can_add_to_phase_block(call, call_phase_region, block)) {
+        if (!can_add_to_phase_block(call, call_phase_region, block)) {
             return copy_each_first(block);
         }
         block.emplace_back(call, std::move(call_phase_region));
