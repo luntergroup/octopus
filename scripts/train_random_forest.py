@@ -412,10 +412,16 @@ def read_octopus_header_info(vcf_filename):
             return dict(record)
     return None
 
+def startswith_index(options, pattern):
+    for i, option in enumerate(options):
+        if option.startswith(pattern):
+            return i
+    return -1
+
 def read_normal_samples(vcf_filename):
     options = read_octopus_header_info(vcf_filename)['options'].split(' ')
     result = []
-    for token in options[options.index('--normal-samples') + 1:]:
+    for token in options[startswith_index(options, "--normal-sample") + 1:]:
         if token.startswith('--'):
             break
         else:
