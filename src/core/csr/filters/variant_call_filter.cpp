@@ -193,6 +193,14 @@ std::vector<T> copy_each_first(const std::vector<std::pair<T, _>>& items)
     return result;
 }
 
+template <typename Range>
+bool can_add_to_phase_block(const VcfRecord& call, const GenomicRegion& call_phase_region, const Range& block)
+{
+    if (block.empty()) return true;
+    if (overlaps(block.back().second, call_phase_region)) return true;
+    return is_refcall(call) && is_same_contig(call, block.back().first);
+}
+
 } // namespace
 
 VariantCallFilter::CallBlock
@@ -202,7 +210,7 @@ VariantCallFilter::read_next_block(VcfIterator& first, const VcfIterator& last, 
     for (; first != last; ++first) {
         const VcfRecord& call {*first};
         auto call_phase_region = get_phase_region(call, samples);
-        if (!block.empty() && !(overlaps(block.back().second, call_phase_region) || is_refcall(call))) {
+        if (can_add_to_phase_block(call, call_phase_region, block)) {
             return copy_each_first(block);
         }
         block.emplace_back(call, std::move(call_phase_region));
