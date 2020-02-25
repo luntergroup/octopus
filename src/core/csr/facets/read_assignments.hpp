@@ -17,6 +17,7 @@
 #include "core/models/haplotype_likelihood_model.hpp"
 #include "core/tools/read_assigner.hpp"
 #include "io/reference/reference_genome.hpp"
+#include "io/variant/vcf_record.hpp"
 
 namespace octopus { namespace csr {
 
@@ -29,10 +30,12 @@ public:
     
     ReadAssignments(const ReferenceGenome& reference,
                     const GenotypeMap& genotypes,
-                    const ReadMap& reads);
+                    const ReadMap& reads,
+                    const std::vector<VcfRecord>& calls);
     ReadAssignments(const ReferenceGenome& reference,
                     const GenotypeMap& genotypes,
                     const ReadMap& reads,
+                    const std::vector<VcfRecord>& calls,
                     HaplotypeLikelihoodModel model);
     
 private:

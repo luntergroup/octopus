@@ -8,7 +8,6 @@
 
 #include <boost/variant.hpp>
 
-#include "core/tools/read_assigner.hpp"
 #include "core/types/allele.hpp"
 #include "io/variant/vcf_record.hpp"
 #include "io/variant/vcf_spec.hpp"
@@ -57,10 +56,18 @@ void pop_front(std::vector<T>& v)
     v.erase(std::cbegin(v));
 }
 
-auto min_support_count(const AlleleSupportMap& support)
+auto get_support_counts(const std::vector<Allele>& alleles, const AlleleSupportMap& support)
 {
-    const static auto support_less = [] (const auto& lhs, const auto& rhs) { return lhs.second.size() < rhs.second.size(); };
-    return std::min_element(std::cbegin(support), std::cend(support), support_less)->second.size();
+    std::vector<int> result(alleles.size());
+    std::transform(std::cbegin(alleles), std::cend(alleles), std::begin(result),
+                   [&] (const auto& allele) { return support.at(allele).size(); });
+    return result;
+}
+
+auto min_support_count(const std::vector<Allele>& alleles, const AlleleSupportMap& support)
+{
+    const auto counts = get_support_counts(alleles, support);
+    return *std::min_element(std::cbegin(counts), std::cend(counts));
 }
 
 } // namespace
@@ -68,7 +75,7 @@ auto min_support_count(const AlleleSupportMap& support)
 Measure::ResultType AlleleDepth::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     const auto& samples = get_value<Samples>(facets.at("Samples"));
-    const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments"));
+    const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments")).alleles;
     std::vector<boost::optional<int>> result {};
     result.reserve(samples.size());
     for (const auto& sample : samples) {
@@ -77,8 +84,7 @@ Measure::ResultType AlleleDepth::do_evaluate(const VcfRecord& call, const FacetM
             std::vector<Allele> alleles; bool has_ref;
             std::tie(alleles, has_ref) = get_called_alleles(call, sample);
             if (has_ref) pop_front(alleles); // ref always first
-            const auto allele_support = compute_allele_support(alleles, assignments, sample);
-            sample_result = min_support_count(allele_support);
+            sample_result = min_support_count(alleles, assignments.at(sample));
         }
         result.push_back(sample_result);
     }

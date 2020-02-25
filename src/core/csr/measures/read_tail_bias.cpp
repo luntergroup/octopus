@@ -110,11 +110,11 @@ double calculate_tail_bias(const Allele& allele, const ReadRefSupportSet& suppor
     return calculate_tail_bias(counts, std::min(3 * tail_def.tail_fraction, 0.5));
 }
 
-double calculate_max_tail_bias(const AlleleSupportMap& support, const TailDefinition tail_def = TailDefinition {})
+double calculate_max_tail_bias(const std::vector<Allele>& alleles, const AlleleSupportMap& support, const TailDefinition tail_def = TailDefinition {})
 {
     double result {0};
-    for (const auto& p : support) {
-        auto bias = calculate_tail_bias(p.first, p.second, tail_def);
+    for (const auto& allele : alleles) {
+        auto bias = calculate_tail_bias(allele, support.at(allele), tail_def);
         result = std::max(result, bias);
     }
     return result;
@@ -125,19 +125,14 @@ double calculate_max_tail_bias(const AlleleSupportMap& support, const TailDefini
 Measure::ResultType ReadTailBias::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     const auto& samples = get_value<Samples>(facets.at("Samples"));
-    const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments"));
+    const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments")).alleles;
     std::vector<double> result {};
     result.reserve(samples.size());
     const TailDefinition tail_def {tail_fraction_};
     for (const auto& sample : samples) {
         std::vector<Allele> alleles; bool has_ref;
         std::tie(alleles, has_ref) = get_called_alleles(call, sample);
-        if (!alleles.empty()) {
-            const auto allele_support = compute_allele_support(alleles, assignments, sample);
-            result.push_back(calculate_max_tail_bias(allele_support, tail_def));
-        } else {
-            result.push_back(0);
-        }
+        result.push_back(calculate_max_tail_bias(alleles, assignments.at(sample), tail_def));
     }
     return result;
 }

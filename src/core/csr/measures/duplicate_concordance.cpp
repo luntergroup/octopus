@@ -94,15 +94,16 @@ bool is_duplicate(const AlignedRead& realigned_read, const std::vector<AlignedRe
     return std::find_if(std::cbegin(duplicate_reads), std::cend(duplicate_reads), is_duplicate) != std::cend(duplicate_reads);
 }
 
-double calculate_support_concordance(const std::vector<AlignedRead>& duplicate_reads, const AlleleSupportMap& allele_support)
+double calculate_support_concordance(const std::vector<AlignedRead>& duplicate_reads, const std::vector<Allele>& alleles, const AlleleSupportMap& allele_support)
 {
     assert(duplicate_reads.size() > 1);
     std::vector<unsigned> support_counts {};
     unsigned total_duplicate_support {0};
     support_counts.reserve(allele_support.size());
-    for (const auto& p : allele_support) {
+    for (const auto& allele : alleles) {
+        const auto& support = allele_support.at(allele);
         const auto is_duplicate_helper = [&] (const auto& read) { return is_duplicate(read, duplicate_reads); };
-        const auto duplicate_support = std::count_if(std::cbegin(p.second), std::cend(p.second), is_duplicate_helper);
+        const auto duplicate_support = std::count_if(std::cbegin(support), std::cend(support), is_duplicate_helper);
         if (duplicate_support > 0) {
             support_counts.push_back(duplicate_support);
             total_duplicate_support += duplicate_support;
@@ -124,7 +125,7 @@ Measure::ResultType DuplicateConcordance::do_evaluate(const VcfRecord& call, con
 {
     const auto& samples = get_value<Samples>(facets.at("Samples"));
     const auto& reads = get_value<OverlappingReads>(facets.at("OverlappingReads"));
-    const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments"));
+    const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments")).alleles;
     std::vector<boost::optional<double>> result {};
     result.reserve(samples.size());
     for (const auto& sample : samples) {
@@ -132,9 +133,10 @@ Measure::ResultType DuplicateConcordance::do_evaluate(const VcfRecord& call, con
         if (has_called_alt_allele(call, sample)) {
             const auto duplicate_reads = find_duplicate_overlapped_reads(reads.at(sample), mapped_region(call));
             if (!duplicate_reads.empty()) {
-                const auto allele_support = compute_allele_support(get_called_alleles(call, sample).first, assignments, sample);
+                const auto alleles = get_called_alleles(call, sample).first;
+                const auto& allele_support = assignments.at(sample);
                 for (const auto& duplicates : duplicate_reads) {
-                    const auto concordance = calculate_support_concordance(duplicates, allele_support);
+                    const auto concordance = calculate_support_concordance(duplicates, alleles, allele_support);
                     if (!sample_result || concordance < *sample_result) {
                         sample_result = concordance;
                     }

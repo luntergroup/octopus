@@ -4,6 +4,7 @@
 #include "read_assignments.hpp"
 
 #include "core/tools/read_realigner.hpp"
+#include "utils/genotype_reader.hpp"
 
 namespace octopus { namespace csr {
 
@@ -18,16 +19,40 @@ auto copy_overlapped_to_vector(const ReadContainer& reads, const Mappable& mappa
     return std::vector<AlignedRead> {std::cbegin(overlapped), std::cend(overlapped)};
 }
 
+AlleleSupportMap
+compute_allele_support(const std::vector<Allele>& alleles, 
+                       const Facet::SampleSupportMap& support, 
+                       const Facet::SampleAmbiguityMap& ambiguous,
+                       const SampleName& sample)
+{
+    if (support.count(sample) == 1) {
+        if (ambiguous.count(sample) == 1) {
+            return compute_allele_support(alleles, support.at(sample), ambiguous.at(sample));
+        } else {
+            return compute_allele_support(alleles, support.at(sample));
+        }
+    } else {
+        if (ambiguous.count(sample) == 1) {
+            const HaplotypeSupportMap empty {};
+            return compute_allele_support(alleles, empty, ambiguous.at(sample));
+        } else {
+            return {};
+        }
+    }
+}
+
 } // namespace
 
 ReadAssignments::ReadAssignments(const ReferenceGenome& reference,
                                  const GenotypeMap& genotypes,
-                                 const ReadMap& reads)
-: ReadAssignments {reference, genotypes, reads, {}} {}
+                                 const ReadMap& reads,
+                                 const std::vector<VcfRecord>& calls)
+: ReadAssignments {reference, genotypes, reads, calls, {}} {}
 
 ReadAssignments::ReadAssignments(const ReferenceGenome& reference,
                                  const GenotypeMap& genotypes,
                                  const ReadMap& reads,
+                                 const std::vector<VcfRecord>& calls,
                                  HaplotypeLikelihoodModel model)
 : result_ {}
 , likelihood_model_ {std::move(model)}
@@ -65,6 +90,13 @@ ReadAssignments::ReadAssignments(const ReferenceGenome& reference,
                     std::sort(std::begin(s.second), std::end(s.second));
                     result_.support[sample][s.first] = std::move(s.second);
                 }
+            }
+        }
+        for (const auto& call : calls) {
+            auto alleles = get_called_alleles(call, sample).first;
+            auto allele_support = compute_allele_support(alleles, result_.support, result_.ambiguous, sample);
+            for (auto& allele : alleles) {
+                result_.alleles[sample].emplace(std::move(allele), std::move(allele_support.at(allele)));
             }
         }
     }

@@ -35,6 +35,7 @@ public:
     {
         SampleSupportMap support;
         SampleAmbiguityMap ambiguous;
+        std::unordered_map<SampleName, AlleleSupportMap> alleles;
     };
     
     using ResultType = boost::variant<std::reference_wrapper<const ReadMap>,
