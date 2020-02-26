@@ -31,8 +31,6 @@
 #include "io/variant/vcf_writer.hpp"
 #include "io/variant/vcf_spec.hpp"
 
-#include "timers.hpp"
-
 namespace octopus { namespace csr {
 
 namespace {
@@ -264,12 +262,8 @@ VariantCallFilter::MeasureVector VariantCallFilter::measure(const VcfRecord& cal
 
 VariantCallFilter::MeasureBlock VariantCallFilter::measure(const CallBlock& block) const
 {
-    resume(misc_timer[0]);
     const auto facets = compute_facets(block);
-    pause(misc_timer[0]);
-    resume(misc_timer[1]);
     auto result = measure(block, facets);
-    pause(misc_timer[1]);
     return result;
 }
 
