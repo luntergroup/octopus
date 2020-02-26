@@ -91,6 +91,15 @@ private:
         return InstructionSet::template _left_shift_bits<idx>(vec);
     }
     
+    VectorType maybe_right_shift_word(const VectorType& vec, const std::int8_t*) const noexcept
+    {
+        return _right_shift_word(vec);
+    }
+    const VectorType& maybe_right_shift_word(const VectorType& vec, ScoreType) const noexcept
+    {
+        return vec;
+    }
+
     void update_gap_penalty(VectorType& current, const std::int8_t* source, const std::size_t gap_idx) const noexcept
     {
         current = _insert_top(_right_shift_word(current), source[gap_idx] << trace_bits_);
@@ -283,7 +292,7 @@ private:
                 }
             }
             update_match_state(_m1, _targetwin, _truthwin, _qualitieswin, _truthnqual, _snvmaskwin, _snv_priorwin);
-            _d1 = _min(_add(_d2, _gap_extend), _add(_min(_m2, _i2), _right_shift_word(_gap_open))); // allow I->D
+            _d1 = _min(_add(_d2, maybe_right_shift_word(_gap_extend, gap_extend)), _add(_min(_m2, _i2), maybe_right_shift_word(_gap_open, gap_open))); // allow I->D
             _d1 = _insert_bottom(_left_shift_word(_d1), infinity_);
             _i1 = _add(_min(_add(_i2, _gap_extend), _add(_m2, _gap_open)), _nuc_prior);
             update_traceback(_backpointers, s, _m1, _i1, _d1);
@@ -354,70 +363,69 @@ private:
                                  const SnvBaseQualityCapArrayOrNull snv_prior,
                                  const ScoreType nuc_prior,
                                  const int first_pos,
-                                 const char* aln1,
-                                 const char* aln2,
+                                 const char* alignment1,
+                                 const char* alignment2,
                                  int& target_mask_size) const noexcept
     {
         static constexpr char match {'M'}, insertion {'I'}, deletion {'D'};
         auto prev_state = match;
-        int x {first_pos}; // index into truth
-        int y {0};         // index into target
-        int i {0};         // index into alignment
+        int truth_idx {first_pos}, target_idx {0}, alignment_idx {0};
         int result {0};    // alignment score (within flank)
         const auto rhs_flank_begin = truth_len - rhs_flank_len;
         target_mask_size = 0;
-        while (aln1[i]) {
+        while (alignment1[alignment_idx]) {
             auto new_state = match;
-            if (aln1[i] == gap_label) {
+            if (alignment1[alignment_idx] == gap_label) {
                 new_state = insertion;
-            } else if (aln2[i] == gap_label) { // can't be both '-'
+            } else if (alignment2[alignment_idx] == gap_label) { // can't be both '-'
                 new_state = deletion;
             }
+            const bool in_flank {truth_idx < lhs_flank_len || truth_idx >= rhs_flank_begin};
             switch (new_state) {
                 case match:
                 {
-                    if (x < lhs_flank_len || x >= rhs_flank_begin) {
-                        if (aln1[i] != aln2[i]) {
-                            if (aln1[i] != 'N') {
-                                result += get_mismatch_quality(target, quals, x, y, snv_mask, snv_prior);
+                    if (in_flank) {
+                        if (alignment1[alignment_idx] != alignment2[alignment_idx]) {
+                            if (alignment1[alignment_idx] != 'N') {
+                                result += get_mismatch_quality(target, quals, truth_idx, target_idx, snv_mask, snv_prior);
                             } else {
                                 result += n_score_ >> trace_bits_;
                             }
                         }
                         ++target_mask_size;
                     }
-                    ++x;
-                    ++y;
+                    ++truth_idx;
+                    ++target_idx;
                     break;
                 }
                 case insertion:
                 {
-                    if (x < lhs_flank_len || x >= rhs_flank_begin) {
+                    if (in_flank) {
                         if (prev_state == insertion) {
-                            result += get(gap_extend, x - 1) + nuc_prior;
+                            result += get(gap_extend, truth_idx - 1) + nuc_prior;
                         } else {
                             // gap open score is charged for insertions just after the corresponding base, hence the -1
-                            result += get(gap_open, x - 1) + nuc_prior;
+                            result += get(gap_open, truth_idx - 1) + nuc_prior;
                         }
                         ++target_mask_size;
                     }
-                    ++y;
+                    ++target_idx;
                     break;
                 }
                 case deletion:
                 {
-                    if (x < lhs_flank_len || x >= rhs_flank_begin) {
+                    if (in_flank) {
                         if (prev_state == deletion) {
-                            result += get(gap_extend, x);
+                            result += get(gap_extend, truth_idx);
                         } else {
-                            result += get(gap_open, x);
+                            result += get(gap_open, truth_idx);
                         }
                     }
-                    ++x;
+                    ++truth_idx;
                     break;
                 }
             }
-            ++i;
+            ++alignment_idx;
             prev_state = new_state;
         }
         return result;
