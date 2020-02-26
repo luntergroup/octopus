@@ -26,7 +26,7 @@ class Facet : public Equitable<Facet>
 {
 public:
     using GenotypeMap = std::unordered_map<SampleName, MappableFlatSet<Genotype<Haplotype>>>;
-    using AlleleMap = std::unordered_map<SampleName, MappableFlatSet<Allele>>;
+    using AlleleMap = std::unordered_map<GenomicRegion, std::unordered_map<SampleName, std::pair<std::vector<Allele>, bool>>>;
     using SampleSupportMap = std::unordered_map<SampleName, HaplotypeSupportMap>;
     using SampleAmbiguityMap = std::unordered_map<SampleName, AmbiguousReadList>;
     using LocalPloidyMap = std::unordered_map<SampleName, unsigned>;

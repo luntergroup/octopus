@@ -13,10 +13,10 @@
 #include "core/types/allele.hpp"
 #include "io/variant/vcf_record.hpp"
 #include "io/variant/vcf_spec.hpp"
-#include "utils/genotype_reader.hpp"
 #include "utils/maths.hpp"
 #include "utils/append.hpp"
 #include "../facets/samples.hpp"
+#include "../facets/alleles.hpp"
 #include "../facets/read_assignments.hpp"
 
 namespace octopus { namespace csr {
@@ -77,17 +77,15 @@ auto median_base_quality(const ReadRefSupportSet& reads, const Allele& allele)
 Measure::ResultType MedianBaseQuality::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     const auto& samples = get_value<Samples>(facets.at("Samples"));
+    const auto& alleles = get_value<Alleles>(facets.at("Alleles"));
     const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments")).alleles;
     std::vector<boost::optional<int>> result {};
     result.reserve(call.num_alt());
     for (const auto& sample : samples) {
         boost::optional<int> sample_result {};
         if (is_evaluable(call, sample)) {
-            std::vector<Allele> alleles; bool has_ref;
-            std::tie(alleles, has_ref) = get_called_alleles(call, sample);
-            if (has_ref) alleles.erase(std::cbegin(alleles));
             const auto& allele_support = assignments.at(sample);
-            for (const auto& allele : alleles) {
+            for (const auto& allele : get_alt(alleles, call, sample)) {
                 const auto median_bq = median_base_quality(allele_support.at(allele), allele);
                 if (median_bq) {
                     if (sample_result) {
@@ -120,7 +118,7 @@ std::string MedianBaseQuality::do_describe() const
 
 std::vector<std::string> MedianBaseQuality::do_requirements() const
 {
-    return {"Samples", "ReadAssignments"};
+    return {"Samples", "Alleles", "ReadAssignments"};
 }
 
 } // namespace csr

@@ -10,16 +10,15 @@
 #include <boost/variant.hpp>
 
 #include "basics/mappable_reference_wrapper.hpp"
-#include "core/tools/read_assigner.hpp"
 #include "core/types/allele.hpp"
 #include "io/variant/vcf_record.hpp"
 #include "io/variant/vcf_spec.hpp"
-#include "utils/genotype_reader.hpp"
 #include "utils/mappable_algorithms.hpp"
 #include "utils/read_duplicates.hpp"
 #include "utils/maths.hpp"
 #include "../facets/samples.hpp"
 #include "../facets/overlapping_reads.hpp"
+#include "../facets/alleles.hpp"
 #include "../facets/read_assignments.hpp"
 
 namespace octopus { namespace csr {
@@ -126,6 +125,7 @@ Measure::ResultType DuplicateAlleleDepth::do_evaluate(const VcfRecord& call, con
 {
     const auto& samples = get_value<Samples>(facets.at("Samples"));
     const auto& reads = get_value<OverlappingReads>(facets.at("OverlappingReads"));
+    const auto& alleles = get_value<Alleles>(facets.at("Alleles"));
     const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments")).alleles;
     std::vector<boost::optional<int>> result {};
     result.reserve(samples.size());
@@ -135,12 +135,10 @@ Measure::ResultType DuplicateAlleleDepth::do_evaluate(const VcfRecord& call, con
             sample_result = 0;
             const auto duplicate_reads = find_duplicate_overlapped_reads(reads.at(sample), mapped_region(call));
             if (!duplicate_reads.empty()) {
-                std::vector<Allele> alleles; bool has_ref;
-                std::tie(alleles, has_ref) = get_called_alleles(call, sample);
-                if (has_ref) pop_front(alleles); // ref always first
+                const auto sample_alleles = get_alt(alleles, call, sample);
                 const auto& allele_support = assignments.at(sample);
                 for (const auto& duplicates : duplicate_reads) {
-                    *sample_result += count_duplicate_support(duplicates, alleles, allele_support);
+                    *sample_result += count_duplicate_support(duplicates, sample_alleles, allele_support);
                 }
             }
         }
@@ -167,7 +165,7 @@ std::string DuplicateAlleleDepth::do_describe() const
 std::vector<std::string> DuplicateAlleleDepth::do_requirements() const
 {
     
-    return {"Samples", "OverlappingReads", "ReadAssignments"};
+    return {"Samples", "OverlappingReads", "Alleles", "ReadAssignments"};
 }
     
 } // namespace csr

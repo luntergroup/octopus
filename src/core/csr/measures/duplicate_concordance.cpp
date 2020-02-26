@@ -14,12 +14,12 @@
 #include "core/types/allele.hpp"
 #include "io/variant/vcf_record.hpp"
 #include "io/variant/vcf_spec.hpp"
-#include "utils/genotype_reader.hpp"
 #include "utils/mappable_algorithms.hpp"
 #include "utils/read_duplicates.hpp"
 #include "utils/maths.hpp"
 #include "../facets/samples.hpp"
 #include "../facets/overlapping_reads.hpp"
+#include "../facets/alleles.hpp"
 #include "../facets/read_assignments.hpp"
 
 namespace octopus { namespace csr {
@@ -125,6 +125,7 @@ Measure::ResultType DuplicateConcordance::do_evaluate(const VcfRecord& call, con
 {
     const auto& samples = get_value<Samples>(facets.at("Samples"));
     const auto& reads = get_value<OverlappingReads>(facets.at("OverlappingReads"));
+    const auto& alleles = get_value<Alleles>(facets.at("Alleles"));
     const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments")).alleles;
     std::vector<boost::optional<double>> result {};
     result.reserve(samples.size());
@@ -133,10 +134,10 @@ Measure::ResultType DuplicateConcordance::do_evaluate(const VcfRecord& call, con
         if (has_called_alt_allele(call, sample)) {
             const auto duplicate_reads = find_duplicate_overlapped_reads(reads.at(sample), mapped_region(call));
             if (!duplicate_reads.empty()) {
-                const auto alleles = get_called_alleles(call, sample).first;
+                const auto sample_alleles = get_all(alleles, call, sample);
                 const auto& allele_support = assignments.at(sample);
                 for (const auto& duplicates : duplicate_reads) {
-                    const auto concordance = calculate_support_concordance(duplicates, alleles, allele_support);
+                    const auto concordance = calculate_support_concordance(duplicates, sample_alleles, allele_support);
                     if (!sample_result || concordance < *sample_result) {
                         sample_result = concordance;
                     }
@@ -166,7 +167,7 @@ std::string DuplicateConcordance::do_describe() const
 std::vector<std::string> DuplicateConcordance::do_requirements() const
 {
     
-    return {"Samples", "OverlappingReads", "ReadAssignments"};
+    return {"Samples", "OverlappingReads", "Alleles", "ReadAssignments"};
 }
 
 } // namespace csr

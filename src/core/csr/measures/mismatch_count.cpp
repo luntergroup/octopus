@@ -11,8 +11,8 @@
 #include "basics/aligned_read.hpp"
 #include "core/types/allele.hpp"
 #include "core/tools/read_assigner.hpp"
-#include "utils/genotype_reader.hpp"
 #include "../facets/samples.hpp"
+#include "../facets/alleles.hpp"
 #include "../facets/read_assignments.hpp"
 
 namespace octopus { namespace csr {
@@ -57,14 +57,13 @@ bool mismatches(const AlignedRead& read, const Allele& allele)
 Measure::ResultType MismatchCount::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     const auto& samples = get_value<Samples>(facets.at("Samples"));
+    const auto& alleles = get_value<Alleles>(facets.at("Alleles"));
     const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments")).alleles;
     std::vector<int> result {};
     result.reserve(samples.size());
     for (const auto& sample : samples) {
-        std::vector<Allele> alleles; bool has_ref;
-        std::tie(alleles, has_ref) = get_called_alleles(call, sample);
         int sample_result {0};
-        for (const auto& allele : alleles) {
+        for (const auto& allele : get_all(alleles, call, sample)) {
             for (const auto& read : assignments.at(sample).at(allele)) {
                 sample_result += mismatches(read, allele);
             }
@@ -91,7 +90,7 @@ std::string MismatchCount::do_describe() const
 
 std::vector<std::string> MismatchCount::do_requirements() const
 {
-    return {"Samples", "ReadAssignments"};
+    return {"Samples", "Alleles", "ReadAssignments"};
 }
 
 } // namespace csr

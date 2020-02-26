@@ -91,7 +91,7 @@ Measure::ResultType STRLength::do_evaluate(const VcfRecord& call, const FacetMap
     int result {0};
     const auto& reference = get_value<ReferenceContext>(facets.at("ReferenceContext"));
     const auto& samples = get_value<Samples>(facets.at("Samples"));
-    const auto alleles = copy_unique_overlapped(get_value<Alleles>(facets.at("Alleles")), call, samples);
+    const auto alleles = get_all_unique(get_value<Alleles>(facets.at("Alleles")), call, samples);
     const auto repeat_context = find_repeat_context(call, alleles, reference);
     if (repeat_context) result = region_size(*repeat_context);
     return result;

@@ -16,8 +16,8 @@
 #include "basics/aligned_read.hpp"
 #include "core/types/allele.hpp"
 #include "utils/maths.hpp"
-#include "utils/genotype_reader.hpp"
 #include "../facets/samples.hpp"
+#include "../facets/alleles.hpp"
 #include "../facets/read_assignments.hpp"
 
 namespace octopus { namespace csr {
@@ -135,14 +135,13 @@ double calculate_max_tail_bias(const std::vector<Allele>& alleles, const AlleleS
 Measure::ResultType ReadEndBias::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     const auto& samples = get_value<Samples>(facets.at("Samples"));
+    const auto& alleles = get_value<Alleles>(facets.at("Alleles"));
     const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments")).alleles;
     std::vector<double> result {};
     result.reserve(samples.size());
     const EndDefinition end_def {end_fraction_};
     for (const auto& sample : samples) {
-        std::vector<Allele> alleles; bool has_ref;
-        std::tie(alleles, has_ref) = get_called_alleles(call, sample);
-        result.push_back(calculate_max_tail_bias(alleles, assignments.at(sample), end_def));
+        result.push_back(calculate_max_tail_bias(get_all(alleles, call, sample), assignments.at(sample), end_def));
     }
     return result;
 }
@@ -164,7 +163,7 @@ std::string ReadEndBias::do_describe() const
 
 std::vector<std::string> ReadEndBias::do_requirements() const
 {
-    return {"Samples", "ReadAssignments"};
+    return {"Samples", "Alleles", "ReadAssignments"};
 }
 
 bool ReadEndBias::is_equal(const Measure& other) const noexcept

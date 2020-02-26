@@ -11,8 +11,8 @@
 #include "core/types/allele.hpp"
 #include "io/variant/vcf_record.hpp"
 #include "io/variant/vcf_spec.hpp"
-#include "utils/genotype_reader.hpp"
 #include "../facets/samples.hpp"
+#include "../facets/alleles.hpp"
 #include "../facets/read_assignments.hpp"
 
 namespace octopus { namespace csr {
@@ -75,16 +75,14 @@ auto min_support_count(const std::vector<Allele>& alleles, const AlleleSupportMa
 Measure::ResultType AlleleDepth::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     const auto& samples = get_value<Samples>(facets.at("Samples"));
+    const auto& alleles = get_value<Alleles>(facets.at("Alleles"));
     const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments")).alleles;
     std::vector<boost::optional<int>> result {};
     result.reserve(samples.size());
     for (const auto& sample : samples) {
         boost::optional<int> sample_result {};
         if (is_evaluable(call, sample)) {
-            std::vector<Allele> alleles; bool has_ref;
-            std::tie(alleles, has_ref) = get_called_alleles(call, sample);
-            if (has_ref) pop_front(alleles); // ref always first
-            sample_result = min_support_count(alleles, assignments.at(sample));
+            sample_result = min_support_count(get_alt(alleles, call, sample), assignments.at(sample));
         }
         result.push_back(sample_result);
     }
@@ -108,7 +106,7 @@ std::string AlleleDepth::do_describe() const
 
 std::vector<std::string> AlleleDepth::do_requirements() const
 {
-    return {"Samples", "ReadAssignments"};
+    return {"Samples", "Alleles", "ReadAssignments"};
 }
 
 } // namespace csr
