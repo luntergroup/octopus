@@ -48,9 +48,6 @@ private:
     Facet::ResultType do_get() const override;
 };
 
-AlleleSupportMap
-compute_allele_support(const std::vector<Allele>& alleles, const Facet::SupportMaps& assignments, const SampleName& sample);
-
 } // namespace csr
 } // namespace octopus
 

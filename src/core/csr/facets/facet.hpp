@@ -27,14 +27,16 @@ class Facet : public Equitable<Facet>
 public:
     using GenotypeMap = std::unordered_map<SampleName, MappableFlatSet<Genotype<Haplotype>>>;
     using AlleleMap = std::unordered_map<GenomicRegion, std::unordered_map<SampleName, std::pair<std::vector<Allele>, bool>>>;
-    using SampleSupportMap = std::unordered_map<SampleName, HaplotypeSupportMap>;
-    using SampleAmbiguityMap = std::unordered_map<SampleName, AmbiguousReadList>;
     using LocalPloidyMap = std::unordered_map<SampleName, unsigned>;
     
     struct SupportMaps
     {
-        SampleSupportMap support;
-        SampleAmbiguityMap ambiguous;
+        struct HaplotypeSupportMaps
+        {
+            HaplotypeSupportMap assigned_wrt_reference, assigned_wrt_haplotype;
+            AmbiguousReadList ambiguous_wrt_reference, ambiguous_wrt_haplotype;
+        };
+        std::unordered_map<SampleName, HaplotypeSupportMaps> haplotypes;
         std::unordered_map<SampleName, AlleleSupportMap> alleles;
     };
     

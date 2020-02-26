@@ -15,7 +15,6 @@
 #include "basics/aligned_read.hpp"
 #include "core/types/haplotype.hpp"
 #include "io/variant/vcf_record.hpp"
-#include "core/tools/read_realigner.hpp"
 #include "../facets/samples.hpp"
 #include "../facets/read_assignments.hpp"
 
@@ -36,33 +35,18 @@ Measure::ResultType ErrorRate::get_default_result() const
 namespace {
 
 boost::optional<double> 
-compute_error_rate(const Facet::SupportMaps& assignments, const SampleName& sample, const GenomicRegion& region) noexcept
+compute_error_rate(const Facet::SupportMaps::HaplotypeSupportMaps& assignments, const GenomicRegion& region) noexcept
 {
     std::size_t error_bases {0}, total_bases {0};
-    if (assignments.support.count(sample) == 1) {
-        for (const auto& p : assignments.support.at(sample)) {
-            auto realigned_reads = copy_overlapped(p.second, region);
-            safe_realign(realigned_reads, p.first);
-            for (const auto& read : realigned_reads) {
-                error_bases += sum_non_matches(read.cigar());
-                total_bases += sequence_size(read);
-            }
+    for (const auto& p : assignments.assigned_wrt_haplotype) {
+        for (const auto& read : overlap_range(p.second, region)) {
+            error_bases += sum_non_matches(read.cigar());
+            total_bases += sequence_size(read);
         }
     }
-    if (assignments.ambiguous.count(sample) == 1) {
-        std::map<Haplotype, std::vector<AlignedRead>> assigned {};
-        for (const auto& ambiguous_read : assignments.ambiguous.at(sample)) {
-            if (ambiguous_read.haplotypes && overlaps(ambiguous_read.read, region)) {
-                assigned[*ambiguous_read.haplotypes->front()].push_back(ambiguous_read.read);
-            }
-        }
-        for (auto& p : assigned) {
-            safe_realign(p.second, p.first);
-            for (const auto& read : p.second) {
-                error_bases += sum_non_matches(read.cigar());
-                total_bases += sequence_size(read);
-            }
-        }
+    for (const auto& read : overlap_range(assignments.ambiguous_wrt_haplotype, region)) {
+        error_bases += sum_non_matches(read.read.cigar());
+        total_bases += sequence_size(read.read);
     }
     if (total_bases > 0) {
         return static_cast<double>(error_bases) / total_bases;
@@ -76,11 +60,11 @@ compute_error_rate(const Facet::SupportMaps& assignments, const SampleName& samp
 Measure::ResultType ErrorRate::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     const auto& samples = get_value<Samples>(facets.at("Samples"));
-    const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments"));
+    const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments")).haplotypes;
     std::vector<boost::optional<double>> result {};
     result.reserve(samples.size());
     for (const auto& sample : samples) {
-        result.push_back(compute_error_rate(assignments, sample, mapped_region(call)));
+        result.push_back(compute_error_rate(assignments.at(sample), mapped_region(call)));
     }
     return result;
 }

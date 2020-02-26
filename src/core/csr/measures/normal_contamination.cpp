@@ -129,7 +129,7 @@ Measure::ResultType NormalContamination::do_evaluate(const VcfRecord& call, cons
         }
         const auto& genotypes = get_value<Genotypes>(facets.at("Genotypes"));
         const auto somatic_haplotypes = get_somatic_haplotypes(call, genotypes, somatic_samples, normal_samples);
-        const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments"));
+        const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments")).haplotypes;
         Genotype<Haplotype> somatic_genotype {static_cast<unsigned>(somatic_haplotypes.size() + 1)};
         for (const auto& haplotype : somatic_haplotypes) {
             somatic_genotype.emplace(haplotype);
@@ -140,7 +140,7 @@ Measure::ResultType NormalContamination::do_evaluate(const VcfRecord& call, cons
             for (const auto& haplotype : somatic_haplotypes) {
                 haplotype_priors[haplotype] = -1;
             }
-            for (const auto& p : assignments.support.at(sample)) {
+            for (const auto& p : assignments.at(sample).assigned_wrt_reference) {
                 const auto overlapped_reads = copy_overlapped(p.second, call);
                 if (!overlapped_reads.empty()) {
                     const Haplotype& assigned_haplotype {p.first};
@@ -161,8 +161,8 @@ Measure::ResultType NormalContamination::do_evaluate(const VcfRecord& call, cons
                     }
                 }
             }
-            if (assignments.ambiguous.count(sample) == 1 && !assignments.ambiguous.at(sample).empty()) {
-                const auto ambiguous_reads = copy_overlapped_to_vector(assignments.ambiguous.at(sample), call);
+            if (assignments.at(sample).ambiguous_wrt_reference.empty()) {
+                const auto ambiguous_reads = copy_overlapped_to_vector(assignments.at(sample).ambiguous_wrt_reference, call);
                 if (!ambiguous_reads.empty()) {
                     const auto overlapped_genotypes = overlap_range(genotypes.at(sample), call);
                     if (size(overlapped_genotypes) == 1) {
