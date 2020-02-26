@@ -15,6 +15,7 @@
 #include "overlapping_reads.hpp"
 #include "read_assignments.hpp"
 #include "reference_context.hpp"
+#include "repeat_context.hpp"
 #include "samples.hpp"
 #include "genotypes.hpp"
 #include "alleles.hpp"
@@ -135,7 +136,7 @@ decltype(auto) name() noexcept
 
 bool requires_reference(const std::string& facet) noexcept
 {
-    const static std::array<std::string, 2> read_facets{name<ReferenceContext>(), name<ReadAssignments>()};
+    const static std::array<std::string, 3> read_facets{name<ReferenceContext>(), name<RepeatContext>(), name<ReadAssignments>()};
     return std::find(std::cbegin(read_facets), std::cend(read_facets), facet) != std::cend(read_facets);
 }
 
@@ -272,6 +273,15 @@ void FacetFactory::setup_facet_makers()
         if (block.region) {
             constexpr GenomicRegion::Size context_size {50};
             return {std::make_unique<ReferenceContext>(*reference_, expand(*block.region, context_size))};
+        } else {
+            return {nullptr};
+        }
+    };
+    facet_makers_[name<RepeatContext>()] = [this] (const BlockData& block) -> FacetWrapper
+    {
+        if (block.region) {
+            constexpr GenomicRegion::Size context_size {50};
+            return {std::make_unique<RepeatContext>(*reference_, expand(*block.region, context_size))};
         } else {
             return {nullptr};
         }

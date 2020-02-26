@@ -19,6 +19,7 @@
 #include "core/types/haplotype.hpp"
 #include "core/types/genotype.hpp"
 #include "core/tools/read_assigner.hpp"
+#include "basics/tandem_repeat.hpp"
 
 namespace octopus { namespace csr {
 
@@ -48,7 +49,8 @@ public:
                                       std::reference_wrapper<const GenotypeMap>,
                                       std::reference_wrapper<const AlleleMap>,
                                       std::reference_wrapper<const LocalPloidyMap>,
-                                      std::reference_wrapper<const octopus::Pedigree>
+                                      std::reference_wrapper<const octopus::Pedigree>,
+                                      std::reference_wrapper<const std::vector<TandemRepeat>>
                                      >;
     
     Facet() = default;

@@ -266,6 +266,8 @@ set(CORE_SOURCES
     core/csr/facets/ploidies.cpp
     core/csr/facets/pedigree.hpp
     core/csr/facets/pedigree.cpp
+    core/csr/facets/repeat_context.hpp
+    core/csr/facets/repeat_context.cpp
     core/csr/facets/facet_factory.hpp
     core/csr/facets/facet_factory.cpp
 
