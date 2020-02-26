@@ -31,7 +31,6 @@
 #include "core/csr/measures/denovo_contamination.hpp"
 #include "core/csr/measures/read_side_bias.hpp"
 #include "core/csr/measures/alt_allele_count.hpp"
-#include "core/csr/measures/overlaps_tandem_repeat.hpp"
 #include "core/csr/measures/str_length.hpp"
 #include "core/csr/measures/str_period.hpp"
 #include "core/csr/measures/posterior_probability.hpp"

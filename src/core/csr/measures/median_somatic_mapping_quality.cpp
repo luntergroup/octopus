@@ -121,16 +121,16 @@ Measure::ResultType MedianSomaticMappingQuality::do_evaluate(const VcfRecord& ca
         const auto& genotypes = get_value<Genotypes>(facets.at("Genotypes"));
         const auto somatic_haplotypes = get_somatic_haplotypes(call, genotypes, somatic_samples, normal_samples);
         if (somatic_haplotypes.empty()) return result;
-        const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments")).support;
+        const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments")).haplotypes;
         std::transform(std::cbegin(samples), std::cend(samples), std::begin(result), [&] (const auto& sample) -> boost::optional<int> {
             if (normal_samples.empty()
                 || std::find(std::cbegin(somatic_samples), std::cend(somatic_samples), sample) != std::cend(somatic_samples)) {
                 std::vector<AlignedRead::MappingQuality> somatic_mqs {};
                 for (const auto& haplotype : somatic_haplotypes) {
-                    if (assignments.at(sample).count(haplotype) == 0) {
+                    if (assignments.at(sample).assigned_wrt_reference.count(haplotype) == 0) {
                         return boost::none; // TODO: This should never happen...
                     }
-                    const auto& somatic_support = assignments.at(sample).at(haplotype);
+                    const auto& somatic_support = assignments.at(sample).assigned_wrt_reference.at(haplotype);
                     somatic_mqs.reserve(somatic_mqs.size() + somatic_support.size());
                     std::transform(std::cbegin(somatic_support), std::cend(somatic_support), std::back_inserter(somatic_mqs),
                                    [] (const AlignedRead& read) { return read.mapping_quality(); });

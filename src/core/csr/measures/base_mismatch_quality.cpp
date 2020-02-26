@@ -12,9 +12,8 @@
 #include "io/variant/vcf_record.hpp"
 #include "basics/aligned_read.hpp"
 #include "core/types/allele.hpp"
-#include "core/tools/read_assigner.hpp"
-#include "utils/genotype_reader.hpp"
 #include "../facets/samples.hpp"
+#include "../facets/alleles.hpp"
 #include "../facets/read_assignments.hpp"
 
 namespace octopus { namespace csr {
@@ -94,19 +93,19 @@ void copy_mismatch_base_quality(const AlignedRead& read, const Allele& allele, O
 Measure::ResultType BaseMismatchQuality::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     const auto& samples = get_value<Samples>(facets.at("Samples"));
-    const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments"));
+    const auto& alleles = get_value<Alleles>(facets.at("Alleles"));
+    const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments")).alleles;
     std::vector<boost::optional<int>> result {};
     result.reserve(samples.size());
     for (const auto& sample : samples) {
-        std::vector<Allele> alleles; bool has_ref;
-        std::tie(alleles, has_ref) = get_called_alleles(call, sample);
+        const auto sample_alleles = get_all(alleles, call, sample);
         boost::optional<int> sample_result {};
-        if (!alleles.empty()) {
-            const auto sample_allele_support = compute_allele_support(alleles, assignments, sample);
+        if (!sample_alleles.empty()) {
             std::deque<int> mismatch_qualities {};
-            for (const auto& p : sample_allele_support) {
-                for (const auto& read : p.second) {
-                    copy_mismatch_base_quality(read, p.first, std::back_inserter(mismatch_qualities));
+            const auto& sample_support = assignments.at(sample);
+            for (const auto& allele : sample_alleles) {
+                for (const auto& read : sample_support.at(allele)) {
+                    copy_mismatch_base_quality(read, allele, std::back_inserter(mismatch_qualities));
                 }
             }
             if (!mismatch_qualities.empty()) {
@@ -135,7 +134,7 @@ std::string BaseMismatchQuality::do_describe() const
 
 std::vector<std::string> BaseMismatchQuality::do_requirements() const
 {
-    return {"Samples", "ReadAssignments"};
+    return {"Samples", "Alleles", "ReadAssignments"};
 }
 
 } // namespace csr

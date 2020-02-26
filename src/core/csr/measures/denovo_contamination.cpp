@@ -147,7 +147,7 @@ Measure::ResultType DeNovoContamination::do_evaluate(const VcfRecord& call, cons
         if (denovo_haplotypes.empty()) {
             return result;
         }
-        const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments"));
+        const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments")).haplotypes;
         Genotype<Haplotype> denovo_genotype {static_cast<unsigned>(denovo_haplotypes.size() + 1)};
         HaplotypeProbabilityMap haplotype_priors {};
         haplotype_priors.reserve(denovo_haplotypes.size() + 1);
@@ -159,7 +159,7 @@ Measure::ResultType DeNovoContamination::do_evaluate(const VcfRecord& call, cons
         const std::array<SampleName, 2> parents {trio.mother(), trio.father()};
         result = 0;
         for (const auto& sample : parents) {
-            for (const auto& p : assignments.support.at(sample)) {
+            for (const auto& p : assignments.at(sample).assigned_wrt_reference) {
                 auto supporting_reads = copy_overlapped(p.second, call);
                 if (!supporting_reads.empty()) {
                     const Haplotype& assigned_haplotype {p.first};
@@ -180,8 +180,8 @@ Measure::ResultType DeNovoContamination::do_evaluate(const VcfRecord& call, cons
                     }
                 }
             }
-            if (assignments.ambiguous.count(sample) == 1 && !assignments.ambiguous.at(sample).empty()) {
-                const auto ambiguous_reads = copy_overlapped_to_vector(assignments.ambiguous.at(sample), call);
+            if (!assignments.at(sample).ambiguous_wrt_reference.empty()) {
+                const auto ambiguous_reads = copy_overlapped_to_vector(assignments.at(sample).ambiguous_wrt_reference, call);
                 if (!ambiguous_reads.empty()) {
                     const auto overlapped_genotypes = overlap_range(genotypes.at(sample), call);
                     if (size(overlapped_genotypes) == 1) {

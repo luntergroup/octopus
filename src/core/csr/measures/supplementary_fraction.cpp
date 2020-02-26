@@ -10,9 +10,9 @@
 #include "io/variant/vcf_record.hpp"
 #include "basics/aligned_read.hpp"
 #include "core/types/allele.hpp"
-#include "utils/genotype_reader.hpp"
 #include "utils/read_stats.hpp"
 #include "../facets/samples.hpp"
+#include "../facets/alleles.hpp"
 #include "../facets/read_assignments.hpp"
 
 namespace octopus { namespace csr {
@@ -32,20 +32,19 @@ Measure::ResultType SupplementaryFraction::get_default_result() const
 Measure::ResultType SupplementaryFraction::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     const auto& samples = get_value<Samples>(facets.at("Samples"));
-    const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments"));
+    const auto& alleles = get_value<Alleles>(facets.at("Alleles"));
+    const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments")).alleles;
     std::vector<boost::optional<double>> result {};
     result.reserve(samples.size());
     for (const auto& sample : samples) {
-        std::vector<Allele> alleles; bool has_ref;
-        std::tie(alleles, has_ref) = get_called_alleles(call, sample);
-        if (has_ref) alleles.erase(std::cbegin(alleles));
+        const auto sample_alleles = get_alt(alleles, call, sample);
         boost::optional<double> sample_result {};
-        if (!alleles.empty()) {
-            const auto sample_allele_support = compute_allele_support(alleles, assignments, sample);
+        if (!sample_alleles.empty()) {
             sample_result = 0;
-            for (const auto& p : sample_allele_support) {
-                if (!p.second.empty()) {
-                    auto allele_supplementary_fraction = static_cast<double>(count_supplementary(p.second)) / p.second.size();
+            for (const auto& allele : sample_alleles) {
+                const auto& allele_support = assignments.at(sample).at(allele);
+                if (!allele_support.empty()) {
+                    auto allele_supplementary_fraction = static_cast<double>(count_supplementary(allele_support)) / allele_support.size();
                     *sample_result += std::max(*sample_result, allele_supplementary_fraction);
                 }
             }
@@ -72,7 +71,7 @@ std::string SupplementaryFraction::do_describe() const
 
 std::vector<std::string> SupplementaryFraction::do_requirements() const
 {
-    return {"Samples", "ReadAssignments"};
+    return {"Samples", "Alleles", "ReadAssignments"};
 }
 
 } // namespace csr

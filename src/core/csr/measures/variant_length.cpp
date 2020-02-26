@@ -6,8 +6,8 @@
 #include <algorithm>
 
 #include "io/variant/vcf_record.hpp"
-#include "utils/genotype_reader.hpp"
 #include "../facets/samples.hpp"
+#include "../facets/alleles.hpp"
 
 namespace octopus { namespace csr {
 
@@ -26,13 +26,12 @@ Measure::ResultType VariantLength::get_default_result() const
 Measure::ResultType VariantLength::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     const auto& samples = get_value<Samples>(facets.at("Samples"));
+    const auto& alleles = get_value<Alleles>(facets.at("Alleles"));
     std::vector<int> result {};
     result.reserve(samples.size());
     for (const auto& sample : samples) {
-        std::vector<Allele> alleles; bool has_ref;
-        std::tie(alleles, has_ref) = get_called_alleles(call, sample);
         int sample_result {0};
-        for (const auto& allele : alleles) {
+        for (const auto& allele : get_all(alleles, call, sample)) {
             sample_result = std::max({sample_result, static_cast<int>(region_size(allele)), static_cast<int>(sequence_size(allele))});
         }
         result.push_back(sample_result);
@@ -57,7 +56,7 @@ std::string VariantLength::do_describe() const
 
 std::vector<std::string> VariantLength::do_requirements() const
 {
-    return {"Samples"};
+    return {"Samples", "Alleles"};
 }
 
 } // namespace csr

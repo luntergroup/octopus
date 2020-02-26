@@ -263,7 +263,8 @@ VariantCallFilter::MeasureVector VariantCallFilter::measure(const VcfRecord& cal
 VariantCallFilter::MeasureBlock VariantCallFilter::measure(const CallBlock& block) const
 {
     const auto facets = compute_facets(block);
-    return measure(block, facets);
+    auto result = measure(block, facets);
+    return result;
 }
 
 std::vector<VariantCallFilter::MeasureBlock> VariantCallFilter::measure(const std::vector<CallBlock>& blocks) const

@@ -16,8 +16,8 @@
 #include "basics/aligned_read.hpp"
 #include "core/types/allele.hpp"
 #include "utils/maths.hpp"
-#include "utils/genotype_reader.hpp"
 #include "../facets/samples.hpp"
+#include "../facets/alleles.hpp"
 #include "../facets/read_assignments.hpp"
 
 namespace octopus { namespace csr {
@@ -100,11 +100,11 @@ double calculate_position_bias(const Allele& allele, const ReadRefSupportSet& su
     return calculate_position_bias(forward_counts, reverse_counts);
 }
 
-double calculate_position_bias(const AlleleSupportMap& support)
+double calculate_position_bias(const std::vector<Allele>& alleles, const AlleleSupportMap& support)
 {
     double result {0};
-    for (const auto& p : support) {
-        auto bias = calculate_position_bias(p.first, p.second);
+    for (const auto& allele : alleles) {
+        auto bias = calculate_position_bias(allele, support.at(allele));
         result = std::max(result, bias);
     }
     return result;
@@ -115,19 +115,12 @@ double calculate_position_bias(const AlleleSupportMap& support)
 Measure::ResultType ReadSideBias::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     const auto& samples = get_value<Samples>(facets.at("Samples"));
-    const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments"));
+    const auto& alleles = get_value<Alleles>(facets.at("Alleles"));
+    const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments")).alleles;
     std::vector<double> result {};
     result.reserve(samples.size());
     for (const auto& sample : samples) {
-        std::vector<Allele> alleles; bool has_ref;
-        std::tie(alleles, has_ref) = get_called_alleles(call, sample);
-        if (!alleles.empty()) {
-            const auto allele_support = compute_allele_support(alleles, assignments, sample);
-            auto position_bias = calculate_position_bias(allele_support);
-            result.push_back(position_bias);
-        } else {
-            result.push_back(0);
-        }
+        result.push_back(calculate_position_bias(get_all(alleles, call, sample), assignments.at(sample)));
     }
     return result;
 }
@@ -149,7 +142,7 @@ std::string ReadSideBias::do_describe() const
 
 std::vector<std::string> ReadSideBias::do_requirements() const
 {
-    return {"Samples", "ReadAssignments"};
+    return {"Samples", "Alleles", "ReadAssignments"};
 }
 
 } // namespace csr

@@ -29,9 +29,10 @@ private:
     Facet::ResultType do_get() const override;
 };
 
-std::vector<Allele> copy_overlapped(const MappableFlatSet<Allele>& alleles, const VcfRecord& call);
+std::vector<Allele> get_all(const Facet::AlleleMap& alleles, const VcfRecord& call, const SampleName& sample);
+std::vector<Allele> get_alt(const Facet::AlleleMap& alleles, const VcfRecord& call, const SampleName& sample);
 
-std::vector<Allele> copy_unique_overlapped(const Facet::AlleleMap& alleles, const VcfRecord& call, const std::vector<SampleName>& samples);
+std::vector<Allele> get_all_unique(const Facet::AlleleMap& alleles, const VcfRecord& call, const std::vector<SampleName>& samples);
 
 } // namespace csr
 } // namespace octopus

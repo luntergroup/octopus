@@ -266,6 +266,10 @@ set(CORE_SOURCES
     core/csr/facets/ploidies.cpp
     core/csr/facets/pedigree.hpp
     core/csr/facets/pedigree.cpp
+    core/csr/facets/repeat_context.hpp
+    core/csr/facets/repeat_context.cpp
+    core/csr/facets/reads_summary.hpp
+    core/csr/facets/reads_summary.cpp
     core/csr/facets/facet_factory.hpp
     core/csr/facets/facet_factory.cpp
 
@@ -363,8 +367,6 @@ set(CORE_SOURCES
     core/csr/measures/read_side_bias.cpp
     core/csr/measures/alt_allele_count.hpp
     core/csr/measures/alt_allele_count.cpp
-    core/csr/measures/overlaps_tandem_repeat.hpp
-    core/csr/measures/overlaps_tandem_repeat.cpp
     core/csr/measures/str_length.hpp
     core/csr/measures/str_length.cpp
     core/csr/measures/str_period.hpp

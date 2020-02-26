@@ -15,11 +15,13 @@
 #include "overlapping_reads.hpp"
 #include "read_assignments.hpp"
 #include "reference_context.hpp"
+#include "repeat_context.hpp"
 #include "samples.hpp"
 #include "genotypes.hpp"
 #include "alleles.hpp"
 #include "ploidies.hpp"
 #include "pedigree.hpp"
+#include "reads_summary.hpp"
 
 namespace octopus { namespace csr {
 
@@ -135,7 +137,7 @@ decltype(auto) name() noexcept
 
 bool requires_reference(const std::string& facet) noexcept
 {
-    const static std::array<std::string, 2> read_facets{name<ReferenceContext>(), name<ReadAssignments>()};
+    const static std::array<std::string, 3> read_facets{name<ReferenceContext>(), name<RepeatContext>(), name<ReadAssignments>()};
     return std::find(std::cbegin(read_facets), std::cend(read_facets), facet) != std::cend(read_facets);
 }
 
@@ -146,7 +148,7 @@ bool requires_reference(const std::vector<std::string>& facets) noexcept
 
 bool requires_reads(const std::string& facet) noexcept
 {
-    const static std::array<std::string, 2> read_facets{name<OverlappingReads>(), name<ReadAssignments>()};
+    const static std::array<std::string, 3> read_facets{name<OverlappingReads>(), name<ReadsSummary>(), name<ReadAssignments>()};
     return std::find(std::cbegin(read_facets), std::cend(read_facets), facet) != std::cend(read_facets);
 }
 
@@ -258,13 +260,18 @@ void FacetFactory::setup_facet_makers()
         assert(block.reads);
         return {std::make_unique<OverlappingReads>(*block.reads)};
     };
+    facet_makers_[name<ReadsSummary>()] = [] (const BlockData& block) -> FacetWrapper
+    {
+        assert(block.reads);
+        return {std::make_unique<ReadsSummary>(*block.reads)};
+    };
     facet_makers_[name<ReadAssignments>()] = [this] (const BlockData& block) -> FacetWrapper
     {
         assert(block.reads && block.genotypes);
         if (likelihood_model_) {
-            return {std::make_unique<ReadAssignments>(*reference_, *block.genotypes, *block.reads, *likelihood_model_)};
+            return {std::make_unique<ReadAssignments>(*reference_, *block.genotypes, *block.reads, *block.calls, *likelihood_model_)};
         } else {
-            return {std::make_unique<ReadAssignments>(*reference_, *block.genotypes, *block.reads)};
+            return {std::make_unique<ReadAssignments>(*reference_, *block.genotypes, *block.reads, *block.calls)};
         }
     };
     facet_makers_[name<ReferenceContext>()] = [this] (const BlockData& block) -> FacetWrapper
@@ -272,6 +279,15 @@ void FacetFactory::setup_facet_makers()
         if (block.region) {
             constexpr GenomicRegion::Size context_size {50};
             return {std::make_unique<ReferenceContext>(*reference_, expand(*block.region, context_size))};
+        } else {
+            return {nullptr};
+        }
+    };
+    facet_makers_[name<RepeatContext>()] = [this] (const BlockData& block) -> FacetWrapper
+    {
+        if (block.region) {
+            constexpr GenomicRegion::Size context_size {50};
+            return {std::make_unique<RepeatContext>(*reference_, expand(*block.region, context_size))};
         } else {
             return {nullptr};
         }
@@ -332,12 +348,31 @@ FacetWrapper FacetFactory::make(const std::string& name, const BlockData& block)
     }
 }
 
-FacetFactory::FacetBlock FacetFactory::make(const std::vector<std::string>& names, const BlockData& block) const
+FacetFactory::FacetBlock 
+FacetFactory::make(const std::vector<std::string>& names, const BlockData& block) const
 {
     FacetBlock result {};
     result.reserve(names.size());
     for (const auto& name : names) {
         result.push_back(make(name, block));
+    }
+    return result;
+}
+
+FacetFactory::FacetBlock
+FacetFactory::make(const std::vector<std::string>& names, const BlockData& block,
+                   ThreadPool& workers) const
+{
+    if (workers.empty() || names.size() < 2) return make(names, block);
+    std::vector<std::future<FacetWrapper>> futures {};
+    futures.reserve(names.size());
+    for (const auto& name : names) {
+        futures.push_back(workers.push([&] () mutable { return this->make(name, block); }));
+    }
+    FacetBlock result {};
+    result.reserve(names.size());
+    for (auto& fut : futures) {
+        result.push_back(fut.get());
     }
     return result;
 }
