@@ -14,10 +14,9 @@
 #include "io/variant/vcf_record.hpp"
 #include "io/variant/vcf_spec.hpp"
 #include "utils/mappable_algorithms.hpp"
-#include "utils/read_duplicates.hpp"
 #include "utils/maths.hpp"
 #include "../facets/samples.hpp"
-#include "../facets/overlapping_reads.hpp"
+#include "../facets/reads_summary.hpp"
 #include "../facets/alleles.hpp"
 #include "../facets/read_assignments.hpp"
 
@@ -54,27 +53,6 @@ bool has_called_alt_allele(const VcfRecord& call, const VcfRecord::SampleName& s
 bool is_evaluable(const VcfRecord& call, const VcfRecord::SampleName& sample)
 {
     return has_called_alt_allele(call, sample);
-}
-
-auto find_duplicate_overlapped_reads(const ReadContainer& reads, const GenomicRegion& region)
-{
-    const auto overlapped_reads = overlap_range(reads, region);
-    const auto duplicate_itrs = find_duplicate_reads(std::cbegin(overlapped_reads), std::cend(overlapped_reads));
-    std::vector<std::vector<AlignedRead>> result {};
-    result.reserve(duplicate_itrs.size());
-    for (const auto& itrs : duplicate_itrs) {
-        std::vector<AlignedRead> dups {};
-        dups.reserve(itrs.size());
-        std::transform(std::cbegin(itrs), std::cend(itrs), std::back_inserter(dups), [] (auto itr) { return *itr; });
-        result.push_back(std::move(dups));
-    }
-    return result;
-}
-
-template <typename T>
-void pop_front(std::vector<T>& v)
-{
-    v.erase(std::cbegin(v));
 }
 
 bool other_segments_equal(const AlignedRead& lhs, const AlignedRead& rhs) noexcept
@@ -124,7 +102,7 @@ auto count_duplicate_support(const std::vector<AlignedRead>& duplicate_reads, co
 Measure::ResultType DuplicateAlleleDepth::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     const auto& samples = get_value<Samples>(facets.at("Samples"));
-    const auto& reads = get_value<OverlappingReads>(facets.at("OverlappingReads"));
+    const auto& reads = get_value<ReadsSummary>(facets.at("ReadsSummary"));
     const auto& alleles = get_value<Alleles>(facets.at("Alleles"));
     const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments")).alleles;
     std::vector<boost::optional<int>> result {};
@@ -133,13 +111,10 @@ Measure::ResultType DuplicateAlleleDepth::do_evaluate(const VcfRecord& call, con
         boost::optional<int> sample_result {};
         if (is_evaluable(call, sample)) {
             sample_result = 0;
-            const auto duplicate_reads = find_duplicate_overlapped_reads(reads.at(sample), mapped_region(call));
-            if (!duplicate_reads.empty()) {
-                const auto sample_alleles = get_alt(alleles, call, sample);
-                const auto& allele_support = assignments.at(sample);
-                for (const auto& duplicates : duplicate_reads) {
-                    *sample_result += count_duplicate_support(duplicates, sample_alleles, allele_support);
-                }
+            const auto sample_alleles = get_alt(alleles, call, sample);
+            const auto& allele_support = assignments.at(sample);
+            for (const auto& duplicates : overlap_range(reads.at(sample).duplicates, call)) {
+                *sample_result += count_duplicate_support(duplicates.reads, sample_alleles, allele_support);
             }
         }
         result.push_back(sample_result);
@@ -165,7 +140,7 @@ std::string DuplicateAlleleDepth::do_describe() const
 std::vector<std::string> DuplicateAlleleDepth::do_requirements() const
 {
     
-    return {"Samples", "OverlappingReads", "Alleles", "ReadAssignments"};
+    return {"Samples", "ReadsSummary", "Alleles", "ReadAssignments"};
 }
     
 } // namespace csr

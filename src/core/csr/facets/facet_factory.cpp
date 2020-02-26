@@ -21,6 +21,7 @@
 #include "alleles.hpp"
 #include "ploidies.hpp"
 #include "pedigree.hpp"
+#include "reads_summary.hpp"
 
 namespace octopus { namespace csr {
 
@@ -147,7 +148,7 @@ bool requires_reference(const std::vector<std::string>& facets) noexcept
 
 bool requires_reads(const std::string& facet) noexcept
 {
-    const static std::array<std::string, 2> read_facets{name<OverlappingReads>(), name<ReadAssignments>()};
+    const static std::array<std::string, 3> read_facets{name<OverlappingReads>(), name<ReadsSummary>(), name<ReadAssignments>()};
     return std::find(std::cbegin(read_facets), std::cend(read_facets), facet) != std::cend(read_facets);
 }
 
@@ -258,6 +259,11 @@ void FacetFactory::setup_facet_makers()
     {
         assert(block.reads);
         return {std::make_unique<OverlappingReads>(*block.reads)};
+    };
+    facet_makers_[name<ReadsSummary>()] = [] (const BlockData& block) -> FacetWrapper
+    {
+        assert(block.reads);
+        return {std::make_unique<ReadsSummary>(*block.reads)};
     };
     facet_makers_[name<ReadAssignments>()] = [this] (const BlockData& block) -> FacetWrapper
     {

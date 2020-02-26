@@ -41,7 +41,19 @@ public:
         std::unordered_map<SampleName, AlleleSupportMap> alleles;
     };
     
+    struct ReadsSummary
+    {
+        struct DuplicateReadSet : public Mappable<DuplicateReadSet>
+        {
+            std::vector<AlignedRead> reads;
+            const GenomicRegion& mapped_region() const noexcept { return reads.front().mapped_region(); }
+        };
+        std::vector<DuplicateReadSet> duplicates;
+    };
+    using ReadsSummaryMap = std::unordered_map<SampleName, ReadsSummary>;
+
     using ResultType = boost::variant<std::reference_wrapper<const ReadMap>,
+                                      std::reference_wrapper<const ReadsSummaryMap>,
                                       std::reference_wrapper<const SupportMaps>,
                                       std::reference_wrapper<const std::string>,
                                       std::reference_wrapper<const std::vector<std::string>>,
