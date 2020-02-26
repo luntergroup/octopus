@@ -365,8 +365,6 @@ set(CORE_SOURCES
     core/csr/measures/read_side_bias.cpp
     core/csr/measures/alt_allele_count.hpp
     core/csr/measures/alt_allele_count.cpp
-    core/csr/measures/overlaps_tandem_repeat.hpp
-    core/csr/measures/overlaps_tandem_repeat.cpp
     core/csr/measures/str_length.hpp
     core/csr/measures/str_length.cpp
     core/csr/measures/str_period.hpp
