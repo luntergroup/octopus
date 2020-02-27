@@ -426,19 +426,15 @@ Phred<double>
 calculate_phase_quality(const std::vector<std::size_t>& phase_set,
                         const PhaseQualityTable& pairwise_phase_qualities)
 {
-    if (phase_set.size() < 2) {
-        return probability_false_to_phred(0.0); // max quality
-    } else {
-        double pairwise_quality_sum {0};
-        unsigned num_pairs {0};
+    auto result = probability_false_to_phred(0.0);
+    if (phase_set.size() > 1) {
         for (std::size_t lhs {0}; lhs < phase_set.size() - 1; ++lhs) {
             for (auto rhs = lhs + 1; rhs < phase_set.size(); ++rhs) {
-                pairwise_quality_sum += pairwise_phase_qualities[lhs][rhs].score();
-                ++num_pairs;
+                result = std::min(result, pairwise_phase_qualities[lhs][rhs]);
             }
         }
-        return Phred<double> {pairwise_quality_sum / num_pairs};
     }
+    return result;
 }
 
 namespace debug {
