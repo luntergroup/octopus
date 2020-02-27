@@ -37,6 +37,12 @@ namespace constants
     constexpr T ln10Div10 = T {0.230258509299404568401799145468436420760110148862877297603};
 }
 
+template <typename RealType>
+bool is_subnormal(const RealType x) noexcept
+{
+    return std::fpclassify(x) == FP_SUBNORMAL;
+}
+
 template <typename RealType,
           typename = std::enable_if_t<std::is_floating_point<RealType>::value>>
 RealType round(const RealType val, const unsigned precision = 2)

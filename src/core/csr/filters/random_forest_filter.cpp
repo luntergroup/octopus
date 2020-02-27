@@ -225,16 +225,10 @@ void RandomForestFilter::prepare_for_registration(const SampleList& samples) con
 namespace {
 
 template <typename T>
-bool is_subnormal(const T x) noexcept
-{
-    return std::fpclassify(x) == FP_SUBNORMAL;
-}
-
-template <typename T>
 double lexical_cast_to_double(const T& value)
 {
     auto result = boost::lexical_cast<double>(value);
-    if (is_subnormal(result)) {
+    if (maths::is_subnormal(result)) {
         result = 0;
     }
     return result;

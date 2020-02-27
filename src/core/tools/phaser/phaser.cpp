@@ -370,18 +370,22 @@ auto compute_phase_quality(const std::vector<CompressedGenotype>& genotypes,
     const static auto sum_probabilities = [] (const auto& probs) { return std::accumulate(std::cbegin(probs), std::cend(probs), 0.0); };
     std::transform(std::cbegin(chunk_set_posteriors), std::cend(chunk_set_posteriors), 
                    std::begin(set_weights), sum_probabilities);
-    maths::normalise(set_weights);
     double total_not_map_posterior {0};
-    for (std::size_t set_idx {0}; set_idx < chunk_set_posteriors.size(); ++set_idx) {
-        auto& posteriors = chunk_set_posteriors[set_idx];
-        maths::normalise(posteriors);
-        for (auto& p : posteriors) p *= set_weights[set_idx];
-        assert(!posteriors.empty());
-        const auto map_posterior_itr = std::max_element(std::cbegin(posteriors), std::cend(posteriors));
-        const auto not_map_posterior = std::accumulate(std::cbegin(posteriors), map_posterior_itr,    
-                                       std::accumulate(std::next(map_posterior_itr), std::cend(posteriors), 0.0));
-        total_not_map_posterior += not_map_posterior;
-    };
+    // subnormal numbers can cause divide by zero problems here when
+    // ffast-math is used.
+    if (!maths::is_subnormal(maths::normalise(set_weights))) {
+        for (std::size_t set_idx {0}; set_idx < chunk_set_posteriors.size(); ++set_idx) {
+            auto& posteriors = chunk_set_posteriors[set_idx];
+            if (posteriors.size() > 1 && !maths::is_subnormal(maths::normalise(posteriors))) {
+                for (auto& p : posteriors) p *= set_weights[set_idx];
+                assert(!posteriors.empty());
+                const auto map_posterior_itr = std::max_element(std::cbegin(posteriors), std::cend(posteriors));
+                const auto not_map_posterior = std::accumulate(std::cbegin(posteriors), map_posterior_itr,    
+                                               std::accumulate(std::next(map_posterior_itr), std::cend(posteriors), 0.0));
+                total_not_map_posterior += not_map_posterior;
+            }
+        }
+    }
     return probability_false_to_phred(total_not_map_posterior);
 }
 
