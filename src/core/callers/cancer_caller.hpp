@@ -203,18 +203,25 @@ private:
     std::reference_wrapper<const std::vector<SampleName>> samples_;
     std::reference_wrapper<const CancerCaller::Parameters> parameters_;
     
-    MappableBlock<Genotype<IndexedHaplotype<>>> germline_genotypes_;
-    unsigned somatic_ploidy_ = 1;
-    MappableBlock<CancerGenotype<IndexedHaplotype<>>> cancer_genotypes_;
+    // prior stuff
     CancerCaller::ModelPriors model_priors_;
     std::unique_ptr<GenotypePriorModel> germline_prior_model_ = nullptr;
     boost::optional<CancerGenotypePriorModel> cancer_genotype_prior_model_ = boost::none;
     std::unique_ptr<GermlineModel> germline_model_ = nullptr;
+    // germline and CNV model
+    MappableBlock<Genotype<IndexedHaplotype<>>> germline_genotypes_;
     GermlineModel::InferredLatents germline_model_inferences_;
     CNVModel::InferredLatents cnv_model_inferences_;
-    SomaticModel::InferredLatents somatic_model_inferences_;
+    // somatic model
+    std::vector<MappableBlock<CancerGenotype<IndexedHaplotype<>>>> cancer_genotypes_;
+    std::vector<SomaticModel::InferredLatents> somatic_model_inferences_;
+    std::vector<double> somatic_model_posteriors_;
+    std::size_t max_evidence_somatic_model_index_;
+    unsigned inferred_somatic_ploidy_ = 1;
+    // noise model
     boost::optional<SomaticModel::InferredLatents> noise_model_inferences_ = boost::none;
     boost::optional<GermlineModel::InferredLatents> normal_germline_inferences_ = boost::none;
+    // posterior stuff
     CancerCaller::ModelPosteriors model_posteriors_;
     
     mutable std::shared_ptr<HaplotypeProbabilityMap> haplotype_posteriors_ = nullptr;
