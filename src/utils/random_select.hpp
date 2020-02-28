@@ -8,6 +8,8 @@
 #include <iterator>
 #include <cstddef>
 
+#include <boost/random/uniform_int_distribution.hpp>
+
 namespace octopus {
 
 template <typename ForwardIt, typename RandomGenerator>
@@ -16,7 +18,7 @@ ForwardIt random_select(ForwardIt first, ForwardIt last, RandomGenerator& g)
     if (first == last) return first;
     const auto max = static_cast<std::size_t>(std::distance(first, last));
     if (max == 1) return first;
-    std::uniform_int_distribution<std::size_t> dist {0, max - 1};
+    boost::random::uniform_int_distribution<std::size_t> dist {0, max - 1};
     std::advance(first, dist(g));
     return first;
 }
