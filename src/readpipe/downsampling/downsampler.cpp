@@ -211,7 +211,7 @@ Downsampler::Report sample(ReadContainer& reads, const unsigned trigger_coverage
     std::vector<std::vector<AlignedRead>> unsampled_read_blocks {};
     unsampled_read_blocks.reserve(targets.size());
     std::size_t num_reads {0};
-    std::mt19937 generator {};
+    std::mt19937 generator {891106};
     
     // Downsample in reverse order because erasing near back of MappableFlatMultiSet is much
     // cheaper than erasing near front.
