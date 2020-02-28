@@ -242,7 +242,7 @@ OptionMap parse_options(const int argc, const char** argv)
      "Allows reads marked as unmapped to be used for calling")
     
     ("min-mapping-quality",
-     po::value<int>()->default_value(20),
+     po::value<int>()->default_value(10),
      "Minimum read mapping quality required to consider a read for calling")
     
     ("good-base-quality",
