@@ -472,7 +472,7 @@ double BadRegionDetector::calculate_probability_good(const RegionState& state, O
             result *= calculate_conditional_depth_probability(average_depth, depth_stats.combined.genome);
         }
         if (state.read_stats.median_mapping_quality < reads_profile_->mapping_quality_stats.median) {
-            result /= std::min((reads_profile_->mapping_quality_stats.median - state.read_stats.median_mapping_quality) / 10, 4);
+            result /= std::max(std::min((reads_profile_->mapping_quality_stats.median - state.read_stats.median_mapping_quality) / 10, 4), 1);
         }
     } else if (state.read_stats.median_mapping_quality < 40) {
         result /= 2;
