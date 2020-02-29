@@ -88,7 +88,7 @@ std::istream& operator>>(std::istream& in, LibraryPreparation& result)
     utils::capitalise(token);
     if (token == "PCR")
         result = LibraryPreparation::pcr;
-    else if (token == "PCR-FREE")
+    else if (token == "PCR-FREE" || token == "PCRF")
         result = LibraryPreparation::pcr_free;
     else if (token == "10X")
         result = LibraryPreparation::tenx;
