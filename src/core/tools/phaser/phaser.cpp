@@ -362,18 +362,18 @@ auto compute_phase_quality(const std::vector<CompressedGenotype>& genotypes,
     if (overlaps(sites[lhs], sites[rhs])
      || is_very_likely_homozygous(sites[lhs], genotype_posteriors, info[lhs])
      || is_very_likely_homozygous(sites[rhs], genotype_posteriors, info[rhs])) {
-         // maximum quality
-        return probability_false_to_phred(0.0);
+        return probability_false_to_phred(0.0); // maximum quality
     }
     auto chunk_set_posteriors = compute_chunk_set_posteriors(genotypes, sites, lhs, rhs, genotype_posteriors, info);
     std::vector<double> set_weights(chunk_set_posteriors.size());
-    const static auto sum_probabilities = [] (const auto& probs) { return std::accumulate(std::cbegin(probs), std::cend(probs), 0.0); };
+    const static auto sum_probabilities = [] (const auto& probs) {
+         return std::accumulate(std::cbegin(probs), std::cend(probs), 0.0); };
     std::transform(std::cbegin(chunk_set_posteriors), std::cend(chunk_set_posteriors), 
                    std::begin(set_weights), sum_probabilities);
     double total_not_map_posterior {0};
-    // subnormal numbers can cause divide by zero problems here when
-    // ffast-math is used.
-    if (!maths::is_subnormal(maths::normalise(set_weights))) {
+    // subnormal numbers can cause divide by zero problems here when ffast-math is used.
+    const auto heterozygous_mass = maths::normalise(set_weights);
+    if (!maths::is_subnormal(heterozygous_mass) && heterozygous_mass > 0) {
         for (std::size_t set_idx {0}; set_idx < chunk_set_posteriors.size(); ++set_idx) {
             auto& posteriors = chunk_set_posteriors[set_idx];
             if (posteriors.size() > 1 && !maths::is_subnormal(maths::normalise(posteriors))) {
@@ -385,6 +385,7 @@ auto compute_phase_quality(const std::vector<CompressedGenotype>& genotypes,
                 total_not_map_posterior += not_map_posterior;
             }
         }
+        total_not_map_posterior *= heterozygous_mass;
     }
     return probability_false_to_phred(total_not_map_posterior);
 }
