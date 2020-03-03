@@ -25,9 +25,10 @@ namespace octopus {
 static constexpr std::array<LibraryPreparation, 3> libraries {
     LibraryPreparation::pcr, LibraryPreparation::pcr_free, LibraryPreparation::tenx
 };
-static constexpr std::array<Sequencer, 7> sequencers {
+static constexpr std::array<Sequencer, 8> sequencers {
     Sequencer::hiseq_2000, Sequencer::hiseq_2500, Sequencer::hiseq_4000,
-    Sequencer::xten, Sequencer::novaseq, Sequencer::bgiseq_500, Sequencer::pacbio
+    Sequencer::xten, Sequencer::novaseq, Sequencer::bgiseq_500,
+    Sequencer::pacbio, Sequencer::pacbio_css
 };
 
 std::ostream& operator<<(std::ostream& out, const LibraryPreparation& library)
@@ -120,6 +121,9 @@ std::ostream& operator<<(std::ostream& out, const Sequencer& sequencer)
         case Sequencer::pacbio:
             out << "PacBio";
             break;
+        case Sequencer::pacbio_css:
+            out << "PacBioCSS";
+            break;
     }
     return out;
 }
@@ -167,6 +171,8 @@ std::istream& operator>>(std::istream& in, Sequencer& result)
         result = Sequencer::bgiseq_500;
     else if (token == "PACBIO")
         result = Sequencer::pacbio;
+    else if (token == "PACBIOCSS")
+        result = Sequencer::pacbio_css;
     else throw UnknownSequencer {token};
     return in;
 }
@@ -271,6 +277,15 @@ static const RepeatBasedIndelModelParameterMap builtin_indel_models {{
         }
     },
     {
+        {LibraryPreparation::pcr_free, Sequencer::pacbio_css},
+        {
+            {40,40,31,29,28,24,21,19,17,15,13,12,11,10,10,9,9,8,8,8,7,7,6,6,6,6,5,5,5,5,4},
+            {40,40,33,31,28,22,17,13,12,10,9,8,7,6,5,5,5,4,4,4,4,4,4,4,4,4,4,3},
+            {40,40,30,27,22,18,16,15,13,13,12,12,11,11,11,10,10,10,9,9,9,8,8,8,7,7,6,6,6,6,5,5,5,4},
+            {40,40,28,25,19,16,15,14,12,12,12,12,11,11,10,10,10,9,9,9,8,7,7,7,5,5,5,5,5,4,4,4,4,4,4,4,4,4,4,4,4,3}
+        }
+    },
+    {
         {LibraryPreparation::pcr, Sequencer::hiseq_2000},
         {
             {45,45,43,41,40,36,34,30,24,20,16,13,12,11,10,10,9,9,8,8,7,7,7,6,6,6,6,5,5,5,4,4,4,4,4,4,4,4,4,4,3},
@@ -327,10 +342,19 @@ static const RepeatBasedIndelModelParameterMap builtin_indel_models {{
     {
         {LibraryPreparation::pcr, Sequencer::pacbio},
         {
-        {13,13,11,10,9,8,7,7,7,6,6,6,6,6,6,6,6,6,6,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,4,4,4,4,4,4,4,4,4,4,4,4},
-        {13,13,10,8,7,7,7,7,5,5,5,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4},
-        {13,13,8,7,6,6,5,5,5,5,5,4,4,4,4,4,4,4,4,4,4,4,4,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3},
-        {13,13,7,6,5,5,5,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4}
+            {13,13,11,10,9,8,7,7,7,6,6,6,6,6,6,6,6,6,6,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,4,4,4,4,4,4,4,4,4,4,4,4},
+            {13,13,10,8,7,7,7,7,5,5,5,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4},
+            {13,13,8,7,6,6,5,5,5,5,5,4,4,4,4,4,4,4,4,4,4,4,4,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3},
+            {13,13,7,6,5,5,5,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4}
+        }
+    },
+    {
+        {LibraryPreparation::pcr, Sequencer::pacbio_css},
+        {
+            {40,40,31,29,28,24,21,19,17,15,13,12,11,10,10,9,9,8,8,8,7,7,6,6,6,6,5,5,5,5,4},
+            {40,40,33,31,28,22,17,13,12,10,9,8,7,6,5,5,5,4,4,4,4,4,4,4,4,4,4,3},
+            {40,40,30,27,22,18,16,15,13,13,12,12,11,11,11,10,10,10,9,9,9,8,8,8,7,7,6,6,6,6,5,5,5,4},
+            {40,40,28,25,19,16,15,14,12,12,12,12,11,11,10,10,10,9,9,9,8,7,7,7,5,5,5,5,5,4,4,4,4,4,4,4,4,4,4,4,4,3}
         }
     },
     {
