@@ -110,6 +110,7 @@ ReadAssignments::ReadAssignments(const ReferenceGenome& reference,
         for (const auto& call : calls) {
             auto alleles = get_called_alleles(call, sample).first;
             auto allele_support = compute_allele_support(alleles, result_.haplotypes.at(sample), sample);
+            result_.alleles[sample] = {}; // make sure sample is present
             for (auto& allele : alleles) {
                 result_.alleles[sample].emplace(std::move(allele), std::move(allele_support.at(allele)));
             }
