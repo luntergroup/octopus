@@ -49,6 +49,7 @@ ReadAssignments::ReadAssignments(const ReferenceGenome& reference,
         const auto& sample = p.first;
         const auto& sample_genotypes = p.second;
         result_.haplotypes[sample].assigned_wrt_reference.reserve(sample_genotypes.size());
+        result_.alleles[sample] = {}; // make sure sample is present
         for (const auto& genotype : sample_genotypes) {
             auto local_reads = copy_overlapped_to_vector(reads.at(sample), genotype);
             for (const auto& haplotype : genotype) {
