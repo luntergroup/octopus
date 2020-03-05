@@ -279,7 +279,7 @@ static const RepeatBasedIndelModelParameterMap builtin_indel_models {{
     {
         {LibraryPreparation::pcr_free, Sequencer::pacbio_css},
         {
-            {40,40,31,29,28,24,21,19,17,15,13,12,11,10,10,9,9,8,8,8,7,7,6,6,6,6,5,5,5,5,4},
+            {40,40,35,33,30,24,21,19,17,15,13,12,11,10,10,9,9,8,8,8,7,7,6,6,6,6,5,5,5,5,4},
             {40,40,33,31,28,22,17,13,12,10,9,8,7,6,5,5,5,4,4,4,4,4,4,4,4,4,4,3},
             {40,40,30,27,22,18,16,15,13,13,12,12,11,11,11,10,10,10,9,9,9,8,8,8,7,7,6,6,6,6,5,5,5,4},
             {40,40,28,25,19,16,15,14,12,12,12,12,11,11,10,10,10,9,9,9,8,7,7,7,5,5,5,5,5,4,4,4,4,4,4,4,4,4,4,4,4,3}
@@ -418,6 +418,11 @@ BasicRepeatBasedIndelErrorModel::Parameters lookup_builtin_indel_model(const Mod
     return builtin_indel_models.at(config);
 }
 
+bool use_snv_error_model(const ModelConfig config)
+{
+    return !(config.sequencer != Sequencer::pacbio || config.sequencer != Sequencer::pacbio_css);
+}
+
 using RepeatBasedSnvModelParameterMap = std::unordered_map<LibraryPreparation, BasicRepeatBasedSNVErrorModel::Parameters>;
 
 static const RepeatBasedSnvModelParameterMap builtin_snv_models {{
@@ -445,9 +450,13 @@ static const RepeatBasedSnvModelParameterMap builtin_snv_models {{
     }}
 }};
 
-BasicRepeatBasedSNVErrorModel::Parameters lookup_builtin_snv_model(const ModelConfig config)
+boost::optional<BasicRepeatBasedSNVErrorModel::Parameters> lookup_builtin_snv_model(const ModelConfig config)
 {
-    return builtin_snv_models.at(config.library);
+    if (use_snv_error_model(config)) {
+        return builtin_snv_models.at(config.library);
+    } else {
+        return boost::none;
+    }
 }
 
 class MalformedErrorModelFile : public MalformedFileError
@@ -460,7 +469,12 @@ public:
 
 std::unique_ptr<SnvErrorModel> make_snv_error_model(const ModelConfig config)
 {
-    return std::make_unique<BasicRepeatBasedSNVErrorModel>(lookup_builtin_snv_model(config));
+    auto model = lookup_builtin_snv_model(config);
+    if (model) {
+        return std::make_unique<BasicRepeatBasedSNVErrorModel>(std::move(*model));
+    } else {
+        return nullptr;
+    }
 }
 
 std::unique_ptr<IndelErrorModel> make_indel_error_model(const ModelConfig config)
