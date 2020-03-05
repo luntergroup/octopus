@@ -693,7 +693,7 @@ OptionMap parse_options(const int argc, const char** argv)
      "Maximum number of haplotype gains in the phylogeny")
     
     ("somatic-cnv-prior",
-     po::value<float>()->default_value(0.001, "0.001"),
+     po::value<float>()->default_value(1e-5, "1e-5"),
      "Prior probability of a given base in a sample being affected by a CNV")
      
     ("dropout-concentration",
