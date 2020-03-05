@@ -207,8 +207,7 @@ private:
                        const ProbabilityVector& genotype_posteriors,
                        const GroupResponsibilityVector& group_responsibilities,
                        const ComponentResponsibilityMatrix& component_responsibilities,
-                       const HaplotypeLikelihoodMatrix& log_likelihoods,
-                       bool debug = false) const;
+                       const HaplotypeLikelihoodMatrix& log_likelihoods) const;
     void
     compute_evidence_weighted_latents(ProbabilityVector& genotype_posteriors,
                                       GroupResponsibilityVector& group_responsibilities,
