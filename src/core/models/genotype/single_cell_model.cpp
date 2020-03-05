@@ -519,6 +519,45 @@ bool valid_ploidies(const std::vector<std::size_t>& combination,
     return std::all_of(std::cbegin(combination), std::cend(combination), ploidy_equal);
 }
 
+template <typename T>
+auto get_leaf_labels(const Phylogeny<std::size_t, T>& phylogeny)
+{
+    std::vector<std::size_t> result {};
+    result.reserve(phylogeny.size() - 1);
+    for (std::size_t id {0}; id < phylogeny.size(); ++id) {
+        if (phylogeny.num_descendants(id) == 0) {
+            result.push_back(id);
+        }
+    }
+    return result;
+}
+
+bool is_redundant_copy_change(const Genotype<IndexedHaplotype<>>& lhs, const Genotype<IndexedHaplotype<>>& rhs)
+{
+    return lhs.ploidy() != rhs.ploidy() && have_same_elements(lhs, rhs);
+}
+
+void erase_combinations_with_redundant_copy_changes(std::vector<std::vector<std::size_t>>& combinations,
+                                                    const SingleCellModel::GenotypeVector& genotypes,
+                                                    const SingleCellPriorModel::CellPhylogeny& phylogeny)
+{
+    const auto leafs = get_leaf_labels(phylogeny);
+    std::vector<std::size_t> leaf_ancestors(leafs.size());
+    std::transform(std::cbegin(leafs), std::cend(leafs), std::begin(leaf_ancestors),
+                   [&] (auto leaf_id) { return phylogeny.ancestor(leaf_id).id; });
+    std::vector<std::vector<boost::optional<bool>>> have_same_elements_cache(genotypes.size(), std::vector<boost::optional<bool>>(genotypes.size()));
+    combinations.erase(std::remove_if(std::begin(combinations), std::end(combinations), [&] (const auto& combination) {
+        std::size_t leaf_idx {0};
+        return std::any_of(std::cbegin(leafs), std::cend(leafs), [&] (const auto leaf) {
+            const auto child_index = combination[leaf];
+            const auto parent_index = combination[leaf_ancestors[leaf_idx++]];
+            auto& result = have_same_elements_cache[child_index][parent_index];
+            if (!result) result = is_redundant_copy_change(genotypes[child_index], genotypes[parent_index]);
+            return *result;
+        });
+    }), std::end(combinations));
+}
+
 } // namespace
 
 class ZygosityGenotypePriorModel : public GenotypePriorModel
@@ -653,6 +692,7 @@ SingleCellModel::propose_genotype_combinations(const PhylogenyNodePloidyMap& phy
         return !has_valid_combination;
     }), std::end(result));
     unique_stable_erase(result);
+    erase_combinations_with_redundant_copy_changes(result, genotypes, prior_model_.phylogeny());
     if (result.empty()) {
         throw NoViableGenotypeCombinationsError {};
     }
