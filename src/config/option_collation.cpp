@@ -1065,12 +1065,7 @@ coretools::CigarScanner::Options::InclusionPredicate get_candidate_variant_inclu
 
 coretools::CigarScanner::Options::MatchPredicate get_candidate_variant_match_predicate(const OptionMap& options)
 {
-    using CVDP = CandidateVariantDiscoveryProtocol;
-    if (options.at("variant-discovery-mode").as<CVDP>() == CVDP::illumina) {
-        return coretools::TolerantMatchPredicate {};
-    } else {
-        return std::equal_to<> {};
-    }
+    return coretools::TolerantMatchPredicate {};
 }
 
 double get_min_expected_somatic_vaf(const OptionMap& options)
