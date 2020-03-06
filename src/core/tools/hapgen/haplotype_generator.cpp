@@ -1025,7 +1025,7 @@ void HaplotypeGenerator::populate_tree()
 {
     if (in_holdout_mode() && can_reintroduce_holdouts()) {
         populate_tree_with_holdouts();
-        if (next_active_region_) {
+        if (next_active_region_ && ends_before(active_region_, *next_active_region_)) {
             populate_tree_with_novel_alleles();
         }
     } else {
