@@ -781,13 +781,18 @@ bool TolerantMatchPredicate::operator()(const Variant& lhs, const Variant& rhs) 
         return lhs == rhs;
     }
     if (is_insertion(lhs)) {
+        if (!is_same_region(lhs, rhs)) return false;
         if (alt_sequence_size(lhs) == alt_sequence_size(rhs)) {
             const auto& lhs_alt = alt_sequence(lhs);
             const auto& rhs_alt = alt_sequence(rhs);
             return std::count(std::cbegin(lhs_alt), std::cend(lhs_alt), 'N')
                    == std::count(std::cbegin(rhs_alt), std::cend(rhs_alt), 'N');
         } else {
-            return false;
+            if (utils::is_homopolymer(alt_sequence(lhs)) && utils::is_homopolymer(alt_sequence(rhs))) {
+                return alt_sequence(lhs).front() == alt_sequence(rhs).front();
+            } else {
+                return false;
+            }
         }
     }
     return overlaps(lhs, rhs);
