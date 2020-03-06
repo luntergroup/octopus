@@ -897,6 +897,8 @@ auto make_read_filterer(const OptionMap& options)
     }
     if (is_set("min-read-length", options)) {
         result.add(make_unique<IsLong>(as_unsigned("min-read-length", options)));
+    } else {
+        result.add(make_unique<IsLong>(0));
     }
     if (is_set("max-read-length", options) && !split_long_reads(options)) {
         result.add(make_unique<IsShort>(as_unsigned("max-read-length", options)));
@@ -2309,7 +2311,7 @@ ReadPipe make_default_filter_read_pipe(ReadManager& read_manager, std::vector<Sa
     filterer.add(make_unique<HasValidBaseQualities>());
     filterer.add(make_unique<HasWellFormedCigar>());
     filterer.add(make_unique<IsMapped>());
-    filterer.add(make_unique<IsNotMarkedQcFail>());
+    filterer.add(make_unique<IsLong>(1));
     return ReadPipe {read_manager, std::move(transformer), std::move(filterer), boost::none, std::move(samples)};
 }
 
