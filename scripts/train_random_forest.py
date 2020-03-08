@@ -219,7 +219,8 @@ def get_octopus_output_filename(reference_filename, bam_filenames, kind="germlin
     return get_bam_id(bam_filenames) + "." + get_reference_id(reference_filename) + ".Octopus." + kind + ".vcf.gz"
 
 def run_octopus(octopus, reference, reads, regions, threads, output,
-                config=None, octopus_vcf=None, kind="germline", annotations="all"):
+                config=None, octopus_vcf=None, kind="germline", annotations="all",
+                keep_raw=False):
     octopus_cmd = [str(octopus), '-R', str(reference), '-I'] + \
                   [str(r) for r in reads] + \
                   ['-t', str(regions), \
@@ -235,6 +236,8 @@ def run_octopus(octopus, reference, reads, regions, threads, output,
         octopus_cmd += ['--config', str(config)]
     if octopus_vcf is not None:
         octopus_cmd += ['--filter-vcf', str(octopus_vcf)]
+    elif keep_raw:
+         octopus_cmd += ['--keep-unfiltered-calls']
     if kind == "somatic":
         octopus_cmd += ['--caller', 'cancer', '--somatics-only']
     sp.call(octopus_cmd)
@@ -448,13 +451,14 @@ def read_pedigree(vcf_filename):
         return Path(options[options.index('--pedigree') + 1])
     return None
 
-def eval_octopus(octopus, rtg, example, out_dir, threads, kind="germline", measures=None, overwrite=False):
+def eval_octopus(octopus, rtg, example, out_dir, threads, kind="germline", measures=None, overwrite=False, keep_raw_calls=False):
     if example.reads is not None:
         octopus_vcf = out_dir / get_octopus_output_filename(example.reference, example.reads, kind=kind)
         if overwrite or not octopus_vcf.exists():
             run_octopus(octopus, example.reference, example.reads, example.regions, threads, octopus_vcf,
                         config=example.config, octopus_vcf=example.octopus_vcf, kind=kind,
-                        annotations="all" if measures is None else measures)
+                        annotations="all" if measures is None else measures,
+                        keep_raw=keep_raw_calls)
     else:
         assert example.octopus_vcf is not None
         octopus_vcf = example.octopus_vcf
@@ -602,7 +606,9 @@ def main(options):
     data_files, tmp_files = [], []
     default_measures = default_germline_measures if options.kind == "germline" else default_somatic_measures
     for example in examples:
-        vcfeval_dirs = eval_octopus(options.octopus, options.rtg, example, options.out, options.threads, kind=options.kind, measures=default_measures, overwrite=options.overwrite)
+        vcfeval_dirs = eval_octopus(options.octopus, options.rtg, example, options.out, options.threads,
+                                    kind=options.kind, measures=default_measures, overwrite=options.overwrite,
+                                    keep_raw_calls=options.keep_raw_calls)
         for vcfeval_dir in vcfeval_dirs:
             tp_vcf_path = vcfeval_dir / "tp.vcf.gz"
             tp_train_vcf_path = Path(str(tp_vcf_path).replace("tp.vcf", "tp.train.vcf"))
@@ -622,7 +628,7 @@ def main(options):
     concat(data_files, master_data_file)
     if not options.keep_example_data_files:
         for file in tmp_files + data_files:
-            file.unlink()
+            if file.exists(): file.unlink()
     shuffle(master_data_file)
     ranger_header = ' '.join(default_measures + ['TP'])
     add_header(master_data_file, ranger_header)
@@ -687,6 +693,10 @@ if __name__ == '__main__':
     parser.add_argument('--overwrite',
                         default=False,
                         help='Overwrite existing calls and evaluation files',
+                        action='store_true')
+    parser.add_argument('--keep-raw-calls',
+                        default=False,
+                        help='Keep raw unannotated Octopus calls',
                         action='store_true')
     parser.add_argument('--keep-example-data-files',
                         default=False,
