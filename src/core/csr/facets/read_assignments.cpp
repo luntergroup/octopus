@@ -96,14 +96,14 @@ ReadAssignments::ReadAssignments(const ReferenceGenome& reference,
                 for (auto& s : possible_ambiguous_assignments) {
                     std::vector<AlignedRead> realigned {};
                     realigned.reserve(s.second.size());
-                    for (auto idx : s.second) realigned.push_back(ambiguous_reads[idx].read);
+                    for (auto idx : s.second) realigned.push_back(std::move(ambiguous_reads[idx].read));
                     safe_realign(realigned, s.first, likelihood_model_);
                     for (std::size_t j {0}; j < s.second.size(); ++j) {
-                        result_.haplotypes[sample].ambiguous_wrt_haplotype[s.second[j]] = realigned[j];
+                        result_.haplotypes[sample].ambiguous_wrt_haplotype[s.second[j]].read = realigned[j];
                     }
                     rebase(realigned, s.first);
                     for (std::size_t j {0}; j < s.second.size(); ++j) {
-                        result_.haplotypes[sample].ambiguous_wrt_reference[s.second[j]] = std::move(realigned[j]);
+                        result_.haplotypes[sample].ambiguous_wrt_reference[s.second[j]].read = std::move(realigned[j]);
                     }
                 }
             }
