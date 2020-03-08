@@ -576,6 +576,10 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<int>()->default_value(16),
      "Maximum number of indel errors that must be tolerated for haplotype likelihood calculation")
     
+    ("use-wide-hmm-scores",
+     po::bool_switch()->default_value(false),
+     "Use 32-bits rather than 16-bits for HMM scores")
+
     ("read-linkage",
      po::value<ReadLinkage>()->default_value(ReadLinkage::paired),
      "Read linkage information to use for calling [NONE, PAIRED, LINKED]")

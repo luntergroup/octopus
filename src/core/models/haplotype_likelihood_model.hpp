@@ -40,6 +40,7 @@ public:
         AlignedRead::MappingQuality mapping_quality_cap = 120;
         bool use_flank_state = true;
         unsigned max_indel_error = 8;
+        bool use_int_scores = false;
     };
     
     struct FlankState

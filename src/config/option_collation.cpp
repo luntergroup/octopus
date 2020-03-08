@@ -897,6 +897,8 @@ auto make_read_filterer(const OptionMap& options)
     }
     if (is_set("min-read-length", options)) {
         result.add(make_unique<IsLong>(as_unsigned("min-read-length", options)));
+    } else {
+        result.add(make_unique<IsLong>(0));
     }
     if (is_set("max-read-length", options) && !split_long_reads(options)) {
         result.add(make_unique<IsShort>(as_unsigned("max-read-length", options)));
@@ -1065,12 +1067,7 @@ coretools::CigarScanner::Options::InclusionPredicate get_candidate_variant_inclu
 
 coretools::CigarScanner::Options::MatchPredicate get_candidate_variant_match_predicate(const OptionMap& options)
 {
-    using CVDP = CandidateVariantDiscoveryProtocol;
-    if (options.at("variant-discovery-mode").as<CVDP>() == CVDP::illumina) {
-        return coretools::TolerantMatchPredicate {};
-    } else {
-        return std::equal_to<> {};
-    }
+    return coretools::TolerantMatchPredicate {};
 }
 
 double get_min_expected_somatic_vaf(const OptionMap& options)
@@ -1577,6 +1574,14 @@ bool model_mapping_quality(const OptionMap& options)
     return !options.at("dont-model-mapping-quality").as<bool>();;
 }
 
+bool use_int_hmm_scores(const OptionMap& options, const boost::optional<const ReadSetProfile&> read_profile)
+{
+    if (options.at("use-wide-hmm-scores").as<bool>()) return true;
+    if (as_unsigned("max-indel-errors", options) > 50) return true;
+    if (read_profile && read_profile->length_stats.median > 1000) return true;
+    return false;
+}
+
 HaplotypeLikelihoodModel make_haplotype_likelihood_model(const OptionMap& options, const boost::optional<const ReadSetProfile&> read_profile)
 {
     auto error_model = make_error_model(options);
@@ -1588,6 +1593,7 @@ HaplotypeLikelihoodModel make_haplotype_likelihood_model(const OptionMap& option
         config.mapping_quality_cap_trigger = calculate_mapping_quality_cap_trigger(options, read_profile);
     }
     config.max_indel_error = as_unsigned("max-indel-errors", options);
+    config.use_int_scores = use_int_hmm_scores(options, read_profile);
     return HaplotypeLikelihoodModel {std::move(error_model.snv), std::move(error_model.indel), config};
 }
 
@@ -2305,7 +2311,7 @@ ReadPipe make_default_filter_read_pipe(ReadManager& read_manager, std::vector<Sa
     filterer.add(make_unique<HasValidBaseQualities>());
     filterer.add(make_unique<HasWellFormedCigar>());
     filterer.add(make_unique<IsMapped>());
-    filterer.add(make_unique<IsNotMarkedQcFail>());
+    filterer.add(make_unique<IsLong>(1));
     return ReadPipe {read_manager, std::move(transformer), std::move(filterer), boost::none, std::move(samples)};
 }
 

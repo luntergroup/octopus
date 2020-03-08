@@ -652,11 +652,14 @@ bool is_good_pacbio(const Variant& variant, const unsigned depth, const unsigned
                     const unsigned forward_strand_support, std::vector<unsigned> observed_qualities)
 {
     const auto support = observed_qualities.size();
-    if (support < 2) return false;
     const auto vaf = static_cast<double>(support) / depth;
     if (is_snv(variant)) {
-        return vaf > 0.1;
+        return support > 1 && vaf > 0.1;
     } else if (is_insertion(variant)) {
+        if (alt_sequence_size(variant) > 50) {
+            return vaf > 0.1;
+        }
+        if (support < 2) return false;
         if (alt_sequence_size(variant) <= 2) {
             return vaf > 0.2;
         } else if (alt_sequence_size(variant) < 4) {
@@ -665,6 +668,10 @@ bool is_good_pacbio(const Variant& variant, const unsigned depth, const unsigned
             return vaf > 0.05;
         }
     } else { // deletion or mnv
+        if (region_size(variant) > 50) {
+            return vaf > 0.1;
+        }
+        if (support < 2) return false;
         if (region_size(variant) <= 2) {
             return vaf > 0.2;
         } else if (region_size(variant) < 4) {
@@ -774,13 +781,18 @@ bool TolerantMatchPredicate::operator()(const Variant& lhs, const Variant& rhs) 
         return lhs == rhs;
     }
     if (is_insertion(lhs)) {
+        if (!is_same_region(lhs, rhs)) return false;
         if (alt_sequence_size(lhs) == alt_sequence_size(rhs)) {
             const auto& lhs_alt = alt_sequence(lhs);
             const auto& rhs_alt = alt_sequence(rhs);
             return std::count(std::cbegin(lhs_alt), std::cend(lhs_alt), 'N')
                    == std::count(std::cbegin(rhs_alt), std::cend(rhs_alt), 'N');
         } else {
-            return false;
+            if (utils::is_homopolymer(alt_sequence(lhs)) && utils::is_homopolymer(alt_sequence(rhs))) {
+                return alt_sequence(lhs).front() == alt_sequence(rhs).front();
+            } else {
+                return false;
+            }
         }
     }
     return overlaps(lhs, rhs);

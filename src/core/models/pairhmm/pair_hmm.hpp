@@ -891,17 +891,32 @@ align(const Sequence1& truth,
 
 template <typename Parameters,
           int BandSize = 0,
-          typename ScoreType = NullType>
+          typename Score = NullType>
 class PairHMM
 {
 public:
+    using ScoreType = simd::PairHMMWrapper::ScorePrecision;
     using ParameterType = Parameters;
     
     PairHMM() = default;
-    PairHMM(unsigned min_band_size) { reset(min_band_size); }
+    PairHMM(unsigned min_band_size)
+    {
+        reset(min_band_size);
+    }
+    PairHMM(unsigned min_band_size, ScoreType score)
+    {
+        static_assert(std::is_same<Score, NullType>::value, "");
+        reset(min_band_size, score);
+    }
     PairHMM(const Parameters& params, unsigned min_band_size = 8)
     {
         reset(min_band_size);
+        set(params);
+    }
+    PairHMM(const Parameters& params, unsigned min_band_size, ScoreType score)
+    {
+        static_assert(std::is_same<Score, NullType>::value, "");
+        reset(min_band_size, score);
         set(params);
     }
     
@@ -985,9 +1000,9 @@ public:
     }
     
 private:
-    using SIMDHMM = std::conditional_t<(BandSize > 0), simd::SimdPairHMM<BandSize, ScoreType>, simd::PairHMMWrapper>;
+    using SIMDHMM = std::conditional_t<(BandSize > 0), simd::SimdPairHMM<BandSize, Score>, simd::PairHMMWrapper>;
     
-    static constexpr bool is_static = BandSize > 0 && !std::is_same<ScoreType, NullType>::value;
+    static constexpr bool is_static = BandSize > 0 && !std::is_same<Score, NullType>::value;
     
     SIMDHMM hmm_;
     const Parameters* params_ = nullptr;
@@ -995,9 +1010,12 @@ private:
     void reset(unsigned min_band_size) { reset(min_band_size, std::conditional_t<is_static, std::true_type, std::false_type> {}); }
     void reset(unsigned min_band_size, std::true_type) const noexcept {}
     void reset(unsigned min_band_size, std::false_type) { hmm_.reset(min_band_size, score_precision()); }
+    void reset(unsigned min_band_size, ScoreType score) { reset(min_band_size, score, std::conditional_t<is_static, std::true_type, std::false_type> {}); }
+    void reset(unsigned min_band_size, ScoreType score, std::true_type) const noexcept {}
+    void reset(unsigned min_band_size, ScoreType score, std::false_type) { hmm_.reset(min_band_size, score); }
     simd::PairHMMWrapper::ScorePrecision score_precision(NullType) const noexcept
     {
-        return simd::PairHMMWrapper::ScorePrecision::int16;
+        return score_precision(short {});
     }
     simd::PairHMMWrapper::ScorePrecision score_precision(short) const noexcept
     {
@@ -1009,7 +1027,7 @@ private:
     }
     simd::PairHMMWrapper::ScorePrecision score_precision() const noexcept
     {
-        return score_precision(ScoreType {});
+        return score_precision(Score {});
     }
 };
 
