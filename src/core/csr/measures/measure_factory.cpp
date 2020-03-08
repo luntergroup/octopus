@@ -67,6 +67,8 @@ void init(MeasureMakerMap& measure_makers)
     measure_makers[name<ErrorRate>()]                   = [] () { return make_wrapped_measure<ErrorRate>(); };
     measure_makers[name<ErrorRateStdev>()]              = [] () { return make_wrapped_measure<ErrorRateStdev>(); };
     measure_makers[name<IsTransversion>()]              = [] () { return make_wrapped_measure<IsTransversion>(); };
+    measure_makers[name<PhaseLength>()]                 = [] () { return make_wrapped_measure<PhaseLength>(); };
+    measure_makers[name<MaxReadLength>()]               = [] () { return make_wrapped_measure<MaxReadLength>(); };
 }
 
 class BadParameterList : public UserError

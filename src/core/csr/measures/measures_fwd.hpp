@@ -54,5 +54,7 @@
 #include "core/csr/measures/error_rate.hpp"
 #include "core/csr/measures/error_rate_stdev.hpp"
 #include "core/csr/measures/is_transversion.hpp"
+#include "core/csr/measures/phase_length.hpp"
+#include "core/csr/measures/max_read_length.hpp"
 
 #endif
