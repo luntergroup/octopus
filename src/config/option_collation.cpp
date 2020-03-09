@@ -1184,6 +1184,17 @@ auto get_max_expected_heterozygosity(const OptionMap& options)
     return std::min(static_cast<double>(heterozygosity + 2 * heterozygosity_stdev), 0.9999);
 }
 
+auto get_assembler_cycle_tolerance(const OptionMap& options)
+{
+    using CGT = coretools::LocalReassembler::Options::CyclicGraphTolerance;
+    using CVDP = CandidateVariantDiscoveryProtocol;
+    if (options.at("variant-discovery-mode").as<CVDP>() == CVDP::illumina) {
+        return CGT::high;
+    } else {
+        return CGT::none;
+    }
+}
+
 auto make_variant_generator_builder(const OptionMap& options, const boost::optional<const ReadSetProfile&> read_profile)
 {
     using namespace coretools;
@@ -1240,6 +1251,7 @@ auto make_variant_generator_builder(const OptionMap& options, const boost::optio
         reassembler_options.max_bubbles = as_unsigned("max-bubbles", options);
         reassembler_options.min_bubble_score = get_assembler_bubble_score_setter(options);
         reassembler_options.max_variant_size = as_unsigned("max-variant-size", options);
+        reassembler_options.cycle_tolerance = get_assembler_cycle_tolerance(options);
         result.set_local_reassembler(std::move(reassembler_options));
     }
     if (is_set("source-candidates", options) || is_set("source-candidates-file", options)) {
