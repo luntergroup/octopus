@@ -345,6 +345,36 @@ std::vector<unsigned> unique_counts(const Genotype<MappableType>& genotype, std:
     return result;
 }
 
+template <typename InputIt1, typename InputIt2,
+          typename Compare>
+bool set_equal(InputIt1 first1, InputIt1 last1, 
+               InputIt2 first2, InputIt2 last2,
+               Compare cmp)
+{
+    while (first1 != last1) {
+        if (first2 == last2) return false;
+        if (!cmp(*first1, *first2)) return false;
+        const auto& match = *first1;
+        const auto is_duplicate = [&] (const auto& v) { return cmp(v, match); };
+        first1 = std::find_if_not(std::next(first1), last1, is_duplicate);
+        first2 = std::find_if_not(std::next(first2), last2, is_duplicate);
+    }
+    return first2 == last2;
+}
+
+template <typename InputIt1, typename InputIt2>
+bool set_equal(InputIt1 first1, InputIt1 last1, 
+               InputIt2 first2, InputIt2 last2)
+{
+    return set_equal(first1, last1, first2, last2, std::equal_to<> {});
+}
+
+template <typename MappableType>
+bool have_same_elements(const Genotype<MappableType>& lhs, const Genotype<MappableType>& rhs, std::true_type)
+{
+    return set_equal(std::cbegin(lhs), std::cend(lhs), std::cbegin(rhs), std::cend(rhs));
+}
+
 } // namespace detail
 
 template <typename MappableType>
@@ -407,7 +437,11 @@ std::vector<unsigned> unique_counts(const Genotype<MappableType>& genotype)
     return detail::unique_counts(genotype, is_ordered<MappableType> {});
 }
 
-// non-member methods
+template <typename MappableType>
+bool have_same_elements(const Genotype<MappableType>& lhs, const Genotype<MappableType>& rhs)
+{
+    return detail::have_same_elements(lhs, rhs, is_ordered<MappableType> {});
+}
 
 template <typename MappableType>
 bool is_haploid(const Genotype<MappableType>& genotype) noexcept

@@ -33,7 +33,7 @@ std::unique_ptr<Measure> NormalContamination::do_clone() const
 
 Measure::ResultType NormalContamination::get_default_result() const
 {
-    return boost::optional<int> {};
+    return boost::optional<double> {};
 }
 
 namespace {
@@ -113,9 +113,10 @@ auto copy_overlapped_to_vector(const AmbiguousReadList& reads, const MappableTyp
 
 Measure::ResultType NormalContamination::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
-    boost::optional<int> result {};
+    boost::optional<double> result {};
     if (is_somatic(call)) {
         result = 0;
+        std::size_t total_overlapped {0};
         const auto& samples = get_value<Samples>(facets.at("Samples"));
         const auto somatic_status = boost::get<std::vector<bool>>(IsSomatic(true).evaluate(call, facets));
         std::vector<SampleName> somatic_samples {}, normal_samples {};
@@ -159,9 +160,10 @@ Measure::ResultType NormalContamination::do_evaluate(const VcfRecord& call, cons
                         // This could happen if we don't call all 'somatic' alleles on the called somatic haplotype.
                         *result += overlapped_reads.size();
                     }
+                    total_overlapped += overlapped_reads.size();
                 }
             }
-            if (assignments.at(sample).ambiguous_wrt_reference.empty()) {
+            if (!assignments.at(sample).ambiguous_wrt_reference.empty()) {
                 const auto ambiguous_reads = copy_overlapped_to_vector(assignments.at(sample).ambiguous_wrt_reference, call);
                 if (!ambiguous_reads.empty()) {
                     const auto overlapped_genotypes = overlap_range(genotypes.at(sample), call);
@@ -181,9 +183,11 @@ Measure::ResultType NormalContamination::do_evaluate(const VcfRecord& call, cons
                             }
                         }
                     }
+                    total_overlapped += ambiguous_reads.size();
                 }
             }
         }
+        if (*result > 0) *result /= total_overlapped;
     }
     return result;
 }
@@ -200,7 +204,7 @@ const std::string& NormalContamination::do_name() const
 
 std::string NormalContamination::do_describe() const
 {
-    return "Number of reads supporting a somatic haplotype in the normal";
+    return "Fraction of overlapping reads supporting a somatic haplotype in the normal";
 }
 
 std::vector<std::string> NormalContamination::do_requirements() const

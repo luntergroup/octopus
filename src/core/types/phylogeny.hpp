@@ -26,7 +26,7 @@ public:
     struct Group
     {
         Label id;
-        T value = boost::none;
+        T value = T {};
     };
     
     Phylogeny() = default;
@@ -70,6 +70,8 @@ public:
     template <typename UnaryFunction>
     Phylogeny<Label, std::result_of_t<UnaryFunction(T)>>
     transform(UnaryFunction op) const;
+
+    bool is_isomorphism(const Phylogeny& other) const;
     
     template <typename GroupSerialiser>
     void serialise(std::ostream& os, GroupSerialiser serialiser) const;
@@ -297,6 +299,51 @@ Phylogeny<Label, T>::transform(UnaryFunction op) const
         }
     }
     return result;
+}
+
+template <typename Label, typename T>
+bool Phylogeny<Label, T>::is_isomorphism(const Phylogeny& other) const
+{
+    if (this->size() != other.size()) return false;
+    if (this->empty()) return true;
+    const auto group_equal = [] (const Group& lhs, const Group& rhs) {
+        return lhs.value == rhs.value;
+    };
+    if (!group_equal(this->tree_->group, other.tree_->group)) return false;
+    if (this->size() == 1) return true;
+    std::stack<std::pair<TreeNode*, TreeNode*>> visiting {};
+    visiting.push({this->tree_.get(), other.tree_.get()});
+    while (!visiting.empty()) {
+        TreeNode* this_v, *other_v;
+        std::tie(this_v, other_v) = visiting.top();
+        visiting.pop();
+        assert(this_v && other_v);
+        if (this_v->descendant1 && other_v->descendant1 && this_v->descendant2 && other_v->descendant2) {
+            // both nodes have two children
+            if (group_equal(this_v->descendant1->group, other_v->descendant1->group)
+             && group_equal(this_v->descendant2->group, other_v->descendant2->group)) {
+                visiting.push({this_v->descendant1.get(), other_v->descendant1.get()});
+                visiting.push({this_v->descendant2.get(), other_v->descendant2.get()});
+            } else if (group_equal(this_v->descendant1->group, other_v->descendant2->group)
+                    && group_equal(this_v->descendant2->group, other_v->descendant1->group)) {
+                visiting.push({this_v->descendant1.get(), other_v->descendant2.get()});
+                visiting.push({this_v->descendant2.get(), other_v->descendant1.get()});
+            } else {
+                return false;
+            }
+        } else if (this_v->descendant1 && other_v->descendant1) {
+            if (this_v->descendant2 || other_v->descendant2) return false;
+            // both nodes have one child
+            if (group_equal(this_v->descendant1->group, other_v->descendant1->group)) {
+                visiting.push({this_v->descendant1.get(), other_v->descendant1.get()});
+            } else {
+                return false;
+            }
+        } else if (this_v->descendant1 || other_v->descendant1) {
+            return false;
+        }
+    }
+    return true;
 }
 
 template <typename Label, typename T>

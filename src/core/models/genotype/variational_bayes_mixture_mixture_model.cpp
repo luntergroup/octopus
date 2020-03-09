@@ -593,10 +593,8 @@ VariationalBayesMixtureMixtureModel::calculate_evidence(const GroupConcentration
                                                         const ProbabilityVector& genotype_posteriors,
                                                         const GroupResponsibilityVector& group_responsibilities,
                                                         const ComponentResponsibilityMatrix& component_responsibilities,
-                                                        const HaplotypeLikelihoodMatrix& log_likelihoods,
-                                                        const bool debug) const
+                                                        const HaplotypeLikelihoodMatrix& log_likelihoods) const
 {
-    if (debug) std::cout << "calculate_evidence" << std::endl;
     const auto G = genotype_log_priors.size();
     const auto S = prior_mixture_concentrations.size();
     const auto T = group_responsibilities.front().size();
@@ -609,27 +607,17 @@ VariationalBayesMixtureMixtureModel::calculate_evidence(const GroupConcentration
                 ss += group_responsibilities[s][t] * marginalise(component_responsibilities[s], log_likelihoods[s][g][t]);
             }
             w += ss;
-            if (debug) std::cout << "g = " << g << " s = " << s << " w = " << w << "(" << ss << ")" << std::endl;
         }
         result += genotype_posteriors[g] * w;
-    }
-    
-    if (debug) std::cout << "likelihood: " << result << std::endl;
-    
+    }    
     for (std::size_t s {0}; s < S; ++s) {
         result += shannon_entropy(group_responsibilities[s]);
         result += shannon_entropy(component_responsibilities[s]);
         for (std::size_t t {0}; t < T; ++t) {
             result += maths::log_beta(posterior_mixture_concentrations[s][t]) - maths::log_beta(prior_mixture_concentrations[s][t]);
         }
-    }
-    
-    if (debug) std::cout << "samples: " << result << std::endl;
-    
-    result += maths::log_beta(posterior_group_concentrations) - maths::log_beta(prior_group_concentrations);
-    
-    if (debug) std::cout << "result: " << result << std::endl;
-    
+    }    
+    result += maths::log_beta(posterior_group_concentrations) - maths::log_beta(prior_group_concentrations);    
     return result;
 }
 

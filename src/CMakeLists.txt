@@ -413,7 +413,11 @@ set(CORE_SOURCES
     core/csr/measures/error_rate_stdev.cpp
     core/csr/measures/is_transversion.hpp
     core/csr/measures/is_transversion.cpp
-
+    core/csr/measures/phase_length.hpp
+    core/csr/measures/phase_length.cpp
+    core/csr/measures/max_read_length.hpp
+    core/csr/measures/max_read_length.cpp
+    
     core/models/haplotype_likelihood_array.hpp
     core/models/haplotype_likelihood_array.cpp
     core/models/haplotype_likelihood_model.hpp
