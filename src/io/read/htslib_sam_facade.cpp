@@ -1042,12 +1042,14 @@ AlignedRead HtslibSamFacade::HtslibIterator::operator*() const
     if (sequence.size() != qualities.size()) {
         throw InvalidBamRecord {hts_facade_.file_path_, extract_read_name(hts_bam1_.get()), "corrupt sequence data"};
     }
-    if (read_begin_tmp < 0 && !qualities.empty() && qualities.size() == sequence.size()) {
+    if (read_begin_tmp < 0) {
         // Then the read hangs off the left of the contig, and we must remove bases, base_qualities, and
         // adjust the cigar string as we cannot have a negative begin position
         const auto overhang_size = static_cast<unsigned>(std::abs(read_begin_tmp));
-        sequence.erase(begin(sequence), next(begin(sequence), overhang_size));
-        qualities.erase(begin(qualities), next(begin(qualities), overhang_size));
+        if (!qualities.empty() && qualities.size() == sequence.size()) {
+            sequence.erase(begin(sequence), next(begin(sequence), overhang_size));
+            qualities.erase(begin(qualities), next(begin(qualities), overhang_size));
+        }
         auto soft_clip_size = cigar.front().size();
         if (overhang_size == soft_clip_size) {
             cigar.erase(begin(cigar));
