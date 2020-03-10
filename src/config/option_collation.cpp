@@ -1583,15 +1583,12 @@ AlignedRead::MappingQuality calculate_mapping_quality_cap_trigger(const OptionMa
 
 bool model_mapping_quality(const OptionMap& options)
 {
-    return !options.at("dont-model-mapping-quality").as<bool>();;
+    return !options.at("dont-model-mapping-quality").as<bool>();
 }
 
 bool use_int_hmm_scores(const OptionMap& options, const boost::optional<const ReadSetProfile&> read_profile)
 {
-    if (options.at("use-wide-hmm-scores").as<bool>()) return true;
-    if (as_unsigned("max-indel-errors", options) > 50) return true;
-    if (read_profile && read_profile->length_stats.median > 1000) return true;
-    return false;
+    return options.at("use-wide-hmm-scores").as<bool>();
 }
 
 HaplotypeLikelihoodModel make_haplotype_likelihood_model(const OptionMap& options, const boost::optional<const ReadSetProfile&> read_profile)
