@@ -1354,12 +1354,28 @@ auto merge(std::vector<T1>&& first, std::vector<T2>&& second)
     return result;
 }
 
+auto extract_called_regions(const std::vector<Variant>& candidates)
+{
+    auto regions = extract_regions(candidates);
+    const auto is_insertion = [] (const auto& region) { return is_empty(region); };
+    auto insertion_itr = std::find_if(std::begin(regions), std::end(regions), is_insertion);
+    if (insertion_itr != std::end(regions)) {
+        do {
+            *insertion_itr = expand_rhs(*insertion_itr, 1);
+            insertion_itr = std::find_if(std::next(insertion_itr), std::end(regions), is_insertion);
+        } while (insertion_itr != std::end(regions));
+        std::sort(std::begin(regions), std::end(regions));
+    }
+    return extract_covered_regions(regions);
+}
+
 auto extract_uncalled_reference_regions(const GenomicRegion& region,
                                         const std::vector<Variant>& candidates,
                                         const std::vector<CallWrapper>& calls)
 {
     auto uncalled_candidate_regions = extract_uncalled_candidate_regions(candidates, calls);
-    auto noncandidate_regions = extract_intervening_regions(extract_covered_regions(candidates), region);
+    auto called_regions = extract_called_regions(candidates);
+    auto noncandidate_regions = extract_intervening_regions(called_regions, region);
     auto result = merge(std::move(uncalled_candidate_regions), std::move(noncandidate_regions));
     result.erase(std::remove_if(std::begin(result), std::end(result),
                                 [] (const auto& region) { return is_empty(region); }),
