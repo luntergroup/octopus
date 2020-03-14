@@ -115,6 +115,11 @@ const HaplotypeLikelihoodModel& GenomeCallingComponents::haplotype_likelihood_mo
     return components_.haplotype_likelihood_model;
 }
 
+HaplotypeLikelihoodModel GenomeCallingComponents::realignment_haplotype_likelihood_model() const
+{
+    return components_.realignment_haplotype_likelihood_model;
+}
+
 const CallerFactory& GenomeCallingComponents::caller_factory() const noexcept
 {
     return components_.caller_factory;
@@ -574,7 +579,8 @@ GenomeCallingComponents::Components::Components(ReferenceGenome&& reference, Rea
 , ploidies {options::get_ploidy_map(options)}
 , reads_profile {profile_reads_helper(this->samples, this->reference, this->regions, this->read_manager, this->ploidies, options)}
 , read_pipe {options::make_read_pipe(this->read_manager, this->reference, this->samples, options)}
-, haplotype_likelihood_model {options::make_haplotype_likelihood_model(options, optional_cref(this->reads_profile))}
+, haplotype_likelihood_model {options::make_calling_haplotype_likelihood_model(options, optional_cref(this->reads_profile))}
+, realignment_haplotype_likelihood_model {options::make_realignment_haplotype_likelihood_model(haplotype_likelihood_model, optional_cref(this->reads_profile), options)}
 , caller_factory {options::make_caller_factory(this->reference, this->read_pipe, this->regions, options, optional_cref(this->reads_profile))}
 , filter_read_pipe {}
 , output {std::move(output)}
@@ -607,11 +613,7 @@ GenomeCallingComponents::Components::Components(ReferenceGenome&& reference, Rea
         if (temp_directory) fs::remove_all(*temp_directory);
         throw;
     }
-    bamout_config.alignment_model = haplotype_likelihood_model;
-    auto new_config = haplotype_likelihood_model.config();
-    new_config.use_mapping_quality = false;
-    new_config.use_flank_state = false;
-    bamout_config.alignment_model.set(std::move(new_config));
+    bamout_config.alignment_model = realignment_haplotype_likelihood_model;
     bamout_config.copy_hom_ref_reads = options::full_bamouts_requested(options);
     bamout_config.max_buffer = read_buffer_footprint;
     bamout_config.max_threads = num_threads;

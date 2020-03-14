@@ -1350,12 +1350,7 @@ bool use_unfiltered_call_region_hints_for_filtering(const GenomeCallingComponent
 
 HaplotypeLikelihoodModel make_filtering_haplotype_likelihood_model(const GenomeCallingComponents& components)
 {
-    auto result = components.haplotype_likelihood_model();
-    auto new_config = result.config();
-    new_config.use_mapping_quality = false;
-    new_config.use_flank_state = false;
-    result.set(std::move(new_config));
-    return result;
+    return components.realignment_haplotype_likelihood_model();
 }
 
 Pedigree get_pedigree(const GenomeCallingComponents& components)

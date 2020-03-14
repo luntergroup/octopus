@@ -64,6 +64,7 @@ public:
     const boost::optional<Path>& temp_directory() const noexcept;
     boost::optional<unsigned> num_threads() const noexcept;
     const HaplotypeLikelihoodModel& haplotype_likelihood_model() const noexcept;
+    HaplotypeLikelihoodModel realignment_haplotype_likelihood_model() const;
     const CallerFactory& caller_factory() const noexcept;
     boost::optional<VcfWriter&> filtered_output() noexcept;
     boost::optional<const VcfWriter&> filtered_output() const noexcept;
@@ -105,6 +106,7 @@ private:
         boost::optional<ReadSetProfile> reads_profile;
         ReadPipe read_pipe;
         HaplotypeLikelihoodModel haplotype_likelihood_model;
+        HaplotypeLikelihoodModel realignment_haplotype_likelihood_model;
         CallerFactory caller_factory;
         boost::optional<ReadPipe> filter_read_pipe;
         VcfWriter output;
