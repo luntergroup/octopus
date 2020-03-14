@@ -12,6 +12,7 @@
 #include "read_pipe.hpp"
 #include "basics/genomic_region.hpp"
 #include "containers/mappable_map.hpp"
+#include "logging/logging.hpp"
 
 namespace octopus {
 
@@ -63,6 +64,7 @@ private:
     mutable bool default_unchecked_fetch_overflowed_ = false;
     mutable bool adjusted_unchecked_fetch_overflowed_ = false;
     mutable boost::optional<GenomicRegion::Size> min_checked_fetch_size_ = boost::none;
+    mutable boost::optional<logging::DebugLogger> debug_log_;
     
     void setup_buffer(const GenomicRegion& request) const;
     GenomicRegion get_max_fetch_region(const GenomicRegion& request) const;

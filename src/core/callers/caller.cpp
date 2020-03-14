@@ -914,7 +914,7 @@ void Caller::call_variants(const GenomicRegion& active_region,
     if (refcalls_requested()) {
         const auto refcall_region = right_overhang_region(uncalled_region, completed_region);
         const auto pileups = make_pileups(reads, latents, refcall_region);
-        auto alleles = generate_reference_alleles(refcall_region, active_candidates, calls);
+        auto alleles = generate_reference_alleles(refcall_region, calls);
         auto reference_calls = call_reference_helper(alleles, latents, pileups);
         const auto itr = utils::append(std::move(reference_calls), calls);
         std::inplace_merge(std::begin(calls), itr, std::end(calls));
@@ -1323,48 +1323,26 @@ auto extract_unique_regions(const Container& mappables)
     return result;
 }
 
-template <typename T1, typename T2>
-auto set_difference(std::vector<T1>&& first, const std::vector<T2>& second)
+auto extract_called_regions(const std::vector<CallWrapper>& calls)
 {
-    std::vector<T1> result {};
-    result.reserve(first.size());
-    std::set_difference(std::make_move_iterator(std::begin(first)),
-                        std::make_move_iterator(std::end(first)),
-                        std::cbegin(second), std::cend(second),
-                        std::back_inserter(result));
-    return result;
-}
-
-auto extract_uncalled_candidate_regions(const std::vector<Variant>& candidates,
-                                        const std::vector<CallWrapper>& calls)
-{
-    auto uncalled_regions = set_difference(extract_unique_regions(candidates), extract_unique_regions(calls));
-    return extract_covered_regions(std::move(uncalled_regions));
-}
-
-template <typename T1, typename T2>
-auto merge(std::vector<T1>&& first, std::vector<T2>&& second)
-{
-    std::vector<GenomicRegion> result {};
-    result.reserve(first.size() + second.size());
-    using std::make_move_iterator; using std::begin; using std::end;
-    std::merge(make_move_iterator(begin(first)), make_move_iterator(end(first)),
-               make_move_iterator(begin(second)), make_move_iterator(end(second)),
-               std::back_inserter(result));
-    return result;
+    auto regions = extract_regions(calls);
+    const auto is_insertion = [] (const auto& region) { return is_empty(region); };
+    auto insertion_itr = std::find_if(std::begin(regions), std::end(regions), is_insertion);
+    if (insertion_itr != std::end(regions)) {
+        do {
+            *insertion_itr = expand_lhs(*insertion_itr, 1);
+            insertion_itr = std::find_if(std::next(insertion_itr), std::end(regions), is_insertion);
+        } while (insertion_itr != std::end(regions));
+        std::sort(std::begin(regions), std::end(regions));
+    }
+    return extract_covered_regions(regions);
 }
 
 auto extract_uncalled_reference_regions(const GenomicRegion& region,
-                                        const std::vector<Variant>& candidates,
                                         const std::vector<CallWrapper>& calls)
 {
-    auto uncalled_candidate_regions = extract_uncalled_candidate_regions(candidates, calls);
-    auto noncandidate_regions = extract_intervening_regions(extract_covered_regions(candidates), region);
-    auto result = merge(std::move(uncalled_candidate_regions), std::move(noncandidate_regions));
-    result.erase(std::remove_if(std::begin(result), std::end(result),
-                                [] (const auto& region) { return is_empty(region); }),
-                 std::end(result));
-    return result;
+    auto called_regions = extract_called_regions(calls);
+    return extract_intervening_regions(called_regions, region);
 }
 
 auto make_positional_reference_alleles(const std::vector<GenomicRegion>& regions, const ReferenceGenome& reference)
@@ -1381,10 +1359,9 @@ auto make_positional_reference_alleles(const std::vector<GenomicRegion>& regions
 
 std::vector<Allele>
 Caller::generate_reference_alleles(const GenomicRegion& region,
-                                   const std::vector<Variant>& candidates,
                                    const std::vector<CallWrapper>& calls) const
 {
-    auto refcall_regions = extract_uncalled_reference_regions(region, candidates, calls);
+    auto refcall_regions = extract_uncalled_reference_regions(region, calls);
     if (parameters_.refcall_type == RefCallType::positional || is_merge_block_refcalling()) {
         return make_positional_reference_alleles(std::move(refcall_regions), reference_);
     } else {
@@ -1394,7 +1371,7 @@ Caller::generate_reference_alleles(const GenomicRegion& region,
 
 std::vector<Allele> Caller::generate_reference_alleles(const GenomicRegion& region) const
 {
-    return generate_reference_alleles(region, {}, {});
+    return generate_reference_alleles(region, {});
 }
 
 namespace {

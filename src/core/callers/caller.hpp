@@ -246,7 +246,6 @@ private:
                                                    const ReadPileupMap& pileups) const;
     std::vector<Allele>
     generate_reference_alleles(const GenomicRegion& region,
-                               const std::vector<Variant>& candidates,
                                const std::vector<CallWrapper>& calls) const;
     std::vector<Allele> generate_reference_alleles(const GenomicRegion& region) const;
     ReadPileupMap make_pileups(const ReadMap& reads, const Latents& latents, const GenomicRegion& region) const;

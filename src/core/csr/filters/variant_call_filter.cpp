@@ -513,6 +513,10 @@ Measure::FacetMap VariantCallFilter::compute_facets(const CallBlock& block) cons
 
 std::vector<Measure::FacetMap> VariantCallFilter::compute_facets(const std::vector<CallBlock>& blocks) const
 {
+    if (debug_log_ && !blocks.empty()) {
+        const auto blocks_region = closed_region(blocks.front().front(), blocks.back().back());
+        stream(*debug_log_) << "Computing facets in blocks region " << blocks_region << " containing " << blocks.size() << " blocks";
+    }
     auto facets = facet_factory_.make(facet_names_, blocks, workers_);
     std::vector<Measure::FacetMap> result {};
     result.reserve(blocks.size());
