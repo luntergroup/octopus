@@ -50,7 +50,8 @@ public:
     
     using Tau = std::vector<double>; // One element per read
     using ComponentResponsibilityVector = std::vector<Tau>; // One element per haplotype in genotype (max)
-    using ComponentResponsibilityMatrix = std::vector<ComponentResponsibilityVector>; // One element per sample
+    using ComponentResponsibilityVectorArray = std::vector<ComponentResponsibilityVector>; // One element per group
+    using ComponentResponsibilityMatrix = std::vector<ComponentResponsibilityVectorArray>; // One element per sample
     
     struct Latents
     {

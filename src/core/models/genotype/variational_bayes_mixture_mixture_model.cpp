@@ -377,24 +377,21 @@ VariationalBayesMixtureMixtureModel::update_responsibilities(GroupResponsibility
     const auto G = genotype_posteriors.size();
     const auto ln_ex_psi = dirichlet_expectation_log(group_concentrations);
     for (std::size_t s {0}; s < S; ++s) {
-        const auto max_K = component_responsibilities[s].size();
-        std::vector<double> component_responsibility_sums(max_K);
-        std::transform(std::cbegin(component_responsibilities[s]), std::cend(component_responsibilities[s]),
-                       std::begin(component_responsibility_sums), [] (const auto& taus) { return sum(taus); });
         for (std::size_t t {0}; t < T; ++t) {
+            const auto max_K = component_responsibilities[s][t].size();
             result[s][t] = ln_ex_psi[t];
             if (group_log_priors[s]) result[s][t] += (*group_log_priors[s])[t];
             const auto ln_ex_pi = dirichlet_expectation_log(mixture_concentrations[s][t]);
             const auto K = ln_ex_pi.size();
             for (std::size_t k {0}; k < max_K; ++k) {
                 if (!ignore_component_mixture_prior && k < K) {
-                    result[s][t] += ln_ex_pi[k] * component_responsibility_sums[k];
+                    result[s][t] += ln_ex_pi[k] * sum(component_responsibilities[s][t][k]);
                 }
                 for (std::size_t g {0}; g < G; ++g) {
                     if (k < K) {
-                        result[s][t] += genotype_posteriors[g] * inner_product(component_responsibilities[s][k], log_likelihoods[s][g][t][k]);
+                        result[s][t] += genotype_posteriors[g] * inner_product(component_responsibilities[s][t][k], log_likelihoods[s][g][t][k]);
                     } else {
-                        result[s][t] += genotype_posteriors[g] * inner_product(component_responsibilities[s][k], log_likelihoods[s][g][t][0]);
+                        result[s][t] += genotype_posteriors[g] * inner_product(component_responsibilities[s][t][k], log_likelihoods[s][g][t][0]);
                     }
                 }
             }
@@ -418,11 +415,13 @@ VariationalBayesMixtureMixtureModel::init_responsibilities(const GroupConcentrat
             K = std::max(K, mixture_concentrations[s][t].size());
         }
     }
-    ComponentResponsibilityMatrix result(S, ComponentResponsibilityVector(K));
+    ComponentResponsibilityMatrix result(S, ComponentResponsibilityVectorArray(T, ComponentResponsibilityVector(K)));
     for (std::size_t s {0}; s < S; ++s) {
-        const auto N = log_likelihoods[s][0][0][0].size();
-        for (std::size_t k {0}; k < K; ++k) {
-            result[s][k].resize(N);
+        for (std::size_t t {0}; t < T; ++t) {
+            const auto N = log_likelihoods[s][0][0][0].size();
+            for (std::size_t k {0}; k < K; ++k) {
+                result[s][t][k].resize(N);
+            }
         }
     }
     update_responsibilities(result, group_concentrations, mixture_concentrations,
@@ -456,7 +455,7 @@ VariationalBayesMixtureMixtureModel::update_responsibilities(ComponentResponsibi
 {
     const auto T = group_concentrations.size();
     const auto S = log_likelihoods.size();
-    const auto max_K = result[0].size();
+    const auto max_K = result[0][0].size();
     for (std::size_t s {0}; s < S; ++s) {
         const auto N = log_likelihoods[s][0][0][0].size();
         for (std::size_t t {0}; t < T; ++t) {
@@ -464,20 +463,20 @@ VariationalBayesMixtureMixtureModel::update_responsibilities(ComponentResponsibi
             const auto K = ln_exp_pi.size();
             for (std::size_t k {0}; k < max_K; ++k) {
                 for (std::size_t n {0}; n < N; ++n) {
-                    if (t == 0) result[s][k][n] = 0;
+                    if (t == 0) result[s][t][k][n] = 0;
                     auto w = k < K ? ln_exp_pi[k] + inner_product(genotype_posteriors, log_likelihoods[s], t, k, n) : options_.null_log_probability;
-                    result[s][k][n] += group_responsibilities[s][t] * w;
+                    result[s][t][k][n] += group_responsibilities[s][t] * w;
                 }
             }
-        }
-        std::vector<double> ln_rho(max_K);
-        for (std::size_t n {0}; n < N; ++n) {
-            for (std::size_t k {0}; k < max_K; ++k) {
-                ln_rho[k] = result[s][k][n];
-            }
-            const auto ln_rho_norm = log_sum_exp(ln_rho);
-            for (std::size_t k {0}; k < max_K; ++k) {
-                result[s][k][n] = std::exp(ln_rho[k] - ln_rho_norm);
+            std::vector<double> ln_rho(max_K);
+            for (std::size_t n {0}; n < N; ++n) {
+                for (std::size_t k {0}; k < max_K; ++k) {
+                    ln_rho[k] = result[s][t][k][n];
+                }
+                const auto ln_rho_norm = log_sum_exp(ln_rho);
+                for (std::size_t k {0}; k < max_K; ++k) {
+                    result[s][t][k][n] = std::exp(ln_rho[k] - ln_rho_norm);
+                }
             }
         }
     }
@@ -507,7 +506,7 @@ VariationalBayesMixtureMixtureModel::marginalise(const GroupResponsibilityVector
     LogProbability result {0};
     for (std::size_t s {0}; s < S; ++s) {
         for (std::size_t t {0}; t < T; ++t) {
-            result += group_responsibilities[s][t] * marginalise(component_responsibilities[s], log_likelihoods[s][g][t]);
+            result += group_responsibilities[s][t] * marginalise(component_responsibilities[s][t], log_likelihoods[s][g][t]);
         }
     }
     return result;
@@ -559,7 +558,7 @@ VariationalBayesMixtureMixtureModel::update_mixture_concentrations(MixtureConcen
         for (std::size_t t {0}; t < T; ++t) {
             const auto K = prior_mixture_concentrations[s][t].size();
             for (std::size_t k {0}; k < K; ++k) {
-                result[s][t][k] = prior_mixture_concentrations[s][t][k] + group_responsibilities[s][t] * sum(component_responsibilities[s][k]);
+                result[s][t][k] = prior_mixture_concentrations[s][t][k] + group_responsibilities[s][t] * sum(component_responsibilities[s][t][k]);
             }
         }
     }
@@ -604,7 +603,7 @@ VariationalBayesMixtureMixtureModel::calculate_evidence(const GroupConcentration
         for (std::size_t s {0}; s < S; ++s) {
             double ss {0};
             for (std::size_t t {0}; t < T; ++t) {
-                ss += group_responsibilities[s][t] * marginalise(component_responsibilities[s], log_likelihoods[s][g][t]);
+                ss += group_responsibilities[s][t] * marginalise(component_responsibilities[s][t], log_likelihoods[s][g][t]);
             }
             w += ss;
         }
@@ -612,8 +611,8 @@ VariationalBayesMixtureMixtureModel::calculate_evidence(const GroupConcentration
     }    
     for (std::size_t s {0}; s < S; ++s) {
         result += shannon_entropy(group_responsibilities[s]);
-        result += shannon_entropy(component_responsibilities[s]);
         for (std::size_t t {0}; t < T; ++t) {
+            result += group_responsibilities[s][t] * shannon_entropy(component_responsibilities[s][t]);
             result += maths::log_beta(posterior_mixture_concentrations[s][t]) - maths::log_beta(prior_mixture_concentrations[s][t]);
         }
     }    
@@ -718,9 +717,11 @@ void VariationalBayesMixtureMixtureModel::print(const GroupResponsibilityVector&
 void VariationalBayesMixtureMixtureModel::print(const ComponentResponsibilityMatrix& responsibilities) const
 {
     for (std::size_t s {0}; s < responsibilities.size(); ++s) {
-        for (std::size_t k {0}; k < responsibilities[s].size(); ++k) {
-            for (std::size_t n {0}; n < responsibilities[s][k].size(); ++n) {
-                std::cout << "s: " << s <<  " k: " << k << " n: " << n << " = " << responsibilities[s][k][n] << std::endl;
+        for (std::size_t t {0}; t < responsibilities[s].size(); ++t) {
+            for (std::size_t k {0}; k < responsibilities[s].size(); ++k) {
+                for (std::size_t n {0}; n < responsibilities[s][k].size(); ++n) {
+                    std::cout << "s: " << s << " t: " << t <<  " k: " << k << " n: " << n << " = " << responsibilities[s][t][k][n] << std::endl;
+                }
             }
         }
     }
