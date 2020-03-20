@@ -348,7 +348,7 @@ if __name__ == '__main__':
                         required=False,
                         type=str,
                         help='Install into given location')
-    parser.add_argument('--dependencies',
+    parser.add_argument('-D', '--dependencies',
                         default=False,
                         help='Install all dependencies locally into build directory',
                         action='store_true')
@@ -395,7 +395,7 @@ if __name__ == '__main__':
                         required=False,
                         type=str,
                         help='The GMP library root')
-    parser.add_argument('--forests',
+    parser.add_argument('-F', '--forests',
                         default=False,
                         help='Try to download pre-trained random forests for filtering',
                         action='store_true')
