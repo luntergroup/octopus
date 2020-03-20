@@ -253,7 +253,7 @@ def main(args):
         os.remove(cmake_cache_file)
 
     dependencies_dir, dependencies_binaries = None, None
-    if args["install_dependencies"]:
+    if args["dependencies"]:
         dependencies_dir, dependencies_binaries = install_dependencies(octopus_build_dir)
 
     cmake_options = []
@@ -335,7 +335,7 @@ def main(args):
         else:
             print("Windows make files not supported. Build files have been written to " + octopus_build_dir)
 
-        if args["download_forests"]:
+        if args["forests"]:
             if len(forests) > 0:
                 forest_dir = os.path.join(octopus_dir, "resources/forests")
                 download_forests(forest_dir, octopus_version)
@@ -348,7 +348,7 @@ if __name__ == '__main__':
                         required=False,
                         type=str,
                         help='Install into given location')
-    parser.add_argument('--install-dependencies',
+    parser.add_argument('--dependencies',
                         default=False,
                         help='Install all dependencies locally into build directory',
                         action='store_true')
@@ -395,7 +395,7 @@ if __name__ == '__main__':
                         required=False,
                         type=str,
                         help='The GMP library root')
-    parser.add_argument('--download-forests',
+    parser.add_argument('--forests',
                         default=False,
                         help='Try to download pre-trained random forests for filtering',
                         action='store_true')
