@@ -74,10 +74,12 @@ find_repeat_context(const std::vector<TandemRepeat>& repeats, const VcfRecord& c
             }
         }
         if (!result) {
-            result = *max_overlapped(repeats, call);
-            if (!has_overlapped(alleles, *result)) {
+            const auto result_itr = max_overlapped(repeats, call);
+            if (result_itr == std::cend(repeats) || has_overlapped(alleles, *result_itr)) {
                 result = boost::none;
-            }
+            } else {
+	        result = *result_itr;
+	    }
         }
     }
     return result;
