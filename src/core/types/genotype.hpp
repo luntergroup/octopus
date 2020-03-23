@@ -563,7 +563,7 @@ decltype(auto)
 copy_from_cache(const IndexedType& element, UnaryFunction&& f, LinearCache<IndexedType, UnaryFunction>& cache)
 {
     if (index_of(element) >= cache.size()) {
-        cache.resize(2 * index_of(element));
+        cache.resize(2 * (index_of(element) + 1));
     }
     if (!cache[index_of(element)]) {
         cache[index_of(element)] = f(element);

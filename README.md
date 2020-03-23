@@ -25,7 +25,7 @@ Install Octopus (dependencies will be installed into `octopus/build`):
 
 ```shell
 $ git clone -b develop https://github.com/luntergroup/octopus.git
-$ octopus/scripts/install.py --install-dependencies --download-forests
+$ octopus/scripts/install.py --dependencies --forests
 $ echo 'export PATH='$(pwd)'/octopus/bin:$PATH' >> ~/.bash_profile
 $ source ~/.bash_profile
 ```
@@ -33,7 +33,7 @@ $ source ~/.bash_profile
 Call some variants:
 
 ```shell
-$ FOREST="$(pwd)/octopus/resources/forests/germline.v0.5.2-beta.forest"
+$ FOREST="$(pwd)/octopus/resources/forests/0.7.0/germline.v0.7.0.forest"
 $ octopus -R hs37d5.fa -I NA12878.bam -T 1 to MT -o NA12878.octopus.vcf.gz --forest $FOREST --threads 8
 ```
 

@@ -516,7 +516,7 @@ using GenotypePtrCountMap = std::unordered_map<const Genotype<IndexedHaplotype<>
 bool contains(const IndexedHaplotype<>& haplotype, const Allele& allele, HaplotypeBoolCache& cache)
 {
     if (index_of(haplotype) >= cache.size()) {
-        cache.resize(2 * index_of(haplotype));
+        cache.resize(2 * (index_of(haplotype) + 1));
     }
     if (!cache[index_of(haplotype)]) {
         cache[index_of(haplotype)] = contains_helper(haplotype, allele);
@@ -592,19 +592,24 @@ auto compute_segregation_posterior_uncached(const Allele& allele, const TrioProb
     return marginalise_condition(trio_posteriors, [&] (const auto& trio) { return contains(trio, allele); });
 }
 
-auto compute_segregation_posterior_cached(const Allele& allele, const TrioProbabilityVector& trio_posteriors)
+struct MarginalisationInfo
 {
-    HaplotypeBoolCache haplotype_cache {};
-    haplotype_cache.reserve(trio_posteriors.size());
-    GenotypePtrCountMap genotype_cache {};
-    genotype_cache.reserve(trio_posteriors.size());
+    std::size_t num_genotypes, num_haplotypes;
+};
+
+auto compute_segregation_posterior_cached(const Allele& allele, const TrioProbabilityVector& trio_posteriors, 
+                                          const MarginalisationInfo& info)
+{
+    HaplotypeBoolCache haplotype_cache(info.num_haplotypes);
+    GenotypePtrCountMap genotype_cache {info.num_genotypes};
     return marginalise_condition(trio_posteriors, [&] (const auto& trio) { return contains(trio, allele, haplotype_cache, genotype_cache); });
 }
 
-auto compute_segregation_posterior(const Allele& allele, const TrioProbabilityVector& trio_posteriors)
+auto compute_segregation_posterior(const Allele& allele, const TrioProbabilityVector& trio_posteriors,
+                                   const MarginalisationInfo& info)
 {
     if (trio_posteriors.size() >= 500) {
-        return compute_segregation_posterior_cached(allele, trio_posteriors);
+        return compute_segregation_posterior_cached(allele, trio_posteriors, info);
     } else {
         return compute_segregation_posterior_uncached(allele, trio_posteriors);
     }
@@ -612,11 +617,12 @@ auto compute_segregation_posterior(const Allele& allele, const TrioProbabilityVe
 
 using AllelePosteriorMap = std::map<Allele, Phred<double>>;
 
-auto compute_segregation_posteriors(const std::vector<Allele>& alleles, const TrioProbabilityVector& trio_posteriors)
+auto compute_segregation_posteriors(const std::vector<Allele>& alleles, const TrioProbabilityVector& trio_posteriors,
+                                    const MarginalisationInfo& info)
 {
     AllelePosteriorMap result {};
     for (const auto& allele : alleles) {
-        result.emplace(allele, compute_segregation_posterior(allele, trio_posteriors));
+        result.emplace(allele, compute_segregation_posterior(allele, trio_posteriors, info));
     }
     return result;
 }
@@ -679,28 +685,31 @@ auto compute_denovo_posterior_uncached(const Allele& allele, const TrioProbabili
     return marginalise_condition(trio_posteriors, [&] (const auto& trio) { return is_denovo(allele, trio); });
 }
 
-auto compute_denovo_posterior_cached(const Allele& allele, const TrioProbabilityVector& trio_posteriors)
+auto compute_denovo_posterior_cached(const Allele& allele, const TrioProbabilityVector& trio_posteriors,
+                                     const MarginalisationInfo& info)
 {
-    HaplotypeBoolCache haplotype_cache(trio_posteriors.size());
-    GenotypePtrCountMap genotype_cache(trio_posteriors.size());
+    HaplotypeBoolCache haplotype_cache(info.num_haplotypes);
+    GenotypePtrCountMap genotype_cache(info.num_genotypes);
     return marginalise_condition(trio_posteriors, [&] (const auto& trio) { return is_denovo(allele, trio, haplotype_cache, genotype_cache); });
 }
 
-auto compute_denovo_posterior(const Allele& allele, const TrioProbabilityVector& trio_posteriors)
+auto compute_denovo_posterior(const Allele& allele, const TrioProbabilityVector& trio_posteriors,
+                              const MarginalisationInfo& info)
 {
     if (trio_posteriors.size() >= 500) {
-        return compute_denovo_posterior_cached(allele, trio_posteriors);
+        return compute_denovo_posterior_cached(allele, trio_posteriors, info);
     } else {
         return compute_denovo_posterior_uncached(allele, trio_posteriors);
     }
 }
 
 auto compute_denovo_posteriors(const AllelePosteriorMap& called_alleles,
-                               const TrioProbabilityVector& trio_posteriors)
+                               const TrioProbabilityVector& trio_posteriors,
+                               const MarginalisationInfo& info)
 {
     AllelePosteriorMap result {};
     for (const auto& p : called_alleles) {
-        result.emplace(p.first, compute_denovo_posterior(p.first, trio_posteriors));
+        result.emplace(p.first, compute_denovo_posterior(p.first, trio_posteriors, info));
     }
     return result;
 }
@@ -1030,10 +1039,11 @@ TrioCaller::call_variants(const std::vector<Variant>& candidates, const Latents&
     const auto alleles = decompose(candidates);
     const auto& trio_posteriors = latents.model_latents.posteriors.joint_genotype_probabilities;
     debug::log(trio_posteriors, debug_log_, trace_log_);
-    const auto allele_posteriors = compute_segregation_posteriors(alleles, trio_posteriors);
+    const MarginalisationInfo info {latents.maternal_genotypes.size(), latents.haplotypes.size()};
+    const auto allele_posteriors = compute_segregation_posteriors(alleles, trio_posteriors, info);
     debug::log(allele_posteriors, debug_log_, trace_log_, parameters_.min_variant_posterior);
     const auto called_alleles = call_alleles(allele_posteriors, parameters_.min_variant_posterior);
-    const auto denovo_posteriors = compute_denovo_posteriors(called_alleles, trio_posteriors);
+    const auto denovo_posteriors = compute_denovo_posteriors(called_alleles, trio_posteriors, info);
     debug::log(denovo_posteriors, debug_log_, trace_log_, parameters_.min_denovo_posterior, true);
     auto denovos = call_denovos(denovo_posteriors, allele_posteriors, parameters_.min_denovo_posterior);
     const auto germline_alleles = get_germline_alleles(called_alleles, denovos);
