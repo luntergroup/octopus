@@ -254,7 +254,7 @@ double update_haplotype_frequencies(HardyWeinbergModel& hw_model,
         if (frequency_change > max_frequency_change) {
             max_frequency_change = frequency_change;
         }
-        current_frequency = new_frequency;
+        current_frequency = std::max(new_frequency, std::numeric_limits<decltype(new_frequency)>::min());
     }
     return max_frequency_change;
 }
