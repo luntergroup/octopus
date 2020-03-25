@@ -41,12 +41,10 @@ const HaplotypeLikelihoodModel::Config& HaplotypeLikelihoodModel::config() const
 
 void HaplotypeLikelihoodModel::set(Config config)
 {
-    if (config.max_indel_error != this->config_.max_indel_error) {
-        if (config.use_int_scores) {
-            hmm_ = HMM {config.max_indel_error, HMM::ScoreType::int32};
-        } else {
-            hmm_ = HMM {config.max_indel_error};
-        }
+    if (config.use_int_scores) {
+        hmm_ = HMM {config.max_indel_error, HMM::ScoreType::int32};
+    } else {
+        hmm_ = HMM {config.max_indel_error};
     }
     config_ = std::move(config);
     if (config_.mapping_quality_cap_trigger && *config_.mapping_quality_cap_trigger >= config_.mapping_quality_cap) {
