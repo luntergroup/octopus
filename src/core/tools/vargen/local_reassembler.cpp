@@ -64,6 +64,7 @@ LocalReassembler::LocalReassembler(const ReferenceGenome& reference, Options opt
 , max_bubbles_ {options.max_bubbles}
 , min_bubble_score_ {options.min_bubble_score}
 , max_variant_size_ {options.max_variant_size}
+, cycle_tolerance_ {options.cycle_tolerance}
 {
     if (max_bin_size_ == 0) {
         throw std::runtime_error {"bin size must be greater than zero"};
@@ -840,6 +841,11 @@ auto align(const Assembler::Variant& v, const Model& model)
     return align(v.ref, v.alt, model).cigar;
 }
 
+struct VariantDecompositionConfig
+{
+    enum class ComplexAction { decompose, mnv, ignore } complex;
+};
+
 auto count_variant_types(const CigarString& cigar) noexcept
 {
     bool has_snv {false}, has_insertion {false}, has_deletion {false};
@@ -860,7 +866,9 @@ bool is_complex_alignment(const CigarString& cigar, const Assembler::Variant& v)
     const auto num_variant_types = count_variant_types(cigar);
     return (min_allele_size > 5 && cigar.size() >= min_allele_size && num_variant_types > 1)
            || (min_allele_size > 8 && cigar.size() > 2 * min_allele_size / 3 && num_variant_types > 1)
-           || (min_allele_size > 20 && cigar.size() > min_allele_size / 2 && num_variant_types > 2);
+           || (min_allele_size > 20 && cigar.size() > min_allele_size / 2 && num_variant_types > 2)
+           || (min_allele_size > 50 && cigar.size() > 2 * min_allele_size / 3 && num_variant_types > 2)
+           || (min_allele_size > 100 && cigar.size() > min_allele_size / 3 && num_variant_types > 2);
 }
 
 bool is_good_alignment(const CigarString& cigar, const Assembler::Variant& v) noexcept
@@ -868,20 +876,23 @@ bool is_good_alignment(const CigarString& cigar, const Assembler::Variant& v) no
     return !is_complex_alignment(cigar, v);
 }
 
-std::vector<Assembler::Variant> decompose_with_aligner(Assembler::Variant v, const Model& model)
+std::vector<Assembler::Variant>
+decompose_with_aligner(Assembler::Variant v, const Model& model, const VariantDecompositionConfig config)
 {
     const auto cigar = align(v, model);
     if (is_good_alignment(cigar, v)) {
         return extract_variants(v.ref, v.alt, cigar, v.begin_pos);
-    } else {
+    } else if (config.complex == VariantDecompositionConfig::ComplexAction::mnv) {
         return {std::move(v)};
+    } else {
+        return {};
     }
 }
 
-auto decompose_with_aligner(Assembler::Variant v)
+auto decompose_with_aligner(Assembler::Variant v, const VariantDecompositionConfig config)
 {
     Model model {4, -6, -8, -1};
-    return decompose_with_aligner(std::move(v), model);
+    return decompose_with_aligner(std::move(v), model, config);
 }
 
 bool is_fully_decomposed(const Assembler::Variant v) noexcept
@@ -889,21 +900,23 @@ bool is_fully_decomposed(const Assembler::Variant v) noexcept
     return v.ref.empty() && v.alt.empty();
 }
 
-std::vector<Assembler::Variant> decompose_complex(Assembler::Variant v, const std::vector<Repeat>& reference_repeats)
+std::vector<Assembler::Variant> 
+decompose_complex(Assembler::Variant v, const std::vector<Repeat>& reference_repeats, const VariantDecompositionConfig config)
 {
     auto result = try_to_split_repeats(v, reference_repeats);
     if (!is_fully_decomposed(v)) {
-        utils::append(decompose_with_aligner(std::move(v)), result);
+        utils::append(decompose_with_aligner(std::move(v), config), result);
     }
     return result;
 }
 
-std::vector<Assembler::Variant> decompose(Assembler::Variant v, const std::vector<Repeat>& reference_repeats)
+std::vector<Assembler::Variant> 
+decompose(Assembler::Variant v, const std::vector<Repeat>& reference_repeats, const VariantDecompositionConfig config)
 {
     if (is_mnv(v)) {
         return split_mnv(std::move(v));
     } else {
-        return decompose_complex(std::move(v), reference_repeats);
+        return decompose_complex(std::move(v), reference_repeats, config);
     }
 }
 
@@ -924,12 +937,12 @@ struct VariantLess
 
 using VariantIterator = std::deque<Assembler::Variant>::iterator;
 
-auto decompose(VariantIterator first, VariantIterator last, const std::vector<Repeat>& reference_repeats)
+auto decompose(VariantIterator first, VariantIterator last, const std::vector<Repeat>& reference_repeats, const VariantDecompositionConfig config)
 {
     using std::begin; using std::end; using std::make_move_iterator;
     std::deque<Assembler::Variant> result {};
     std::for_each(make_move_iterator(first), make_move_iterator(last), [&] (auto&& complex) {
-        utils::append(decompose(std::move(complex), reference_repeats), result);
+        utils::append(decompose(std::move(complex), reference_repeats, config), result);
     });
     std::sort(begin(result), end(result), VariantLess {});
     result.erase(std::unique(begin(result), end(result)), end(result));
@@ -959,13 +972,13 @@ void merge(std::deque<Assembler::Variant>&& decomposed, std::deque<Assembler::Va
     std::inplace_merge(begin(variants), first_complex, end(variants), VariantLess {});
 }
 
-void decompose(std::deque<Assembler::Variant>& variants, const ReferenceGenome::GeneticSequence& reference)
+void decompose(std::deque<Assembler::Variant>& variants, const ReferenceGenome::GeneticSequence& reference, const VariantDecompositionConfig config)
 {
     auto tmp = reference;
     auto reference_repeats = find_repeats(tmp);
     const auto first_decomposable = partition_decomposable(variants);
     if (first_decomposable != std::end(variants)) {
-        merge(decompose(first_decomposable, std::end(variants), reference_repeats), variants, first_decomposable);
+        merge(decompose(first_decomposable, std::end(variants), reference_repeats, config), variants, first_decomposable);
     }
 }
 
@@ -994,6 +1007,9 @@ LocalReassembler::try_assemble_region(Assembler& assembler, const NucleotideSequ
     assembler.prune(min_kmer_observations_);
     auto status = AssemblerStatus::success;
     if (!assembler.is_acyclic()) {
+        if (cycle_tolerance_ == Options::CyclicGraphTolerance::none) {
+            return AssemblerStatus::failed;
+        }
         assembler.remove_nonreference_cycles();
         status = AssemblerStatus::partial_success;
     }
@@ -1007,7 +1023,13 @@ LocalReassembler::try_assemble_region(Assembler& assembler, const NucleotideSequ
         trim_reference(variants);
         std::sort(std::begin(variants), std::end(variants), VariantLess {});
         variants.erase(std::unique(std::begin(variants), std::end(variants)), std::end(variants));
-        decompose(variants, reference_sequence);
+        VariantDecompositionConfig decomposition_config {};
+        if (status == AssemblerStatus::success || cycle_tolerance_ == Options::CyclicGraphTolerance::high) {
+            decomposition_config.complex = VariantDecompositionConfig::ComplexAction::mnv;
+        } else {
+            decomposition_config.complex = VariantDecompositionConfig::ComplexAction::ignore;
+        }
+        decompose(variants, reference_sequence, decomposition_config);
         if (status == AssemblerStatus::partial_success) {
             // TODO: Some false positive large deletions are being generated for small kmer sizes.
             // Until Assembler is better able to remove these automatically, filter them here.

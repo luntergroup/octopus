@@ -1184,6 +1184,17 @@ auto get_max_expected_heterozygosity(const OptionMap& options)
     return std::min(static_cast<double>(heterozygosity + 2 * heterozygosity_stdev), 0.9999);
 }
 
+auto get_assembler_cycle_tolerance(const OptionMap& options)
+{
+    using CGT = coretools::LocalReassembler::Options::CyclicGraphTolerance;
+    using CVDP = CandidateVariantDiscoveryProtocol;
+    if (options.at("variant-discovery-mode").as<CVDP>() == CVDP::illumina) {
+        return CGT::high;
+    } else {
+        return CGT::none;
+    }
+}
+
 auto make_variant_generator_builder(const OptionMap& options, const boost::optional<const ReadSetProfile&> read_profile)
 {
     using namespace coretools;
@@ -1240,6 +1251,7 @@ auto make_variant_generator_builder(const OptionMap& options, const boost::optio
         reassembler_options.max_bubbles = as_unsigned("max-bubbles", options);
         reassembler_options.min_bubble_score = get_assembler_bubble_score_setter(options);
         reassembler_options.max_variant_size = as_unsigned("max-variant-size", options);
+        reassembler_options.cycle_tolerance = get_assembler_cycle_tolerance(options);
         result.set_local_reassembler(std::move(reassembler_options));
     }
     if (is_set("source-candidates", options) || is_set("source-candidates-file", options)) {
@@ -1571,18 +1583,16 @@ AlignedRead::MappingQuality calculate_mapping_quality_cap_trigger(const OptionMa
 
 bool model_mapping_quality(const OptionMap& options)
 {
-    return !options.at("dont-model-mapping-quality").as<bool>();;
+    return !options.at("dont-model-mapping-quality").as<bool>();
 }
 
 bool use_int_hmm_scores(const OptionMap& options, const boost::optional<const ReadSetProfile&> read_profile)
 {
-    if (options.at("use-wide-hmm-scores").as<bool>()) return true;
-    if (as_unsigned("max-indel-errors", options) > 50) return true;
-    if (read_profile && read_profile->length_stats.median > 1000) return true;
-    return false;
+    return options.at("use-wide-hmm-scores").as<bool>();
 }
 
-HaplotypeLikelihoodModel make_haplotype_likelihood_model(const OptionMap& options, const boost::optional<const ReadSetProfile&> read_profile)
+HaplotypeLikelihoodModel
+make_calling_haplotype_likelihood_model(const OptionMap& options, const boost::optional<const ReadSetProfile&> read_profile)
 {
     auto error_model = make_error_model(options);
     HaplotypeLikelihoodModel::Config config {};
@@ -1597,9 +1607,37 @@ HaplotypeLikelihoodModel make_haplotype_likelihood_model(const OptionMap& option
     return HaplotypeLikelihoodModel {std::move(error_model.snv), std::move(error_model.indel), config};
 }
 
+bool use_int_hmm_scores_for_realignment(const OptionMap& options, const boost::optional<const ReadSetProfile&> read_profile)
+{
+    if (options.at("use-wide-hmm-scores").as<bool>()) return true;
+    if (options.at("split-long-reads").as<bool>()) return true;
+    if (read_profile && read_profile->length_stats.median > 1'000) return true;
+    return false;
+}
+
+unsigned get_realignment_hmm_max_indel_errors(const OptionMap& options, const boost::optional<const ReadSetProfile&> read_profile)
+{
+    return as_unsigned("max-indel-errors", options);
+}
+
+HaplotypeLikelihoodModel 
+make_realignment_haplotype_likelihood_model(const HaplotypeLikelihoodModel& calling_model,
+                                            const boost::optional<const ReadSetProfile&> read_profile,
+                                            const options::OptionMap& options)
+{
+    auto result = calling_model;
+    auto realignment_config = result.config();
+    realignment_config.use_mapping_quality = false;
+    realignment_config.use_flank_state = false;
+    realignment_config.use_int_scores = use_int_hmm_scores_for_realignment(options, read_profile);
+    realignment_config.max_indel_error = get_realignment_hmm_max_indel_errors(options, read_profile);
+    result.set(std::move(realignment_config));
+    return result;
+}
+
 auto get_min_haplotype_flank_pad(const OptionMap& options, const boost::optional<const ReadSetProfile&>& input_reads_profile)
 {
-    auto model = make_haplotype_likelihood_model(options, input_reads_profile);
+    auto model = make_calling_haplotype_likelihood_model(options, input_reads_profile);
     return 2 * model.pad_requirement();
 }
 
@@ -2083,7 +2121,7 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
     vc_builder.set_max_genotype_combinations(get_max_genotype_combinations(options, caller));
     vc_builder.set_haplotype_extension_threshold(options.at("min-protected-haplotype-posterior").as<double>());
     vc_builder.set_reference_haplotype_protection(protect_reference_haplotype(options));
-    vc_builder.set_likelihood_model(make_haplotype_likelihood_model(options, read_profile));
+    vc_builder.set_likelihood_model(make_calling_haplotype_likelihood_model(options, read_profile));
     auto min_phase_score = options.at("min-phase-score").as<Phred<double>>();
     vc_builder.set_min_phase_score(min_phase_score);
     vc_builder.set_early_phase_detection_policy(!options.at("disable-early-phase-detection").as<bool>());
