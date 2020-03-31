@@ -763,9 +763,9 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<Phred<double>>()->default_value(Phred<double> {3}),
      "Minimum PASSing random forest probability (Phred scale)")
 
-    ("use-somatic-forest-for-refcalls",
+    ("use-germline-forest-for-somatic-normals",
      po::bool_switch()->default_value(false),
-     "Use the somatic forest model for evaluating homozygous reference calls rather than the germline forest model")
+     "Use the germline forest model for evaluating somatic variant normal sample genotypes rather than the somatic forest model")
     ;
     
     po::options_description all("Octopus command line options");
