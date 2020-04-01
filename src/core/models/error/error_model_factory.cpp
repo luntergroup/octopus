@@ -420,7 +420,7 @@ BasicRepeatBasedIndelErrorModel::Parameters lookup_builtin_indel_model(const Mod
 
 bool use_snv_error_model(const ModelConfig config)
 {
-    return !(config.sequencer != Sequencer::pacbio || config.sequencer != Sequencer::pacbio_css);
+    return config.sequencer != Sequencer::pacbio && config.sequencer != Sequencer::pacbio_css;
 }
 
 using RepeatBasedSnvModelParameterMap = std::unordered_map<LibraryPreparation, BasicRepeatBasedSNVErrorModel::Parameters>;
