@@ -97,15 +97,16 @@ public:
     , op_ {std::move(op)}
     , type1_ {std::move(type1)}
     , type2_ {std::move(type2)}
+    , what_ {std::string {runtime_error::what()} + ": operation=" + op_ + " lhs= " + type1_ + " rhs=" + type2_}
     {}
     
     const char* what() const noexcept
     {
-        return (std::string {runtime_error::what()} + ": operation=" + op_ + " lhs= " + type1_ + " rhs=" + type2_).c_str();
+        return what_.c_str();
     }
     
 private:
-    std::string op_, type1_, type2_;
+    std::string op_, type1_, type2_, what_;
 };
 
 class is_equal : public boost::static_visitor<bool>
