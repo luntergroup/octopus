@@ -303,7 +303,7 @@ std::vector<HtslibSamFacade::SampleName> HtslibSamFacade::extract_samples() cons
 std::vector<std::string> HtslibSamFacade::extract_read_groups(const SampleName& sample) const
 {
     std::vector<std::string> result {};
-    for (const auto pair : sample_names_) {
+    for (const auto& pair : sample_names_) {
         if (pair.second == sample) result.emplace_back(pair.first);
     }
     result.shrink_to_fit();
