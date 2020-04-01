@@ -609,6 +609,7 @@ set(WarningIgnores
     -Wno-unused-parameter
     -Wno-unused-function
     -Wno-missing-braces
+    -Wno-deprecated-copy
 )
 
 set(GCCWarningIgnores
