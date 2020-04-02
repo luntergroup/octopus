@@ -54,17 +54,17 @@ public:
     
     // Constructor with genotype fields
     template <typename String1, typename String2, typename Sequence1, typename Sequence2,
-    typename Filters, typename Info, typename Format, typename Genotypes, typename Samples>
+    typename Filters, typename Info, typename Format, typename Samples>
     VcfRecord(String1&& chrom, GenomicRegion::Position pos, String2&& id,
               Sequence1&& ref, Sequence2&& alt, boost::optional<QualityType> qual,
               Filters&& filters, Info&& info,
-              Format&& format, Genotypes&& genotypes, Samples&& samples);
+              Format&& format, Samples&& samples);
     template <typename String, typename Sequence1, typename Sequence2,
-              typename Filters, typename Info, typename Format, typename Genotypes, typename Samples>
+              typename Filters, typename Info, typename Format, typename Samples>
     VcfRecord(GenomicRegion region, String&& id,
               Sequence1&& ref, Sequence2&& alt, boost::optional<QualityType> qual,
               Filters&& filters, Info&& info,
-              Format&& format, Genotypes&& genotypes, Samples&& samples);
+              Format&& format, Samples&& samples);
     
     VcfRecord(const VcfRecord&)            = default;
     VcfRecord& operator=(const VcfRecord&) = default;
@@ -114,8 +114,18 @@ public:
     friend Builder;
     
 private:
-    using Genotype = std::pair<std::vector<NucleotideSequence>, bool>;
     using ValueMap = boost::container::flat_map<KeyType, std::vector<ValueType>>;
+    struct Genotype
+    {
+        std::vector<NucleotideSequence> alleles;
+        bool phased;
+    };
+    struct SampleData
+    {
+        boost::optional<Genotype> genotype;
+        ValueMap other;
+    };
+    using SampleDataMap = boost::container::flat_map<SampleName, SampleData>;
     
     // mandatory fields
     GenomicRegion region_;
@@ -125,14 +135,12 @@ private:
     boost::optional<QualityType> qual_;
     std::vector<KeyType> filter_;
     ValueMap info_;
-    
     // optional fields
     std::vector<KeyType> format_;
-    boost::container::flat_map<SampleName, Genotype> genotypes_;
-    boost::container::flat_map<SampleName, ValueMap> samples_;
+    SampleDataMap samples_;
     
+    const Genotype& get_genotype(const SampleName& sample) const;
     std::string get_allele_number(const NucleotideSequence& allele) const;
-    
     std::vector<SampleName> samples() const;
     void print_info(std::ostream& os) const;
     void print_genotype_allele_numbers(std::ostream& os, const SampleName& sample) const;
@@ -256,7 +264,6 @@ private:
     decltype(VcfRecord::filter_) filter_ = {};
     decltype(VcfRecord::info_) info_ = {};
     decltype(VcfRecord::format_) format_ = {};
-    decltype(VcfRecord::genotypes_) genotypes_ = {};
     decltype(VcfRecord::samples_) samples_ = {};
     boost::optional<GenomicRegion::Position> end_;
 };
@@ -273,7 +280,6 @@ VcfRecord::VcfRecord(String1&& chrom, GenomicRegion::Position pos, String2&& id,
 , filter_ {std::forward<Filters>(filters)}
 , info_ {std::forward<Info>(info)}
 , format_ {}
-, genotypes_ {}
 , samples_ {}
 {}
 
@@ -289,16 +295,15 @@ VcfRecord::VcfRecord(GenomicRegion region, String&& id,  Sequence1&& ref, Sequen
 , filter_ {std::forward<Filters>(filters)}
 , info_ {std::forward<Info>(info)}
 , format_ {}
-, genotypes_ {}
 , samples_ {}
 {}
 
 template <typename String1, typename String2, typename Sequence1, typename Sequence2,
-typename Filters, typename Info, typename Format, typename Genotypes, typename Samples>
+typename Filters, typename Info, typename Format, typename Samples>
 VcfRecord::VcfRecord(String1&& chrom, GenomicRegion::Position pos, String2&& id,
                      Sequence1&& ref, Sequence2&& alt,
                      boost::optional<QualityType> qual, Filters&& filters,
-                     Info&& info, Format&& format, Genotypes&& genotypes, Samples&& samples)
+                     Info&& info, Format&& format, Samples&& samples)
 : region_ {std::forward<String1>(chrom), pos - 1, pos + static_cast<GenomicRegion::Position>(utils::length(ref)) - 1}
 , id_ {std::forward<String2>(id)}
 , ref_ {std::forward<Sequence1>(ref)}
@@ -307,16 +312,15 @@ VcfRecord::VcfRecord(String1&& chrom, GenomicRegion::Position pos, String2&& id,
 , filter_ {std::forward<Filters>(filters)}
 , info_ {std::forward<Info>(info)}
 , format_ {std::forward<Format>(format)}
-, genotypes_ {std::forward<Genotypes>(genotypes)}
 , samples_ {std::forward<Samples>(samples)}
 {}
 
 template <typename String, typename Sequence1, typename Sequence2,
-          typename Filters, typename Info, typename Format, typename Genotypes, typename Samples>
+          typename Filters, typename Info, typename Format, typename Samples>
 VcfRecord::VcfRecord(GenomicRegion region, String&& id,
                      Sequence1&& ref, Sequence2&& alt,
                      boost::optional<QualityType> qual, Filters&& filters,
-                     Info&& info, Format&& format, Genotypes&& genotypes, Samples&& samples)
+                     Info&& info, Format&& format, Samples&& samples)
 : region_ {std::move(region)}
 , id_ {std::forward<String>(id)}
 , ref_ {std::forward<Sequence1>(ref)}
@@ -325,7 +329,6 @@ VcfRecord::VcfRecord(GenomicRegion region, String&& id,
 , filter_ {std::forward<Filters>(filters)}
 , info_ {std::forward<Info>(info)}
 , format_ {std::forward<Format>(format)}
-, genotypes_ {std::forward<Genotypes>(genotypes)}
 , samples_ {std::forward<Samples>(samples)}
 {}
 

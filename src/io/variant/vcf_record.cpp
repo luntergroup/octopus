@@ -73,11 +73,9 @@ std::vector<VcfRecord::KeyType> VcfRecord::info_keys() const
 {
     std::vector<KeyType> result {};
     result.reserve(info_.size());
-    
     std::transform(info_.cbegin(), info_.cend(), std::back_inserter(result), [] (const auto& p) {
         return p.first;
     });
-    
     return result;
 }
 
@@ -96,7 +94,7 @@ boost::optional<unsigned> VcfRecord::format_cardinality(const KeyType& key) cons
     boost::optional<unsigned> result {};
     if (has_format(key)) {
         for (const auto& p : samples_) {
-            const auto sample_format_cardinality = p.second.at(key).size();
+            const auto sample_format_cardinality = p.second.other.at(key).size();
             if (result) {
                 if (*result != sample_format_cardinality) return boost::none;
             } else {
@@ -114,27 +112,27 @@ const std::vector<VcfRecord::KeyType>& VcfRecord::format() const noexcept
 
 unsigned VcfRecord::num_samples() const noexcept
 {
-    return static_cast<unsigned>((has_genotypes()) ? genotypes_.size() : samples_.size());
+    return samples_.size();
 }
 
 bool VcfRecord::has_genotypes() const noexcept
 {
-    return !genotypes_.empty();
+    return std::find(std::cbegin(format_), std::cend(format_), vcfspec::format::genotype) != std::cend(format_);
 }
 
 unsigned VcfRecord::ploidy(const SampleName& sample) const
 {
-    return static_cast<unsigned>(genotypes_.at(sample).first.size());
+    return get_genotype(sample).alleles.size();
 }
 
 bool VcfRecord::is_sample_phased(const SampleName& sample) const
 {
-    return genotypes_.at(sample).second;
+    return get_genotype(sample).phased;
 }
 
 bool VcfRecord::is_homozygous(const SampleName& sample) const
 {
-    const auto& genotype = genotypes_.at(sample).first;
+    const auto& genotype = get_genotype(sample).alleles;
     return std::adjacent_find(std::cbegin(genotype), std::cend(genotype),
                               std::not_equal_to<NucleotideSequence>()) == std::cend(genotype);
 }
@@ -146,7 +144,7 @@ bool VcfRecord::is_heterozygous(const SampleName& sample) const
 
 bool VcfRecord::is_homozygous_ref(const SampleName& sample) const
 {
-    const auto& genotype = genotypes_.at(sample).first;
+    const auto& genotype = get_genotype(sample).alleles;
     return std::all_of(std::cbegin(genotype), std::cend(genotype),
                        [this] (const auto& allele) { return allele == ref_; });
 }
@@ -155,25 +153,25 @@ bool VcfRecord::is_refcall() const
 {
     const auto is_ref = [this] (const auto& allele) { return allele == ref_; };
     const auto is_hom_ref = [&] (const auto& p) {
-        return std::all_of(std::cbegin(p.second.first), std::cend(p.second.first), is_ref); };
-    return std::all_of(std::cbegin(genotypes_), std::cend(genotypes_), is_hom_ref);
+        return std::all_of(std::cbegin(p.second.genotype->alleles), std::cend(p.second.genotype->alleles), is_ref); };
+    return std::all_of(std::cbegin(samples_), std::cend(samples_), is_hom_ref);
 }
 
 bool VcfRecord::is_homozygous_non_ref(const SampleName& sample) const
 {
-    const auto& genotype = genotypes_.at(sample).first;
+    const auto& genotype = get_genotype(sample).alleles;
     return genotype.front() != ref_ && is_homozygous(sample);
 }
 
 bool VcfRecord::has_ref_allele(const SampleName& sample) const
 {
-    const auto& genotype = genotypes_.at(sample).first;
+    const auto& genotype = get_genotype(sample).alleles;
     return std::find(std::cbegin(genotype), std::cend(genotype), ref_) != std::cend(genotype);
 }
 
 bool VcfRecord::has_alt_allele(const SampleName& sample) const
 {
-    const auto& genotype = genotypes_.at(sample).first;
+    const auto& genotype = get_genotype(sample).alleles;
     return std::find_if_not(std::cbegin(genotype), std::cend(genotype),
                             [this] (const auto& allele) {
                                 return allele == ref_;
@@ -182,7 +180,8 @@ bool VcfRecord::has_alt_allele(const SampleName& sample) const
 
 const std::vector<VcfRecord::ValueType>& VcfRecord::get_sample_value(const SampleName& sample, const KeyType& key) const
 {
-    return (key == vcfspec::format::genotype) ? genotypes_.at(sample).first : samples_.at(sample).at(key);
+    const auto& data = samples_.at(sample);
+    return (key == vcfspec::format::genotype) ? data.genotype->alleles : data.other.at(key);
 }
 
 // helper non-members needed for printing
@@ -216,18 +215,16 @@ std::ostream& operator<<(std::ostream& os, const std::vector<T>& v)
 std::vector<VcfRecord::SampleName> VcfRecord::samples() const
 {
     std::vector<SampleName> result {};
-    
-    if (has_genotypes()) {
-        result.reserve(genotypes_.size());
-        std::transform(std::cbegin(genotypes_), std::cend(genotypes_), std::back_inserter(result),
-                       [] (const auto& p) { return p.first; });
-    } else {
-        result.reserve(samples_.size());
-        std::transform(std::cbegin(samples_), std::cend(samples_), std::back_inserter(result),
-                       [] (const auto& p) { return p.first; });
+    result.reserve(samples_.size());
+    for (const auto& p : samples_) {
+        result.push_back(p.first);
     }
-    
     return result;
+}
+
+const VcfRecord::Genotype& VcfRecord::get_genotype(const SampleName& sample) const
+{
+    return *samples_.at(sample).genotype;
 }
 
 std::string VcfRecord::get_allele_number(const NucleotideSequence& allele) const
@@ -266,19 +263,19 @@ void VcfRecord::print_info(std::ostream& os) const
 void VcfRecord::print_genotype_allele_numbers(std::ostream& os, const SampleName& sample) const
 {
     std::vector<std::string> allele_numbers(ploidy(sample));
-    const auto& genotype = genotypes_.at(sample);
-    std::transform(std::cbegin(genotype.first), std::cend(genotype.first), std::begin(allele_numbers),
+    const auto& genotype = get_genotype(sample);
+    std::transform(std::cbegin(genotype.alleles), std::cend(genotype.alleles), std::begin(allele_numbers),
                    [this] (const std::string& allele) { return get_allele_number(allele); });
-    print(os, allele_numbers, (genotype.second) ? "|" : "/");
+    print(os, allele_numbers, (genotype.phased) ? "|" : "/");
 }
 
 void VcfRecord::print_other_sample_data(std::ostream& os, const SampleName& sample) const
 {
     if (!samples_.empty()) {
-        if (samples_.at(sample).empty()) {
+        if (samples_.at(sample).other.empty()) {
             os << ".";
         } else {
-            const auto& data = samples_.at(sample);
+            const auto& data = samples_.at(sample).other;
             auto last = std::next(cbegin(data), data.size() - 1);
             std::for_each(std::cbegin(data), last, [&os] (const auto& p) {
                 print(os, p.second, ",");
@@ -428,7 +425,6 @@ std::ostream& operator<<(std::ostream& os, const VcfRecord& record)
     record.print_info(os);
     os << "\t";
     record.print_sample_data(os);
-    
     return os;
 }
 
@@ -444,7 +440,6 @@ VcfRecord::Builder::Builder(const VcfRecord& call)
 , filter_ {call.filter()}
 , info_ {call.info_}
 , format_ {call.format()}
-, genotypes_ {call.genotypes_}
 , samples_ {call.samples_}
 {}
 
@@ -615,7 +610,7 @@ VcfRecord::Builder& VcfRecord::Builder::add_format(std::initializer_list<KeyType
 
 VcfRecord::Builder& VcfRecord::Builder::reserve_samples(unsigned n)
 {
-    genotypes_.reserve(n);
+    samples_.reserve(n);
     return *this;
 }
 
@@ -628,7 +623,7 @@ VcfRecord::Builder&VcfRecord::Builder:: set_homozygous_ref_genotype(const Sample
 VcfRecord::Builder& VcfRecord::Builder::set_genotype(const SampleName& sample, std::vector<NucleotideSequence> alleles,
                                                      Phasing phasing)
 {
-    genotypes_[sample] = std::make_pair(std::move(alleles), phasing == Phasing::phased);
+    samples_[sample].genotype = VcfRecord::Genotype {std::move(alleles), phasing == Phasing::phased};
     return *this;
 }
 
@@ -650,7 +645,7 @@ VcfRecord::Builder& VcfRecord::Builder::set_genotype(const SampleName& sample, c
 
 VcfRecord::Builder& VcfRecord::Builder::clear_genotype(const SampleName& sample) noexcept
 {
-    genotypes_.erase(sample);
+    samples_.at(sample).genotype = boost::none;
     return *this;
 }
 
@@ -661,7 +656,7 @@ VcfRecord::Builder& VcfRecord::Builder::set_format(const SampleName& sample, con
 
 VcfRecord::Builder& VcfRecord::Builder::set_format(const SampleName& sample, const KeyType& key, std::vector<ValueType> values)
 {
-    samples_[sample][key] = std::move(values);
+    samples_[sample].other[key] = std::move(values);
     return *this;
 }
 
@@ -679,22 +674,24 @@ VcfRecord::Builder& VcfRecord::Builder::clear_format() noexcept
 {
     format_.clear();
     samples_.clear();
-    genotypes_.clear();
     return *this;
 }
 
 VcfRecord::Builder& VcfRecord::Builder::clear_format(const SampleName& sample) noexcept
 {
     samples_.erase(sample);
-    genotypes_.erase(sample);
     return *this;
 }
 
 VcfRecord::Builder& VcfRecord::Builder::clear_format(const SampleName& sample, const KeyType& key) noexcept
 {
-    const auto sample_itr = samples_.find(sample);
-    if (sample_itr != std::cend(samples_)) {
-        sample_itr->second.erase(key);
+    if (key == vcfspec::format::genotype) {
+        clear_genotype(sample);
+    } else {
+        const auto sample_itr = samples_.find(sample);
+        if (sample_itr != std::cend(samples_)) {
+            sample_itr->second.other.erase(key);
+        }
     }
     return *this;
 }
@@ -716,7 +713,7 @@ VcfRecord::Builder& VcfRecord::Builder::set_filter(const SampleName& sample, std
 
 VcfRecord::Builder& VcfRecord::Builder::add_filter(const SampleName& sample, KeyType filter)
 {
-    samples_[sample][vcfspec::format::filter].push_back(std::move(filter));
+    samples_[sample].other[vcfspec::format::filter].push_back(std::move(filter));
     return *this;
 }
 
@@ -755,8 +752,8 @@ VcfRecord::Builder& VcfRecord::Builder::set_blocked_reference()
         throw std::runtime_error {"Cannot block a non reference call"};
     if (ref_.size() > 1) {
         set_info("END", pos_ + ref_.size() - 1);
-        for (auto& p : genotypes_) {
-            for (auto& allele : p.second.first) {
+        for (auto& p : samples_) {
+            for (auto& allele : p.second.genotype->alleles) {
                 if (allele == ref_) {
                     allele.resize(1);
                 }
@@ -774,7 +771,7 @@ GenomicRegion::Position VcfRecord::Builder::pos() const noexcept
 
 VcfRecord VcfRecord::Builder::build() const
 {
-    if (genotypes_.empty() && samples_.empty()) {
+    if (format_.empty()) {
         if (end_) {
             GenomicRegion region {chrom_, pos_ - 1, *end_ - 1};
             return VcfRecord {std::move(region), id_, ref_, alt_, qual_, filter_, info_};
@@ -785,17 +782,17 @@ VcfRecord VcfRecord::Builder::build() const
         if (end_) {
             GenomicRegion region {chrom_, pos_ - 1, *end_ - 1};
             return VcfRecord {std::move(region), id_, ref_, alt_, qual_, filter_,
-                              info_, format_, genotypes_, samples_};
+                              info_, format_, samples_};
         } else {
             return VcfRecord {chrom_, pos_, id_, ref_, alt_, qual_, filter_,
-                             info_, format_, genotypes_, samples_};
+                             info_, format_, samples_};
         }
     }
 }
 
 VcfRecord VcfRecord::Builder::build_once() noexcept
 {
-    if (genotypes_.empty() && samples_.empty()) {
+    if (format_.empty()) {
         if (end_) {
             GenomicRegion region {std::move(chrom_), pos_ - 1, *end_ - 1};
             return VcfRecord {std::move(region), std::move(id_), std::move(ref_),
@@ -809,11 +806,11 @@ VcfRecord VcfRecord::Builder::build_once() noexcept
             GenomicRegion region {std::move(chrom_), pos_ - 1, *end_ - 1};
             return VcfRecord {std::move(region), std::move(id_), std::move(ref_),
                               std::move(alt_), qual_, std::move(filter_), std::move(info_),
-                              std::move(format_), std::move(genotypes_), std::move(samples_)};
+                              std::move(format_), std::move(samples_)};
         } else {
             return VcfRecord {std::move(chrom_), pos_, std::move(id_), std::move(ref_),
                               std::move(alt_), qual_, std::move(filter_), std::move(info_),
-                              std::move(format_), std::move(genotypes_), std::move(samples_)};
+                              std::move(format_), std::move(samples_)};
         }
     }
 }
