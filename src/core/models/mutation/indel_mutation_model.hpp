@@ -15,7 +15,7 @@ namespace octopus {
 class IndelMutationModel
 {
 public:
-    using Probability = double;
+    using Probability = float;
     using ProbabilityVector = std::vector<Probability>;
     
     struct Parameters
