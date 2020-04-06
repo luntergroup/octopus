@@ -399,7 +399,7 @@ TrioCaller::infer_latents(const HaplotypeBlock& haplotypes,
     }
     auto germline_prior_model = make_prior_model(haplotypes);
     germline_prior_model->prime(haplotypes);
-    DeNovoModel denovo_model {parameters_.denovo_model_params, haplotypes.size(), DeNovoModel::CachingStrategy::address};
+    DeNovoModel denovo_model {parameters_.denovo_model_params, haplotypes.size(), DeNovoModel::CachingStrategy::none};
     denovo_model.prime(haplotypes);
     const model::TrioModel model {
         parameters_.trio, *germline_prior_model, denovo_model,
