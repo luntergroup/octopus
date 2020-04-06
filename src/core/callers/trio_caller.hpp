@@ -128,7 +128,7 @@ private:
     std::vector<double> marginal_maternal_posteriors, marginal_paternal_posteriors, marginal_child_posteriors;
     mutable std::shared_ptr<GenotypeProbabilityMap> marginal_genotype_posteriors;
     std::shared_ptr<HaplotypeProbabilityMap> marginal_haplotype_posteriors;
-    std::vector<Genotypeblock::value_type> concatenated_genotypes_;
+    Genotypeblock concatenated_genotypes_;
     std::vector<double> padded_marginal_maternal_posteriors_, padded_marginal_paternal_posteriors_, padded_marginal_child_posteriors_;
     unsigned child_ploidy_;
     
