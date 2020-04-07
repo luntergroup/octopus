@@ -381,7 +381,11 @@ extract_genotypes(const std::vector<VcfRecord>& calls,
                 call_region = encompassing_region(wrapped_calls.front());
             }
             auto genotype = extract_genotype(wrapped_calls.front(), *call_region, sample, reference);
-            if (genotype.ploidy() > 0) result[sample] = {std::move(genotype)};
+            if (genotype.ploidy() > 0) {
+                result[sample] = {std::move(genotype)};
+            } else {
+                result[sample] = {};
+            }
         } else { // wrapped_calls.size() > 1
             auto call_itr = std::cbegin(wrapped_calls);
             GenomicRegion region;
@@ -404,7 +408,11 @@ extract_genotypes(const std::vector<VcfRecord>& calls,
                 region = right_overhang_region(call_itr->back(), std::prev(call_itr)->back());
             }
             genotype = extract_genotype(*call_itr, region, sample, reference);
-            if (genotype.ploidy() > 0) result.at(sample).insert(std::move(genotype));
+            if (genotype.ploidy() > 0) {
+                result.at(sample).insert(std::move(genotype));
+            } else {
+                result[sample] = {};
+            }
         }
     }
     return result;

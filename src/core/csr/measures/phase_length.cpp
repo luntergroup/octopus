@@ -29,7 +29,8 @@ Measure::ResultType PhaseLength::do_evaluate(const VcfRecord& call, const FacetM
     std::vector<std::size_t> result {};
     result.reserve(samples.size());
     for (const auto& sample : samples) {
-        result.push_back(size(encompassing_region(genotypes.at(sample))));
+        const auto& sample_genotypes = genotypes.at(sample);
+        result.push_back(!sample_genotypes.empty() ? size(encompassing_region(sample_genotypes)) : 0);
     }
     return result;
 }
