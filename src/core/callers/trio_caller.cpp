@@ -143,8 +143,6 @@ TrioCaller::Latents::Latents(IndexedHaplotypeBlock haplotypes,
 {
     set_genotype_posteriors_unique_genotypes(trio);
     set_haplotype_posteriors_unique_genotypes();
-    concatenated_genotypes_.clear();
-    concatenated_genotypes_.shrink_to_fit();
     padded_marginal_maternal_posteriors_.clear();
     padded_marginal_maternal_posteriors_.shrink_to_fit();
     padded_marginal_paternal_posteriors_.clear();
@@ -399,7 +397,9 @@ TrioCaller::infer_latents(const HaplotypeBlock& haplotypes,
                                          parameters_.child_ploidy, std::move(trio_latents), parameters_.trio);
     }
     auto germline_prior_model = make_prior_model(haplotypes);
+    germline_prior_model->prime(haplotypes);
     DeNovoModel denovo_model {parameters_.denovo_model_params, haplotypes.size(), DeNovoModel::CachingStrategy::address};
+    denovo_model.prime(haplotypes);
     const model::TrioModel model {
         parameters_.trio, *germline_prior_model, denovo_model,
         TrioModel::Options {parameters_.max_genotype_combinations},
@@ -407,8 +407,6 @@ TrioCaller::infer_latents(const HaplotypeBlock& haplotypes,
     };
     auto maternal_genotypes = generate_all_genotypes(indexed_haplotypes, parameters_.maternal_ploidy);
     if (parameters_.maternal_ploidy == parameters_.paternal_ploidy) {
-        germline_prior_model->prime(haplotypes);
-        denovo_model.prime(haplotypes);
         auto latents = model.evaluate(maternal_genotypes, haplotype_likelihoods);
         return std::make_unique<Latents>(std::move(indexed_haplotypes), std::move(maternal_genotypes),
                                          std::move(latents), parameters_.trio);

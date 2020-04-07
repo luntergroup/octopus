@@ -28,6 +28,14 @@ std::size_t count_calls(const std::vector<std::pair<Iterator, Iterator>>& calls)
     return std::accumulate(std::cbegin(calls), std::cend(calls), std::size_t {0}, add_count);
 }
 
+template <typename Iterator>
+auto phase_set_ploidy(std::vector<std::pair<Iterator, Iterator>>& calls, const SampleName& sample)
+{
+    assert(!calls.empty());
+    const CallWrapper& call {*calls.front().first};
+    return call->get_genotype_call(sample).genotype.ploidy();
+}
+
 struct AlleleExtractor
 {
     explicit AlleleExtractor(unsigned index) noexcept : index_ {index} {}
@@ -45,7 +53,7 @@ template <typename Iterator>
 void sort_genotype_alleles(std::vector<std::pair<Iterator, Iterator>>& calls, const SampleName& sample, const ReferenceGenome& reference)
 {
     const auto num_calls = detail::count_calls(calls);
-    if (num_calls > 0) {
+    if (num_calls > 0 && detail::phase_set_ploidy(calls, sample) > 0) {
         std::vector<Genotype<Allele>> genotypes {};
         genotypes.reserve(num_calls);
         for (const auto& p : calls) {

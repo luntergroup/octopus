@@ -538,9 +538,11 @@ auto compute_polymorphism_posteriors(const std::vector<Variant>& variants,
 auto marginalise(const Genotype<Allele>& genotype, const GenotypeProbabilityMap& genotype_posteriors)
 {
     double mass_not_contained {0};
-    for_each_contains(std::cbegin(genotype_posteriors), std::cend(genotype_posteriors), genotype,
-                      [&] (const auto& p, bool contain) { if (!contain) mass_not_contained += p.second; },
-                      [] (const auto& p) { return p.first; });
+    if (genotype.ploidy() > 0) {
+        for_each_contains(std::cbegin(genotype_posteriors), std::cend(genotype_posteriors), genotype,
+                          [&] (const auto& p, bool contain) { if (!contain) mass_not_contained += p.second; },
+                          [] (const auto& p) { return p.first; });
+    }
     return probability_false_to_phred(mass_not_contained);
 }
 
@@ -554,7 +556,7 @@ auto call_genotypes(const std::vector<SampleName>& samples,
     for (const auto& region : variant_regions) {
         std::vector<GenotypeCall> region_calls {};
         region_calls.reserve(samples.size());
-        for (std::size_t s {0}; s < samples.size(); ++s) {
+        for (std::size_t s {0}; s < samples.size(); ++s) { 
             auto genotype_chunk = copy<Allele>(genotype_calls[s], region);
             const auto posterior = marginalise(genotype_chunk, genotype_posteriors[samples[s]]);
             region_calls.push_back({std::move(genotype_chunk), posterior});
@@ -742,8 +744,8 @@ PopulationCaller::infer_latents_with_joint_model(const HaplotypeBlock& haplotype
     const auto indexed_haplotypes = index(haplotypes);
     const auto prior_model = make_joint_prior_model(haplotypes);
     const model::PopulationModel model {*prior_model, {parameters_.max_genotype_combinations}, debug_log_};
+    prior_model->prime(haplotypes);
     if (unique_ploidies_.size() == 1) {
-        prior_model->prime(haplotypes);
         auto genotypes = generate_all_genotypes(indexed_haplotypes, parameters_.ploidies.front());
         if (debug_log_) stream(*debug_log_) << "There are " << genotypes.size() << " candidate genotypes";
         auto inferences = model.evaluate(samples_, haplotypes, genotypes, haplotype_likelihoods);
@@ -751,7 +753,11 @@ PopulationCaller::infer_latents_with_joint_model(const HaplotypeBlock& haplotype
     } else {
         model::PopulationModel::GenotypeVector genotypes {};
         for (const auto ploidy : unique_ploidies_) {
-            append(generate_all_genotypes(indexed_haplotypes, ploidy), genotypes);
+            if (ploidy > 0) {
+                append(generate_all_genotypes(indexed_haplotypes, ploidy), genotypes);
+            } else {
+                genotypes.push_back(Genotype<IndexedHaplotype<>> {});
+            }
         }
         auto inferences = model.evaluate(samples_, parameters_.ploidies, haplotypes, genotypes, haplotype_likelihoods);
         return std::make_unique<Latents>(samples_, indexed_haplotypes, std::move(genotypes), std::move(inferences));
@@ -774,7 +780,11 @@ PopulationCaller::infer_latents_with_independence_model(const HaplotypeBlock& ha
     } else {
         model::PopulationModel::GenotypeVector genotypes {};
         for (const auto ploidy : unique_ploidies_) {
-            append(generate_all_genotypes(indexed_haplotypes, ploidy), genotypes);
+            if (ploidy > 0) {
+                append(generate_all_genotypes(indexed_haplotypes, ploidy), genotypes);
+            } else {
+                genotypes.push_back(Genotype<IndexedHaplotype<>> {});
+            }
         }
         auto inferences = model.evaluate(samples_, parameters_.ploidies, genotypes, haplotype_likelihoods);
         return std::make_unique<Latents>(samples_, indexed_haplotypes, std::move(genotypes), std::move(inferences));

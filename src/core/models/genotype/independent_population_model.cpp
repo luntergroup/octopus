@@ -43,15 +43,23 @@ IndependentPopulationModel::evaluate(const SampleVector& samples,
     for (std::size_t s {0}; s < samples.size(); ++s) {
         haplotype_likelihoods.prime(samples[s]);
         const auto sample_ploidy = sample_ploidies[s];
-        auto sample_results = individual_model_.evaluate(genotypes_by_ploidy[sample_ploidy], haplotype_likelihoods);
         Latents::GenotypeProbabilityVector genotype_posteriors(genotypes.size());
-        for (std::size_t genotype_idx {0}, sample_genotype_idx {0}; genotype_idx < genotypes.size(); ++genotype_idx) {
-            if (genotypes[genotype_idx].ploidy() == sample_ploidy) {
-                genotype_posteriors[genotype_idx] = sample_results.posteriors.genotype_probabilities[sample_genotype_idx++];
+        if (sample_ploidy > 0) {
+            auto sample_results = individual_model_.evaluate(genotypes_by_ploidy[sample_ploidy], haplotype_likelihoods);
+            for (std::size_t genotype_idx {0}, sample_genotype_idx {0}; genotype_idx < genotypes.size(); ++genotype_idx) {
+                if (genotypes[genotype_idx].ploidy() == sample_ploidy) {
+                    genotype_posteriors[genotype_idx] = sample_results.posteriors.genotype_probabilities[sample_genotype_idx++];
+                }
             }
+            result.log_evidence += sample_results.log_evidence;
+        } else {
+            assert(genotypes_by_ploidy[0].size() == 1);
+            const static auto is_ploidy_zero = [] (const auto& g) { return g.ploidy() == 0; };
+            const auto genotype_itr = std::find_if(std::cbegin(genotypes), std::cend(genotypes), is_ploidy_zero);
+            const auto genotype_idx = static_cast<std::size_t>(std::distance(std::cbegin(genotypes), genotype_itr));
+            genotype_posteriors[genotype_idx] = 1;
         }
         result.posteriors.genotype_probabilities.push_back(std::move(genotype_posteriors));
-        result.log_evidence += sample_results.log_evidence;
     }
     return result;
 }

@@ -658,7 +658,7 @@ get_genotype_sets(const std::vector<unsigned>& sample_ploidies,
     }
     const auto num_genotype_sets = std::count_if(std::cbegin(genotype_ploidy_sizes), std::cend(genotype_ploidy_sizes), [] (auto n) { return n > 0; });
     std::vector<std::size_t> genotype_set_sizes(num_genotype_sets), ploidy_to_genotype_set_idx(max_ploidy + 1);
-    for (unsigned ploidy {1}, genotype_set_idx {0}; ploidy <= max_ploidy; ++ploidy) {
+    for (unsigned ploidy {0}, genotype_set_idx {0}; ploidy <= max_ploidy; ++ploidy) {
         if (genotype_ploidy_sizes[ploidy] > 0) {
             ploidy_to_genotype_set_idx[ploidy] = genotype_set_idx;
             genotype_set_sizes[genotype_set_idx++] = genotype_ploidy_sizes[ploidy];
