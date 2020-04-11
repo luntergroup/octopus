@@ -136,12 +136,18 @@ auto compute_likelihoods(const TrioModel::GenotypeVector& genotypes,
     return result;
 }
 
+auto evaluate_helper(const GenotypeIndex& genotype, const PopulationPriorModel& prior_model)
+{
+    const PopulationPriorModel::GenotypeReference genotype_ref {genotype};
+    return prior_model.evaluate({genotype_ref});
+}
+
 auto compute_posteriors(const std::vector<GenotypeIndexProbabilityPair>& likelihoods,
                         const PopulationPriorModel& prior_model)
 {
     std::vector<double> posteriors(likelihoods.size());
     std::transform(std::cbegin(likelihoods), std::cend(likelihoods), std::begin(posteriors),
-                   [&] (const auto& p) { return p.probability + prior_model.evaluate({p.genotype}); });
+                   [&] (const auto& p) { return p.probability + evaluate_helper(p.genotype, prior_model); });
     maths::normalise_exp(posteriors);
     std::vector<GenotypeIndexProbabilityPair> result(posteriors.size());
     std::transform(std::cbegin(likelihoods), std::cend(likelihoods), std::cbegin(posteriors), std::begin(result),
