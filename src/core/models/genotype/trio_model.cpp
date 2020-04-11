@@ -136,18 +136,13 @@ auto compute_likelihoods(const TrioModel::GenotypeVector& genotypes,
     return result;
 }
 
-auto evaluate_helper(const GenotypeIndex& genotype, const PopulationPriorModel& prior_model)
-{
-    const PopulationPriorModel::GenotypeReference genotype_ref {genotype};
-    return prior_model.evaluate({genotype_ref});
-}
-
 auto compute_posteriors(const std::vector<GenotypeIndexProbabilityPair>& likelihoods,
-                        const PopulationPriorModel& prior_model)
+                        const PopulationPriorModel& prior_model,
+                        const TrioModel::GenotypeVector& genotypes)
 {
     std::vector<double> posteriors(likelihoods.size());
     std::transform(std::cbegin(likelihoods), std::cend(likelihoods), std::begin(posteriors),
-                   [&] (const auto& p) { return p.probability + evaluate_helper(p.genotype, prior_model); });
+                   [&] (const auto& p) { return p.probability + prior_model.evaluate({genotypes[p.genotype]}); });
     maths::normalise_exp(posteriors);
     std::vector<GenotypeIndexProbabilityPair> result(posteriors.size());
     std::transform(std::cbegin(likelihoods), std::cend(likelihoods), std::cbegin(posteriors), std::begin(result),
@@ -422,7 +417,8 @@ bool are_parents_same_ploidy(const TrioGenotypeData& genotypes)
 auto reduce(std::vector<GenotypeIndexProbabilityPair>& likelihoods,
             const PopulationPriorModel& prior_model,
             boost::optional<double>& lost_log_mass,
-            const TrioModel::Options& options)
+            const TrioModel::Options& options,
+            const TrioModel::GenotypeVector& genotypes)
 {
     if (!options.max_genotype_combinations) return make_reduction_map(likelihoods, std::cend(likelihoods), options);
     const auto reduction_count = get_sample_reduction_count(*options.max_genotype_combinations);
@@ -432,7 +428,7 @@ auto reduce(std::vector<GenotypeIndexProbabilityPair>& likelihoods,
     } else if (lost_log_mass && *lost_log_mass > options.max_individual_log_probability_loss) {
         return make_reduction_map(likelihoods, last_likelihood_join, options); // overflow
     } else {
-        auto posteriors = compute_posteriors(likelihoods, prior_model);
+        auto posteriors = compute_posteriors(likelihoods, prior_model, genotypes);
         const auto last_posterior_join = reduce(posteriors, reduction_count, options.max_individual_log_probability_loss, lost_log_mass);
         assert(last_posterior_join <= std::end(posteriors));
         if (last_posterior_join != std::end(posteriors)) {
@@ -798,23 +794,23 @@ TrioModel::evaluate(const GenotypeVector& maternal_genotypes,
         return evaluate_allosome(maternal_genotypes, child_genotypes, haplotype_likelihoods);
     }
     assert(!maternal_genotypes.empty() && !paternal_genotypes.empty() && !child_genotypes.empty());
+    const TrioGenotypeData genotypes {maternal_genotypes, paternal_genotypes, child_genotypes};
     const ConstantMixtureGenotypeLikelihoodModel likelihood_model {haplotype_likelihoods};
     haplotype_likelihoods.prime(trio_.mother());
-    auto maternal_likelihoods = compute_likelihoods(maternal_genotypes, likelihood_model);
+    auto maternal_likelihoods = compute_likelihoods(genotypes.maternal, likelihood_model);
     haplotype_likelihoods.prime(trio_.father());
-    auto paternal_likelihoods = compute_likelihoods(paternal_genotypes, likelihood_model);
+    auto paternal_likelihoods = compute_likelihoods(genotypes.paternal, likelihood_model);
     haplotype_likelihoods.prime(trio_.child());
-    auto child_likelihoods = compute_likelihoods(child_genotypes, likelihood_model);
+    auto child_likelihoods = compute_likelihoods(genotypes.child, likelihood_model);
     if (debug_log_) {
-        debug::print(stream(*debug_log_), "maternal", maternal_genotypes, maternal_likelihoods);
-        debug::print(stream(*debug_log_), "paternal", paternal_genotypes, paternal_likelihoods);
-        debug::print(stream(*debug_log_), "child", child_genotypes, child_likelihoods);
+        debug::print(stream(*debug_log_), "maternal", genotypes.maternal, maternal_likelihoods);
+        debug::print(stream(*debug_log_), "paternal", genotypes.paternal, paternal_likelihoods);
+        debug::print(stream(*debug_log_), "child", genotypes.child, child_likelihoods);
     }
-    const TrioGenotypeData genotypes {maternal_genotypes, paternal_genotypes, child_genotypes};
     boost::optional<double> lost_log_mass {};
-    const auto reduced_maternal_likelihoods = reduce(maternal_likelihoods, prior_model_, lost_log_mass, options_);
-    const auto reduced_paternal_likelihoods = reduce(paternal_likelihoods, prior_model_, lost_log_mass, options_);
-    const auto reduced_child_likelihoods    = reduce(child_likelihoods, prior_model_, lost_log_mass, options_);
+    const auto reduced_maternal_likelihoods = reduce(maternal_likelihoods, prior_model_, lost_log_mass, options_, genotypes.maternal);
+    const auto reduced_paternal_likelihoods = reduce(paternal_likelihoods, prior_model_, lost_log_mass, options_, genotypes.paternal);
+    const auto reduced_child_likelihoods    = reduce(child_likelihoods, prior_model_, lost_log_mass, options_, genotypes.child);
     auto parental_likelihoods = join(reduced_maternal_likelihoods, reduced_paternal_likelihoods, genotypes, prior_model_);
     if (debug_log_) debug::print(stream(*debug_log_), genotypes, parental_likelihoods);
     const auto reduced_parental_likelihoods = reduce(parental_likelihoods, reduced_child_likelihoods, maternal_likelihoods, paternal_likelihoods, genotypes, lost_log_mass, options_);
@@ -888,10 +884,10 @@ TrioModel::evaluate_allosome(const GenotypeVector& parent_genotypes,
     auto child_likelihoods = compute_likelihoods(child_genotypes, likelihood_model);
     if (debug_log_) debug::print(stream(*debug_log_), "child", child_genotypes, child_likelihoods);
     boost::optional<double> lost_log_mass {};
-    const auto reduced_child_likelihoods = reduce(child_likelihoods, prior_model_, lost_log_mass, options_);
+    const auto reduced_child_likelihoods = reduce(child_likelihoods, prior_model_, lost_log_mass, options_, child_genotypes);
     auto parent_likelihoods = compute_likelihoods(parent_genotypes, likelihood_model);
     if (debug_log_) debug::print(stream(*debug_log_), "parent", child_genotypes, parent_likelihoods);
-    const auto reduced_parent_likelihoods = reduce(parent_likelihoods, prior_model_, lost_log_mass, options_);
+    const auto reduced_parent_likelihoods = reduce(parent_likelihoods, prior_model_, lost_log_mass, options_, parent_genotypes);
     haplotype_likelihoods.prime(trio_.child());
     auto joint_likelihoods = join(reduced_parent_likelihoods, reduced_child_likelihoods, parent_genotypes, child_genotypes, mutation_model_);
     if (lost_log_mass) *lost_log_mass *= 2 * std::distance(reduced_child_likelihoods.first, reduced_child_likelihoods.last_full_join);
