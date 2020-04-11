@@ -21,7 +21,7 @@ public:
     struct Parameters
     {
         double indel_mutation_prior;
-        unsigned max_period = 10, max_periodicity = 50, max_indel_length = 100;
+        unsigned max_period = 10, max_periodicity = 50, max_indel_length = 50;
         double max_open_probability = 0.9, max_extend_probability = 1.0;
     };
     
