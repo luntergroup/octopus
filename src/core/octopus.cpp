@@ -893,58 +893,20 @@ void resolve_connecting_calls(CompletedTask& lhs, CompletedTask& rhs,
                               const ContigCallingComponentFactory& calling_components)
 {
     static auto debug_log = get_debug_log();
-    using std::begin; using std::end; using std::cbegin; using std::cend; using std::make_move_iterator;
     if (lhs.calls.empty() || rhs.calls.empty()) return;
     const auto first_lhs_connecting = find_first_lhs_connecting(lhs.calls, encompassing_region(rhs.calls));
     const auto last_rhs_connecting  = find_last_rhs_connecting(encompassing_region(lhs.calls), rhs.calls);
-    if (first_lhs_connecting == cend(lhs.calls) && last_rhs_connecting == cbegin(rhs.calls)) {
-        return;
-    }
     if (debug_log) {
-        stream(*debug_log) << "Resolving connecting calls between tasks " << lhs << " & " << rhs;
-    }
-    std::deque<VcfRecord> merged_calls {};
-    std::set_union(first_lhs_connecting, cend(lhs.calls),
-                   cbegin(rhs.calls), last_rhs_connecting,
-                   std::back_inserter(merged_calls));
-    lhs.calls.erase(first_lhs_connecting, cend(lhs.calls));
-    rhs.calls.erase(cbegin(rhs.calls), last_rhs_connecting);
-    if (is_consistent(merged_calls)) {
-        rhs.calls.insert(begin(rhs.calls),
-                         make_move_iterator(begin(merged_calls)),
-                         make_move_iterator(end(merged_calls)));
-    } else {
-        const auto unresolved_region = encompassing_region(mapped_region(merged_calls.front()),
-                                                           mapped_region(merged_calls.back()));
-        const auto components = calling_components();
-        auto num_unresolved_region_reads = components.read_manager.get().count_reads(components.samples, unresolved_region);
-        if (num_unresolved_region_reads <= components.read_buffer_size) {
-            merged_calls.clear();
-            merged_calls.shrink_to_fit();
-            if (debug_log) {
-                stream(*debug_log) << "Calls are inconsistent in connecting region " << unresolved_region
-                                   << ". Recalling the region";
-            }
-            logging::WarningLogger warn_log {};
-            stream(warn_log) << "Recalling " << unresolved_region
-                             << " due to call inconsistency between thread tasks. This may increase expected runtime";
-            auto resolved_calls = components.caller->call(unresolved_region, components.progress_meter);
-            if (!resolved_calls.empty()) {
-                if (!contains(unresolved_region, encompassing_region(resolved_calls))) {
-                    // TODO
-                }
-                // TODO: we may need to adjust phase regions in calls past the unresolved_region
-                rhs.calls.insert(begin(rhs.calls),
-                                 make_move_iterator(begin(resolved_calls)),
-                                 make_move_iterator(end(resolved_calls)));
-            }
-        } else {
-            // TODO: we could try to manually resolve the calls. Very difficult.
-            logging::WarningLogger log {};
-            stream(log) << "Skipping region " << unresolved_region
-                        << " as there are too many reads to analyse the whole region, and partitions give inconsistent calls";
+        const auto num_lhs_conflicting = std::distance(first_lhs_connecting, std::cend(lhs.calls));
+        const auto num_rhs_conflicting = std::distance(std::cbegin(rhs.calls), last_rhs_connecting);
+        if (num_lhs_conflicting + num_rhs_conflicting > 0) {
+            stream(*debug_log) << "Resolving connecting calls between tasks " 
+                           << lhs << "(" << num_lhs_conflicting << " conflicting)"
+                           << " & " << rhs << "(" << num_rhs_conflicting << " conflicting)";
         }
     }
+    // Keep RHS calls otherwise we might mess up phase sets of downstream calls
+    lhs.calls.erase(first_lhs_connecting, std::cend(lhs.calls));
 }
 
 void resolve_connecting_calls(std::deque<CompletedTask>& adjacent_tasks,
