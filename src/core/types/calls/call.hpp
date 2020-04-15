@@ -10,6 +10,7 @@
 #include <iterator>
 
 #include <boost/optional.hpp>
+#include <boost/container/flat_map.hpp>
 
 #include "config/common.hpp"
 #include "basics/phred.hpp"
@@ -103,10 +104,8 @@ public:
     void reorder_genotype(const SampleName& sample, const std::vector<unsigned>& order);
     
 protected:
-    std::unordered_map<SampleName, GenotypeCall> genotype_calls_;
-    
+    boost::container::flat_map<SampleName, GenotypeCall> genotype_calls_;
     Phred<double> quality_;
-    
     boost::optional<Phred<double>> model_posterior_;
     
 private:
@@ -117,8 +116,7 @@ private:
 
 template <typename T>
 Call::Call(T&& genotype_calls, Phred<double> quality)
-: genotype_calls_ {std::begin(genotype_calls)
-, std::end(genotype_calls)}
+: genotype_calls_ {std::begin(genotype_calls), std::end(genotype_calls)}
 , quality_ {quality}
 , model_posterior_ {}
 {}
