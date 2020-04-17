@@ -28,7 +28,7 @@ static constexpr std::array<LibraryPreparation, 3> libraries {
 static constexpr std::array<Sequencer, 8> sequencers {
     Sequencer::hiseq_2000, Sequencer::hiseq_2500, Sequencer::hiseq_4000,
     Sequencer::xten, Sequencer::novaseq, Sequencer::bgiseq_500,
-    Sequencer::pacbio, Sequencer::pacbio_css
+    Sequencer::pacbio, Sequencer::pacbio_ccs
 };
 
 std::ostream& operator<<(std::ostream& out, const LibraryPreparation& library)
@@ -121,8 +121,8 @@ std::ostream& operator<<(std::ostream& out, const Sequencer& sequencer)
         case Sequencer::pacbio:
             out << "PacBio";
             break;
-        case Sequencer::pacbio_css:
-            out << "PacBioCSS";
+        case Sequencer::pacbio_ccs:
+            out << "PacBioCCS";
             break;
     }
     return out;
@@ -171,8 +171,8 @@ std::istream& operator>>(std::istream& in, Sequencer& result)
         result = Sequencer::bgiseq_500;
     else if (token == "PACBIO")
         result = Sequencer::pacbio;
-    else if (token == "PACBIOCSS")
-        result = Sequencer::pacbio_css;
+    else if (token == "PACBIOCCS")
+        result = Sequencer::pacbio_ccs;
     else throw UnknownSequencer {token};
     return in;
 }
@@ -277,7 +277,7 @@ static const RepeatBasedIndelModelParameterMap builtin_indel_models {{
         }
     },
     {
-        {LibraryPreparation::pcr_free, Sequencer::pacbio_css},
+        {LibraryPreparation::pcr_free, Sequencer::pacbio_ccs},
         {
             {31,31,27,24,21,18,16,14,13,12,11,10,10,9,9,8,8,8,8,7,7,7,7,7,7,7,6,6,6,6,6,6,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5},
             {31,31,25,21,18,16,14,12,10,9,8,8,6,6,6,6,6,5,5,5,4,4,4,4,4,4,4,4,4,4,4,4},
@@ -349,7 +349,7 @@ static const RepeatBasedIndelModelParameterMap builtin_indel_models {{
         }
     },
     {
-        {LibraryPreparation::pcr, Sequencer::pacbio_css},
+        {LibraryPreparation::pcr, Sequencer::pacbio_ccs},
         {
             {40,40,31,29,28,24,21,19,17,15,13,12,11,10,10,9,9,8,8,8,7,7,6,6,6,6,5,5,5,5,4},
             {40,40,33,31,28,22,17,13,12,10,9,8,7,6,5,5,5,4,4,4,4,4,4,4,4,4,4,3},
@@ -420,7 +420,7 @@ BasicRepeatBasedIndelErrorModel::Parameters lookup_builtin_indel_model(const Mod
 
 bool use_snv_error_model(const ModelConfig config)
 {
-    return config.sequencer != Sequencer::pacbio && config.sequencer != Sequencer::pacbio_css;
+    return config.sequencer != Sequencer::pacbio && config.sequencer != Sequencer::pacbio_ccs;
 }
 
 using RepeatBasedSnvModelParameterMap = std::unordered_map<LibraryPreparation, BasicRepeatBasedSNVErrorModel::Parameters>;
