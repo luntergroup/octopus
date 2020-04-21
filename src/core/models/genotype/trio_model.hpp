@@ -30,9 +30,9 @@ public:
     {
         struct JointProbability
         {
-            using GenotypeReference = std::reference_wrapper<const GenotypeVector::value_type>;
-            GenotypeReference maternal, paternal, child;
+            using GenotypeIndex = unsigned;
             double log_probability, probability;
+            GenotypeIndex maternal, paternal, child;
         };
         using JointProbabilityVector = std::vector<JointProbability>;
         JointProbabilityVector joint_genotype_probabilities;
