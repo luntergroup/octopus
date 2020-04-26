@@ -6,9 +6,10 @@ import sys
 from subprocess import call, check_output
 import platform
 import argparse
-from shutil import move, rmtree
+from shutil import move, rmtree, copyfileobj
 import multiprocessing
 import urllib.request
+import gzip
 
 google_cloud_octopus_base = "https://storage.googleapis.com/luntergroup/octopus"
 forest_url_base = os.path.join(google_cloud_octopus_base, "forests")
@@ -168,7 +169,7 @@ def get_required_dependencies():
         compiled.append(latest_llvm)
     else:
         compiled.append(latest_gcc)
-        compiled += ['binutils']
+        compiled += ['binutils', 'glibc']
     compiled += ['boost', 'gmp']
     if is_osx():
         compiled += ['htslib']
@@ -204,17 +205,28 @@ def install_dependencies(build_dir):
     else:
         return None, None
 
+def unzip_gz(filename, out_filename=None):
+    with gzip.open(filename, 'rb') as f_in:
+        if out_filename is None:
+            if filename.endswith('.gz'):
+                out_filename = filename[:-3]
+            else:
+                out_filename = filename + '_unzipped'
+        with open(filename, 'wb') as f_out:
+            copyfileobj(f_in, f_out)
+
 def download_forests(forest_dir, version):
     if not os.path.exists(forest_dir):
         print("No forest directory found, making one")
         os.makedirs(forest_dir)
     for forest in forests:
-        forest_name = forest + '.v' + to_short_version_str(version) + '.forest'
+        forest_name = forest + '.v' + to_short_version_str(version) + '.forest.gz'
         forest_url = os.path.join(forest_url_base, forest_name)
         forest_file = os.path.join(forest_dir, forest_name)
         try:
             print("Downloading " + forest_url + " to " + forest_file)
             download_file(forest_url, forest_file)
+            unzip_gz(forest_file)
         except:
             print("Failed to download forest " + forest_name)
 
