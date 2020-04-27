@@ -596,9 +596,16 @@ def main(options):
     options.out.mkdir(parents=True, exist_ok=True)
     data_files, tmp_files = [], []
     default_measures = default_germline_measures if options.kind == "germline" else default_somatic_measures
+    if options.measures is not None:
+        measures = options.measures
+        if options.kind == "somatic" and "SOMATIC" not in measures:
+            print('"SOMATIC" must be ones of the measures for somatic forests')
+            exit(0)
+    else:
+        measures = default_measures
     for example in examples:
         vcfeval_dirs = eval_octopus(options.octopus, options.rtg, example, options.out, options.threads,
-                                    kind=options.kind, measures=default_measures, overwrite=options.overwrite,
+                                    kind=options.kind, measures=measures, overwrite=options.overwrite,
                                     keep_raw_calls=options.keep_raw_calls)
         for vcfeval_dir in vcfeval_dirs:
             tp_vcf_path = vcfeval_dir / "tp.vcf.gz"
@@ -606,17 +613,17 @@ def main(options):
             if not tp_train_vcf_path.exists(): subset(tp_vcf_path, tp_train_vcf_path, example.regions)
             tp_data_path = Path(str(tp_train_vcf_path).replace(".vcf.gz", ".dat"))
 
-            if not tp_data_path.exists(): make_ranger_data(tp_train_vcf_path, tp_data_path, True, default_measures, options.missing_value, fraction=example.tp)
+            if not tp_data_path.exists(): make_ranger_data(tp_train_vcf_path, tp_data_path, True, measures, options.missing_value, fraction=example.tp)
             data_files.append(tp_data_path)
             fp_vcf_path = vcfeval_dir / "fp.vcf.gz"
             fp_train_vcf_path = Path(str(fp_vcf_path).replace("fp.vcf", "fp.train.vcf"))
             if not fp_train_vcf_path.exists(): subset(fp_vcf_path, fp_train_vcf_path, example.regions)
             fp_data_path = Path(str(fp_train_vcf_path).replace(".vcf.gz", ".dat"))
-            if not fp_data_path.exists(): make_ranger_data(fp_train_vcf_path, fp_data_path, False, default_measures, options.missing_value, fraction=example.fp)
+            if not fp_data_path.exists(): make_ranger_data(fp_train_vcf_path, fp_data_path, False, measures, options.missing_value, fraction=example.fp)
             data_files.append(fp_data_path)
             tmp_files += [tp_train_vcf_path, fp_train_vcf_path]
     master_data_file = options.out / (str(options.prefix) + ".dat")
-    ranger_header = ' '.join(default_measures + ['TP'])
+    ranger_header = ' '.join(measures + ['TP'])
     make_ranger_master_data_file(data_files, master_data_file, ranger_header)
     if not options.keep_example_data_files:
         for file in tmp_files + data_files:
@@ -691,6 +698,11 @@ if __name__ == '__main__':
                         default=False,
                         help='Do not delete generated training data files for each example',
                         action='store_true')
+    parser.add_argument('--measures',
+                        default=None,
+                        nargs='+',
+                        type=str,
+                        help='List of measures to use')
     parsed, unparsed = parser.parse_known_args()
     if len(unparsed) == 0:
         main(parsed)
