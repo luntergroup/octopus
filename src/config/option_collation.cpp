@@ -1286,8 +1286,8 @@ auto make_variant_generator_builder(const OptionMap& options, const boost::optio
             }
             VcfExtractor::Options vcf_options {};
             vcf_options.max_variant_size = as_unsigned("max-variant-size", options);
-            if (is_set("min-source-quality", options)) {
-                vcf_options.min_quality = options.at("min-source-quality").as<Phred<double>>().score();
+            if (is_set("min-source-candidate-quality", options)) {
+                vcf_options.min_quality = options.at("min-source-candidate-quality").as<Phred<double>>().score();
             }
             vcf_options.extract_filtered = options.at("use-filtered-source-candidates").as<bool>();
             result.add_vcf_extractor(std::move(source_path), vcf_options);
