@@ -23,7 +23,7 @@ except ImportError as plot_import_exception:
 script_dir = Path(__file__).parent.parent.absolute()
 default_octopus_bin = script_dir / 'bin/octopus'
 
-default_germline_measures = "AC AD ADP AF ARF BMQ BQ CC CRF DAD DAF DC DENOVO DP DPC ER ERS FRF GC GQ GQD ITV MC MF MP MRC MQ MQ0 MQD MRL PLN PP PPD QD QUAL REB RSB RTB SB SD SF STRL STRP VL".split()
+default_germline_measures = "AC AD ADP AF ARF BMQ BQ CC CRF DAD DAF DC DENOVO DP DPC ER ERS FRF GC GQ GQD ITV MC MF MP MRC MQ MQ0 MQD PLN PP PPD QD QUAL REB RSB RTB SB SD SF STRL STRP VL".split()
 default_somatic_measures = "AC AD ADP AF ARF BMQ BQ CC CRF DAD DAF DP DPC ER ERS FRF GC GQ GQD ITV NC MC MF MP MRC MQ MQ0 MQD PLN PP PPD QD QUAL REB RSB RTB SB SD SF SHC SMQ SOMATIC STRL STRP VL".split()
 
 known_truth_set_urls = {
