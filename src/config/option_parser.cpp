@@ -70,7 +70,7 @@ OptionMap parse_options(const int argc, const char** argv)
     
     ("resolve-symlinks",
      po::bool_switch()->default_value(false),
-     "Replace all symlinks to their resolved targets during startup")
+     "Replace all symlinks to their resolved targets")
     
     ("threads",
      po::value<int>()->implicit_value(0),
@@ -126,7 +126,7 @@ OptionMap parse_options(const int argc, const char** argv)
 
     ("one-based-indexing",
      po::bool_switch()->default_value(false),
-     "Assume one based indexing rather than zero based for input region options")
+     "Assume one-based indexing rather than zero-based for input region options")
     
     ("samples,S",
      po::value<std::vector<std::string>>()->multitoken(),
@@ -138,7 +138,7 @@ OptionMap parse_options(const int argc, const char** argv)
     
     ("ignore-unmapped-contigs",
      po::bool_switch()->default_value(false),
-     "Ignore any contigs that are not present in the read files")
+     "Ignore any contigs that are not mapped in the read files")
     
     ("pedigree",
      po::value<fs::path>(),
@@ -171,20 +171,15 @@ OptionMap parse_options(const int argc, const char** argv)
      
     ("data-profile",
      po::value<fs::path>(),
-     "Output a profile of polymorphisms and errors found in the data")
+     "Output a profile of variation and errors found in the data")
     
     ("fast",
      po::bool_switch()->default_value(false),
-     "Turns off some features to improve runtime, at the cost of decreased calling accuracy."
-     " Equivalent to '-a off -l minimal -x 50`")
+     "Turns off some features to improve runtime, at the cost of worse calling accuracy and phasing")
     
     ("very-fast",
      po::bool_switch()->default_value(false),
-     "Same as --fast but also disables inactive flank scoring")
-    
-    ("bad-region-tolerance",
-     po::value<BadRegionTolerance>()->default_value(BadRegionTolerance::normal),
-     "Tolerance for skipping regions that are considered unlikely to be callable [LOW, NORMAL, HIGH, UNLIMITED]")
+     "Like --fast but even faster")
     ;
     
     po::options_description read_preprocessing("Read preprocessing");
@@ -226,12 +221,12 @@ OptionMap parse_options(const int argc, const char** argv)
      "Disable read segment overlap masking")
      
     ("mask-inverted-soft-clipping",
-    po::bool_switch()->default_value(false),
-    "Mask soft clipped sequence that is an inverted copy of a proximate sequence")
+     po::bool_switch()->default_value(false),
+     "Mask soft clipped sequence that is an inverted copy of a proximate sequence")
     
     ("mask-3prime-shifted-soft-clipped-heads",
-    po::bool_switch()->default_value(false),
-    "Mask soft clipped read head sequence that is a copy of a proximate 3' sequence")
+     po::bool_switch()->default_value(false),
+     "Mask soft clipped read head sequence that is a copy of a proximate 3' sequence")
 
     ("split-long-reads",
      po::bool_switch()->default_value(false),
@@ -516,7 +511,7 @@ OptionMap parse_options(const int argc, const char** argv)
      "Threshold to merge adjacent refcall positions when using blocked refcalling")
      
     ("min-refcall-posterior",
-     po::value<Phred<double>>()->default_value(Phred<double> {2.0}),
+     po::value<Phred<double>>()->default_value(Phred<double> {0}),
      "Report reference alleles with posterior probability (QUAL) greater than this")
 
     ("max-refcall-posterior",
@@ -591,13 +586,17 @@ OptionMap parse_options(const int argc, const char** argv)
     ("disable-early-phase-detection",
      po::bool_switch()->default_value(false),
      "Disable phase detection before haplotypes fully extended")
+
+    ("bad-region-tolerance",
+     po::value<BadRegionTolerance>()->default_value(BadRegionTolerance::normal),
+     "Tolerance for skipping regions that are considered unlikely to be callable [LOW, NORMAL, HIGH, UNLIMITED]")
     ;
     
     po::options_description cancer("Cancer calling model");
     cancer.add_options()
     ("normal-samples,N",
      po::value<std::vector<std::string>>()->multitoken(),
-     "Normal sample - all other samples are considered tumour")
+     "Normal samples - all other samples are considered tumour")
     
     ("max-somatic-haplotypes",
      po::value<int>()->default_value(2),
