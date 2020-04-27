@@ -156,10 +156,10 @@ OptionMap parse_options(const int argc, const char** argv)
      po::bool_switch()->default_value(false),
      "Only reports call sites (i.e. drop sample genotype information)")
     
-    ("regenotype",
-     po::value<fs::path>(),
-     "VCF file specifying calls to regenotype, only sites in this files will appear in the"
-     " final output")
+    // ("regenotype",
+    //  po::value<fs::path>(),
+    //  "VCF file specifying calls to regenotype, only sites in this files will appear in the"
+    //  " final output")
     
     ("bamout",
      po::value<fs::path>(),
