@@ -260,7 +260,7 @@ ExecutionPolicy get_thread_execution_policy(const OptionMap& options)
 
 MemoryFootprint get_target_read_buffer_size(const OptionMap& options)
 {
-    return options.at("target-read-buffer-footprint").as<MemoryFootprint>();
+    return options.at("target-read-buffer-memory").as<MemoryFootprint>();
 }
 
 boost::optional<fs::path> get_debug_log_file_name(const OptionMap& options)
@@ -295,7 +295,7 @@ ReferenceGenome make_reference(const OptionMap& options)
 {
     const fs::path input_path {options.at("reference").as<fs::path>()};
     auto resolved_path = resolve_path(input_path, options);
-    auto ref_cache_size = options.at("max-reference-cache-footprint").as<MemoryFootprint>();
+    auto ref_cache_size = options.at("max-reference-cache-memory").as<MemoryFootprint>();
     static constexpr MemoryFootprint min_non_zero_reference_cache_size {1'000}; // 1Kb
     if (ref_cache_size.bytes() > 0 && ref_cache_size < min_non_zero_reference_cache_size) {
         static bool warned {false};

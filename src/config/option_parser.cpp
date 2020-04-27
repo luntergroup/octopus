@@ -76,23 +76,23 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<int>()->implicit_value(0),
      "Maximum number of threads to be used. If no argument is provided unlimited threads are assumed")
     
-    ("max-reference-cache-footprint,X",
+    ("max-reference-cache-memory,X",
      po::value<MemoryFootprint>()->default_value(*parse_footprint("500MB"), "500MB"),
-     "Maximum memory footprint for cached reference sequence")
+     "Maximum memory for cached reference sequence")
     
-    ("target-read-buffer-footprint,B",
+    ("target-read-buffer-memory,B",
      po::value<MemoryFootprint>()->default_value(*parse_footprint("6GB"), "6GB"),
-     "None-binding request to limit the memory footprint of buffered read data")
+     "None-binding request to limit the memory of buffered read data")
     
+    ("target-working-memory",
+     po::value<MemoryFootprint>(),
+     "Target working memory per thread for computation, not including read or reference data")
+     
     ("max-open-read-files",
      po::value<int>()->default_value(250),
      "Limits the number of read files that are open simultaneously")
-    
-     ("target-working-memory",
-     po::value<MemoryFootprint>(),
-     "Target working memory footprint for analysis, not including read or reference buffers")
-     
-     ("temp-directory-prefix",
+
+    ("temp-directory-prefix",
      po::value<fs::path>()->default_value("octopus-temp"),
      "File name prefix of temporary directory for calling")
     
