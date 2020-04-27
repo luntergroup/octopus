@@ -509,23 +509,14 @@ def make_ranger_data(octopus_vcf_filename, out_path, classifcation, measures, mi
                 row.append(str(int(classifcation)))
                 datawriter.writerow(row)
 
-def concat(filenames, outpath):
-    with outpath.open(mode='w') as outfile:
-        for fname in filenames:
-            with fname.open() as infile:
-                for line in infile:
-                    outfile.write(line)
-
-def shuffle(fname):
-    lines = fname.open().readlines()
+def make_ranger_master_data_file(in_filenames, out_filename, header):
+    lines = []
+    for file in in_filenames:
+        lines += file.open().readlines()
     random.shuffle(lines)
-    fname.open(mode='w').writelines(lines)
-
-def add_header(fname, header):
-    lines = fname.open().readlines()
-    with fname.open(mode='w') as f:
-        f.write(header + '\n')
-        f.writelines(lines)
+    with out_filename.open(mode='w') as file:
+        file.write(header + '\n')
+        file.writelines(lines)
 
 def partition_data(data_fname, validation_fraction, training_fname, validation_fname):
     with data_fname.open() as data_file:
@@ -625,13 +616,11 @@ def main(options):
             data_files.append(fp_data_path)
             tmp_files += [tp_train_vcf_path, fp_train_vcf_path]
     master_data_file = options.out / (str(options.prefix) + ".dat")
-    concat(data_files, master_data_file)
+    ranger_header = ' '.join(default_measures + ['TP'])
+    make_ranger_master_data_file(data_files, master_data_file, ranger_header)
     if not options.keep_example_data_files:
         for file in tmp_files + data_files:
             if file.exists(): file.unlink()
-    shuffle(master_data_file)
-    ranger_header = ' '.join(default_measures + ['TP'])
-    add_header(master_data_file, ranger_header)
     ranger_out_prefix = options.out / options.prefix
     hyperparameters = select_training_hypterparameters(master_data_file, training_params, options)
     run_ranger_training(options.ranger, master_data_file, hyperparameters, options.threads, ranger_out_prefix)
