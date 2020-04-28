@@ -414,6 +414,10 @@ OptionMap parse_options(const int argc, const char** argv)
      "Aligned bases with quality less than this will be converted to reference before"
      " being inserted into the De Bruijn graph")
     
+    ("no-cycles",
+     po::bool_switch()->default_value(false),
+     "Do not allow cyclic assembly graphs")
+    
     ("min-kmer-prune",
      po::value<int>()->default_value(2),
      "Minimum number of read observations to keep a kmer in the assembly graph before bubble extraction")
