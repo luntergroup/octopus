@@ -46,6 +46,8 @@ private:
     LogProbability evaluate_polyploid(const Genotype<Haplotype>& genotype) const;
     LogProbability evaluate_haploid(const Genotype<IndexedHaplotype<>>& genotype) const;
     LogProbability evaluate_diploid(const Genotype<IndexedHaplotype<>>& genotype) const;
+    LogProbability evaluate_triploid(const Genotype<IndexedHaplotype<>>& genotype) const;
+    LogProbability evaluate_tetraploid(const Genotype<IndexedHaplotype<>>& genotype) const;
     LogProbability evaluate_polyploid(const Genotype<IndexedHaplotype<>>& genotype) const;
 };
 
