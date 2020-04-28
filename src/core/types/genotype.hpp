@@ -104,6 +104,9 @@ public:
     void collapse() { collapse(ordered {}); }
     
     template <typename T> friend Genotype<T> detail::collapse(const Genotype<T>& genotype, std::true_type);
+
+    auto capacity() const noexcept { return elements_.capacity(); }
+    void shrink_to_fit() { elements_.shrink_to_fit(); }
     
 private:
     std::vector<MappableType> elements_;
@@ -1367,6 +1370,7 @@ auto extend(const MappableBlock<Genotype<MappableType>>& genotypes,
             if (selector(genotype, haplotype)) {
                 auto extended_genotype = genotype;
                 extended_genotype.emplace(haplotype);
+                extended_genotype.shrink_to_fit();
                 result.push_back(std::move(extended_genotype));
             }
         }
