@@ -175,6 +175,7 @@ ConstantMixtureGenotypeLikelihoodModel::evaluate_diploid(const Genotype<IndexedH
         return std::accumulate(std::cbegin(log_likelihoods1), std::cend(log_likelihoods1), LogProbability {0});
     } else {
         constexpr static auto ln2 = ln<HaplotypeLikelihoodArray::LogProbability>(2);
+        (void) ln2; // To silence bad GCC unused-but-set-variable warning
         const auto& log_likelihoods2 = likelihoods_[genotype[1]];
         return std::inner_product(std::cbegin(log_likelihoods1), std::cend(log_likelihoods1),
                                   std::cbegin(log_likelihoods2), LogProbability {0}, std::plus<> {},
@@ -189,6 +190,7 @@ ConstantMixtureGenotypeLikelihoodModel::evaluate_triploid(const Genotype<Indexed
 {
     constexpr static auto ln2 = ln<HaplotypeLikelihoodArray::LogProbability>(2);
     constexpr static auto ln3 = ln<HaplotypeLikelihoodArray::LogProbability>(3);
+    (void) ln2; (void) ln3; // To silence bad GCC unused-but-set-variable warning
     if (genotype[0] == genotype[1]) {
         if (genotype[1] == genotype[2]) {
             // homozygous
@@ -226,6 +228,7 @@ ConstantMixtureGenotypeLikelihoodModel::evaluate_tetraploid(const Genotype<Index
     constexpr static auto ln2 = ln<HaplotypeLikelihoodArray::LogProbability>(2);
     constexpr static auto ln3 = ln<HaplotypeLikelihoodArray::LogProbability>(3);
     constexpr static auto ln4 = ln<HaplotypeLikelihoodArray::LogProbability>(4);
+    (void) ln2; (void) ln3; (void) ln4; // To silence bad GCC unused-but-set-variable warning
     if (genotype[0] == genotype[1]) {
         if (genotype[1] == genotype[2]) {
             if (genotype[2] == genotype[3]) {
