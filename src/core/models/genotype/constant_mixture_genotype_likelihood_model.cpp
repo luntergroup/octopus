@@ -174,7 +174,7 @@ ConstantMixtureGenotypeLikelihoodModel::evaluate_diploid(const Genotype<IndexedH
     if (is_homozygous(genotype)) {
         return std::accumulate(std::cbegin(log_likelihoods1), std::cend(log_likelihoods1), LogProbability {0});
     } else {
-        constexpr auto ln2 = ln<HaplotypeLikelihoodArray::LogProbability>(2);
+        constexpr static auto ln2 = ln<HaplotypeLikelihoodArray::LogProbability>(2);
         const auto& log_likelihoods2 = likelihoods_[genotype[1]];
         return std::inner_product(std::cbegin(log_likelihoods1), std::cend(log_likelihoods1),
                                   std::cbegin(log_likelihoods2), LogProbability {0}, std::plus<> {},
@@ -187,8 +187,8 @@ ConstantMixtureGenotypeLikelihoodModel::evaluate_diploid(const Genotype<IndexedH
 ConstantMixtureGenotypeLikelihoodModel::LogProbability
 ConstantMixtureGenotypeLikelihoodModel::evaluate_triploid(const Genotype<IndexedHaplotype<>>& genotype) const
 {
-    constexpr auto ln2 = ln<HaplotypeLikelihoodArray::LogProbability>(2);
-    constexpr auto ln3 = ln<HaplotypeLikelihoodArray::LogProbability>(3);
+    constexpr static auto ln2 = ln<HaplotypeLikelihoodArray::LogProbability>(2);
+    constexpr static auto ln3 = ln<HaplotypeLikelihoodArray::LogProbability>(3);
     if (genotype[0] == genotype[1]) {
         if (genotype[1] == genotype[2]) {
             // homozygous
@@ -223,9 +223,9 @@ ConstantMixtureGenotypeLikelihoodModel::evaluate_triploid(const Genotype<Indexed
 ConstantMixtureGenotypeLikelihoodModel::LogProbability
 ConstantMixtureGenotypeLikelihoodModel::evaluate_tetraploid(const Genotype<IndexedHaplotype<>>& genotype) const
 {
-    constexpr auto ln2 = ln<HaplotypeLikelihoodArray::LogProbability>(2);
-    constexpr auto ln3 = ln<HaplotypeLikelihoodArray::LogProbability>(3);
-    constexpr auto ln4 = ln<HaplotypeLikelihoodArray::LogProbability>(4);
+    constexpr static auto ln2 = ln<HaplotypeLikelihoodArray::LogProbability>(2);
+    constexpr static auto ln3 = ln<HaplotypeLikelihoodArray::LogProbability>(3);
+    constexpr static auto ln4 = ln<HaplotypeLikelihoodArray::LogProbability>(4);
     if (genotype[0] == genotype[1]) {
         if (genotype[1] == genotype[2]) {
             if (genotype[2] == genotype[3]) {
