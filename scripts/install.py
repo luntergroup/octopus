@@ -163,13 +163,24 @@ def install_homebrew(build_dir):
     init_homebrew(brew_bin_dir)
     return os.path.join(brew_bin_dir, 'brew') # brew binary
 
+def get_glibc_version():
+    try:
+        return tuple(int(v) for v in check_output(['ldd', '--version']).decode("utf-8").strip().split('\n')[0].split()[-1].split('.'))
+    except:
+        return True
+
+def is_old_glibc():
+    return get_glibc_version() < (2, 18)
+
 def get_required_dependencies():
     compiled, recompile = ['cmake'], []
     if is_osx():
         compiled.append(latest_llvm)
     else:
         compiled.append(latest_gcc)
-        compiled += ['binutils', 'glibc']
+        compiled += ['binutils']
+        if is_old_glibc():
+            compiled.append('glibc')
     compiled += ['boost', 'gmp']
     if is_osx():
         compiled += ['htslib']
