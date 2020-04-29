@@ -414,9 +414,9 @@ OptionMap parse_options(const int argc, const char** argv)
      "Aligned bases with quality less than this will be converted to reference before"
      " being inserted into the De Bruijn graph")
     
-    ("no-cycles",
+    ("allow-cycles",
      po::bool_switch()->default_value(false),
-     "Do not allow cyclic assembly graphs")
+     "Allow cyclic assembly graphs")
     
     ("min-kmer-prune",
      po::value<int>()->default_value(2),

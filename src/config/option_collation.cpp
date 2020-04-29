@@ -1187,12 +1187,13 @@ auto get_max_expected_heterozygosity(const OptionMap& options)
 auto get_assembler_cycle_tolerance(const OptionMap& options)
 {
     using CGT = coretools::LocalReassembler::Options::CyclicGraphTolerance;
-    if (options.at("no-cycles").as<bool>()) return CGT::none;
-    using CVDP = CandidateVariantDiscoveryProtocol;
-    if (options.at("variant-discovery-mode").as<CVDP>() == CVDP::illumina) {
-        return CGT::high;
-    } else if (is_cancer_calling(options)) {
-        return CGT::low;
+    if (options.at("allow-cycles").as<bool>()) {
+        using CVDP = CandidateVariantDiscoveryProtocol;
+        if (options.at("variant-discovery-mode").as<CVDP>() == CVDP::illumina) {
+            return CGT::high;
+        } else {
+            return CGT::low;
+        }
     } else {
         return CGT::none;
     }
