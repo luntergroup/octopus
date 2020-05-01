@@ -808,16 +808,26 @@ TrioModel::evaluate(const GenotypeVector& maternal_genotypes,
         debug::print(stream(*debug_log_), "child", genotypes.child, child_likelihoods);
     }
     boost::optional<double> lost_log_mass {};
-    const auto reduced_maternal_likelihoods = reduce(maternal_likelihoods, prior_model_, lost_log_mass, options_, genotypes.maternal);
-    const auto reduced_paternal_likelihoods = reduce(paternal_likelihoods, prior_model_, lost_log_mass, options_, genotypes.paternal);
-    const auto reduced_child_likelihoods    = reduce(child_likelihoods, prior_model_, lost_log_mass, options_, genotypes.child);
-    auto parental_likelihoods = join(reduced_maternal_likelihoods, reduced_paternal_likelihoods, genotypes, prior_model_);
+    auto reduced_maternal_likelihoods = maternal_likelihoods;
+    const auto reduced_maternal_likelihoods_info = reduce(reduced_maternal_likelihoods, prior_model_, lost_log_mass, options_, genotypes.maternal);
+    auto reduced_paternal_likelihoods = paternal_likelihoods;
+    const auto reduced_paternal_likelihoods_info = reduce(reduced_paternal_likelihoods, prior_model_, lost_log_mass, options_, genotypes.paternal);
+    const auto reduced_child_likelihoods_info    = reduce(child_likelihoods, prior_model_, lost_log_mass, options_, genotypes.child);
+    auto parental_likelihoods = join(reduced_maternal_likelihoods_info, reduced_paternal_likelihoods_info, genotypes, prior_model_);
     if (debug_log_) debug::print(stream(*debug_log_), genotypes, parental_likelihoods);
-    const auto reduced_parental_likelihoods = reduce(parental_likelihoods, reduced_child_likelihoods, maternal_likelihoods, paternal_likelihoods, genotypes, lost_log_mass, options_);
-    auto joint_likelihoods = join(reduced_parental_likelihoods, reduced_child_likelihoods, genotypes, mutation_model_);
+    const auto reduced_parental_likelihoods = reduce(parental_likelihoods, reduced_child_likelihoods_info, maternal_likelihoods, paternal_likelihoods, genotypes, lost_log_mass, options_);
+    maternal_likelihoods.clear();
+    maternal_likelihoods.shrink_to_fit();
+    reduced_maternal_likelihoods.clear();
+    reduced_maternal_likelihoods.shrink_to_fit();
+    paternal_likelihoods.clear();
+    paternal_likelihoods.shrink_to_fit();
+    reduced_paternal_likelihoods.clear();
+    reduced_paternal_likelihoods.shrink_to_fit();
+    auto joint_likelihoods = join(reduced_parental_likelihoods, reduced_child_likelihoods_info, genotypes, mutation_model_);
     if (debug_log_) debug::print(stream(*debug_log_), genotypes, joint_likelihoods);
     const auto evidence = normalise_exp(joint_likelihoods);
-    if (lost_log_mass) *lost_log_mass *= 2 * std::distance(reduced_child_likelihoods.first, reduced_child_likelihoods.last_full_join);
+    if (lost_log_mass) *lost_log_mass *= 2 * std::distance(reduced_child_likelihoods_info.first, reduced_child_likelihoods_info.last_full_join);
     return {std::move(joint_likelihoods), evidence, lost_log_mass};
 }
 
