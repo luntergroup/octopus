@@ -28,7 +28,11 @@ Measure::ResultType ClassificationConfidence::do_evaluate(const VcfRecord& call,
     const auto posterior = boost::get<boost::optional<double>>(PosteriorProbability().evaluate(call, facets));
     boost::optional<double> result {};
     if (quality && posterior) {
-        result = *posterior / *quality;
+        if (*quality > 0) {
+            result = *posterior / *quality;
+        } else {
+            result = 0;
+        }
     }
     return result;
 }
