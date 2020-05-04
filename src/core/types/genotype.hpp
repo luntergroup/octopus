@@ -1358,6 +1358,38 @@ auto generate_all_max_zygosity_genotypes(const Range& elements, const unsigned p
     return result;
 }
 
+template <typename ForwardIterator, typename MappableType, 
+          typename OutputIterator, typename UnaryPredicate>
+OutputIterator
+extend(ForwardIterator first, ForwardIterator last, 
+       const MappableBlock<MappableType>& haplotypes,
+       OutputIterator result,
+       UnaryPredicate&& selector)
+{
+    std::for_each(first, last, [&] (const auto& genotype) {
+        for (const auto& haplotype : haplotypes) {
+            if (selector(genotype, haplotype)) {
+                auto extended_genotype = genotype;
+                extended_genotype.emplace(haplotype);
+                extended_genotype.shrink_to_fit();
+                *result++ = std::move(extended_genotype);
+            }
+        }
+    });
+    return result;
+}
+
+template <typename ForwardIterator, typename MappableType, 
+          typename OutputIterator>
+OutputIterator
+extend(ForwardIterator first, ForwardIterator last, 
+       const MappableBlock<MappableType>& haplotypes,
+       OutputIterator result)
+{
+    const static auto default_selector = [] (const auto&, const auto&) noexcept { return true; };
+    return extend(first, last, haplotypes, result, default_selector);
+}
+
 template <typename MappableType, typename UnaryPredicate>
 auto extend(const MappableBlock<Genotype<MappableType>>& genotypes,
             const MappableBlock<MappableType>& haplotypes,
@@ -1365,16 +1397,7 @@ auto extend(const MappableBlock<Genotype<MappableType>>& genotypes,
 {
     MappableBlock<Genotype<MappableType>> result {mapped_region(haplotypes)};
     result.reserve(genotypes.size() * haplotypes.size());
-    for (const auto& genotype : genotypes) {
-        for (const auto& haplotype : haplotypes) {
-            if (selector(genotype, haplotype)) {
-                auto extended_genotype = genotype;
-                extended_genotype.emplace(haplotype);
-                extended_genotype.shrink_to_fit();
-                result.push_back(std::move(extended_genotype));
-            }
-        }
-    }
+    extend(std::cbegin(genotypes), std::cend(genotypes), haplotypes, std::back_inserter(result), std::forward<UnaryPredicate>(selector));
     return result;
 }
 

@@ -564,6 +564,27 @@ void select_top_k(Container& items, const Range& probabilities, const std::size_
     erase_complement_indices(items, best_indices);
 }
 
+template <typename Container, typename T, typename Compare = std::less<T>>
+void 
+sort_by_other(Container& items, const std::vector<T>& other,
+              Compare&& comp = Compare {})
+{
+    assert(items.size() == other.size());
+    using U = typename Container::value_type;
+    std::vector<std::pair<U, std::reference_wrapper<const T>>> zipped {};
+    zipped.reserve(items.size());
+    for (std::size_t i {0}; i < items.size(); ++i) {
+        zipped.emplace_back(std::move(items[i]), other[i]);
+    }
+    const auto comp_helper = [&] (const auto& lhs, const auto& rhs) {
+        return comp(lhs.second, rhs.second);
+    };
+    std::sort(std::begin(zipped), std::end(zipped), comp_helper);
+    for (std::size_t i {0}; i < items.size(); ++i) {
+        items[i] = std::move(zipped[i].first);
+    }
+}
+
 template <typename IndexType>
 void erase_duplicates(MappableBlock<Genotype<IndexedHaplotype<IndexType>>>& genotypes)
 {
@@ -606,13 +627,20 @@ IndividualCaller::propose_genotypes(const HaplotypeBlock& haplotypes,
         for (; ploidy < parameters_.ploidy; ++ploidy) {
             if (debug_log_) stream(*debug_log_) << "Finding good genotypes with ploidy " << ploidy << " from " << result.size();
             const auto ploidy_inferences = model.evaluate(result, haplotype_likelihoods);
-            const std::size_t max_seeds {2 * std::max(*parameters_.max_genotypes / haplotypes.size(), std::size_t {1})};
-            select_top_k(result, ploidy_inferences.posteriors.genotype_log_probabilities, max_seeds);
-            result = extend(result, indexed_haplotypes);
-            erase_duplicates(result);
-            if (result.size() > *parameters_.max_genotypes) {
-                result.resize(*parameters_.max_genotypes);
+            sort_by_other(result, ploidy_inferences.posteriors.genotype_log_probabilities);
+            GenotypeBlock next_result {};
+            next_result.reserve(*parameters_.max_genotypes);
+            // We dont know the right number of seed genotypes since there can be
+            // duplicated after expansion with a new haplotype.
+            for (int n {0}; n < 3 && next_result.size() < *parameters_.max_genotypes; ++n) {
+                const std::size_t num_seeds {std::max((*parameters_.max_genotypes - next_result.size()) / haplotypes.size(), std::size_t {1})};
+                const auto seed_itr = std::prev(std::cend(result), num_seeds);
+                extend(seed_itr, std::cend(result), indexed_haplotypes, std::back_inserter(next_result));
+                erase_duplicates(next_result);
+                result.erase(seed_itr, std::cend(result));
+                result.shrink_to_fit();
             }
+            result = std::move(next_result);
         }
     }
     return result;
