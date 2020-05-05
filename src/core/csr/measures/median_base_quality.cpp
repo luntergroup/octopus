@@ -77,6 +77,8 @@ auto median_base_quality(const ReadRefSupportSet& reads, const Allele& allele)
 Measure::ResultType MedianBaseQuality::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     const auto& samples = get_value<Samples>(facets.at("Samples"));
+    const auto& alleles = get_value<Alleles>(facets.at("Alleles"));
+    const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments")).alleles;
     Array<Optional<Array<Optional<ValueType>>>> result {};
     result.reserve(call.num_alt());
     for (const auto& sample : samples) {
@@ -85,9 +87,10 @@ Measure::ResultType MedianBaseQuality::do_evaluate(const VcfRecord& call, const 
             const auto& sample_alleles = get_alt(alleles, call, sample);
             if (!sample_alleles.empty()) {
                 sample_result = Array<Optional<ValueType>>(sample_alleles.size());
-                const auto& allele_support = assignments.at(sample).at(allele);
+                const auto& sample_support = assignments.at(sample);
                 std::transform(std::cbegin(sample_alleles), std::cend(sample_alleles), std::begin(*sample_result),
-                              [&] (const auto& allele) { return median_base_quality(allele_support, allele); });
+                               [&] (const auto& allele) { return median_base_quality(sample_support.at(allele), allele); });
+            }
         }
         result.push_back(sample_result);
     }

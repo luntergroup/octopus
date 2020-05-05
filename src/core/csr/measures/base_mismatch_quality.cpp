@@ -25,9 +25,9 @@ std::unique_ptr<Measure> BaseMismatchQuality::do_clone() const
     return std::make_unique<BaseMismatchQuality>(*this);
 }
 
-Measure::ResultType BaseMismatchQuality::get_default_result() const
+Measure::ValueType BaseMismatchQuality::get_value_type() const
 {
-    return std::vector<int> {};
+    return int {};
 }
 
 namespace {
@@ -95,11 +95,10 @@ Measure::ResultType BaseMismatchQuality::do_evaluate(const VcfRecord& call, cons
     const auto& samples = get_value<Samples>(facets.at("Samples"));
     const auto& alleles = get_value<Alleles>(facets.at("Alleles"));
     const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments")).alleles;
-    std::vector<boost::optional<int>> result {};
-    result.reserve(samples.size());
-    for (const auto& sample : samples) {
+    Array<Optional<ValueType>> result(samples.size());
+    for (std::size_t s {0}; s < samples.size(); ++s) {
+        const auto& sample = samples[s];
         const auto sample_alleles = get_all(alleles, call, sample);
-        boost::optional<int> sample_result {};
         if (!sample_alleles.empty()) {
             std::deque<int> mismatch_qualities {};
             const auto& sample_support = assignments.at(sample);
@@ -109,10 +108,9 @@ Measure::ResultType BaseMismatchQuality::do_evaluate(const VcfRecord& call, cons
                 }
             }
             if (!mismatch_qualities.empty()) {
-                sample_result = maths::median(mismatch_qualities);
+                result[s] = static_cast<int>(maths::median(mismatch_qualities));
             }
         }
-        result.push_back(sample_result);
     }
     return result;
 }

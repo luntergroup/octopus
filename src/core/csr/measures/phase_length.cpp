@@ -17,20 +17,20 @@ std::unique_ptr<Measure> PhaseLength::do_clone() const
     return std::make_unique<PhaseLength>(*this);
 }
 
-Measure::ResultType PhaseLength::get_default_result() const
+Measure::ValueType PhaseLength::get_value_type() const
 {
-    return std::vector<std::size_t> {};
+    return std::size_t {};
 }
 
 Measure::ResultType PhaseLength::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     const auto& samples = get_value<Samples>(facets.at("Samples"));
     const auto& genotypes = get_value<Genotypes>(facets.at("Genotypes"));
-    std::vector<std::size_t> result {};
+    Array<ValueType> result {};
     result.reserve(samples.size());
     for (const auto& sample : samples) {
         const auto& sample_genotypes = genotypes.at(sample);
-        result.push_back(!sample_genotypes.empty() ? size(encompassing_region(sample_genotypes)) : 0);
+        result.emplace_back(static_cast<std::size_t>(!sample_genotypes.empty() ? size(encompassing_region(sample_genotypes)) : 0));
     }
     return result;
 }

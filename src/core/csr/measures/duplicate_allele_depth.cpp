@@ -95,21 +95,22 @@ Measure::ResultType DuplicateAlleleDepth::do_evaluate(const VcfRecord& call, con
         const auto& sample = samples[s];
         if (is_evaluable(call, sample)) {
             result[s] = Array<ValueType>(alleles.size(), std::size_t {0});
-            const auto& duplicate_reads = overlap_range(reads.at(sample.duplicates, call));
+            const auto sample_alleles = get_all(alleles, call, sample);
+            const auto& duplicate_reads = overlap_range(reads.at(sample).duplicates, call);
             if (!duplicate_reads.empty()) {
-                const auto& allele_support = assignments.at(sample);
+                const auto& sample_support = assignments.at(sample);
                 const auto compute_duplicate_support = [&] (const auto& allele) {
-                    const auto& support = allele_support.at(allele);
+                    const auto& support = sample_support.at(allele);
                     std::size_t result {0};
                     for (const auto& duplicates : duplicate_reads) {
-                        const auto is_duplicate_helper = [&] (const auto& read) { return is_duplicate(read, duplicates); };
+                        const auto is_duplicate_helper = [&] (const auto& read) { return is_duplicate(read, duplicates.reads); };
                         result += std::count_if(std::cbegin(support), std::cend(support), is_duplicate_helper);
                         --result; // One 'duplicate' read is not actually a duplicate
                     }
                     if (result < 0) result = 0;
                     return result;
                 };
-                std::transform(std::cbegin(alleles), std::cend(alleles), std::begin(*result[s]), compute_duplicate_support);
+                std::transform(std::cbegin(sample_alleles), std::cend(sample_alleles), std::begin(*result[s]), compute_duplicate_support);
             }
         }
     }
