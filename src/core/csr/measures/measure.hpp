@@ -184,10 +184,12 @@ T get_value_type(const Measure::ResultType& value)
 
 std::vector<std::string> get_all_requirements(const std::vector<MeasureWrapper>& measures);
 
-Measure::ResultType get_sample_value(const Measure::ResultType& value, const MeasureWrapper& measure, std::size_t sample_idx);
-std::vector<Measure::ResultType> get_sample_values(const std::vector<Measure::ResultType>& values,
-                                                   const std::vector<MeasureWrapper>& measures,
-                                                   std::size_t sample_idx);
+Measure::ResultType
+ get_sample_value(const Measure::ResultType& value, const MeasureWrapper& measure, std::size_t sample_idx);
+std::vector<Measure::ResultType>
+ get_sample_values(const std::vector<Measure::ResultType>& values,
+                   const std::vector<MeasureWrapper>& measures, 
+                   std::size_t sample_idx);
 
 } // namespace csr
 } // namespace octopus

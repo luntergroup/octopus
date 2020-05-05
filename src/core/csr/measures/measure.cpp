@@ -224,7 +224,7 @@ std::vector<std::string> get_all_requirements(const std::vector<MeasureWrapper>&
 
 Measure::ResultType get_sample_value(const Measure::ResultType& value, const MeasureWrapper& measure, const std::size_t sample_idx)
 {
-    if (measure.cardinality() == Measure::ResultCardinality::samples) {
+    if (is_per_sample(measure.cardinality())) {
         return boost::apply_visitor(VectorIndexGetterVisitor {sample_idx}, value);
     } else {
         return value;
