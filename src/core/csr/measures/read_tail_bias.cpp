@@ -29,9 +29,9 @@ std::unique_ptr<Measure> ReadTailBias::do_clone() const
     return std::make_unique<ReadTailBias>(*this);
 }
 
-Measure::ResultType ReadTailBias::get_default_result() const
+Measure::ValueType ReadTailBias::get_value_type() const
 {
-    return std::vector<double> {};
+    return double {};
 }
 
 void ReadTailBias::do_set_parameters(std::vector<std::string> params)
@@ -127,11 +127,11 @@ Measure::ResultType ReadTailBias::do_evaluate(const VcfRecord& call, const Facet
     const auto& samples = get_value<Samples>(facets.at("Samples"));
     const auto& alleles = get_value<Alleles>(facets.at("Alleles"));
     const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments")).alleles;
-    std::vector<double> result {};
+    Array<ValueType> result {};
     result.reserve(samples.size());
     const TailDefinition tail_def {tail_fraction_};
     for (const auto& sample : samples) {
-        result.push_back(calculate_max_tail_bias(get_all(alleles, call, sample), assignments.at(sample), tail_def));
+        result.emplace_back(calculate_max_tail_bias(get_all(alleles, call, sample), assignments.at(sample), tail_def));
     }
     return result;
 }

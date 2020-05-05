@@ -12,7 +12,6 @@
 
 #include <boost/variant.hpp>
 #include <boost/optional.hpp>
-#include <boost/any.hpp>
 
 #include "concepts/equitable.hpp"
 #include "io/variant/vcf_header.hpp"
@@ -26,16 +25,29 @@ class Measure : public Equitable<Measure>
 {
 public:
     using FacetMap = std::unordered_map<std::string, FacetWrapper>;
-    using ResultType = boost::variant<double, boost::optional<double>,
-                                      std::vector<double>, std::vector<boost::optional<double>>,
-                                      int, boost::optional<int>,
-                                      std::vector<int>, boost::optional<std::vector<int>>, std::vector<boost::optional<int>>,
-                                      std::size_t, boost::optional<std::size_t>,
-                                      std::vector<std::size_t>, std::vector<boost::optional<std::size_t>>,
-                                      bool,
-                                      std::vector<bool>,
-                                      boost::any>;
-    enum class ResultCardinality { one, alleles, samples };
+
+    using ValueType = boost::variant<bool, int, std::size_t, double>;
+    template <typename T>
+    using Array = std::vector<T>;
+    template <typename T>
+    using Optional = boost::optional<T>;
+    using ResultType = boost::variant<
+            // one value per call
+            ValueType,
+            Optional<ValueType>,
+            // one value per (alt) allele or sample
+            Array<ValueType>, 
+            Array<Optional<ValueType>>,
+            Optional<Array<ValueType>>,
+            Optional<Array<Optional<ValueType>>>,
+            // one value per sample and (alt) allele
+            Array<Array<ValueType>>,
+            Array<Array<Optional<ValueType>>>,
+            Array<Optional<Array<ValueType>>>,
+            Array<Optional<Array<Optional<ValueType>>>>
+        >;
+
+    enum class ResultCardinality { one, alleles, alt_alleles, samples, samples_and_alleles, samples_and_alt_alleles };
     
     Measure() = default;
     
@@ -67,7 +79,7 @@ private:
     virtual std::unique_ptr<Measure> do_clone() const = 0;
     virtual void do_set_parameters(std::vector<std::string> params);
     virtual std::vector<std::string> do_parameters() const { return {}; }
-    virtual ResultType get_default_result() const { return boost::any {}; };
+    virtual ValueType get_value_type() const = 0;
     virtual ResultType do_evaluate(const VcfRecord& call, const FacetMap& facets) const = 0;
     virtual ResultCardinality do_cardinality() const noexcept = 0;
     virtual const std::string& do_name() const = 0;
@@ -163,6 +175,12 @@ std::string long_name(const Measure& measure);
 std::string long_name(const MeasureWrapper& measure);
 
 bool is_missing(const Measure::ResultType& value) noexcept;
+
+template <typename T>
+T get_value_type(const Measure::ResultType& value)
+{
+    return boost::get<T>(boost::get<Measure::ValueType>(value));
+}
 
 std::vector<std::string> get_all_requirements(const std::vector<MeasureWrapper>& measures);
 

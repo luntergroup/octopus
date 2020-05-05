@@ -15,6 +15,7 @@
 
 #include "io/variant/vcf_spec.hpp"
 #include "utils/append.hpp"
+#include "utils/string_utils.hpp"
 
 namespace octopus { namespace csr {
 
@@ -27,47 +28,41 @@ void Measure::do_set_parameters(std::vector<std::string> params)
 
 struct MeasureSerialiseVisitor : boost::static_visitor<>
 {
-    std::string str;
+    std::ostringstream ss;
     
+    void operator()(const Measure::ValueType& value)
+    {
+        boost::apply_visitor(*this, value);
+    }
     void operator()(double value)
     {
-        std::ostringstream ss;
         ss << std::fixed << std::setprecision(3) << value;
-        str = ss.str();
-    }
-    void operator()(boost::any value)
-    {
-        str = ".";
     }
     template <typename T>
     void operator()(const T& value)
     {
-        str = boost::lexical_cast<std::string>(value);
+        ss << boost::lexical_cast<std::string>(value);
     }
     template <typename T>
-    void operator()(const boost::optional<T>& value)
+    void operator()(const Measure::Optional<T>& value)
     {
         if (value) {
             (*this)(*value);
         } else {
-            str = ".";
+            ss << vcfspec::missingValue;
         }
     }
     template <typename T>
-    void operator()(const std::vector<T>& values)
+    void operator()(const Measure::Array<T>& values)
     {
         if (values.empty()) {
-            str = ".";
+            ss << vcfspec::missingValue;
         } else {
-            auto tmp_str = std::move(str);
             std::for_each(std::cbegin(values), std::prev(std::cend(values)), [&] (const auto& value) {
                 (*this)(value);
-                tmp_str += str;
-                tmp_str += ',';
+                ss << vcfspec::format::valueSeperator;
             });
             (*this)(values.back());
-            tmp_str += str;
-            str = std::move(tmp_str);
         }
     }
 };
@@ -76,10 +71,10 @@ std::string Measure::do_serialise(const ResultType& value) const
 {
     MeasureSerialiseVisitor vis {};
     boost::apply_visitor(vis, value);
-    return vis.str;
+    return vis.ss.str();
 }
 
-struct MeasureResultTypeVisitor : boost::static_visitor<std::string>
+struct MeasureValueTypeVisitor : boost::static_visitor<std::string>
 {
     auto operator()(bool) const { return vcfspec::header::meta::type::flag; }
     template <typename T, std::enable_if_t<std::is_integral<T>::value, int> = 0>
@@ -88,27 +83,50 @@ struct MeasureResultTypeVisitor : boost::static_visitor<std::string>
     auto operator()(T) const { return vcfspec::header::meta::type::floating; }
     template <typename T> auto operator()(boost::optional<T>) const { return (*this)(T{}); }
     template <typename T> auto operator()(std::vector<T>) const { return (*this)(T{}); }
-    auto operator()(boost::any) const { return vcfspec::header::meta::type::string; }
 };
 
-std::string get_vcf_typename(const Measure::ResultType& value)
+std::string get_vcf_typename(const Measure::ValueType& value)
 {
-    MeasureResultTypeVisitor vis {};
+    MeasureValueTypeVisitor vis {};
     return boost::apply_visitor(vis, value);
+}
+
+bool is_per_sample(const Measure::ResultCardinality cardinality) noexcept
+{
+    using RC = Measure::ResultCardinality;
+    return cardinality == RC::samples
+        || cardinality == RC::samples_and_alleles
+        || cardinality == RC::samples_and_alt_alleles;
+}
+
+bool is_one_value(const Measure::ResultCardinality cardinality) noexcept
+{
+    using RC = Measure::ResultCardinality;
+    return cardinality == RC::one || cardinality == RC::samples;
+}
+
+auto get_vcf_number(const Measure::ResultCardinality cardinality)
+{
+    using RC = Measure::ResultCardinality;
+    using namespace vcfspec::header::meta::number;
+    if (cardinality == RC::one || cardinality == RC::samples) {
+        return one;
+    } else if (cardinality == RC::alleles || cardinality == RC::samples_and_alleles) {
+        return per_allele;
+    } else {
+        return per_alt_allele;
+    }
 }
 
 void Measure::annotate(VcfHeader::Builder& header) const
 {
     if (!is_required_vcf_field()) {
-        const auto vcf_typename = get_vcf_typename(this->get_default_result());
-        using namespace vcfspec::header::meta::number;
-        if (this->cardinality() == Measure::ResultCardinality::samples) {
-            header.add_format(this->name(), one, vcf_typename, this->describe());
-        } else if (this->cardinality() == Measure::ResultCardinality::alleles) {
-            header.add_info(this->name(), per_allele, vcf_typename, this->describe());
+        const auto vcf_typename = get_vcf_typename(this->get_value_type());
+        const auto vcf_number = get_vcf_number(this->cardinality());
+        if (is_per_sample(this->cardinality())) {
+            header.add_format(this->name(), vcf_number, vcf_typename, this->describe());
         } else {
-            using namespace vcfspec::header::meta::type;
-            header.add_info(this->name(), vcf_typename == flag ? zero : one, vcf_typename, this->describe());
+            header.add_info(this->name(), vcf_number, vcf_typename, this->describe());
         }
     }
 }
@@ -116,16 +134,30 @@ void Measure::annotate(VcfHeader::Builder& header) const
 struct VectorIndexGetterVisitor : public boost::static_visitor<Measure::ResultType>
 {
     VectorIndexGetterVisitor(std::size_t idx) : idx_ {idx} {}
-    template <typename T> T operator()(const std::vector<T>& value) const noexcept { return value[idx_]; }
-    template <typename T> boost::optional<T> operator()(const boost::optional<std::vector<T>>& value) const noexcept
+    template <typename T> Measure::ResultType operator()(const T& value) const 
     {
-        if (value) {
-            return (*value)[idx_];
-        } else {
-            return boost::none;
-        }
+        return value;
     }
-    template <typename T> T operator()(const T& value) const noexcept { return value; }
+    template <typename T> Measure::ResultType operator()(const Measure::Array<T>& value) const
+    {
+         return value[idx_];
+    }
+    template <typename T> Measure::ResultType operator()(const Measure::Optional<Measure::Array<T>>& value) const
+    {
+        Measure::Optional<T> result {};
+        if (value) {
+            result = (*value)[idx_];
+        }
+        return result;
+    }
+    template <typename T> Measure::ResultType operator()(const Measure::Optional<Measure::Array<Measure::Optional<T>>>& value) const
+    {
+        Measure::Optional<T> result {};
+        if (value) {
+            result = (*value)[idx_];
+        }
+        return result;
+    }
 private:
     std::size_t idx_;
 };
@@ -133,12 +165,16 @@ private:
 void Measure::annotate(VcfRecord::Builder& record, const ResultType& value, const VcfHeader& header) const
 {
     if (!is_required_vcf_field()) {
-        if (this->cardinality() == Measure::ResultCardinality::samples) {
+        if (is_per_sample(this->cardinality())) {
             record.add_format(this->name());
             const auto samples = header.samples();
             for (std::size_t sample_idx {0}; sample_idx < samples.size(); ++sample_idx) {
                 const auto sample_value = boost::apply_visitor(VectorIndexGetterVisitor {sample_idx}, value);
-                record.set_format(samples[sample_idx], this->name(), this->serialise(sample_value));
+                if (is_one_value(this->cardinality())) {
+                    record.set_format(samples[sample_idx], this->name(), this->serialise(sample_value));
+                } else {
+                    record.set_format(samples[sample_idx], this->name(), utils::split(this->serialise(sample_value), vcfspec::format::valueSeperator));
+                }
             }
         } else {
             record.set_info(this->name(), this->serialise(value));

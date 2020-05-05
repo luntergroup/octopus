@@ -370,12 +370,12 @@ def get_annotation(field, rec, sample=None):
         else:
             res = rec.samples[sample][field]
         if type(res) == tuple:
-            res = res[0]
+            res = np.mean(res)
         return res
     elif field in rec.info:
         res = rec.info[field]
         if type(res) == tuple:
-            res = res[0]
+            res = np.mean(res)
         return res
     else:
         # Field must be a flag and not present

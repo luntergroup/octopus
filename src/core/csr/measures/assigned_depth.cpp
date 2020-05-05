@@ -24,9 +24,9 @@ std::unique_ptr<Measure> AssignedDepth::do_clone() const
     return std::make_unique<AssignedDepth>(*this);
 }
 
-Measure::ResultType AssignedDepth::get_default_result() const
+Measure::ValueType AssignedDepth::get_value_type() const
 {
-    return std::vector<std::size_t> {};
+    return std::size_t {};
 }
 
 namespace {
@@ -44,11 +44,11 @@ Measure::ResultType AssignedDepth::do_evaluate(const VcfRecord& call, const Face
     const auto& samples = get_value<Samples>(facets.at("Samples"));
     const auto& alleles = get_value<Alleles>(facets.at("Alleles"));
     const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments")).alleles;
-    std::vector<std::size_t> result {};
+    Array<ValueType> result {};
     result.reserve(samples.size());
     for (const auto& sample : samples) {
         const auto sample_alleles = get_all(alleles, call, sample);
-        result.push_back(sum_support_counts(sample_alleles, assignments.at(sample)));
+        result.emplace_back(sum_support_counts(sample_alleles, assignments.at(sample)));
     }
     return result;
 }

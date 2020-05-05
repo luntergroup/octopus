@@ -29,9 +29,9 @@ std::unique_ptr<Measure> MappingQualityDivergence::do_clone() const
     return std::make_unique<MappingQualityDivergence>(*this);
 }
 
-Measure::ResultType MappingQualityDivergence::get_default_result() const
+Measure::ValueType MappingQualityDivergence::get_value_type() const
 {
-    return std::vector<boost::optional<int>> {};
+    return int {};
 }
 
 namespace {
@@ -145,17 +145,15 @@ Measure::ResultType MappingQualityDivergence::do_evaluate(const VcfRecord& call,
     const auto& samples = get_value<Samples>(facets.at("Samples"));
     const auto& alleles = get_value<Alleles>(facets.at("Alleles"));
     const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments")).alleles;
-    std::vector<boost::optional<int>> result {};
-    result.reserve(samples.size());
-    for (const auto& sample : samples) {
-        boost::optional<int> sample_result {};
+    Array<Optional<ValueType>> result(samples.size());
+    for (std::size_t s {0}; s < samples.size(); ++s) {
+        const auto& sample = samples[s];
         if (call.is_heterozygous(sample)) {
             const auto mapping_qualities = extract_mapping_qualities(get_all(alleles, call, sample), assignments.at(sample));
             if (!mapping_qualities.empty()) {
-                sample_result = max_pairwise_median_mapping_quality_difference(mapping_qualities);
+                    result[s] = max_pairwise_median_mapping_quality_difference(mapping_qualities);
             }
         }
-        result.push_back(sample_result);
     }
     return result;
 }

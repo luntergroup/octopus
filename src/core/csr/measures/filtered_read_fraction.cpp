@@ -22,27 +22,33 @@ std::unique_ptr<Measure> FilteredReadFraction::do_clone() const
     return std::make_unique<FilteredReadFraction>(*this);
 }
 
-Measure::ResultType FilteredReadFraction::get_default_result() const
+Measure::ValueType FilteredReadFraction::get_value_type() const
 {
-    return std::vector<double> {};
+    return double {};
 }
 
 Measure::ResultType FilteredReadFraction::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     if (filtering_depth_.cardinality() == Measure::ResultCardinality::samples) {
-        const auto calling_depth   = boost::get<std::vector<std::size_t>>(calling_depth_.evaluate(call, facets));
-        const auto filtering_depth = boost::get<std::vector<std::size_t>>(filtering_depth_.evaluate(call, facets));
-        assert(calling_depth.size() == filtering_depth.size());
-        std::vector<double> result(calling_depth.size());
-        std::transform(std::cbegin(calling_depth), std::cend(calling_depth), std::cbegin(filtering_depth), std::begin(result),
-                       [] (auto cd, auto fd) { return fd > 0 ? 1.0 - (static_cast<double>(cd) / fd) : 0; });
+        const auto raw_depth = boost::get<Array<ValueType>>(filtering_depth_.evaluate(call, facets));
+        const auto filtered_depth   = boost::get<Array<ValueType>>(calling_depth_.evaluate(call, facets));
+        assert(raw_depth.size() == filtered_depth.size());
+        Array<ValueType> result(raw_depth.size());
+        const auto filtered_read_fraction_helper = [] (const auto raw_depth, const auto filtered_depth) {
+            return raw_depth > 0 ? 1.0 - (static_cast<double>(filtered_depth) / raw_depth) : 0.0;
+        };
+        const auto filtered_read_fraction = [&] (const auto raw_depth, const auto filtered_depth) -> ValueType {
+            return filtered_read_fraction_helper(boost::get<std::size_t>(raw_depth), boost::get<std::size_t>(filtered_depth));
+        };
+        std::transform(std::cbegin(raw_depth), std::cend(raw_depth), std::cbegin(filtered_depth),
+                       std::begin(result), filtered_read_fraction);
         return result;
     } else {
-        const auto filtering_depth = boost::get<std::size_t>(filtering_depth_.evaluate(call, facets));
-        double result {0};
-        if (filtering_depth > 0) {
-            auto calling_depth = boost::get<std::size_t>(calling_depth_.evaluate(call, facets));
-            result = 1.0 - (static_cast<double>(calling_depth) / filtering_depth);
+        const auto raw_depth = boost::get<std::size_t>(boost::get<ValueType>(filtering_depth_.evaluate(call, facets)));
+        ValueType result {0};
+        if (raw_depth > 0) {
+            auto filtered_depth = boost::get<std::size_t>(boost::get<ValueType>(calling_depth_.evaluate(call, facets)));
+            result = 1.0 - (static_cast<double>(filtered_depth) / raw_depth);
         }
         return result;
     }

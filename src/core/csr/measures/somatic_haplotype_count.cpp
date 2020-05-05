@@ -17,21 +17,21 @@ std::unique_ptr<Measure> SomaticHaplotypeCount::do_clone() const
     return std::make_unique<SomaticHaplotypeCount>(*this);
 }
 
-Measure::ResultType SomaticHaplotypeCount::get_default_result() const
+Measure::ValueType SomaticHaplotypeCount::get_value_type() const
 {
-    return boost::optional<std::vector<int>> {};
+    return int {};
 }
 
 Measure::ResultType SomaticHaplotypeCount::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
-    boost::optional<std::vector<int>> result {};
+    Optional<Array<ValueType>> result {};
     if (is_somatic(call)) {
         const auto& samples = get_value<Samples>(facets.at("Samples"));
         const auto& ploidies = get_value<Ploidies>(facets.at("Ploidies"));
-        result = std::vector<int> {};
+        result = Array<ValueType> {};
         result->reserve(samples.size());
         for (const auto& sample : samples) {
-            result->push_back(call.ploidy(sample) - ploidies.at(sample));
+            result->emplace_back(static_cast<int>(call.ploidy(sample) - ploidies.at(sample)));
         }
     }
     return result;

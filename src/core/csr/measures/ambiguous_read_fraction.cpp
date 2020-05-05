@@ -26,9 +26,9 @@ std::unique_ptr<Measure> AmbiguousReadFraction::do_clone() const
     return std::make_unique<AmbiguousReadFraction>(*this);
 }
 
-Measure::ResultType AmbiguousReadFraction::get_default_result() const
+Measure::ValueType AmbiguousReadFraction::get_value_type() const
 {
-    return std::vector<boost::optional<double>> {};
+    return double {};
 }
 
 Measure::ResultType AmbiguousReadFraction::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
@@ -36,20 +36,18 @@ Measure::ResultType AmbiguousReadFraction::do_evaluate(const VcfRecord& call, co
     const auto& samples = get_value<Samples>(facets.at("Samples"));
     const auto& reads = get_value<OverlappingReads>(facets.at("OverlappingReads"));
     const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments")).haplotypes;
-    std::vector<boost::optional<double>> result {};
-    result.reserve(samples.size());
-    for (const auto& sample : samples) {
-        boost::optional<double> sample_result {};
+    Array<Optional<ValueType>> result(samples.size());
+    for (std::size_t s {0}; s < samples.size(); ++s) {
+        const auto& sample = samples[s];
         const auto num_overlapping_reads = count_overlapped(reads.at(sample), call);
         if (num_overlapping_reads > 0) {
+            double sample_result {};
             if (assignments.count(sample) == 1) {
                 const auto num_ambiguous_reads = count_overlapped(assignments.at(sample).ambiguous_wrt_reference, call);
                 sample_result = static_cast<double>(num_ambiguous_reads) / num_overlapping_reads;
-            } else {
-                sample_result = 0;
             }
+            result[s] = sample_result;
         }
-        result.push_back(sample_result);
     }
     return result;
 }

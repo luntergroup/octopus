@@ -19,7 +19,7 @@ class IsTransversion : public Measure
 {
     const static std::string name_;
     std::unique_ptr<Measure> do_clone() const override;
-    ResultType get_default_result() const override;
+    ValueType get_value_type() const override;
     ResultType do_evaluate(const VcfRecord& call, const FacetMap& facets) const override;
     ResultCardinality do_cardinality() const noexcept override;
     const std::string& do_name() const override;
