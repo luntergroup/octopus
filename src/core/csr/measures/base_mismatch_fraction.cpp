@@ -42,7 +42,7 @@ Measure::ResultType BaseMismatchFraction::do_evaluate(const VcfRecord& call, con
     std::vector<std::size_t> base_counts(depths.size());
     std::transform(std::cbegin(depths), std::cend(depths), std::cbegin(variant_lengths), std::begin(base_counts),
                    [] (const auto& depth, const auto& allele_length) {
-                        return boost::get<std::size_t>(depth) * boost::get<std::size_t>(allele_length);
+                        return boost::get<std::size_t>(depth) * boost::get<int>(allele_length);
                    });
     Array<ValueType> result(depths.size());
     std::transform(std::cbegin(mismatch_counts), std::cend(mismatch_counts), std::cbegin(base_counts), std::begin(result),

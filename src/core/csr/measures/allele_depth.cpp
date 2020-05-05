@@ -61,8 +61,8 @@ Measure::ResultType AlleleDepth::do_evaluate(const VcfRecord& call, const FacetM
     for (std::size_t s {0}; s < samples.size(); ++s) {
         const auto& sample = samples[s];
         if (is_evaluable(call, sample)) {
-            result[s] = Array<ValueType>(alleles.size());
             const auto sample_alleles = get_all(alleles, call, sample);
+            result[s] = Array<ValueType>(sample_alleles.size());
             const auto& support = assignments.at(sample);
             std::transform(std::cbegin(sample_alleles), std::cend(sample_alleles), std::begin(*result[s]),
                            [&] (const auto& allele) { return support.at(allele).size(); });

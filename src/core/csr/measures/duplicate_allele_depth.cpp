@@ -94,8 +94,8 @@ Measure::ResultType DuplicateAlleleDepth::do_evaluate(const VcfRecord& call, con
     for (std::size_t s {0}; s < samples.size(); ++s) {
         const auto& sample = samples[s];
         if (is_evaluable(call, sample)) {
-            result[s] = Array<ValueType>(alleles.size(), std::size_t {0});
             const auto sample_alleles = get_all(alleles, call, sample);
+            result[s] = Array<ValueType>(sample_alleles.size(), std::size_t {0});
             const auto& duplicate_reads = overlap_range(reads.at(sample).duplicates, call);
             if (!duplicate_reads.empty()) {
                 const auto& sample_support = assignments.at(sample);
