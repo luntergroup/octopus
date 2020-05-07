@@ -36,6 +36,7 @@ public:
     using SampleName         = std::string;
     using KeyType            = std::string;
     using ValueType          = std::string;
+    using AlleleIndex        = std::int8_t;
     
     VcfRecord() = default;
     
@@ -108,6 +109,7 @@ public:
     bool is_homozygous_non_ref(const SampleName& sample) const;
     bool has_ref_allele(const SampleName& sample) const;
     bool has_alt_allele(const SampleName& sample) const;
+    const std::vector<AlleleIndex>& genotype(const SampleName& sample) const;
     const std::vector<ValueType>& get_sample_value(const SampleName& sample, const KeyType& key) const;
     
     friend std::ostream& operator<<(std::ostream& os, const VcfRecord& record);
@@ -117,7 +119,7 @@ private:
     using ValueMap = boost::container::flat_map<KeyType, std::vector<ValueType>>;
     struct Genotype
     {
-        std::vector<NucleotideSequence> alleles;
+        std::vector<AlleleIndex> indices;
         bool phased;
     };
     struct SampleData
@@ -150,6 +152,7 @@ private:
 
 // non-member functions
 
+const VcfRecord::NucleotideSequence& get_allele(const VcfRecord& record, VcfRecord::AlleleIndex index);
 std::vector<VcfRecord::NucleotideSequence> get_genotype(const VcfRecord& record, const VcfRecord::SampleName& sample);
 VcfRecord::NucleotideSequence get_ancestral_allele(const VcfRecord& record);
 std::vector<unsigned> get_allele_count(const VcfRecord& record);
@@ -224,7 +227,7 @@ public:
     Builder& add_format(std::initializer_list<KeyType> keys);
     Builder& set_homozygous_ref_genotype(const SampleName& sample, unsigned ploidy);
     Builder& reserve_samples(unsigned n);
-    Builder& set_genotype(const SampleName& sample, std::vector<NucleotideSequence> alleles, Phasing phasing);
+    Builder& set_genotype(const SampleName& sample, const std::vector<NucleotideSequence>& alleles, Phasing phasing);
     Builder& set_genotype(const SampleName& sample, const std::vector<boost::optional<unsigned>>& alleles, Phasing is_phased);
     Builder& clear_genotype(const SampleName& sample) noexcept;
     Builder& set_format(const SampleName& sample, const KeyType& key, const ValueType& value);
