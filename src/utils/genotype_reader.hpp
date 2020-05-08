@@ -28,6 +28,10 @@ using GenotypeMap = std::unordered_map<SampleName, MappableFlatSet<Genotype<Hapl
 
 enum class ReferencePadPolicy { leave, trim_alt_alleles, trim_all_alleles };
 
+std::vector<boost::optional<Allele>>
+get_resolved_alleles(const VcfRecord& call, const VcfRecord::SampleName& sample,
+                     ReferencePadPolicy ref_pad_policy = ReferencePadPolicy::trim_all_alleles);
+
 std::pair<std::vector<Allele>, bool>
 get_called_alleles(const VcfRecord& call, const VcfRecord::SampleName& sample,
                    ReferencePadPolicy ref_pad_policy = ReferencePadPolicy::trim_all_alleles);

@@ -63,7 +63,7 @@ Measure::ResultType MismatchCount::do_evaluate(const VcfRecord& call, const Face
     result.reserve(samples.size());
     for (const auto& sample : samples) {
         int sample_result {0};
-        for (const auto& allele : get_all(alleles, call, sample)) {
+        for (const auto& allele : get_called(alleles, call, sample)) {
             for (const auto& read : assignments.at(sample).at(allele)) {
                 sample_result += mismatches(read, allele);
             }

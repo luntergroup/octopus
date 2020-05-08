@@ -129,7 +129,7 @@ Measure::ResultType DuplicateConcordance::do_evaluate(const VcfRecord& call, con
     for (const auto& sample : samples) {
         Optional<ValueType> sample_result {};
         if (has_called_alt_allele(call, sample)) {
-            const auto sample_alleles = get_all(alleles, call, sample);
+            const auto sample_alleles = get_called(alleles, call, sample);
             const auto& allele_support = assignments.at(sample);
             AlleleSupportNameSets supporting_read_name {};
             supporting_read_name.reserve(allele_support.size());

@@ -45,11 +45,6 @@ bool has_called_alt_allele(const VcfRecord& call, const VcfRecord::SampleName& s
                        [&] (const auto& allele) { return allele != call.ref() && is_canonical(allele); });
 }
 
-bool is_evaluable(const VcfRecord& call, const VcfRecord::SampleName& sample)
-{
-    return has_called_alt_allele(call, sample);
-}
-
 } // namespace
 
 Measure::ResultType AlleleDepth::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
@@ -57,15 +52,16 @@ Measure::ResultType AlleleDepth::do_evaluate(const VcfRecord& call, const FacetM
     const auto& samples = get_value<Samples>(facets.at("Samples"));
     const auto& alleles = get_value<Alleles>(facets.at("Alleles"));
     const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments")).alleles;
-    Array<Optional<Array<ValueType>>> result(samples.size());
+    const auto num_alt_alleles = call.alt().size();
+    Array<Array<Optional<ValueType>>> result(samples.size(), Array<Optional<ValueType>>(num_alt_alleles));
     for (std::size_t s {0}; s < samples.size(); ++s) {
-        const auto& sample = samples[s];
-        if (is_evaluable(call, sample)) {
-            const auto sample_alleles = get_all(alleles, call, sample);
-            result[s] = Array<ValueType>(sample_alleles.size());
-            const auto& support = assignments.at(sample);
-            std::transform(std::cbegin(sample_alleles), std::cend(sample_alleles), std::begin(*result[s]),
-                           [&] (const auto& allele) { return support.at(allele).size(); });
+        const auto& sample_alleles = get(alleles, call, samples[s]);
+        assert(sample_alleles.size() == num_alt_alleles + 1);
+        const auto& support = assignments.at(samples[s]);
+        for (std::size_t a {0}; a < num_alt_alleles; ++a) {
+            if (sample_alleles[a + 1]) {
+                result[s][a] = support.at(*sample_alleles[a + 1]).size();
+            }
         }
     }
     return result;

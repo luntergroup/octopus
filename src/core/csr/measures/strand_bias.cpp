@@ -187,7 +187,7 @@ Measure::ResultType StrandBias::do_evaluate(const VcfRecord& call, const FacetMa
     for (std::size_t s {0}; s < samples.size(); ++s) {
         const auto& sample = samples[s];
         if (is_evaluable(call, sample)) {
-            const auto direction_counts = get_direction_counts(get_all(alleles, call, sample), assignments.at(sample), mapped_region(call));
+            const auto direction_counts = get_direction_counts(get_called(alleles, call, sample), assignments.at(sample), mapped_region(call));
             double prob;
             if (use_resampling_) {
                 prob = calculate_max_prob_different(direction_counts, small_sample_size_, min_difference_);

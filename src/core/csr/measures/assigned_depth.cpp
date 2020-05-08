@@ -47,7 +47,7 @@ Measure::ResultType AssignedDepth::do_evaluate(const VcfRecord& call, const Face
     Array<ValueType> result {};
     result.reserve(samples.size());
     for (const auto& sample : samples) {
-        const auto sample_alleles = get_all(alleles, call, sample);
+        const auto sample_alleles = get_called(alleles, call, sample);
         result.emplace_back(sum_support_counts(sample_alleles, assignments.at(sample)));
     }
     return result;

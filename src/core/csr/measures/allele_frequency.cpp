@@ -30,17 +30,21 @@ Measure::ValueType AlleleFrequency::get_value_type() const
 
 Measure::ResultType AlleleFrequency::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
-    const auto allele_depths = boost::get<Array<Optional<Array<ValueType>>>>(AlleleDepth{}.evaluate(call, facets));
+    const auto allele_depths = boost::get<Array<Array<Optional<ValueType>>>>(AlleleDepth{}.evaluate(call, facets));
     const auto depths = boost::get<Array<ValueType>>(AssignedDepth{}.evaluate(call, facets));
-    Array<Optional<Array<ValueType>>> result(allele_depths.size());
+    const auto num_alt_alleles = call.alt().size();
+    Array<Array<Optional<ValueType>>> result(allele_depths.size(), Array<Optional<ValueType>>(num_alt_alleles));
     for (std::size_t s {0}; s < allele_depths.size(); ++s) {
+        assert(allele_depths[s].size() == num_alt_alleles);
         const auto depth = boost::get<std::size_t>(depths[s]);
-        if (allele_depths[s] && depth > 0) {
-            result[s] = Array<ValueType>(allele_depths[s]->size());
-            std::transform(std::cbegin(*allele_depths[s]), std::cend(*allele_depths[s]), std::begin(*result[s]),
-                           [=] (auto allele_depth) {
-                               return static_cast<double>(boost::get<std::size_t>(allele_depth)) / depth;
-                           });
+        for (std::size_t a {0}; a < num_alt_alleles; ++a) {
+            if (allele_depths[s][a]) {
+                if (depth > 0) {
+                    result[s][a] = static_cast<double>(boost::get<std::size_t>(*allele_depths[s][a])) / depth;
+                } else {
+                    result[s][a] = 1.0;
+                }
+            }
         }
     }
     return result;

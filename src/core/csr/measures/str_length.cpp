@@ -92,7 +92,7 @@ Measure::ResultType STRLength::do_evaluate(const VcfRecord& call, const FacetMap
     int result {0};
     const auto& repeats = get_value<RepeatContext>(facets.at("RepeatContext"));
     const auto& samples = get_value<Samples>(facets.at("Samples"));
-    const auto alleles = get_all_unique(get_value<Alleles>(facets.at("Alleles")), call, samples);
+    const auto alleles = get_unique_called(get_value<Alleles>(facets.at("Alleles")), call, samples);
     const auto repeat_context = find_repeat_context(repeats, call, alleles);
     if (repeat_context) result = region_size(*repeat_context);
     return ValueType {result};

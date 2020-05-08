@@ -84,7 +84,7 @@ Measure::ResultType MedianBaseQuality::do_evaluate(const VcfRecord& call, const 
     for (const auto& sample : samples) {
         Optional<Array<Optional<ValueType>>> sample_result {};
         if (is_evaluable(call, sample)) {
-            const auto& sample_alleles = get_alt(alleles, call, sample);
+            const auto& sample_alleles = get_called(alleles, call, sample);
             if (!sample_alleles.empty()) {
                 sample_result = Array<Optional<ValueType>>(sample_alleles.size());
                 const auto& sample_support = assignments.at(sample);

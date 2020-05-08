@@ -98,7 +98,7 @@ Measure::ResultType BaseMismatchQuality::do_evaluate(const VcfRecord& call, cons
     Array<Optional<ValueType>> result(samples.size());
     for (std::size_t s {0}; s < samples.size(); ++s) {
         const auto& sample = samples[s];
-        const auto sample_alleles = get_all(alleles, call, sample);
+        const auto sample_alleles = get_called(alleles, call, sample);
         if (!sample_alleles.empty()) {
             std::deque<int> mismatch_qualities {};
             const auto& sample_support = assignments.at(sample);

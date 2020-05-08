@@ -31,7 +31,7 @@ Measure::ResultType VariantLength::do_evaluate(const VcfRecord& call, const Face
     result.reserve(samples.size());
     for (const auto& sample : samples) {
         int sample_result {0};
-        for (const auto& allele : get_all(alleles, call, sample)) {
+        for (const auto& allele : get_called(alleles, call, sample)) {
             sample_result = std::max({sample_result, static_cast<int>(region_size(allele)), static_cast<int>(sequence_size(allele))});
         }
         result.emplace_back(sample_result);

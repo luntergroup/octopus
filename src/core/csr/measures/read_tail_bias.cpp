@@ -131,7 +131,7 @@ Measure::ResultType ReadTailBias::do_evaluate(const VcfRecord& call, const Facet
     result.reserve(samples.size());
     const TailDefinition tail_def {tail_fraction_};
     for (const auto& sample : samples) {
-        result.emplace_back(calculate_max_tail_bias(get_all(alleles, call, sample), assignments.at(sample), tail_def));
+        result.emplace_back(calculate_max_tail_bias(get_called(alleles, call, sample), assignments.at(sample), tail_def));
     }
     return result;
 }

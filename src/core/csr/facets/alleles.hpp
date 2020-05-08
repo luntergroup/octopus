@@ -29,10 +29,13 @@ private:
     Facet::ResultType do_get() const override;
 };
 
-std::vector<Allele> get_all(const Facet::AlleleMap& alleles, const VcfRecord& call, const SampleName& sample);
-std::vector<Allele> get_alt(const Facet::AlleleMap& alleles, const VcfRecord& call, const SampleName& sample);
+inline const auto& get(const Facet::AlleleMap& alleles, const VcfRecord& call, const SampleName& sample)
+{
+    return alleles.at(mapped_region(call)).at(sample);
+}
 
-std::vector<Allele> get_all_unique(const Facet::AlleleMap& alleles, const VcfRecord& call, const std::vector<SampleName>& samples);
+std::vector<Allele> get_called(const Facet::AlleleMap& alleles, const VcfRecord& call, const SampleName& sample);
+std::vector<Allele> get_unique_called(const Facet::AlleleMap& alleles, const VcfRecord& call, const std::vector<SampleName>& samples);
 
 } // namespace csr
 } // namespace octopus

@@ -120,7 +120,7 @@ Measure::ResultType ReadSideBias::do_evaluate(const VcfRecord& call, const Facet
     Array<ValueType> result {};
     result.reserve(samples.size());
     for (const auto& sample : samples) {
-        result.emplace_back(calculate_position_bias(get_all(alleles, call, sample), assignments.at(sample)));
+        result.emplace_back(calculate_position_bias(get_called(alleles, call, sample), assignments.at(sample)));
     }
     return result;
 }

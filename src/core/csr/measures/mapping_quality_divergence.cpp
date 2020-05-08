@@ -149,7 +149,7 @@ Measure::ResultType MappingQualityDivergence::do_evaluate(const VcfRecord& call,
     for (std::size_t s {0}; s < samples.size(); ++s) {
         const auto& sample = samples[s];
         if (call.is_heterozygous(sample)) {
-            const auto mapping_qualities = extract_mapping_qualities(get_all(alleles, call, sample), assignments.at(sample));
+            const auto mapping_qualities = extract_mapping_qualities(get_called(alleles, call, sample), assignments.at(sample));
             if (!mapping_qualities.empty()) {
                     result[s] = max_pairwise_median_mapping_quality_difference(mapping_qualities);
             }

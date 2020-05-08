@@ -29,29 +29,24 @@ Measure::ValueType DuplicateAlleleFraction::get_value_type() const
 
 Measure::ResultType DuplicateAlleleFraction::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
-    const auto allele_depths = boost::get<Array<Optional<Array<ValueType>>>>(AlleleDepth{}.evaluate(call, facets));
-    const auto duplicate_allele_depths = boost::get<Array<Optional<Array<ValueType>>>>(DuplicateAlleleDepth{}.evaluate(call, facets));
+    const auto allele_depths = boost::get<Array<Array<Optional<ValueType>>>>(AlleleDepth{}.evaluate(call, facets));
+    const auto duplicate_allele_depths = boost::get<Array<Array<Optional<ValueType>>>>(DuplicateAlleleDepth{}.evaluate(call, facets));
+    const auto num_alt_alleles = call.alt().size();
     assert(allele_depths.size() == duplicate_allele_depths.size());
-    Array<Optional<Array<Optional<ValueType>>>> result(allele_depths.size());
-    std::transform(std::cbegin(duplicate_allele_depths), std::cend(duplicate_allele_depths), std::cbegin(allele_depths), std::begin(result),
-                   [] (const auto& duplicate_allele_depths, const auto& allele_depths) {
-        Optional<Array<Optional<ValueType>>> result {};
-        if (duplicate_allele_depths && allele_depths) {
-            assert(duplicate_allele_depths->size() == allele_depths->size());
-            result = Array<Optional<ValueType>>(allele_depths->size());
-            std::transform(std::cbegin(*duplicate_allele_depths), std::cend(*duplicate_allele_depths),
-                           std::cbegin(*allele_depths), std::begin(*result),
-                           [] (const auto dup_depth, const auto allele_depth) {
-                                Optional<ValueType> result {};
-                                const auto adp = boost::get<std::size_t>(allele_depth);;
-                                if (adp > 0) {
-                                    result = static_cast<double>(boost::get<std::size_t>(dup_depth)) / adp;
-                                }
-                                return result;
-                           });
+    Array<Array<Optional<ValueType>>> result(allele_depths.size(), Array<Optional<ValueType>>(num_alt_alleles));
+    for (std::size_t s {0}; s < allele_depths.size(); ++s) {
+        assert(allele_depths[s].size() == num_alt_alleles && duplicate_allele_depths[s].size() == num_alt_alleles);
+        for (std::size_t a {0}; a < num_alt_alleles; ++a) {
+            if (allele_depths[s][a] && duplicate_allele_depths[s][a]) {
+                const auto allele_depth = boost::get<std::size_t>(*allele_depths[s][a]);
+                if (allele_depth > 0) {
+                    result[s][a] = static_cast<double>(boost::get<std::size_t>(*duplicate_allele_depths[s][a])) / allele_depth;
+                } else {
+                    result[s][a] = 0.0;
+                }
+            }
         }
-        return result;
-    });
+    }
     return result;
 }
 

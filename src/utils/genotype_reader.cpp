@@ -171,7 +171,74 @@ auto extract_genotype(const VcfRecord& call, const SampleName& sample, const Ref
     return result;
 }
 
+bool is_spanning_deletion(const VcfRecord::NucleotideSequence& allele)
+{
+    return std::find(std::cbegin(allele), std::cend(allele), vcfspec::deletedBase) != std::cend(allele);
+}
+
+bool is_missing_or_spanning_deletion(const VcfRecord::AlleleIndex index, const VcfRecord& call)
+{
+    const auto& allele = get_allele(call, index);
+    return is_missing(allele) || is_spanning_deletion(allele);
+}
+
 } // namespace
+
+std::vector<boost::optional<Allele>>
+get_resolved_alleles(const VcfRecord& call, const VcfRecord::SampleName& sample,
+                     const ReferencePadPolicy ref_pad_policy)
+{
+    const auto& gt = call.genotype(sample);
+    const auto call_region = mapped_region(call);
+    std::vector<boost::optional<Allele>> result(1 + call.alt().size());
+    if (ref_pad_policy != ReferencePadPolicy::leave) {
+        std::vector<std::pair<VcfRecord::AlleleIndex, Allele::NucleotideSequence>> unique_alleles {};
+        unique_alleles.reserve(gt.size());
+        for (const auto allele_index : gt) {
+            if (!is_missing_or_spanning_deletion(allele_index, call)) {
+                unique_alleles.emplace_back(allele_index, get_allele(call, allele_index));
+            }
+        }
+        std::sort(std::begin(unique_alleles), std::end(unique_alleles));
+        unique_alleles.erase(std::unique(std::begin(unique_alleles), std::end(unique_alleles)), std::end(unique_alleles));
+        std::vector<std::size_t> unknwown_pad_allele_indices {};
+        boost::optional<int> max_ref_pad {};
+        for (unsigned idx {0}; idx < unique_alleles.size(); ++idx) {
+            auto& allele = unique_alleles[idx].second;
+            if (is_ref_pad_size_known(allele, call)) {
+                const auto pad_size = calculate_ref_pad_size(call, allele);
+                allele.erase(std::cbegin(allele), std::next(std::cbegin(allele), pad_size));
+                auto allele_region = expand_lhs(call_region, -pad_size);
+                result[unique_alleles[idx].first] = Allele {std::move(allele_region), std::move(allele)};
+                if (max_ref_pad) {
+                    max_ref_pad = std::max(*max_ref_pad, pad_size);
+                } else {
+                    max_ref_pad = pad_size;
+                }
+            } else {
+                unknwown_pad_allele_indices.push_back(idx);
+            }
+        }
+        if (!max_ref_pad) {
+            max_ref_pad = has_non_complex_indel(call) ? 1 : 0;
+        }
+        for (const auto idx : unknwown_pad_allele_indices) {
+            auto& allele = unique_alleles[idx].second;
+            auto p = std::mismatch(std::cbegin(call.ref()), std::next(std::cbegin(call.ref()), *max_ref_pad),
+                                    std::cbegin(allele), std::cend(allele));
+            allele.erase(std::cbegin(allele), p.second);
+            auto allele_region = expand_lhs(call_region, std::distance(p.second, std::cbegin(allele)));
+            result[unique_alleles[idx].first] = Allele {std::move(allele_region), std::move(allele)};
+        }
+    } else {
+        for (const auto allele_index : gt) {
+            if (!result[allele_index] && !is_missing_or_spanning_deletion(allele_index, call)) {
+                result[allele_index] = Allele {call_region, get_allele(call, allele_index)};
+            }
+        }
+    }
+    return result;
+}
 
 std::pair<std::vector<Allele>, bool>
 get_called_alleles(const VcfRecord& call, const VcfRecord::SampleName& sample, const ReferencePadPolicy ref_pad_policy)
