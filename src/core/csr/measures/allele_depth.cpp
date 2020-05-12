@@ -52,15 +52,15 @@ Measure::ResultType AlleleDepth::do_evaluate(const VcfRecord& call, const FacetM
     const auto& samples = get_value<Samples>(facets.at("Samples"));
     const auto& alleles = get_value<Alleles>(facets.at("Alleles"));
     const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments")).alleles;
-    const auto num_alt_alleles = call.alt().size();
-    Array<Array<Optional<ValueType>>> result(samples.size(), Array<Optional<ValueType>>(num_alt_alleles));
+    const auto num_alleles = 1 + call.num_alt();
+    Array<Array<Optional<ValueType>>> result(samples.size(), Array<Optional<ValueType>>(num_alleles));
     for (std::size_t s {0}; s < samples.size(); ++s) {
         const auto& sample_alleles = get(alleles, call, samples[s]);
-        assert(sample_alleles.size() == num_alt_alleles + 1);
+        assert(sample_alleles.size() == num_alleles);
         const auto& support = assignments.at(samples[s]);
-        for (std::size_t a {0}; a < num_alt_alleles; ++a) {
-            if (sample_alleles[a + 1]) {
-                result[s][a] = support.at(*sample_alleles[a + 1]).size();
+        for (std::size_t a {0}; a < num_alleles; ++a) {
+            if (sample_alleles[a]) {
+                result[s][a] = support.at(*sample_alleles[a]).size();
             }
         }
     }
@@ -69,7 +69,7 @@ Measure::ResultType AlleleDepth::do_evaluate(const VcfRecord& call, const FacetM
 
 Measure::ResultCardinality AlleleDepth::do_cardinality() const noexcept
 {
-    return ResultCardinality::samples_and_alt_alleles;
+    return ResultCardinality::samples_and_alleles;
 }
 
 const std::string& AlleleDepth::do_name() const
@@ -79,7 +79,7 @@ const std::string& AlleleDepth::do_name() const
 
 std::string AlleleDepth::do_describe() const
 {
-    return "Minor empirical alt allele depth";
+    return "Empirical allele depth";
 }
 
 std::vector<std::string> AlleleDepth::do_requirements() const

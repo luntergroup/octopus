@@ -32,12 +32,12 @@ Measure::ResultType AlleleFrequency::do_evaluate(const VcfRecord& call, const Fa
 {
     const auto allele_depths = boost::get<Array<Array<Optional<ValueType>>>>(AlleleDepth{}.evaluate(call, facets));
     const auto depths = boost::get<Array<ValueType>>(AssignedDepth{}.evaluate(call, facets));
-    const auto num_alt_alleles = call.alt().size();
-    Array<Array<Optional<ValueType>>> result(allele_depths.size(), Array<Optional<ValueType>>(num_alt_alleles));
+    const auto num_alleles = 1 + call.alt().size();
+    Array<Array<Optional<ValueType>>> result(allele_depths.size(), Array<Optional<ValueType>>(num_alleles));
     for (std::size_t s {0}; s < allele_depths.size(); ++s) {
-        assert(allele_depths[s].size() == num_alt_alleles);
+        assert(allele_depths[s].size() == num_alleles);
         const auto depth = boost::get<std::size_t>(depths[s]);
-        for (std::size_t a {0}; a < num_alt_alleles; ++a) {
+        for (std::size_t a {0}; a < num_alleles; ++a) {
             if (allele_depths[s][a]) {
                 if (depth > 0) {
                     result[s][a] = static_cast<double>(boost::get<std::size_t>(*allele_depths[s][a])) / depth;
@@ -52,7 +52,7 @@ Measure::ResultType AlleleFrequency::do_evaluate(const VcfRecord& call, const Fa
 
 Measure::ResultCardinality AlleleFrequency::do_cardinality() const noexcept
 {
-    return ResultCardinality::samples_and_alt_alleles;
+    return ResultCardinality::samples_and_alleles;
 }
 
 const std::string& AlleleFrequency::do_name() const
@@ -62,7 +62,7 @@ const std::string& AlleleFrequency::do_name() const
 
 std::string AlleleFrequency::do_describe() const
 {
-    return "Empirical minor allele frequency of ALT alleles (AD / ADP)";
+    return "Empirical allele frequency (AD / ADP)";
 }
 
 std::vector<std::string> AlleleFrequency::do_requirements() const
