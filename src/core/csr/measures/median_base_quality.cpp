@@ -79,20 +79,17 @@ Measure::ResultType MedianBaseQuality::do_evaluate(const VcfRecord& call, const 
     const auto& samples = get_value<Samples>(facets.at("Samples"));
     const auto& alleles = get_value<Alleles>(facets.at("Alleles"));
     const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments")).alleles;
-    Array<Optional<Array<Optional<ValueType>>>> result {};
-    result.reserve(call.num_alt());
-    for (const auto& sample : samples) {
-        Optional<Array<Optional<ValueType>>> sample_result {};
-        if (is_evaluable(call, sample)) {
-            const auto& sample_alleles = get_called(alleles, call, sample);
-            if (!sample_alleles.empty()) {
-                sample_result = Array<Optional<ValueType>>(sample_alleles.size());
-                const auto& sample_support = assignments.at(sample);
-                std::transform(std::cbegin(sample_alleles), std::cend(sample_alleles), std::begin(*sample_result),
-                               [&] (const auto& allele) { return median_base_quality(sample_support.at(allele), allele); });
+    Array<Array<Optional<ValueType>>> result(samples.size(), Array<Optional<ValueType>>(call.num_alt()));
+    for (std::size_t s {0}; s < samples.size(); ++s) {
+        const auto& sample_alleles = get(alleles, call, samples[s]);
+        assert(sample_alleles.size() == call.num_alt() + 1);
+        const auto& support = assignments.at(samples[s]);
+        for (std::size_t a {0}; a < call.num_alt(); ++a) {
+            if (sample_alleles[a + 1]) {
+                const auto& allele = *sample_alleles[a + 1];
+                result[s][a] = median_base_quality(support.at(allele), allele);
             }
         }
-        result.push_back(sample_result);
     }
     return result;
 }
@@ -115,6 +112,11 @@ std::string MedianBaseQuality::do_describe() const
 std::vector<std::string> MedianBaseQuality::do_requirements() const
 {
     return {"Samples", "Alleles", "ReadAssignments"};
+}
+
+boost::optional<Measure::Aggregator> MedianBaseQuality::do_aggregator() const noexcept
+{
+    return Measure::Aggregator::mean;
 }
 
 } // namespace csr

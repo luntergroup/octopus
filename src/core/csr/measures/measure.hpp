@@ -48,6 +48,8 @@ public:
         >;
 
     enum class ResultCardinality { one, alleles, alt_alleles, samples, samples_and_alleles, samples_and_alt_alleles };
+
+    enum class Aggregator { sum, min, max, mean };
     
     Measure() = default;
     
@@ -70,6 +72,7 @@ public:
     std::string serialise(const ResultType& value) const { return do_serialise(value); }
     void annotate(VcfHeader::Builder& header) const;
     void annotate(VcfRecord::Builder& record, const ResultType& value, const VcfHeader& header) const;
+    boost::optional<Aggregator> aggregator() const noexcept { return do_aggregator(); }
     friend bool operator==(const Measure& lhs, const Measure& rhs) noexcept
     {
         return lhs.name() == rhs.name() && lhs.is_equal(rhs);
@@ -88,6 +91,7 @@ private:
     virtual std::string do_serialise(const ResultType& value) const;
     virtual bool is_required_vcf_field() const noexcept { return false; }
     virtual bool is_equal(const Measure& other) const noexcept { return true; }
+    virtual boost::optional<Aggregator> do_aggregator() const noexcept { return boost::none; }
 };
 
 class MeasureWrapper : public Equitable<MeasureWrapper>
@@ -121,6 +125,7 @@ public:
     std::string serialise(const Measure::ResultType& value) const { return measure_->serialise(value); }
     void annotate(VcfHeader::Builder& header) const { measure_->annotate(header); }
     void annotate(VcfRecord::Builder& record, const Measure::ResultType& value, const VcfHeader& header) const { measure_->annotate(record, value, header); }
+    boost::optional<Measure::Aggregator> aggregator() const noexcept { return measure_->aggregator(); }
     
 private:
     std::unique_ptr<Measure> measure_;
@@ -185,11 +190,15 @@ T get_value_type(const Measure::ResultType& value)
 std::vector<std::string> get_all_requirements(const std::vector<MeasureWrapper>& measures);
 
 Measure::ResultType
- get_sample_value(const Measure::ResultType& value, const MeasureWrapper& measure, std::size_t sample_idx);
+ get_sample_value(const Measure::ResultType& value,
+                  const MeasureWrapper& measure,
+                  std::size_t sample_idx,
+                  bool aggregate = false);
 std::vector<Measure::ResultType>
  get_sample_values(const std::vector<Measure::ResultType>& values,
                    const std::vector<MeasureWrapper>& measures, 
-                   std::size_t sample_idx);
+                   std::size_t sample_idx,
+                   bool aggregate = false);
 
 } // namespace csr
 } // namespace octopus

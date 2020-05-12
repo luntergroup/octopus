@@ -51,6 +51,7 @@ private:
     
     Path temp_directory_;
     
+    virtual bool requires_aggregated_allele_measures() const noexcept { return true; }
     virtual void log_registration_pass(Log& log) const;
     virtual void prepare_for_registration(const SampleList& samples) const {};
     virtual void record(std::size_t call_idx, std::size_t sample_idx, MeasureVector measures) const = 0;

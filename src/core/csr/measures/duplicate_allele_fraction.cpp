@@ -71,5 +71,10 @@ std::vector<std::string> DuplicateAlleleFraction::do_requirements() const
     return {"Samples", "OverlappingReads", "ReadAssignments"};
 }
 
+boost::optional<Measure::Aggregator> DuplicateAlleleFraction::do_aggregator() const noexcept
+{
+    return Measure::Aggregator::sum;
+}
+
 } // namespace csr
 } // namespace octopus

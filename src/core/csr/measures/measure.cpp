@@ -222,22 +222,129 @@ std::vector<std::string> get_all_requirements(const std::vector<MeasureWrapper>&
     return result;
 }
 
-Measure::ResultType get_sample_value(const Measure::ResultType& value, const MeasureWrapper& measure, const std::size_t sample_idx)
+namespace {
+
+struct PlusVisitor : public boost::static_visitor<Measure::ValueType>
 {
-    if (is_per_sample(measure.cardinality())) {
-        return boost::apply_visitor(VectorIndexGetterVisitor {sample_idx}, value);
+    PlusVisitor(Measure::ValueType other) : other_ {other} {}
+    template <typename T> auto operator()(const T value) const noexcept
+    {
+        return boost::get<T>(other_) + value;
+    }
+private:
+    Measure::ValueType other_;
+};
+
+auto sum(const Measure::Array<Measure::ValueType>& values)
+{
+    return std::accumulate(std::next(std::cbegin(values)), std::cend(values), values.front(),
+                           [] (auto total, const auto& value) { return boost::apply_visitor(PlusVisitor {total}, value); });
+}
+
+auto min(const Measure::Array<Measure::ValueType>& values)
+{
+    return *std::min_element(std::cbegin(values), std::cend(values));
+}
+
+auto max(const Measure::Array<Measure::ValueType>& values)
+{
+    return *std::max_element(std::cbegin(values), std::cend(values));
+}
+
+struct DivideVisitor : public boost::static_visitor<Measure::ValueType>
+{
+    DivideVisitor(std::size_t n) : n_ {n} {}
+    template <typename T> auto operator()(const T value) const noexcept { return value / n_; }
+private:
+    std::size_t n_;
+};
+
+auto mean(const Measure::Array<Measure::ValueType>& values)
+{
+    return boost::apply_visitor(DivideVisitor {values.size()}, sum(values));
+}
+
+Measure::Optional<Measure::ValueType> 
+aggregate(const Measure::Array<Measure::ValueType>& values,
+          const Measure::Aggregator aggregator)
+{
+    if (values.empty()) {
+        return boost::none;
     } else {
-        return value;
+        switch (aggregator) {
+            case Measure::Aggregator::min: return min(values);
+            case Measure::Aggregator::max: return max(values);
+            case Measure::Aggregator::sum: return sum(values);
+            case Measure::Aggregator::mean: return mean(values);
+        }
     }
 }
 
+} // namespace
+
+struct AggregatorVisitor : public boost::static_visitor<Measure::Optional<Measure::ValueType>>
+{
+    AggregatorVisitor(Measure::Aggregator aggregator) : aggregator_ {aggregator} {}
+    Measure::Optional<Measure::ValueType> operator()(const Measure::ValueType& value) const 
+    {
+        return value;
+    }
+    Measure::Optional<Measure::ValueType> operator()(const Measure::Optional<Measure::ValueType>& value) const 
+    {
+        return value;
+    }
+    Measure::Optional<Measure::ValueType> operator()(const Measure::Array<Measure::ValueType>& values) const
+    {
+        return aggregate(values, aggregator_);
+    }
+    Measure::Optional<Measure::ValueType> operator()(const Measure::Array<Measure::Optional<Measure::ValueType>>& values) const
+    {
+        Measure::Array<Measure::ValueType> valid_values {};
+        valid_values.reserve(values.size());
+        for (const auto& value : values) {
+            if (value) valid_values.push_back(*value);
+        }
+        return (*this)(valid_values);
+    }
+    template <typename T> 
+    Measure::Optional<Measure::ValueType> operator()(const Measure::Optional<Measure::Array<T>>& values) const
+    {
+        if (values) {
+            return (*this)(*values);
+        } else {
+            return boost::none;
+        }
+    }
+    template <typename T> 
+    Measure::Optional<Measure::ValueType> operator()(const T& values) const
+    {
+        throw std::runtime_error {"Bad AggregatorVisitor"};
+    }
+private:
+    Measure::Aggregator aggregator_;
+};
+
+Measure::ResultType get_sample_value(const Measure::ResultType& value, const MeasureWrapper& measure, const std::size_t sample_idx, const bool aggregate)
+{
+    Measure::ResultType result {};
+    if (is_per_sample(measure.cardinality())) {
+        result = boost::apply_visitor(VectorIndexGetterVisitor {sample_idx}, value);
+    } else {
+        result = value;
+    }
+    if (aggregate && measure.aggregator()) {
+        result = boost::apply_visitor(AggregatorVisitor {*measure.aggregator()}, result);
+    }
+    return result;
+}
+
 std::vector<Measure::ResultType>
-get_sample_values(const std::vector<Measure::ResultType>& values, const std::vector<MeasureWrapper>& measures, std::size_t sample_idx)
+get_sample_values(const std::vector<Measure::ResultType>& values, const std::vector<MeasureWrapper>& measures, std::size_t sample_idx, const bool aggregate)
 {
     assert(values.size() == measures.size());
     std::vector<Measure::ResultType> result(values.size());
     std::transform(std::cbegin(values), std::cend(values), std::cbegin(measures), std::begin(result),
-                   [&] (const auto& value, const auto& measure) { return get_sample_value(value, measure, sample_idx); });
+                   [&] (const auto& value, const auto& measure) { return get_sample_value(value, measure, sample_idx, aggregate); });
     return result;
 }
 

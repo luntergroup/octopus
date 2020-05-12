@@ -234,47 +234,37 @@ double lexical_cast_to_double(const T& value)
     return result;
 }
 
+bool is_bool(const Measure::ValueType& value) noexcept
+{
+    return value.which() == 0;
+}
+
 struct MeasureDoubleVisitor : boost::static_visitor<double>
 {
     static constexpr double default_missing_values = -1.0;
-    template <typename T> auto operator()(const T& value)
+    template <typename T> auto operator()(const T& value) const
     {
         return lexical_cast_to_double(value);
     }
-    template <typename T> auto operator()(const boost::optional<T>& value)
+    auto operator()(const Measure::ValueType& value) const
+    {
+        return boost::apply_visitor(*this, value);
+    }
+    template <typename T> auto operator()(const Measure::Optional<T>& value) const
     {
         return value ? (*this)(*value) : default_missing_values;
     }
-    auto operator()(const std::vector<bool>& values)
+    template <typename T> auto operator()(const Measure::Array<T>& values) const
     {
-        // Per-allele type values.
-        return std::find(std::cbegin(values), std::cend(values), true) != std::cend(values); // any-of
+        assert(false); // this should never happen
+        throw std::runtime_error {"Bad measure value"};
+        return default_missing_values;
     }
-    template <typename T> auto operator()(const std::vector<T>& values)
-    {
-        if (values.empty()) return default_missing_values;
-        // Per-allele type values.
-        return maths::mean(values, [this] (const auto& value) { return (*this)(value); });
-    }       
-    template <typename T> auto operator()(const std::vector<boost::optional<T>>& values)
-    {
-        // Per-allele type values.
-        if (values.empty()) return default_missing_values;
-        if (values.size() == 1) return (*this)(values.front());
-        std::vector<T> set_values {};
-        set_values.reserve(values.size());
-        for (const auto& value : values) {
-            if (value) set_values.push_back(*value);
-        }
-        return (*this)(set_values);
-    }
-    MeasureDoubleVisitor(const MeasureWrapper& measure) : measure {measure} {}
-    const MeasureWrapper& measure;
 };
 
 auto cast_to_double(const Measure::ResultType& value, const MeasureWrapper& measure)
 {
-    MeasureDoubleVisitor vis {measure};
+    MeasureDoubleVisitor vis {};
     return boost::apply_visitor(vis, value);
 }
 

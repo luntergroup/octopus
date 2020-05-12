@@ -70,5 +70,10 @@ std::vector<std::string> AlleleFrequency::do_requirements() const
     return concat(AlleleDepth{}.requirements(), AssignedDepth{}.requirements());
 }
 
+boost::optional<Measure::Aggregator> AlleleFrequency::do_aggregator() const noexcept
+{
+    return Measure::Aggregator::sum;
+}
+
 } // namespace csr
 } // namespace octopus

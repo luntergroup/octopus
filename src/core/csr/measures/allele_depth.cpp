@@ -87,5 +87,10 @@ std::vector<std::string> AlleleDepth::do_requirements() const
     return {"Samples", "Alleles", "ReadAssignments"};
 }
 
+boost::optional<Measure::Aggregator> AlleleDepth::do_aggregator() const noexcept
+{
+    return Measure::Aggregator::sum;
+}
+
 } // namespace csr
 } // namespace octopus

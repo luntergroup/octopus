@@ -25,6 +25,7 @@ class DuplicateAlleleDepth : public Measure
     const std::string& do_name() const override;
     std::string do_describe() const override;
     std::vector<std::string> do_requirements() const override;
+    boost::optional<Aggregator> do_aggregator() const noexcept override;
 };
 
 } // namespace csr

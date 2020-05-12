@@ -135,6 +135,11 @@ std::vector<std::string> DuplicateAlleleDepth::do_requirements() const
     
     return {"Samples", "ReadsSummary", "Alleles", "ReadAssignments"};
 }
+
+boost::optional<Measure::Aggregator> DuplicateAlleleDepth::do_aggregator() const noexcept
+{
+    return Measure::Aggregator::sum;
+}
     
 } // namespace csr
 } // namespace octopus

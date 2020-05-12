@@ -51,9 +51,9 @@ std::string IsTransversion::do_describe() const
     return "Is the variant a transversion";
 }
 
-std::vector<std::string> IsTransversion::do_requirements() const
+boost::optional<Measure::Aggregator> IsTransversion::do_aggregator() const noexcept
 {
-    return {};
+    return Measure::Aggregator::max;
 }
 
 } // namespace csr

@@ -39,17 +39,19 @@ int count_non_ref_alleles(const VcfRecord& call, const VcfRecord::SampleName& sa
 Measure::ResultType AltAlleleCount::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     const auto& samples = get_value<Samples>(facets.at("Samples"));
-    Array<ValueType> result {};
-    result.reserve(samples.size());
-    for (const auto& sample : samples) {
-        result.emplace_back(count_non_ref_alleles(call, sample));
+    Array<Array<ValueType>> result(samples.size(), Array<ValueType>(call.num_alt()));
+    for (std::size_t s {0}; s < samples.size(); ++s) {
+        const auto& genotype = call.genotype(samples[s]);
+        for (std::size_t idx {0}; idx < call.num_alt(); ++idx) {
+            result[s][idx] = static_cast<int>(std::count(std::cbegin(genotype), std::cend(genotype), idx + 1));
+        }
     }
     return result;
 }
 
 Measure::ResultCardinality AltAlleleCount::do_cardinality() const noexcept
 {
-    return ResultCardinality::samples;
+    return ResultCardinality::samples_and_alt_alleles;
 }
 
 const std::string& AltAlleleCount::do_name() const
@@ -65,6 +67,11 @@ std::string AltAlleleCount::do_describe() const
 std::vector<std::string> AltAlleleCount::do_requirements() const
 {
     return {"Samples"};
+}
+
+boost::optional<Measure::Aggregator> AltAlleleCount::do_aggregator() const noexcept
+{
+    return Measure::Aggregator::sum;
 }
 
 } // namespace csr
