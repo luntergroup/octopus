@@ -85,27 +85,28 @@ Measure::ResultType DuplicateAlleleDepth::do_evaluate(const VcfRecord& call, con
     const auto& reads = get_value<ReadsSummary>(facets.at("ReadsSummary"));
     const auto& alleles = get_value<Alleles>(facets.at("Alleles"));
     const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments")).alleles;
-    const auto num_alt_alleles = call.alt().size();
-    Array<Array<Optional<ValueType>>> result(samples.size(), Array<Optional<ValueType>>(num_alt_alleles));
+    const auto num_alleles = call.alt().size() + 1;
+    Array<Array<Optional<ValueType>>> result(samples.size(), Array<Optional<ValueType>>(num_alleles));
     for (std::size_t s {0}; s < samples.size(); ++s) {
         const auto sample_alleles = get(alleles, call, samples[s]);
         const auto& duplicate_reads = overlap_range(reads.at(samples[s]).duplicates, call);
         const auto& sample_support = assignments.at(samples[s]);
-        for (std::size_t a {0}; a < num_alt_alleles; ++a) {
-            if (sample_alleles[a + 1]) {
+        for (std::size_t a {0}; a < num_alleles; ++a) {
+            if (sample_alleles[a]) {
                 if (!duplicate_reads.empty()) {
                     const auto compute_duplicate_support = [&] (const auto& allele) {
                         const auto& support = sample_support.at(allele);
                         std::size_t result {0};
                         for (const auto& duplicates : duplicate_reads) {
                             const auto is_duplicate_helper = [&] (const auto& read) { return is_duplicate(read, duplicates.reads); };
-                            result += std::count_if(std::cbegin(support), std::cend(support), is_duplicate_helper);
-                            --result; // One 'duplicate' read is not actually a duplicate
+                            auto num_dups = std::count_if(std::cbegin(support), std::cend(support), is_duplicate_helper);
+                            if (num_dups > 1) --num_dups; // One 'duplicate' read is not actually a duplicate
+                            result += num_dups;
                         }
                         if (result < 0) result = 0;
                         return result;
                     };
-                    result[s][a] = compute_duplicate_support(*sample_alleles[a + 1]);
+                    result[s][a] = compute_duplicate_support(*sample_alleles[a]);
                 } else {
                     result[s][a] = std::size_t {0};
                 }
@@ -117,7 +118,7 @@ Measure::ResultType DuplicateAlleleDepth::do_evaluate(const VcfRecord& call, con
 
 Measure::ResultCardinality DuplicateAlleleDepth::do_cardinality() const noexcept
 {
-    return ResultCardinality::samples_and_alt_alleles;
+    return ResultCardinality::samples_and_alleles;
 }
 
 const std::string& DuplicateAlleleDepth::do_name() const
@@ -138,7 +139,7 @@ std::vector<std::string> DuplicateAlleleDepth::do_requirements() const
 
 boost::optional<Measure::Aggregator> DuplicateAlleleDepth::do_aggregator() const noexcept
 {
-    return Measure::Aggregator::sum;
+    return Measure::Aggregator::max;
 }
     
 } // namespace csr

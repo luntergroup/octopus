@@ -31,12 +31,12 @@ Measure::ResultType DuplicateAlleleFraction::do_evaluate(const VcfRecord& call, 
 {
     const auto allele_depths = boost::get<Array<Array<Optional<ValueType>>>>(AlleleDepth{}.evaluate(call, facets));
     const auto duplicate_allele_depths = boost::get<Array<Array<Optional<ValueType>>>>(DuplicateAlleleDepth{}.evaluate(call, facets));
-    const auto num_alt_alleles = call.alt().size();
+    const auto num_alleles = call.alt().size() + 1;
     assert(allele_depths.size() == duplicate_allele_depths.size());
-    Array<Array<Optional<ValueType>>> result(allele_depths.size(), Array<Optional<ValueType>>(num_alt_alleles));
+    Array<Array<Optional<ValueType>>> result(allele_depths.size(), Array<Optional<ValueType>>(num_alleles));
     for (std::size_t s {0}; s < allele_depths.size(); ++s) {
-        assert(allele_depths[s].size() == num_alt_alleles && duplicate_allele_depths[s].size() == num_alt_alleles);
-        for (std::size_t a {0}; a < num_alt_alleles; ++a) {
+        assert(allele_depths[s].size() == num_alleles && duplicate_allele_depths[s].size() == num_alleles);
+        for (std::size_t a {0}; a < num_alleles; ++a) {
             if (allele_depths[s][a] && duplicate_allele_depths[s][a]) {
                 const auto allele_depth = boost::get<std::size_t>(*allele_depths[s][a]);
                 if (allele_depth > 0) {
@@ -52,7 +52,7 @@ Measure::ResultType DuplicateAlleleFraction::do_evaluate(const VcfRecord& call, 
 
 Measure::ResultCardinality DuplicateAlleleFraction::do_cardinality() const noexcept
 {
-    return ResultCardinality::samples_and_alt_alleles;
+    return ResultCardinality::samples_and_alleles;
 }
 
 const std::string& DuplicateAlleleFraction::do_name() const
@@ -73,7 +73,7 @@ std::vector<std::string> DuplicateAlleleFraction::do_requirements() const
 
 boost::optional<Measure::Aggregator> DuplicateAlleleFraction::do_aggregator() const noexcept
 {
-    return Measure::Aggregator::sum;
+    return Measure::Aggregator::max;
 }
 
 } // namespace csr
