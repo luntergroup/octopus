@@ -99,17 +99,17 @@ bool is_per_sample(const Measure::ResultCardinality cardinality) noexcept
         || cardinality == RC::samples_and_alt_alleles;
 }
 
-bool is_one_value(const Measure::ResultCardinality cardinality) noexcept
+bool is_one_value_annotation(const Measure::ResultCardinality cardinality) noexcept
 {
     using RC = Measure::ResultCardinality;
     return cardinality == RC::one || cardinality == RC::samples;
 }
 
-auto get_vcf_number(const Measure::ResultCardinality cardinality)
+auto get_vcf_number(const Measure::ResultCardinality cardinality, const bool aggregate_alleles)
 {
     using RC = Measure::ResultCardinality;
     using namespace vcfspec::header::meta::number;
-    if (cardinality == RC::one || cardinality == RC::samples) {
+    if (cardinality == RC::one || cardinality == RC::samples || aggregate_alleles) {
         return one;
     } else if (cardinality == RC::alleles || cardinality == RC::samples_and_alleles) {
         return per_allele;
@@ -118,11 +118,11 @@ auto get_vcf_number(const Measure::ResultCardinality cardinality)
     }
 }
 
-void Measure::annotate(VcfHeader::Builder& header) const
+void Measure::annotate(VcfHeader::Builder& header, const bool aggregate_alleles) const
 {
     if (!is_required_vcf_field()) {
         const auto vcf_typename = get_vcf_typename(this->get_value_type());
-        const auto vcf_number = get_vcf_number(this->cardinality());
+        const auto vcf_number = get_vcf_number(this->cardinality(), aggregate_alleles);
         if (is_per_sample(this->cardinality())) {
             header.add_format(this->name(), vcf_number, vcf_typename, this->describe());
         } else {
@@ -161,28 +161,6 @@ struct VectorIndexGetterVisitor : public boost::static_visitor<Measure::ResultTy
 private:
     std::size_t idx_;
 };
-
-void Measure::annotate(VcfRecord::Builder& record, const ResultType& value, const VcfHeader& header) const
-{
-    if (!is_required_vcf_field()) {
-        if (is_per_sample(this->cardinality())) {
-            record.add_format(this->name());
-            const auto samples = header.samples();
-            for (std::size_t sample_idx {0}; sample_idx < samples.size(); ++sample_idx) {
-                const auto sample_value = boost::apply_visitor(VectorIndexGetterVisitor {sample_idx}, value);
-                if (is_one_value(this->cardinality())) {
-                    record.set_format(samples[sample_idx], this->name(), this->serialise(sample_value));
-                } else {
-                    record.set_format(samples[sample_idx], this->name(), utils::split(this->serialise(sample_value), vcfspec::format::valueSeperator));
-                }
-            }
-        } else {
-            record.set_info(this->name(), this->serialise(value));
-        }
-    }
-}
-
-// non-member methods
 
 std::string long_name(const Measure& measure)
 {
@@ -323,6 +301,37 @@ struct AggregatorVisitor : public boost::static_visitor<Measure::Optional<Measur
 private:
     Measure::Aggregator aggregator_;
 };
+
+void Measure::annotate(VcfRecord::Builder& record, const ResultType& value, const VcfHeader& header, const bool aggregate_alleles) const
+{
+    if (!is_required_vcf_field()) {
+        if (is_per_sample(this->cardinality())) {
+            record.add_format(this->name());
+            const auto samples = header.samples();
+            for (std::size_t sample_idx {0}; sample_idx < samples.size(); ++sample_idx) {
+                auto sample_value = boost::apply_visitor(VectorIndexGetterVisitor {sample_idx}, value);
+                bool split_alleles_required {!is_one_value_annotation(this->cardinality())};
+                if (aggregate_alleles && this->aggregator()) {
+                    sample_value = boost::apply_visitor(AggregatorVisitor {*this->aggregator()}, sample_value);
+                    split_alleles_required = false;
+                }
+                if (!split_alleles_required) {
+                    record.set_format(samples[sample_idx], this->name(), this->serialise(sample_value));
+                } else {
+                    record.set_format(samples[sample_idx], this->name(), utils::split(this->serialise(sample_value), vcfspec::format::valueSeperator));
+                }
+            }
+        } else {
+            if (aggregate_alleles && this->aggregator()) {
+                record.set_info(this->name(), this->serialise(boost::apply_visitor(AggregatorVisitor {*this->aggregator()}, value)));
+            } else {
+                record.set_info(this->name(), this->serialise(value));
+            }
+        }
+    }
+}
+
+// non-member methods
 
 Measure::ResultType get_sample_value(const Measure::ResultType& value, const MeasureWrapper& measure, const std::size_t sample_idx, const bool aggregate)
 {

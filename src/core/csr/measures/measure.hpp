@@ -70,8 +70,8 @@ public:
     std::string describe() const { return do_describe(); }
     std::vector<std::string> requirements() const { return do_requirements(); }
     std::string serialise(const ResultType& value) const { return do_serialise(value); }
-    void annotate(VcfHeader::Builder& header) const;
-    void annotate(VcfRecord::Builder& record, const ResultType& value, const VcfHeader& header) const;
+    void annotate(VcfHeader::Builder& header, bool aggregate_alleles) const;
+    void annotate(VcfRecord::Builder& record, const ResultType& value, const VcfHeader& header, bool aggregate_alleles) const;
     boost::optional<Aggregator> aggregator() const noexcept { return do_aggregator(); }
     friend bool operator==(const Measure& lhs, const Measure& rhs) noexcept
     {
@@ -123,8 +123,9 @@ public:
     std::string describe() const { return measure_->describe(); }
     std::vector<std::string> requirements() const { return measure_->requirements(); }
     std::string serialise(const Measure::ResultType& value) const { return measure_->serialise(value); }
-    void annotate(VcfHeader::Builder& header) const { measure_->annotate(header); }
-    void annotate(VcfRecord::Builder& record, const Measure::ResultType& value, const VcfHeader& header) const { measure_->annotate(record, value, header); }
+    void annotate(VcfHeader::Builder& header, bool aggregate_alleles = false) const { measure_->annotate(header, aggregate_alleles); }
+    void annotate(VcfRecord::Builder& record, const Measure::ResultType& value, const VcfHeader& header, bool aggregate_alleles = false) const {
+         measure_->annotate(record, value, header, aggregate_alleles); }
     boost::optional<Measure::Aggregator> aggregator() const noexcept { return measure_->aggregator(); }
     
 private:
