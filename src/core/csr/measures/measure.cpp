@@ -254,6 +254,7 @@ aggregate(const Measure::Array<Measure::ValueType>& values,
             case Measure::Aggregator::max: return max(values);
             case Measure::Aggregator::sum: return sum(values);
             case Measure::Aggregator::mean: return mean(values);
+            default: return boost::none;
         }
     }
 }
