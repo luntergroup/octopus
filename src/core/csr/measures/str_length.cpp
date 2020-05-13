@@ -78,8 +78,8 @@ find_repeat_context(const std::vector<TandemRepeat>& repeats, const VcfRecord& c
             if (result_itr == std::cend(repeats) || has_overlapped(alleles, *result_itr)) {
                 result = boost::none;
             } else {
-	        result = *result_itr;
-	    }
+	            result = *result_itr;
+	        }
         }
     }
     return result;
