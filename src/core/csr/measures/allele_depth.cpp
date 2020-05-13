@@ -89,7 +89,7 @@ std::vector<std::string> AlleleDepth::do_requirements() const
 
 boost::optional<Measure::Aggregator> AlleleDepth::do_aggregator() const noexcept
 {
-    return Measure::Aggregator::sum;
+    return Measure::Aggregator::min;
 }
 
 } // namespace csr

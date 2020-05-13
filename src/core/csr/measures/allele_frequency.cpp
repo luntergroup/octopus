@@ -72,7 +72,7 @@ std::vector<std::string> AlleleFrequency::do_requirements() const
 
 boost::optional<Measure::Aggregator> AlleleFrequency::do_aggregator() const noexcept
 {
-    return Measure::Aggregator::sum;
+    return Measure::Aggregator::min;
 }
 
 } // namespace csr
