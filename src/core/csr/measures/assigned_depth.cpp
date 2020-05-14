@@ -33,7 +33,10 @@ namespace {
 
 auto sum_support_counts(const std::vector<Allele>& alleles, const AlleleSupportMap& support)
 {
-    const auto add_support_count = [&] (auto total, const auto& allele) { return total + support.at(allele).size(); };
+    const auto add_support_count = [&] (auto total, const auto& allele) {
+        const auto itr = support.find(allele);
+        return total + (itr != std::cend(support) ? itr->second.size() : 0);
+    };
     return std::accumulate(std::cbegin(alleles), std::cend(alleles), std::size_t {0}, add_support_count);
 }
 

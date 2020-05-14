@@ -124,8 +124,11 @@ double calculate_max_tail_bias(const std::vector<Allele>& alleles, const AlleleS
 {
     double result {0};
     for (const auto& allele : alleles) {
-        auto bias = calculate_tail_bias(allele, support.at(allele), end_def);
-        result = std::max(result, bias);
+        const auto support_set_itr = support.find(allele);
+        if (support_set_itr != std::cend(support)) {
+            auto bias = calculate_tail_bias(allele, support_set_itr->second, end_def);
+            result = std::max(result, bias);
+        }
     }
     return result;
 }

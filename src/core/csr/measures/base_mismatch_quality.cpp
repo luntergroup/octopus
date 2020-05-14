@@ -101,10 +101,13 @@ Measure::ResultType BaseMismatchQuality::do_evaluate(const VcfRecord& call, cons
         const auto sample_alleles = get_called(alleles, call, sample);
         if (!sample_alleles.empty()) {
             std::deque<int> mismatch_qualities {};
-            const auto& sample_support = assignments.at(sample);
+            const auto& support = assignments.at(sample);
             for (const auto& allele : sample_alleles) {
-                for (const auto& read : sample_support.at(allele)) {
-                    copy_mismatch_base_quality(read, allele, std::back_inserter(mismatch_qualities));
+                const auto support_set_itr = support.find(allele);
+                if (support_set_itr != std::cend(support)) { 
+                    for (const auto& read : support_set_itr->second) {
+                        copy_mismatch_base_quality(read, allele, std::back_inserter(mismatch_qualities));
+                    }
                 }
             }
             if (!mismatch_qualities.empty()) {

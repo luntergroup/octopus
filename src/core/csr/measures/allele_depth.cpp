@@ -60,7 +60,10 @@ Measure::ResultType AlleleDepth::do_evaluate(const VcfRecord& call, const FacetM
         const auto& support = assignments.at(samples[s]);
         for (std::size_t a {0}; a < num_alleles; ++a) {
             if (sample_alleles[a]) {
-                result[s][a] = support.at(*sample_alleles[a]).size();
+                const auto support_set_itr = support.find(*sample_alleles[a]);
+                if (support_set_itr != std::cend(support)) {
+                    result[s][a] = support_set_itr->second.size();
+                }
             }
         }
     }

@@ -51,9 +51,9 @@ auto extract_mapping_qualities(const std::vector<Allele>& alleles, const AlleleS
     std::vector<MappingQualityVector> result {};
     result.reserve(alleles.size());
     for (const auto& allele : alleles) {
-        const auto& allele_support = support.at(allele);
-        if (!allele_support.empty() || !drop_empty) {
-            result.push_back(extract_mapping_qualities(allele_support));
+        const auto support_set_itr = support.find(allele);
+        if (support_set_itr != std::cend(support) && (!support_set_itr->second.empty() || !drop_empty)) {
+            result.push_back(extract_mapping_qualities(support_set_itr->second));
         }
     }
     return result;

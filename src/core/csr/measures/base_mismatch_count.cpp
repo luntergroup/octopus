@@ -87,9 +87,13 @@ Measure::ResultType BaseMismatchCount::do_evaluate(const VcfRecord& call, const 
     result.reserve(samples.size());
     for (const auto& sample : samples) {
         int sample_result {0};
+        const auto& support = assignments.at(sample);
         for (const auto& allele : get_called(alleles, call, sample)) {
-            for (const auto& read : assignments.at(sample).at(allele)) {
-                sample_result += count_mismatches(read, allele);
+            const auto support_set_itr = support.find(allele);
+            if (support_set_itr != std::cend(support)) { 
+                for (const auto& read : support_set_itr->second) {
+                    sample_result += count_mismatches(read, allele);
+                }
             }
         }
         result.emplace_back(sample_result);

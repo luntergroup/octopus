@@ -40,10 +40,11 @@ Measure::ResultType SupplementaryFraction::do_evaluate(const VcfRecord& call, co
         const auto sample_alleles = get_called(alleles, call, sample);
         if (!sample_alleles.empty()) {
             double sample_result {0};
+            const auto& support = assignments.at(sample);
             for (const auto& allele : sample_alleles) {
-                const auto& allele_support = assignments.at(sample).at(allele);
-                if (!allele_support.empty()) {
-                    auto allele_supplementary_fraction = static_cast<double>(count_supplementary(allele_support)) / allele_support.size();
+                const auto support_set_itr = support.find(allele);
+                if (support_set_itr != std::cend(support) && !support_set_itr->second.empty()) {
+                    auto allele_supplementary_fraction = static_cast<double>(count_supplementary(support_set_itr->second)) / support_set_itr->second.size();
                     sample_result += std::max(sample_result, allele_supplementary_fraction);
                 }
             }

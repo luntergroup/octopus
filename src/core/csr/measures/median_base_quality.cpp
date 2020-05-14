@@ -88,7 +88,10 @@ Measure::ResultType MedianBaseQuality::do_evaluate(const VcfRecord& call, const 
         for (std::size_t a {0}; a < num_alleles; ++a) {
             if (sample_alleles[a]) {
                 const auto& allele = *sample_alleles[a];
-                result[s][a] = median_base_quality(support.at(allele), allele);
+                const auto support_set_itr = support.find(allele);
+                if (support_set_itr != std::cend(support)) {
+                    result[s][a] = median_base_quality(support_set_itr->second, allele);
+                }
             }
         }
     }
