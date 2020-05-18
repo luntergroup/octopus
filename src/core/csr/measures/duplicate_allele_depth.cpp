@@ -90,16 +90,16 @@ Measure::ResultType DuplicateAlleleDepth::do_evaluate(const VcfRecord& call, con
     for (std::size_t s {0}; s < samples.size(); ++s) {
         const auto sample_alleles = get(alleles, call, samples[s]);
         const auto& duplicate_reads = overlap_range(reads.at(samples[s]).duplicates, call);
-        const auto& sample_support = assignments.at(samples[s]);
+        const auto& support = assignments.at(samples[s]);
         for (std::size_t a {0}; a < num_alleles; ++a) {
-            if (sample_alleles[a]) {
+            if (sample_alleles[a] && support.count(*sample_alleles[a]) > 0) {
                 if (!duplicate_reads.empty()) {
                     const auto compute_duplicate_support = [&] (const auto& allele) {
-                        const auto& support = sample_support.at(allele);
+                        const auto& allele_support = support.at(allele);
                         std::size_t result {0};
                         for (const auto& duplicates : duplicate_reads) {
                             const auto is_duplicate_helper = [&] (const auto& read) { return is_duplicate(read, duplicates.reads); };
-                            auto num_dups = std::count_if(std::cbegin(support), std::cend(support), is_duplicate_helper);
+                            auto num_dups = std::count_if(std::cbegin(allele_support), std::cend(allele_support), is_duplicate_helper);
                             if (num_dups > 1) --num_dups; // One 'duplicate' read is not actually a duplicate
                             result += num_dups;
                         }
