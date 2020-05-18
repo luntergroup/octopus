@@ -316,9 +316,9 @@ def main(args):
             cmake_options.append("-DHTSLIB_ROOT=" + dependencies_dir)
             cmake_options.append("-DHTSlib_NO_SYSTEM_PATHS=TRUE")
         if args["gmp"]:
-            cmake_options.append("-DGMPlib_ROOT=" + args["gmp"])
+            cmake_options.append("-DGMP_ROOT=" + args["gmp"])
         else:
-            cmake_options.append("-DGMPlib_ROOT=" + dependencies_dir)
+            cmake_options.append("-DGMP_ROOT=" + dependencies_dir)
 
         ret = call([dependencies_binaries['cmake']] + cmake_options + [".."])
     else:
@@ -334,7 +334,7 @@ def main(args):
             cmake_options.append("-DHTSLIB_ROOT=" + args["htslib"])
             cmake_options.append("-DHTSlib_NO_SYSTEM_PATHS=TRUE")
         if args["gmp"]:
-            cmake_options.append("-DGMPlib_ROOT=" + args["gmp"])
+            cmake_options.append("-DGMP_ROOT=" + args["gmp"])
 
         try:
             # CMake version 3 is called cmake3 in CentOS (see https://github.com/luntergroup/octopus/issues/37).
