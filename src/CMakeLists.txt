@@ -663,13 +663,15 @@ if (BUILD_TESTING)
     message(STATUS "Boost include dir: " ${Boost_INCLUDE_DIR})
     message(STATUS "Boost libraries: " ${Boost_LIBRARIES})
     find_package(GMP REQUIRED)
+    message(STATUS "GMP include dir: " ${GMP_INCLUDES})
+    message(STATUS "GMP libraries: " ${GMP_LIBRARIES})
     find_package (HTSlib 1.4 REQUIRED)
     find_package(Threads REQUIRED)
     target_include_directories (Octopus PUBLIC
         ${octopus_SOURCE_DIR}/lib
         ${octopus_SOURCE_DIR}/src
         ${Boost_INCLUDE_DIR}
-        ${GMP_INCLUDE_DIR}
+        ${GMP_INCLUDES}
         ${HTSlib_INCLUDE_DIRS})
     target_link_libraries (Octopus tandem ranger ${Boost_LIBRARIES} ${GMP_LIBRARIES} ${HTSlib_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
     check_ipo_supported(RESULT ipo_supported OUTPUT output)
@@ -700,13 +702,15 @@ elseif (CMAKE_BUILD_TYPE MATCHES Debug)
     message(STATUS "Boost include dir: " ${Boost_INCLUDE_DIR})
     message(STATUS "Boost libraries: " ${Boost_LIBRARIES})
     find_package(GMP REQUIRED)
+    message(STATUS "GMP include dir: " ${GMP_INCLUDES})
+    message(STATUS "GMP libraries: " ${GMP_LIBRARIES})
     find_package (HTSlib 1.4 REQUIRED)
     find_package(Threads REQUIRED)
     target_include_directories (octopus-debug PUBLIC
         ${octopus_SOURCE_DIR}/lib
         ${octopus_SOURCE_DIR}/src
         ${Boost_INCLUDE_DIR}
-        ${GMP_INCLUDE_DIR}
+        ${GMP_INCLUDES}
         ${HTSlib_INCLUDE_DIRS})
     target_link_libraries (octopus-debug tandem ranger ${Boost_LIBRARIES} ${GMP_LIBRARIES} ${HTSlib_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
     configure_file (
@@ -731,13 +735,15 @@ elseif (CMAKE_BUILD_TYPE MATCHES RelWithDebInfo)
     message(STATUS "Boost include dir: " ${Boost_INCLUDE_DIR})
     message(STATUS "Boost libraries: " ${Boost_LIBRARIES})
     find_package(GMP REQUIRED)
+    message(STATUS "GMP include dir: " ${GMP_INCLUDES})
+    message(STATUS "GMP libraries: " ${GMP_LIBRARIES})
     find_package (HTSlib 1.4 REQUIRED)
     find_package(Threads REQUIRED)
     target_include_directories (octopus-sanitize PUBLIC
         ${octopus_SOURCE_DIR}/lib
         ${octopus_SOURCE_DIR}/src
         ${Boost_INCLUDE_DIR}
-        ${GMP_INCLUDE_DIR}
+        ${GMP_INCLUDES}
         ${HTSlib_INCLUDE_DIRS})
     target_link_libraries (octopus-sanitize tandem ranger ${Boost_LIBRARIES} ${GMP_LIBRARIES} ${HTSlib_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${SanitizeFlags})
     configure_file (
@@ -761,13 +767,15 @@ else()
     message(STATUS "Boost include dir: " ${Boost_INCLUDE_DIR})
     message(STATUS "Boost libraries: " ${Boost_LIBRARIES})
     find_package(GMP REQUIRED)
+    message(STATUS "GMP include dir: " ${GMP_INCLUDES})
+    message(STATUS "GMP libraries: " ${GMP_LIBRARIES})
     find_package (HTSlib 1.4 REQUIRED)
     find_package(Threads REQUIRED)
     target_include_directories (octopus PUBLIC
         ${octopus_SOURCE_DIR}/lib
         ${octopus_SOURCE_DIR}/src
         ${Boost_INCLUDE_DIR}
-        ${GMP_INCLUDE_DIR}
+        ${GMP_INCLUDES}
         ${HTSlib_INCLUDE_DIRS})
     target_link_libraries (octopus tandem ranger ${Boost_LIBRARIES} ${GMP_LIBRARIES} ${HTSlib_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
     check_ipo_supported(RESULT ipo_supported OUTPUT output)
