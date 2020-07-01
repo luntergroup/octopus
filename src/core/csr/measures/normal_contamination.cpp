@@ -186,7 +186,7 @@ Measure::ResultType NormalContamination::do_evaluate(const VcfRecord& call, cons
                 }
             }
         }
-        if (contamination > 0) result = static_cast<double>(contamination) / total_overlapped;
+        result = total_overlapped > 0 ? static_cast<double>(contamination) / total_overlapped : 0.0;
     }
     return result;
 }
