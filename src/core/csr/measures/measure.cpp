@@ -202,6 +202,11 @@ std::vector<std::string> get_all_requirements(const std::vector<MeasureWrapper>&
 
 namespace {
 
+bool is_tail_aggregator(const Measure::Aggregator aggregator) noexcept
+{
+    return aggregator == Measure::Aggregator::min_tail || aggregator == Measure::Aggregator::max_tail;
+}
+
 struct PlusVisitor : public boost::static_visitor<Measure::ValueType>
 {
     PlusVisitor(Measure::ValueType other) : other_ {other} {}
@@ -279,6 +284,15 @@ aggregate(const Measure::Array<Measure::ValueType>& values,
     }
 }
 
+auto remove_tail_aggregator(const Measure::Aggregator aggregator)
+{
+    switch (aggregator) {
+        case Measure::Aggregator::min_tail: return Measure::Aggregator::min;
+        case Measure::Aggregator::max_tail: return Measure::Aggregator::max;
+        default: throw std::runtime_error {"Not a tail aggregator("};
+    }
+}
+
 } // namespace
 
 struct AggregatorVisitor : public boost::static_visitor<Measure::Optional<Measure::ValueType>>
@@ -300,10 +314,17 @@ struct AggregatorVisitor : public boost::static_visitor<Measure::Optional<Measur
     {
         Measure::Array<Measure::ValueType> valid_values {};
         valid_values.reserve(values.size());
-        for (const auto& value : values) {
-            if (value) valid_values.push_back(*value);
+        if (is_tail_aggregator(aggregator_)) {
+            std::for_each(std::next(std::cbegin(values)), std::cend(values), [&] (const auto& value) {
+                if (value) valid_values.push_back(*value);
+            });
+            return aggregate(valid_values, remove_tail_aggregator(aggregator_));
+        } else {
+            for (const auto& value : values) {
+                if (value) valid_values.push_back(*value);
+            }
+            return (*this)(valid_values);
         }
-        return (*this)(valid_values);
     }
     template <typename T> 
     Measure::Optional<Measure::ValueType> operator()(const Measure::Optional<Measure::Array<T>>& values) const
