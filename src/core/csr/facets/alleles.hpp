@@ -35,6 +35,7 @@ inline const auto& get(const Facet::AlleleMap& alleles, const VcfRecord& call, c
 }
 
 std::vector<Allele> get_called(const Facet::AlleleMap& alleles, const VcfRecord& call, const SampleName& sample);
+std::vector<Allele> get_called_alt(const Facet::AlleleMap& alleles, const VcfRecord& call, const SampleName& sample);
 std::vector<Allele> get_unique_called(const Facet::AlleleMap& alleles, const VcfRecord& call, const std::vector<SampleName>& samples);
 
 } // namespace csr

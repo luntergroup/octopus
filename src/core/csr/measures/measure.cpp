@@ -224,9 +224,27 @@ auto min(const Measure::Array<Measure::ValueType>& values)
     return *std::min_element(std::cbegin(values), std::cend(values));
 }
 
+Measure::Optional<Measure::ValueType> min_tail(const Measure::Array<Measure::ValueType>& values)
+{
+    if (values.size() > 1) {
+        return *std::min_element(std::next(std::cbegin(values)), std::cend(values));
+    } else {
+        return boost::none;
+    }
+}
+
 auto max(const Measure::Array<Measure::ValueType>& values)
 {
     return *std::max_element(std::cbegin(values), std::cend(values));
+}
+
+Measure::Optional<Measure::ValueType> max_tail(const Measure::Array<Measure::ValueType>& values)
+{
+    if (values.size() > 1) {
+        return *std::max_element(std::next(std::cbegin(values)), std::cend(values));
+    } else {
+        return boost::none;
+    }
 }
 
 struct DivideVisitor : public boost::static_visitor<Measure::ValueType>
@@ -251,7 +269,9 @@ aggregate(const Measure::Array<Measure::ValueType>& values,
     } else {
         switch (aggregator) {
             case Measure::Aggregator::min: return min(values);
+            case Measure::Aggregator::min_tail: return min_tail(values);
             case Measure::Aggregator::max: return max(values);
+            case Measure::Aggregator::max_tail: return max_tail(values);
             case Measure::Aggregator::sum: return sum(values);
             case Measure::Aggregator::mean: return mean(values);
             default: return boost::none;

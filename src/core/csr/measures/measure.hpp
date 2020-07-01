@@ -49,7 +49,7 @@ public:
 
     enum class ResultCardinality { one, alleles, alt_alleles, samples, samples_and_alleles, samples_and_alt_alleles };
 
-    enum class Aggregator { sum, min, max, mean };
+    enum class Aggregator { sum, min, min_tail, max, max_tail, mean };
     
     Measure() = default;
     

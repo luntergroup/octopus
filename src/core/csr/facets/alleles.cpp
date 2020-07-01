@@ -46,6 +46,17 @@ std::vector<Allele> get_called(const Facet::AlleleMap& alleles, const VcfRecord&
     return result;
 }
 
+std::vector<Allele> get_called_alt(const Facet::AlleleMap& alleles, const VcfRecord& call, const SampleName& sample)
+{
+    std::vector<Allele> result {};
+    result.reserve(call.alt().size());
+    const auto& all = get(alleles, call, sample);
+    std::for_each(std::next(std::cbegin(all)), std::cend(all), [&] (const auto& allele) {
+        if (allele) result.push_back(*allele);
+    });
+    return result;
+}
+
 std::vector<Allele> get_unique_called(const Facet::AlleleMap& alleles, const VcfRecord& call, const std::vector<SampleName>& samples)
 {
     std::vector<Allele> result {};

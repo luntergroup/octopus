@@ -37,7 +37,7 @@ Measure::ResultType SupplementaryFraction::do_evaluate(const VcfRecord& call, co
     Array<Optional<ValueType>> result(samples.size());
     for (std::size_t s {0}; s < samples.size(); ++s) {
         const auto& sample = samples[s];
-        const auto sample_alleles = get_called(alleles, call, sample);
+        const auto sample_alleles = get_called_alt(alleles, call, sample);
         if (!sample_alleles.empty()) {
             double sample_result {0};
             const auto& support = assignments.at(sample);

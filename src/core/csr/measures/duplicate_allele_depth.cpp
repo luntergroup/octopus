@@ -139,7 +139,7 @@ std::vector<std::string> DuplicateAlleleDepth::do_requirements() const
 
 boost::optional<Measure::Aggregator> DuplicateAlleleDepth::do_aggregator() const noexcept
 {
-    return Measure::Aggregator::max;
+    return Measure::Aggregator::max_tail;
 }
     
 } // namespace csr

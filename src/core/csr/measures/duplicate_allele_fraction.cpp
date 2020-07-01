@@ -73,7 +73,7 @@ std::vector<std::string> DuplicateAlleleFraction::do_requirements() const
 
 boost::optional<Measure::Aggregator> DuplicateAlleleFraction::do_aggregator() const noexcept
 {
-    return Measure::Aggregator::max;
+    return Measure::Aggregator::max_tail;
 }
 
 } // namespace csr
