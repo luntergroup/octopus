@@ -32,10 +32,14 @@ SomaticCall::SomaticCall(Variant variant,
     }
 }
 
+namespace {
+
 static std::string to_string_sf(const double val, const int sf = 2)
 {
     return utils::strip_leading_zeroes(utils::to_string(val, sf, utils::PrecisionRule::sf));
 }
+
+} // namespace
 
 void SomaticCall::decorate(VcfRecord::Builder& record) const
 {

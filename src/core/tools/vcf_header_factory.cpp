@@ -41,7 +41,12 @@ VcfHeaderFactory::AnnotatorMap VcfHeaderFactory::annotators_ =
         hb.add_info("PSPP", ".", "Integer", "Posterior probabilities of phylogenetic tree sizes");
         hb.add_info("PY", "1", "String", "MAP phylogeny for this loci");
         hb.add_format("PNAP", ".", "Float", "Posterior probability of the sample being assigned to each node in the MAP phylogeny");
-    }}
+    }},
+    {std::type_index(typeid(PolycloneVariantCall)), [] (auto& hb) {
+        hb.add_info("MP", "1", "Float", "Model posterior");
+        hb.add_format("HPC", ".", "Float", "Posterior pseudo counts for each haplotype");
+        hb.add_format("MAP_HF", ".", "Float", "Maximum a posteriori haplotype frequencies");
+    }},
 };
 
 void VcfHeaderFactory::register_call_type(std::type_index type)
