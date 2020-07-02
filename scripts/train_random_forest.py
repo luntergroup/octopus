@@ -100,10 +100,10 @@ def get_octopus_version(octopus_bin):
     return version_line[2], version_line[-1][:-1] if len(version_line) > 3 else None
 
 def check_exists(paths):
-    for path in paths: assert path.exists()
+    for path in paths: assert path.exists(), str(path) + " does not exist"
 
 def check_exists_or_none(paths):
-    for path in paths: assert path is None or path.exists()
+    for path in paths: assert path is None or path.exists(), str(path) + " does not exist"
 
 class TrainingData:
     def __init__(self, data):

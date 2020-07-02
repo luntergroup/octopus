@@ -18,7 +18,7 @@
 #include "containers/probability_matrix.hpp"
 #include "core/types/allele.hpp"
 #include "core/types/variant.hpp"
-#include "core/types/calls/germline_variant_call.hpp"
+#include "core/types/calls/polyclone_variant_call.hpp"
 #include "core/types/calls/reference_call.hpp"
 #include "core/models/genotype/uniform_genotype_prior_model.hpp"
 #include "core/models/genotype/coalescent_genotype_prior_model.hpp"
@@ -59,7 +59,7 @@ std::string PolycloneCaller::do_name() const
 
 PolycloneCaller::CallTypeSet PolycloneCaller::do_call_types() const
 {
-    return {std::type_index(typeid(GermlineVariantCall))};
+    return {std::type_index(typeid(PolycloneVariantCall))};
 }
 
 unsigned PolycloneCaller::do_min_callable_ploidy() const
@@ -352,28 +352,48 @@ GenotypeCalls call_genotypes(const Genotype<IndexedHaplotype<>>& genotype_call,
 
 // output
 
+using HaplotypeFrequencyStats = PolycloneVariantCall::HaplotypeFrequencyStats;
+using HaplotypeFrequencyStatsVector = PolycloneVariantCall::HaplotypeFrequencyStatsVector;
+
+auto compute_haplotype_frequency_stats(const model::SubcloneModel::Priors::GenotypeMixturesDirichletAlphas& alphas)
+{
+    HaplotypeFrequencyStatsVector result {};
+    result.reserve(alphas.size());
+    for (std::size_t i {0}; i < alphas.size(); ++i) {
+        auto map_vaf = maths::dirichlet_expectation(i, alphas);
+        result.push_back({alphas[i], map_vaf});
+    }
+    return result;
+}
+
 octopus::VariantCall::GenotypeCall convert(GenotypeCall&& call)
 {
     return octopus::VariantCall::GenotypeCall {std::move(call.genotype), call.posterior};
 }
 
 std::unique_ptr<octopus::VariantCall>
-transform_call(const SampleName& sample, VariantCall&& variant_call, GenotypeCall&& genotype_call)
+transform_call(const SampleName& sample, VariantCall&& variant_call, GenotypeCall&& genotype_call, 
+               const HaplotypeFrequencyStatsVector& haplotype_frequency_stats)
 {
     std::vector<std::pair<SampleName, Call::GenotypeCall>> tmp {std::make_pair(sample, convert(std::move(genotype_call)))};
-    std::unique_ptr<octopus::VariantCall> result {std::make_unique<GermlineVariantCall>(variant_call.variant.get(), std::move(tmp),
-                                                                                        variant_call.posterior)};
+    std::unique_ptr<octopus::VariantCall> result {};
+    if (haplotype_frequency_stats.empty()) {
+        result = std::make_unique<PolycloneVariantCall>(variant_call.variant.get(), std::move(tmp), variant_call.posterior);
+    } else {
+        result = std::make_unique<PolycloneVariantCall>(variant_call.variant.get(), std::move(tmp), variant_call.posterior, haplotype_frequency_stats);
+    }   
     return result;
 }
 
-auto transform_calls(const SampleName& sample, VariantCalls&& variant_calls, GenotypeCalls&& genotype_calls)
+auto transform_calls(const SampleName& sample, VariantCalls&& variant_calls, GenotypeCalls&& genotype_calls,
+                    const HaplotypeFrequencyStatsVector& haplotype_frequency_stats)
 {
     std::vector<std::unique_ptr<octopus::VariantCall>> result {};
     result.reserve(variant_calls.size());
     std::transform(std::make_move_iterator(std::begin(variant_calls)), std::make_move_iterator(std::end(variant_calls)),
                    std::make_move_iterator(std::begin(genotype_calls)), std::back_inserter(result),
-                   [&sample] (VariantCall&& variant_call, GenotypeCall&& genotype_call) {
-                       return transform_call(sample, std::move(variant_call), std::move(genotype_call));
+                   [&] (VariantCall&& variant_call, GenotypeCall&& genotype_call) {
+                       return transform_call(sample, std::move(variant_call), std::move(genotype_call), haplotype_frequency_stats);
                    });
     return result;
 }
@@ -410,7 +430,11 @@ PolycloneCaller::call_variants(const std::vector<Variant>& candidates, const Lat
     auto variant_calls = call_candidates(candidate_posteriors, genotype_call, parameters_.min_variant_posterior);
     const auto called_regions = extract_regions(variant_calls);
     auto genotype_calls = call_genotypes(genotype_call, genotype_log_posteriors, called_regions);
-    return transform_calls(sample(), std::move(variant_calls), std::move(genotype_calls));
+    HaplotypeFrequencyStatsVector haplotype_frequency_stats {};
+    if (genotype_call.ploidy() > 1) {
+        haplotype_frequency_stats = compute_haplotype_frequency_stats(latents.subclone_model_inferences_.max_evidence_params.alphas.at(sample()));
+    }
+    return transform_calls(sample(), std::move(variant_calls), std::move(genotype_calls), haplotype_frequency_stats);
 }
 
 std::vector<std::unique_ptr<ReferenceCall>>

@@ -629,7 +629,7 @@ Haplotype copy(const Haplotype& haplotype, const std::vector<GenomicRegion>& reg
     if (haplotype.explicit_alleles_.empty()) return result.build();
     auto copied_region = head_region(haplotype);
     for (const auto& region : regions) {
-        if (!is_after(region, copied_region)) {
+        if (!is_after(region, copied_region) && !begins_equal(region, head_region(haplotype))) {
             throw std::runtime_error {"Haplotype::copy unsorted or overlapping regions provided"};
         }
         auto overlapped_alleles = haplotype_overlap_range(haplotype.explicit_alleles_, region.contig_region());

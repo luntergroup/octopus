@@ -345,10 +345,11 @@ std::vector<VcfRecord> VcfRecordFactory::make(std::vector<CallWrapper>&& calls) 
                     const auto ploidy = old_genotype.ploidy();
                     Genotype<Allele> new_genotype {ploidy};
                     for (unsigned i {0}; i < ploidy; ++i) {
-                        if (prev_genotype[i].sequence() == deleted_sequence ||
+                        if (prev_genotype.ploidy() > i // can happen if variants not phased but current call padded
+                            && (prev_genotype[i].sequence() == deleted_sequence ||
                             (old_genotype[i] != prev_genotype[i]
                              && prev_genotype[i].sequence() == old_genotype[i].sequence()
-                             && sequence_size(old_genotype[i]) < region_size(old_genotype))) {
+                             && sequence_size(old_genotype[i]) < region_size(old_genotype)))) {
                             Allele new_allele {mapped_region(curr_call), deleted_sequence};
                             new_genotype.emplace(move(new_allele));
                         } else {
@@ -366,8 +367,9 @@ std::vector<VcfRecord> VcfRecordFactory::make(std::vector<CallWrapper>&& calls) 
             const auto ploidy = block_begin_itr->call->get_genotype_call(sample).genotype.ploidy();
             prev_represented.emplace_back(ploidy, nullptr);
             for (auto itr = block_begin_itr; itr != block_head_end_itr; ++itr) {
-                for (unsigned i {0}; i < ploidy; ++i) {
-                    if (itr->call->is_represented(itr->call->get_genotype_call(sample).genotype[i])) {
+                const auto& gt = itr->call->get_genotype_call(sample).genotype;
+                for (unsigned i {0}; i < gt.ploidy(); ++i) {
+                    if (itr->call->is_represented(gt[i])) {
                         prev_represented.back()[i] = std::addressof(*itr->call);
                     }
                 }

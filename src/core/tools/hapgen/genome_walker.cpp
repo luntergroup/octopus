@@ -37,11 +37,16 @@ template <typename BidirIt>
 BidirIt find_first_shared_helper(const ReadMap& reads, boost::optional<const TemplateMap&> read_templates,
                                  BidirIt first, BidirIt last, const Allele& allele)
 {
+    BidirIt result;
     if (read_templates) {
-        return find_first_shared(*read_templates, first, last, allele);
+        result = find_first_shared(*read_templates, first, last, allele);
     } else {
-        return find_first_shared(reads, first, last, allele);
+        result = find_first_shared(reads, first, last, allele);
     }
+    if (result != last) {
+        while (result != first && (are_adjacent(*std::prev(result), *result) || overlaps(*std::prev(result), *result))) --result;
+    }
+    return result;
 }
 
 template <typename BidirIt>
