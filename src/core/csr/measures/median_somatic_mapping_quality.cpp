@@ -21,6 +21,7 @@
 #include "utils/maths.hpp"
 #include "is_somatic.hpp"
 #include "../facets/samples.hpp"
+#include "../facets/alleles.hpp"
 #include "../facets/genotypes.hpp"
 #include "../facets/read_assignments.hpp"
 
@@ -40,11 +41,6 @@ Measure::ValueType MedianSomaticMappingQuality::get_value_type() const
 
 namespace {
 
-auto extract_called_alleles(const VcfRecord& call, const VcfRecord::SampleName& sample)
-{
-    return get_called_alleles(call, sample, ReferencePadPolicy::trim_alt_alleles).first;
-}
-
 template <typename Container>
 void sort_unique(Container& values)
 {
@@ -52,15 +48,17 @@ void sort_unique(Container& values)
     values.erase(std::unique(std::begin(values), std::end(values)), std::end(values));
 }
 
-auto get_somatic_alleles(const VcfRecord& somatic, const std::vector<SampleName>& somatic_samples,
-                         const std::vector<SampleName>& normal_samples)
+auto get_somatic_alleles(const VcfRecord& somatic, 
+                         const std::vector<SampleName>& somatic_samples,
+                         const std::vector<SampleName>& normal_samples,
+                         const Facet::AlleleMap& alleles)
 {
     std::vector<Allele> somatic_sample_alleles {}, normal_sample_alleles {};
     for (const auto& sample : somatic_samples) {
-        utils::append(extract_called_alleles(somatic, sample), somatic_sample_alleles);
+        utils::append(get_called(alleles, somatic, sample), somatic_sample_alleles);
     }
     for (const auto& sample : normal_samples) {
-        utils::append(extract_called_alleles(somatic, sample), normal_sample_alleles);
+        utils::append(get_called(alleles, somatic, sample), normal_sample_alleles);
     }
     sort_unique(somatic_sample_alleles); sort_unique(normal_sample_alleles);
     std::vector<Allele> result {};
@@ -93,10 +91,13 @@ auto get_somatic_haplotypes(const Facet::GenotypeMap& genotypes, const std::vect
     return result;
 }
 
-auto get_somatic_haplotypes(const VcfRecord& somatic, const Facet::GenotypeMap& genotypes,
-                            const std::vector<SampleName>& somatic_samples, const std::vector<SampleName>& normal_samples)
+auto get_somatic_haplotypes(const VcfRecord& somatic, 
+                            const Facet::GenotypeMap& genotypes,
+                            const std::vector<SampleName>& somatic_samples, 
+                            const std::vector<SampleName>& normal_samples,
+                            const Facet::AlleleMap& alleles)
 {
-    const auto somatic_alleles = get_somatic_alleles(somatic, somatic_samples, normal_samples);
+    const auto somatic_alleles = get_somatic_alleles(somatic, somatic_samples, normal_samples, alleles);
     return get_somatic_haplotypes(genotypes, somatic_alleles);
 }
 
@@ -107,6 +108,7 @@ Measure::ResultType MedianSomaticMappingQuality::do_evaluate(const VcfRecord& ca
     const auto& samples = get_value<Samples>(facets.at("Samples"));
     Array<Optional<ValueType>> result(samples.size());
     if (is_somatic(call)) {
+        const auto& alleles = get_value<Alleles>(facets.at("Alleles"));
         const auto somatic_status = boost::get<Array<ValueType>>(IsSomatic(true).evaluate(call, facets));
         std::vector<SampleName> somatic_samples {}, normal_samples {};
         somatic_samples.reserve(samples.size()); normal_samples.reserve(samples.size());
@@ -119,7 +121,7 @@ Measure::ResultType MedianSomaticMappingQuality::do_evaluate(const VcfRecord& ca
         }
         if (somatic_samples.empty() || normal_samples.empty()) return result;
         const auto& genotypes = get_value<Genotypes>(facets.at("Genotypes"));
-        const auto somatic_haplotypes = get_somatic_haplotypes(call, genotypes, somatic_samples, normal_samples);
+        const auto somatic_haplotypes = get_somatic_haplotypes(call, genotypes, somatic_samples, normal_samples, alleles);
         if (somatic_haplotypes.empty()) return result;
         const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments")).haplotypes;
         for (std::size_t s {0}; s < samples.size(); ++s) {
@@ -164,7 +166,7 @@ std::string MedianSomaticMappingQuality::do_describe() const
 
 std::vector<std::string> MedianSomaticMappingQuality::do_requirements() const
 {
-    std::vector<std::string> result {"Samples", "Genotypes", "ReadAssignments"};
+    std::vector<std::string> result {"Samples", "Alleles", "Genotypes", "ReadAssignments"};
     utils::append(IsSomatic(true).requirements(), result);
     sort_unique(result);
     return result;

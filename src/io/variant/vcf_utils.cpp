@@ -450,9 +450,9 @@ VcfHeader to_legacy(const VcfHeader& native)
     return VcfHeader::Builder(native).set_file_format("VCFv4.2").build_once();
 }
 
-bool has_deleted(const VcfRecord::NucleotideSequence& allele) noexcept
+bool is_deleted(const VcfRecord::NucleotideSequence& allele) noexcept
 {
-    return std::find(std::cbegin(allele), std::cend(allele), vcfspec::deletedBase) != std::cend(allele);
+    return allele == vcfspec::deleteMaskAllele;
 }
 
 bool is_missing(const VcfRecord::NucleotideSequence& allele) noexcept
@@ -461,16 +461,16 @@ bool is_missing(const VcfRecord::NucleotideSequence& allele) noexcept
     return allele == missing;
 }
 
-bool is_missing_or_has_deleted(const VcfRecord::NucleotideSequence& allele) noexcept
+bool is_missing_or_deleted(const VcfRecord::NucleotideSequence& allele) noexcept
 {
-    return is_missing(allele) || has_deleted(allele);
+    return is_missing(allele) || is_deleted(allele);
 }
 
 VcfRecord convert_to_legacy(const VcfRecord& record, const std::vector<std::string>& samples)
 {
     VcfRecord::Builder cb {record};
     const auto& alt = record.alt();
-    const auto first_deleted_itr = std::find_if(std::cbegin(alt), std::cend(alt), has_deleted);
+    const auto first_deleted_itr = std::find_if(std::cbegin(alt), std::cend(alt), is_deleted);
     if (first_deleted_itr != std::cend(alt)) {
         auto new_alt = alt;
         new_alt.erase(std::next(std::begin(new_alt), std::distance(std::cbegin(alt), first_deleted_itr)));
@@ -478,13 +478,13 @@ VcfRecord convert_to_legacy(const VcfRecord& record, const std::vector<std::stri
     }
     for (const auto& sample : samples) {
         const auto& gt = record.get_sample_value(sample, vcfspec::format::genotype);
-        const auto first_non_legacy = std::find_if(std::cbegin(gt), std::cend(gt), is_missing_or_has_deleted);
+        const auto first_non_legacy = std::find_if(std::cbegin(gt), std::cend(gt), is_missing_or_deleted);
         if (first_non_legacy != std::cend(gt)) {
             const auto& ref = record.ref();
             auto new_gt = gt;
             auto ref_itr = std::next(std::begin(new_gt), std::distance(std::cbegin(gt), first_non_legacy));
             *ref_itr = ref;
-            std::replace_if(std::next(ref_itr), std::end(new_gt), is_missing_or_has_deleted, ref);
+            std::replace_if(std::next(ref_itr), std::end(new_gt), is_missing_or_deleted, ref);
             auto phasing = VcfRecord::Builder::Phasing::phased;
             if (!record.is_sample_phased(sample)) {
                 phasing = VcfRecord::Builder::Phasing::unphased;

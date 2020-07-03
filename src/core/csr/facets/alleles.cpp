@@ -23,10 +23,10 @@ static void insert(std::vector<T>&& src, MappableFlatSet<T>& dst)
 Alleles::Alleles(const std::vector<VcfRecord::SampleName>& samples, const std::vector<VcfRecord>& calls)
 {
     alleles_.reserve(calls.size());
-    for (const auto& call : calls) {
-        auto& call_map = alleles_[mapped_region(call)];
+    for (std::size_t idx {0}; idx < calls.size(); ++idx) {
+        auto& call_map = alleles_[mapped_region(calls[idx])];
         for (const auto& sample : samples) {
-            call_map[sample] = get_resolved_alleles(call, sample);
+            call_map[sample] = get_resolved_alleles(calls, idx, sample);
         }
     }
 }
