@@ -538,11 +538,6 @@ void set_vcf_genotype(const SampleName& sample, const Call::GenotypeCall& call, 
         std::replace(std::begin(genotyped_alleles), std::end(genotyped_alleles),
                      std::string {vcfspec::missingValue}, std::string {vcfspec::allele::nonref});
     }
-    for (auto& allele : genotyped_alleles) {
-        if (std::find(std::cbegin(allele), std::cend(allele), deleted_base) != std::cend(allele)) {
-            allele = vcfspec::deleteMaskAllele;
-        }
-    }
     record.set_genotype(sample, std::move(genotyped_alleles), VcfRecord::Builder::Phasing::phased);
 }
 
@@ -599,11 +594,6 @@ VcfRecord VcfRecordFactory::make(std::unique_ptr<Call> call) const
     result.set_pos(mapped_begin(region) + 1);
     result.set_ref(call->reference().sequence());
     set_allele_counts(*call, samples_, alts, result);
-    for (auto& alt : alts) {
-        if (std::find(std::cbegin(alt), std::cend(alt), '*')  != std::cend(alt)) {
-            alt = vcfspec::deleteMaskAllele;
-        }
-    }
     result.set_alt(std::move(alts));
     result.set_qual(std::min(max_qual, maths::round(call->quality().score(), 2)));
     const auto call_reads = copy_overlapped(reads_, region);
@@ -641,6 +631,7 @@ VcfRecord VcfRecordFactory::make(std::unique_ptr<Call> call) const
             result.set_blocked_reference();
         } catch (...) {}
     }
+    result.collapse_spanning_deletions();
     return result.build_once();
 }
 
@@ -745,11 +736,6 @@ VcfRecord VcfRecordFactory::make_segment(std::vector<std::unique_ptr<Call>>&& ca
         is_refcall = std::find(std::cbegin(alt_alleles), std::cend(alt_alleles), vcfspec::allele::nonref) != std::cend(alt_alleles);
     }
     set_allele_counts(alt_alleles, resolved_genotypes, result);
-    for (auto& alt : alt_alleles) {
-        if (std::find(std::cbegin(alt), std::cend(alt), deleted_base) != std::cend(alt)) {
-            alt = vcfspec::deleteMaskAllele;
-        }
-    }
     result.set_alt(std::move(alt_alleles));
     auto q = std::min_element(std::cbegin(calls), std::cend(calls),
                               [] (const auto& lhs, const auto& rhs) { return lhs->quality() < rhs->quality(); });
@@ -777,11 +763,6 @@ VcfRecord VcfRecordFactory::make_segment(std::vector<std::unique_ptr<Call>>&& ca
                 std::replace(std::begin(genotype_call), std::end(genotype_call),
                              std::string {vcfspec::missingValue}, std::string {vcfspec::allele::nonref});
             }
-            for (auto& allele : genotype_call) {
-                if (std::find(std::cbegin(allele), std::cend(allele), deleted_base) != std::cend(allele)) {
-                    allele = vcfspec::deleteMaskAllele;
-                }
-            }
             result.set_genotype(sample, genotype_call, VcfRecord::Builder::Phasing::phased);
             result.set_format(sample, "GQ", std::to_string(gq));
             result.set_format(sample, "DP", max_coverage(reads_.at(sample), region));
@@ -802,6 +783,7 @@ VcfRecord VcfRecordFactory::make_segment(std::vector<std::unique_ptr<Call>>&& ca
             result.set_blocked_reference();
         } catch (...) {}
     }
+    result.collapse_spanning_deletions();
     return result.build_once();
 }
     

@@ -805,6 +805,15 @@ GenomicRegion::Position VcfRecord::Builder::pos() const noexcept
     return pos_;
 }
 
+void VcfRecord::Builder::collapse_spanning_deletions()
+{
+    for (auto& alt : alt_) {
+        if (alt.size() > 1 && std::find(std::cbegin(alt), std::cend(alt), vcfspec::deleteMaskAllele[0]) != std::cend(alt)) {
+            alt = vcfspec::deleteMaskAllele;
+        }
+    }
+}
+
 VcfRecord VcfRecord::Builder::build() const
 {
     if (format_.empty()) {

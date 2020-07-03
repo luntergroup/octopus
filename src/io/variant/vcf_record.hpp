@@ -254,6 +254,8 @@ public:
     
     GenomicRegion::Position pos() const noexcept;
     
+    void collapse_spanning_deletions();
+    
     VcfRecord build() const;
     VcfRecord build_once() noexcept;
     

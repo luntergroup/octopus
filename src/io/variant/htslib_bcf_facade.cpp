@@ -732,7 +732,7 @@ void extract_samples(const bcf_hdr_t* header, bcf1_t* record, VcfRecord::Builder
         bcf_get_genotypes(header, record, &gt, &ngt); // mallocs gt
         const auto max_ploidy = static_cast<unsigned>(record->d.fmt->n);
         for (unsigned sample {0}, i {0}; sample < num_samples; ++sample, i += max_ploidy) {
-            std::vector<VcfRecord::NucleotideSequence> alleles {};
+            std::vector<boost::optional<unsigned>> alleles {};
             alleles.reserve(max_ploidy);
             for (unsigned p {0}; p < max_ploidy; ++p) {
                 g = gt[i + p];
@@ -740,13 +740,13 @@ void extract_samples(const bcf_hdr_t* header, bcf1_t* record, VcfRecord::Builder
                     alleles.shrink_to_fit();
                     break;
                 } else if (bcf_gt_is_missing(g)) {
-                    alleles.push_back(bcf_missing_str);
+                    alleles.push_back(boost::none);
                 } else {
                     const auto idx = bcf_gt_allele(g);
                     if (idx < record->n_allele) {
-                        alleles.emplace_back(record->d.allele[idx]);
+                        alleles.emplace_back(idx);
                     } else {
-                        alleles.push_back(bcf_missing_str);
+                        alleles.push_back(boost::none);
                     }
                 }
             }
