@@ -231,14 +231,16 @@ IndelProfiler::read_next_data_batch(VcfIterator& first, const VcfIterator& last,
             evaluate_support(sample_genotype, reads[sample], result.support);
             reads[sample].clear();
             reads[sample].shrink_to_fit();
-            for (const auto& record : records) {
-                std::vector<Allele> alleles; bool has_ref;
-                std::tie(alleles, has_ref) = get_called_alleles(record, sample);
-                if (has_ref) alleles.erase(std::cbegin(alleles));
-                alleles.erase(std::remove_if(std::begin(alleles), std::end(alleles),
-                                             [] (const auto& allele) { return !is_indel(allele); }),
-                              std::end(alleles));
-                result.indels.insert(std::begin(alleles), std::end(alleles));
+            for (std::size_t record_idx {0}; record_idx < records.size(); ++record_idx) {
+                auto alleles = get_resolved_alleles(records, record_idx, sample);
+                std::vector<Allele> alt_indels {};
+                alt_indels.reserve(alleles.size() - 1);
+                std::for_each(std::next(std::begin(alleles)), std::end(alleles), [&] (auto& allele) {
+                    if (allele && is_indel(*allele)) {
+                        alt_indels.push_back(std::move(*allele));
+                    }
+                });
+                result.indels.insert(std::begin(alt_indels), std::end(alt_indels));
             }
         }
     } else {

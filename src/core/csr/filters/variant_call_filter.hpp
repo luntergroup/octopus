@@ -44,6 +44,7 @@ public:
         bool clear_info = false;
         bool annotate_all_active_measures = false;
         std::unordered_set<std::string> annotations = {};
+        bool aggregate_allele_annotations = false;
     };
     
     struct ConcurrencyPolicy

@@ -28,9 +28,9 @@ SomaticThresholdVariantCallFilter::SomaticThresholdVariantCallFilter(FacetFactor
     {make_wrapped_measure<IsSomatic>(true), make_wrapped_measure<IsRefcall>(true)},
     [] (const MeasureVector& measures) -> std::size_t {
         assert(measures.size() == 2);
-        if (boost::get<bool>(measures.front())) {
+        if (get_value_type<bool>(measures.front())) {
             return 1;
-        } else if (boost::get<bool>(measures.back())) {
+        } else if (get_value_type<bool>(measures.back())) {
             return 2;
         } else {
             return 0;
@@ -50,9 +50,9 @@ SomaticThresholdVariantCallFilter::SomaticThresholdVariantCallFilter(FacetFactor
     {make_wrapped_measure<IsSomatic>(true), make_wrapped_measure<IsRefcall>(true)},
     [] (const MeasureVector& measures) -> std::size_t {
         assert(measures.size() == 2);
-        if (boost::get<bool>(measures.front())) {
+        if (get_value_type<bool>(measures.front())) {
             return 1;
-        } else if (boost::get<bool>(measures.back())) {
+        } else if (get_value_type<bool>(measures.back())) {
             return 2;
         } else {
             return 0;

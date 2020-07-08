@@ -234,36 +234,38 @@ double lexical_cast_to_double(const T& value)
     return result;
 }
 
-struct MeasureDoubleVisitor : boost::static_visitor<>
+bool is_bool(const Measure::ValueType& value) noexcept
 {
-    double result;
-    template <typename T> void operator()(const T& value)
+    return value.which() == 0;
+}
+
+struct MeasureDoubleVisitor : boost::static_visitor<double>
+{
+    static constexpr double default_missing_values = -1.0;
+    template <typename T> auto operator()(const T& value) const
     {
-        result = lexical_cast_to_double(value);
+        return lexical_cast_to_double(value);
     }
-    template <typename T> void operator()(const boost::optional<T>& value)
+    auto operator()(const Measure::ValueType& value) const
     {
-        if (value) {
-            (*this)(*value);
-        } else {
-            result = -1;
-        }
+        return boost::apply_visitor(*this, value);
     }
-    template <typename T> void operator()(const std::vector<T>& values)
+    template <typename T> auto operator()(const Measure::Optional<T>& value) const
     {
-        throw std::runtime_error {"Vector cast not supported"};
+        return value ? (*this)(*value) : default_missing_values;
     }
-    void operator()(boost::any value)
+    template <typename T> auto operator()(const Measure::Array<T>& values) const
     {
-        throw std::runtime_error {"Any cast not supported"};
+        assert(false); // this should never happen
+        throw std::runtime_error {"Bad measure value"};
+        return default_missing_values;
     }
 };
 
-auto cast_to_double(const Measure::ResultType& value)
+auto cast_to_double(const Measure::ResultType& value, const MeasureWrapper& measure)
 {
     MeasureDoubleVisitor vis {};
-    boost::apply_visitor(vis, value);
-    return vis.result;
+    return boost::apply_visitor(vis, value);
 }
 
 class NanMeasure : public ProgramError
@@ -284,7 +286,7 @@ void skip_lines(std::istream& in, int n = 1)
 {
     for (; n > 0; --n) in.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 }
-    
+
 } // namespace
 
 void RandomForestFilter::record(const std::size_t call_idx, std::size_t sample_idx, MeasureVector measures) const
@@ -298,6 +300,7 @@ void RandomForestFilter::record(const std::size_t call_idx, std::size_t sample_i
         const auto first_measure = std::next(std::cbegin(measures), info.start_index);
         buffer.reserve(info.number);
         std::transform(first_measure, std::next(first_measure, info.number),
+                       std::next(std::cbegin(this->measures_), info.start_index),
                        std::back_inserter(buffer), cast_to_double);
         buffer.push_back(0); // dummy TP value
         check_nan(buffer);

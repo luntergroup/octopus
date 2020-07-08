@@ -108,8 +108,12 @@ ReadAssignments::ReadAssignments(const ReferenceGenome& reference,
                 }
             }
         }
-        for (const auto& call : calls) {
-            auto alleles = get_called_alleles(call, sample).first;
+        for (std::size_t call_idx {0}; call_idx < calls.size(); ++call_idx) {
+            std::vector<Allele> alleles {};
+            alleles.reserve(calls[call_idx].num_alt() + 1);
+            for (auto&& allele : get_resolved_alleles(calls, call_idx, sample)) {
+                if (allele) alleles.push_back(std::move(*allele));
+            }
             auto allele_support = compute_allele_support(alleles, result_.haplotypes.at(sample), sample);
             for (auto& allele : alleles) {
                 result_.alleles[sample].emplace(std::move(allele), std::move(allele_support.at(allele)));

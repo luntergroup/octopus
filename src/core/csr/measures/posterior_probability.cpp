@@ -15,14 +15,14 @@ std::unique_ptr<Measure> PosteriorProbability::do_clone() const
     return std::make_unique<PosteriorProbability>(*this);
 }
 
-Measure::ResultType PosteriorProbability::get_default_result() const
+Measure::ValueType PosteriorProbability::get_value_type() const
 {
-    return boost::optional<double> {};
+    return double {};
 }
 
 Measure::ResultType PosteriorProbability::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
-    boost::optional<double> result {};
+    Optional<ValueType> result {};
     if (call.has_info("PP")) {
         const auto& pp = call.info_value("PP");
         if (pp.size() == 1 && pp.front() != vcfspec::missingValue) {

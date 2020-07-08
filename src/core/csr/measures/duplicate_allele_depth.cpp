@@ -29,17 +29,16 @@ std::unique_ptr<Measure> DuplicateAlleleDepth::do_clone() const
     return std::make_unique<DuplicateAlleleDepth>(*this);
 }
 
-Measure::ResultType DuplicateAlleleDepth::get_default_result() const
+Measure::ValueType DuplicateAlleleDepth::get_value_type() const
 {
-    return std::vector<boost::optional<int>> {};
+    return std::size_t {};
 }
 
 namespace {
 
 bool is_canonical(const VcfRecord::NucleotideSequence& allele) noexcept
 {
-    const static VcfRecord::NucleotideSequence deleted_allele {vcfspec::deletedBase};
-    return !(allele == vcfspec::missingValue || allele == deleted_allele);
+    return !(allele == vcfspec::missingValue || allele == vcfspec::deleteMaskAllele);
 }
 
 bool has_called_alt_allele(const VcfRecord& call, const VcfRecord::SampleName& sample)
@@ -48,11 +47,6 @@ bool has_called_alt_allele(const VcfRecord& call, const VcfRecord::SampleName& s
     const auto& genotype = get_genotype(call, sample);
     return std::any_of(std::cbegin(genotype), std::cend(genotype),
                        [&] (const auto& allele) { return allele != call.ref() && is_canonical(allele); });
-}
-
-bool is_evaluable(const VcfRecord& call, const VcfRecord::SampleName& sample)
-{
-    return has_called_alt_allele(call, sample);
 }
 
 bool other_segments_equal(const AlignedRead& lhs, const AlignedRead& rhs) noexcept
@@ -82,21 +76,6 @@ bool is_duplicate(const AlignedRead& realigned_read, const std::vector<AlignedRe
     return std::find_if(std::cbegin(duplicate_reads), std::cend(duplicate_reads), is_duplicate) != std::cend(duplicate_reads);
 }
 
-auto count_duplicate_support(const std::vector<AlignedRead>& duplicate_reads, const std::vector<Allele>& alleles, const AlleleSupportMap& allele_support)
-{
-    unsigned min_support {}, result {};
-    for (const auto& allele : alleles) {
-        const auto& support = allele_support.at(allele);
-        if (min_support == 0 || support.size() < min_support) {
-            const auto is_duplicate_helper = [&] (const auto& read) { return is_duplicate(read, duplicate_reads); };
-            result = std::count_if(std::cbegin(support), std::cend(support), is_duplicate_helper);
-            min_support = support.size();
-            if (result > 1) --result; // One 'duplicate' read is not actually a duplicate
-        }
-    }
-    return result;
-}
-
 } // namespace
 
 Measure::ResultType DuplicateAlleleDepth::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
@@ -105,26 +84,40 @@ Measure::ResultType DuplicateAlleleDepth::do_evaluate(const VcfRecord& call, con
     const auto& reads = get_value<ReadsSummary>(facets.at("ReadsSummary"));
     const auto& alleles = get_value<Alleles>(facets.at("Alleles"));
     const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments")).alleles;
-    std::vector<boost::optional<int>> result {};
-    result.reserve(samples.size());
-    for (const auto& sample : samples) {
-        boost::optional<int> sample_result {};
-        if (is_evaluable(call, sample)) {
-            sample_result = 0;
-            const auto sample_alleles = get_alt(alleles, call, sample);
-            const auto& allele_support = assignments.at(sample);
-            for (const auto& duplicates : overlap_range(reads.at(sample).duplicates, call)) {
-                *sample_result += count_duplicate_support(duplicates.reads, sample_alleles, allele_support);
+    const auto num_alleles = call.alt().size() + 1;
+    Array<Array<Optional<ValueType>>> result(samples.size(), Array<Optional<ValueType>>(num_alleles));
+    for (std::size_t s {0}; s < samples.size(); ++s) {
+        const auto sample_alleles = get(alleles, call, samples[s]);
+        const auto& duplicate_reads = overlap_range(reads.at(samples[s]).duplicates, call);
+        const auto& support = assignments.at(samples[s]);
+        for (std::size_t a {0}; a < num_alleles; ++a) {
+            if (sample_alleles[a] && support.count(*sample_alleles[a]) > 0) {
+                if (!duplicate_reads.empty()) {
+                    const auto compute_duplicate_support = [&] (const auto& allele) {
+                        const auto& allele_support = support.at(allele);
+                        std::size_t result {0};
+                        for (const auto& duplicates : duplicate_reads) {
+                            const auto is_duplicate_helper = [&] (const auto& read) { return is_duplicate(read, duplicates.reads); };
+                            auto num_dups = std::count_if(std::cbegin(allele_support), std::cend(allele_support), is_duplicate_helper);
+                            if (num_dups > 1) --num_dups; // One 'duplicate' read is not actually a duplicate
+                            result += num_dups;
+                        }
+                        if (result < 0) result = 0;
+                        return result;
+                    };
+                    result[s][a] = compute_duplicate_support(*sample_alleles[a]);
+                } else {
+                    result[s][a] = std::size_t {0};
+                }
             }
         }
-        result.push_back(sample_result);
     }
     return result;
 }
 
 Measure::ResultCardinality DuplicateAlleleDepth::do_cardinality() const noexcept
 {
-    return ResultCardinality::samples;
+    return ResultCardinality::samples_and_alleles;
 }
 
 const std::string& DuplicateAlleleDepth::do_name() const
@@ -141,6 +134,11 @@ std::vector<std::string> DuplicateAlleleDepth::do_requirements() const
 {
     
     return {"Samples", "ReadsSummary", "Alleles", "ReadAssignments"};
+}
+
+boost::optional<Measure::Aggregator> DuplicateAlleleDepth::do_aggregator() const noexcept
+{
+    return Measure::Aggregator::max_tail;
 }
     
 } // namespace csr

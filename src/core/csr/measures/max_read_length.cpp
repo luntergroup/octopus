@@ -20,19 +20,19 @@ std::unique_ptr<Measure> MaxReadLength::do_clone() const
     return std::make_unique<MaxReadLength>(*this);
 }
 
-Measure::ResultType MaxReadLength::get_default_result() const
+Measure::ValueType MaxReadLength::get_value_type() const
 {
-    return std::vector<std::size_t> {};
+    return std::size_t {};
 }
 
 Measure::ResultType MaxReadLength::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     const auto& samples = get_value<Samples>(facets.at("Samples"));
     const auto& reads = get_value<OverlappingReads>(facets.at("OverlappingReads"));
-    std::vector<std::size_t> result {};
+    Array<ValueType> result {};
     result.reserve(samples.size());
     for (const auto& sample : samples) {
-        result.push_back(max_read_length(reads.at(sample), mapped_region(call)));
+        result.emplace_back(max_read_length(reads.at(sample), mapped_region(call)));
     }
     return result;
 }

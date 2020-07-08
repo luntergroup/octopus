@@ -23,7 +23,7 @@ std::unique_ptr<Measure> STRLength::do_clone() const
     return std::make_unique<STRLength>(*this);
 }
 
-Measure::ResultType STRLength::get_default_result() const
+Measure::ValueType STRLength::get_value_type() const
 {
     return int {};
 }
@@ -78,8 +78,8 @@ find_repeat_context(const std::vector<TandemRepeat>& repeats, const VcfRecord& c
             if (result_itr == std::cend(repeats) || has_overlapped(alleles, *result_itr)) {
                 result = boost::none;
             } else {
-	        result = *result_itr;
-	    }
+	            result = *result_itr;
+	        }
         }
     }
     return result;
@@ -92,10 +92,10 @@ Measure::ResultType STRLength::do_evaluate(const VcfRecord& call, const FacetMap
     int result {0};
     const auto& repeats = get_value<RepeatContext>(facets.at("RepeatContext"));
     const auto& samples = get_value<Samples>(facets.at("Samples"));
-    const auto alleles = get_all_unique(get_value<Alleles>(facets.at("Alleles")), call, samples);
+    const auto alleles = get_unique_called(get_value<Alleles>(facets.at("Alleles")), call, samples);
     const auto repeat_context = find_repeat_context(repeats, call, alleles);
     if (repeat_context) result = region_size(*repeat_context);
-    return result;
+    return ValueType {result};
 }
 
 Measure::ResultCardinality STRLength::do_cardinality() const noexcept

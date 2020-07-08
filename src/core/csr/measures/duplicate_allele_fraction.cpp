@@ -22,31 +22,37 @@ std::unique_ptr<Measure> DuplicateAlleleFraction::do_clone() const
     return std::make_unique<DuplicateAlleleFraction>(*this);
 }
 
-Measure::ResultType DuplicateAlleleFraction::get_default_result() const
+Measure::ValueType DuplicateAlleleFraction::get_value_type() const
 {
-    return std::vector<boost::optional<double>> {};
+    return double {};
 }
 
 Measure::ResultType DuplicateAlleleFraction::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
-    const auto allele_depths = boost::get<std::vector<boost::optional<int>>>(AlleleDepth{}.evaluate(call, facets));
-    const auto duplicate_allele_depths = boost::get<std::vector<boost::optional<int>>>(DuplicateAlleleDepth{}.evaluate(call, facets));
+    const auto allele_depths = boost::get<Array<Array<Optional<ValueType>>>>(AlleleDepth{}.evaluate(call, facets));
+    const auto duplicate_allele_depths = boost::get<Array<Array<Optional<ValueType>>>>(DuplicateAlleleDepth{}.evaluate(call, facets));
+    const auto num_alleles = call.alt().size() + 1;
     assert(allele_depths.size() == duplicate_allele_depths.size());
-    std::vector<boost::optional<double>> result(allele_depths.size());
-    std::transform(std::cbegin(allele_depths), std::cend(allele_depths), std::cbegin(duplicate_allele_depths), std::begin(result),
-                   [] (auto depth, auto duplicate_depth) -> boost::optional<double> {
-        if (depth && duplicate_depth) {
-            return *depth > 0 ? static_cast<double>(std::min(*duplicate_depth, *depth)) / *depth : 0;
-        } else {
-            return boost::none;
+    Array<Array<Optional<ValueType>>> result(allele_depths.size(), Array<Optional<ValueType>>(num_alleles));
+    for (std::size_t s {0}; s < allele_depths.size(); ++s) {
+        assert(allele_depths[s].size() == num_alleles && duplicate_allele_depths[s].size() == num_alleles);
+        for (std::size_t a {0}; a < num_alleles; ++a) {
+            if (allele_depths[s][a] && duplicate_allele_depths[s][a]) {
+                const auto allele_depth = boost::get<std::size_t>(*allele_depths[s][a]);
+                if (allele_depth > 0) {
+                    result[s][a] = static_cast<double>(boost::get<std::size_t>(*duplicate_allele_depths[s][a])) / allele_depth;
+                } else {
+                    result[s][a] = 0.0;
+                }
+            }
         }
-    });
+    }
     return result;
 }
 
 Measure::ResultCardinality DuplicateAlleleFraction::do_cardinality() const noexcept
 {
-    return ResultCardinality::samples;
+    return ResultCardinality::samples_and_alleles;
 }
 
 const std::string& DuplicateAlleleFraction::do_name() const
@@ -63,6 +69,11 @@ std::vector<std::string> DuplicateAlleleFraction::do_requirements() const
 {
     
     return {"Samples", "OverlappingReads", "ReadAssignments"};
+}
+
+boost::optional<Measure::Aggregator> DuplicateAlleleFraction::do_aggregator() const noexcept
+{
+    return Measure::Aggregator::max_tail;
 }
 
 } // namespace csr

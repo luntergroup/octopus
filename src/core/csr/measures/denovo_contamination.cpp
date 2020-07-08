@@ -22,6 +22,7 @@
 #include "utils/append.hpp"
 #include "is_denovo.hpp"
 #include "../facets/samples.hpp"
+#include "../facets/alleles.hpp"
 #include "../facets/genotypes.hpp"
 #include "../facets/pedigree.hpp"
 #include "../facets/read_assignments.hpp"
@@ -35,16 +36,16 @@ std::unique_ptr<Measure> DeNovoContamination::do_clone() const
     return std::make_unique<DeNovoContamination>(*this);
 }
 
-Measure::ResultType DeNovoContamination::get_default_result() const
+Measure::ValueType DeNovoContamination::get_value_type() const
 {
-    return boost::optional<double> {};
+    return double {};
 }
 
 namespace {
 
 bool is_denovo(const VcfRecord& call, const Measure::FacetMap& facets)
 {
-    return boost::get<bool>(IsDenovo(false).evaluate(call, facets));
+    return get_value_type<bool>(IsDenovo(false).evaluate(call, facets));
 }
 
 auto find_child_idx(const std::vector<SampleName>& samples, const octopus::Pedigree& pedigree)
@@ -66,11 +67,11 @@ void sort_unique(Container& values)
     values.erase(std::unique(std::begin(values), std::end(values)), std::end(values));
 }
 
-auto get_denovo_alleles(const VcfRecord& denovo, const Trio& trio)
+auto get_denovo_alleles(const VcfRecord& denovo, const Trio& trio, const Facet::AlleleMap& alleles)
 {
-    auto parent_alleles = concat(get_called_alleles(denovo, trio.mother()).first,
-                                 get_called_alleles(denovo, trio.father()).first);
-    auto child_alleles = get_called_alleles(denovo, trio.child()).first;
+    auto parent_alleles = concat(get_called(alleles, denovo, trio.mother()),
+                                 get_called(alleles, denovo, trio.father()));
+    auto child_alleles = get_called(alleles, denovo, trio.child());
     sort_unique(parent_alleles); sort_unique(child_alleles);
     std::vector<Allele> result {};
     result.reserve(child_alleles.size());
@@ -112,9 +113,9 @@ bool is_parental_haplotype(const Haplotype& haplotype, const Facet::GenotypeMap&
     return contains(genotypes.at(trio.mother()), haplotype) || contains(genotypes.at(trio.father()), haplotype);
 }
 
-auto get_denovo_haplotypes(const VcfRecord& denovo, const Facet::GenotypeMap& genotypes, const Trio& trio)
+auto get_denovo_haplotypes(const VcfRecord& denovo, const Facet::GenotypeMap& genotypes, const Trio& trio, const Facet::AlleleMap& alleles)
 {
-    const auto denovo_alleles = get_denovo_alleles(denovo, trio);
+    const auto denovo_alleles = get_denovo_alleles(denovo, trio, alleles);
     auto result = get_denovo_haplotypes(genotypes, denovo_alleles);
     const auto is_parental = [&] (const auto& haplotype) { return is_parental_haplotype(haplotype, genotypes, trio); };
     result.erase(std::remove_if(std::begin(result), std::end(result), is_parental), std::end(result));
@@ -136,14 +137,15 @@ auto copy_overlapped_to_vector(const AmbiguousReadList& reads, const MappableTyp
 
 Measure::ResultType DeNovoContamination::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
-    boost::optional<double> result {};
+    Optional<ValueType> result {};
     if (is_denovo(call, facets)) {
         const auto& samples = get_value<Samples>(facets.at("Samples"));
+        const auto& alleles = get_value<Alleles>(facets.at("Alleles"));
         const auto& pedigree = get_value<Pedigree>(facets.at("Pedigree"));
         assert(is_trio(samples, pedigree)); // TODO: Implement for general pedigree
         const auto trio = *make_trio(samples[find_child_idx(samples, pedigree)], pedigree);
         const auto& genotypes = get_value<Genotypes>(facets.at("Genotypes"));
-        const auto denovo_haplotypes = get_denovo_haplotypes(call, genotypes, trio);
+        const auto denovo_haplotypes = get_denovo_haplotypes(call, genotypes, trio, alleles);
         if (denovo_haplotypes.empty()) {
             return result;
         }
@@ -157,8 +159,7 @@ Measure::ResultType DeNovoContamination::do_evaluate(const VcfRecord& call, cons
             haplotype_priors[haplotype] = -1;
         }
         const std::array<SampleName, 2> parents {trio.mother(), trio.father()};
-        result = 0;
-        std::size_t total_overlapped {0};
+        std::size_t contamination {0}, total_overlapped {0};
         for (const auto& sample : parents) {
             for (const auto& p : assignments.at(sample).assigned_wrt_reference) {
                 auto supporting_reads = copy_overlapped(p.second, call);
@@ -172,12 +173,12 @@ Measure::ResultType DeNovoContamination::do_evaluate(const VcfRecord& call, cons
                         haplotype_priors.erase(assigned_haplotype);
                         for (const auto& denovo : denovo_haplotypes) {
                             if (support.count(denovo) == 1) {
-                                *result += support.at(denovo).size();
+                                contamination += support.at(denovo).size();
                             }
                         }
                     } else {
                         // This could happen if we don't call all 'de novo' alleles on the called de novo haplotype.
-                        *result += supporting_reads.size();
+                        contamination += supporting_reads.size();
                     }
                     total_overlapped += supporting_reads.size();
                 }
@@ -201,7 +202,7 @@ Measure::ResultType DeNovoContamination::do_evaluate(const VcfRecord& call, cons
                         }
                         for (const auto& denovo : denovo_haplotypes) {
                             if (support.count(denovo) == 1) {
-                                *result += support.at(denovo).size();
+                                contamination += support.at(denovo).size();
                             }
                         }
                     }
@@ -209,7 +210,7 @@ Measure::ResultType DeNovoContamination::do_evaluate(const VcfRecord& call, cons
                 }
             }
         }
-        if (*result > 0) *result /= total_overlapped;
+        result = total_overlapped > 0 ? static_cast<double>(contamination) / total_overlapped : 0.0;
     }
     return result;
 }
@@ -231,7 +232,7 @@ std::string DeNovoContamination::do_describe() const
 
 std::vector<std::string> DeNovoContamination::do_requirements() const
 {
-    std::vector<std::string> result {"Samples", "Genotypes", "ReadAssignments", "Pedigree"};
+    std::vector<std::string> result {"Samples", "Alleles", "Genotypes", "ReadAssignments", "Pedigree"};
     utils::append(IsDenovo(false).requirements(), result);
     sort_unique(result);
     return result;

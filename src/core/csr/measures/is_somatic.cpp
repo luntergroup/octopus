@@ -22,7 +22,7 @@ std::unique_ptr<Measure> IsSomatic::do_clone() const
     return std::make_unique<IsSomatic>(*this);
 }
 
-Measure::ResultType IsSomatic::get_default_result() const
+Measure::ValueType IsSomatic::get_value_type() const
 {
     return bool {};
 }
@@ -46,7 +46,7 @@ Measure::ResultType IsSomatic::do_evaluate(const VcfRecord& call, const FacetMap
 {
     if (report_sample_status_) {
         const auto& samples = get_value<Samples>(facets.at("Samples"));
-        std::vector<bool> result(samples.size(), false);
+        Array<ValueType> result(samples.size(), false);
         if (is_somatic(call)) {
             const auto& ploidies = get_value<Ploidies>(facets.at("Ploidies"));
             std::transform(std::cbegin(samples), std::cend(samples), std::begin(result),
@@ -54,7 +54,7 @@ Measure::ResultType IsSomatic::do_evaluate(const VcfRecord& call, const FacetMap
         }
         return result;
     } else {
-        return is_somatic(call);
+        return ValueType {is_somatic(call)};
     }
 }
 

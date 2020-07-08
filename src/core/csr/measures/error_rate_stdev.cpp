@@ -29,9 +29,9 @@ std::unique_ptr<Measure> ErrorRateStdev::do_clone() const
     return std::make_unique<ErrorRateStdev>(*this);
 }
 
-Measure::ResultType ErrorRateStdev::get_default_result() const
+Measure::ValueType ErrorRateStdev::get_value_type() const
 {
-    return std::vector<boost::optional<double>> {};
+    return double {};
 }
 
 namespace {
@@ -67,10 +67,10 @@ Measure::ResultType ErrorRateStdev::do_evaluate(const VcfRecord& call, const Fac
 {
     const auto& samples = get_value<Samples>(facets.at("Samples"));
     const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments")).haplotypes;
-    std::vector<boost::optional<double>> result {};
+    Array<Optional<ValueType>> result {};
     result.reserve(samples.size());
     for (const auto& sample : samples) {
-        result.push_back(compute_error_rate_stdev(assignments.at(sample), mapped_region(call)));
+        result.emplace_back(compute_error_rate_stdev(assignments.at(sample), mapped_region(call)));
     }
     return result;
 }

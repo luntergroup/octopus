@@ -15,15 +15,15 @@ std::unique_ptr<Measure> ModelPosterior::do_clone() const
     return std::make_unique<ModelPosterior>(*this);
 }
 
-Measure::ResultType ModelPosterior::get_default_result() const
+Measure::ValueType ModelPosterior::get_value_type() const
 {
-    return boost::optional<double> {};
+    return double {};
 }
 
 Measure::ResultType ModelPosterior::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     namespace ovcf = octopus::vcf::spec;
-    boost::optional<double> result {};
+    Optional<ValueType> result {};
     if (!is_info_missing(ovcf::info::modelPosterior, call)) {
         result = std::stod(call.info_value(ovcf::info::modelPosterior).front());
     }

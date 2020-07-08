@@ -18,7 +18,7 @@ namespace octopus { namespace vcfspec {
 VCF_SPEC_CONSTANT version {"VCFv4.3"};
 VCF_SPEC_CONSTANT missingValue {"."};
 
-static constexpr char deletedBase {'*'};
+VCF_SPEC_CONSTANT deleteMaskAllele {"*"};
 
 namespace header {
 

@@ -35,9 +35,7 @@ namespace {
 
 static bool is_canonical(const VcfRecord::NucleotideSequence& allele)
 {
-    return allele != vcfspec::missingValue
-           && std::none_of(std::cbegin(allele), std::cend(allele),
-                           [](const auto base) { return base == vcfspec::deletedBase; });
+    return allele != vcfspec::missingValue && allele != vcfspec::deleteMaskAllele;
 }
 
 template <typename Iterator>

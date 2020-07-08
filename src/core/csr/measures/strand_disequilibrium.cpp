@@ -22,9 +22,9 @@ std::unique_ptr<Measure> StrandDisequilibrium::do_clone() const
     return std::make_unique<StrandDisequilibrium>(*this);
 }
 
-Measure::ResultType StrandDisequilibrium::get_default_result() const
+Measure::ValueType StrandDisequilibrium::get_value_type() const
 {
-    return std::vector<double> {};
+    return double {};
 }
 
 void StrandDisequilibrium::do_set_parameters(std::vector<std::string> params)
@@ -51,12 +51,12 @@ Measure::ResultType StrandDisequilibrium::do_evaluate(const VcfRecord& call, con
 {
     const auto& samples = get_value<Samples>(facets.at("Samples"));
     const auto& reads = get_value<OverlappingReads>(facets.at("OverlappingReads"));
-    std::vector<double> result {};
+    Array<ValueType> result {};
     result.reserve(samples.size());
     for (const auto& sample : samples) {
         const auto direction_counts = count_directions(reads.at(sample), mapped_region(call));
         const auto tail_probability = maths::beta_tail_probability(direction_counts.first + 0.5, direction_counts.second + 0.5, tail_mass_);
-        result.push_back(tail_probability);
+        result.emplace_back(tail_probability);
     }
     return result;
 }

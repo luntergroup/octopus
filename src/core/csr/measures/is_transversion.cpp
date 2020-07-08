@@ -20,22 +20,25 @@ std::unique_ptr<Measure> IsTransversion::do_clone() const
     return std::make_unique<IsTransversion>(*this);
 }
 
-Measure::ResultType IsTransversion::get_default_result() const
+Measure::ValueType IsTransversion::get_value_type() const
 {
     return bool {};
 }
 
 Measure::ResultType IsTransversion::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
-    return std::any_of(std::cbegin(call.alt()), std::cend(call.alt()), [&] (const auto& alt) -> bool {
+    Array<ValueType> result(call.alt().size());
+    const auto is_transversion_helper = [&] (const auto& alt) {
         const Variant variant {call.mapped_region(), call.ref(), alt};
         return is_transversion(variant);
-    });
+    };
+    std::transform(std::cbegin(call.alt()), std::cend(call.alt()), std::begin(result), is_transversion_helper);
+    return result;
 }
 
 Measure::ResultCardinality IsTransversion::do_cardinality() const noexcept
 {
-    return ResultCardinality::one;
+    return ResultCardinality::alt_alleles;
 }
 
 const std::string& IsTransversion::do_name() const
@@ -48,9 +51,9 @@ std::string IsTransversion::do_describe() const
     return "Is the variant a transversion";
 }
 
-std::vector<std::string> IsTransversion::do_requirements() const
+boost::optional<Measure::Aggregator> IsTransversion::do_aggregator() const noexcept
 {
-    return {};
+    return Measure::Aggregator::max;
 }
 
 } // namespace csr

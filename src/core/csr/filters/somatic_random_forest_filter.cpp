@@ -27,9 +27,9 @@ SomaticRandomForestVariantCallFilter::SomaticRandomForestVariantCallFilter(Facet
     {make_wrapped_measure<IsSomatic>(true), make_wrapped_measure<IsRefcall>(true)},
     [use_somatic_forest_for_refcalls = options.use_somatic_forest_for_refcalls] (const MeasureVector& measures) -> std::int8_t {
         assert(measures.size() == 2);
-        if (boost::get<bool>(measures.front())) {
+        if (get_value_type<bool>(measures.front())) {
             return 1;
-        } else if (boost::get<bool>(measures.back())) {
+        } else if (get_value_type<bool>(measures.back())) {
             return use_somatic_forest_for_refcalls;
         } else {
             return 0;
@@ -54,7 +54,7 @@ SomaticRandomForestVariantCallFilter::SomaticRandomForestVariantCallFilter(Facet
     {make_wrapped_measure<IsSomatic>(false)},
     [] (const MeasureVector& measures) -> std::int8_t {
         assert(measures.size() == 1);
-        return !boost::get<bool>(measures.front());
+        return !get_value_type<bool>(measures.front());
         },
     {std::move(somatic_forest)},
     std::move(output_config),

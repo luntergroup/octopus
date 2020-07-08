@@ -14,14 +14,14 @@ std::unique_ptr<Measure> Quality::do_clone() const
     return std::make_unique<Quality>(*this);
 }
 
-Measure::ResultType Quality::get_default_result() const
+Measure::ValueType Quality::get_value_type() const
 {
-    return boost::optional<double> {};
+    return double {};
 }
 
 Measure::ResultType Quality::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
-    boost::optional<double> result {};
+    Optional<ValueType> result {};
     if (call.qual()) {
         result = static_cast<double>(*call.qual());
     }

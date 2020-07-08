@@ -24,17 +24,16 @@ std::unique_ptr<Measure> AlleleDepth::do_clone() const
     return std::make_unique<AlleleDepth>(*this);
 }
 
-Measure::ResultType AlleleDepth::get_default_result() const
+Measure::ValueType AlleleDepth::get_value_type() const
 {
-    return std::vector<boost::optional<int>> {};
+    return std::size_t {};
 }
 
 namespace {
 
 bool is_canonical(const VcfRecord::NucleotideSequence& allele) noexcept
 {
-    const static VcfRecord::NucleotideSequence deleted_allele {vcfspec::deletedBase};
-    return !(allele == vcfspec::missingValue || allele == deleted_allele);
+    return !(allele == vcfspec::missingValue || allele == vcfspec::deleteMaskAllele);
 }
 
 bool has_called_alt_allele(const VcfRecord& call, const VcfRecord::SampleName& sample)
@@ -45,31 +44,6 @@ bool has_called_alt_allele(const VcfRecord& call, const VcfRecord::SampleName& s
                        [&] (const auto& allele) { return allele != call.ref() && is_canonical(allele); });
 }
 
-bool is_evaluable(const VcfRecord& call, const VcfRecord::SampleName& sample)
-{
-    return has_called_alt_allele(call, sample);
-}
-
-template <typename T>
-void pop_front(std::vector<T>& v)
-{
-    v.erase(std::cbegin(v));
-}
-
-auto get_support_counts(const std::vector<Allele>& alleles, const AlleleSupportMap& support)
-{
-    std::vector<int> result(alleles.size());
-    std::transform(std::cbegin(alleles), std::cend(alleles), std::begin(result),
-                   [&] (const auto& allele) { return support.at(allele).size(); });
-    return result;
-}
-
-auto min_support_count(const std::vector<Allele>& alleles, const AlleleSupportMap& support)
-{
-    const auto counts = get_support_counts(alleles, support);
-    return *std::min_element(std::cbegin(counts), std::cend(counts));
-}
-
 } // namespace
 
 Measure::ResultType AlleleDepth::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
@@ -77,21 +51,27 @@ Measure::ResultType AlleleDepth::do_evaluate(const VcfRecord& call, const FacetM
     const auto& samples = get_value<Samples>(facets.at("Samples"));
     const auto& alleles = get_value<Alleles>(facets.at("Alleles"));
     const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments")).alleles;
-    std::vector<boost::optional<int>> result {};
-    result.reserve(samples.size());
-    for (const auto& sample : samples) {
-        boost::optional<int> sample_result {};
-        if (is_evaluable(call, sample)) {
-            sample_result = min_support_count(get_alt(alleles, call, sample), assignments.at(sample));
+    const auto num_alleles = 1 + call.num_alt();
+    Array<Array<Optional<ValueType>>> result(samples.size(), Array<Optional<ValueType>>(num_alleles));
+    for (std::size_t s {0}; s < samples.size(); ++s) {
+        const auto& sample_alleles = get(alleles, call, samples[s]);
+        assert(sample_alleles.size() == num_alleles);
+        const auto& support = assignments.at(samples[s]);
+        for (std::size_t a {0}; a < num_alleles; ++a) {
+            if (sample_alleles[a]) {
+                const auto support_set_itr = support.find(*sample_alleles[a]);
+                if (support_set_itr != std::cend(support)) {
+                    result[s][a] = support_set_itr->second.size();
+                }
+            }
         }
-        result.push_back(sample_result);
     }
     return result;
 }
 
 Measure::ResultCardinality AlleleDepth::do_cardinality() const noexcept
 {
-    return ResultCardinality::samples;
+    return ResultCardinality::samples_and_alleles;
 }
 
 const std::string& AlleleDepth::do_name() const
@@ -101,12 +81,17 @@ const std::string& AlleleDepth::do_name() const
 
 std::string AlleleDepth::do_describe() const
 {
-    return "Minor empirical alt allele depth";
+    return "Empirical allele depth";
 }
 
 std::vector<std::string> AlleleDepth::do_requirements() const
 {
     return {"Samples", "Alleles", "ReadAssignments"};
+}
+
+boost::optional<Measure::Aggregator> AlleleDepth::do_aggregator() const noexcept
+{
+    return Measure::Aggregator::min_tail;
 }
 
 } // namespace csr

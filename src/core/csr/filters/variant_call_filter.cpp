@@ -323,7 +323,7 @@ void VariantCallFilter::annotate(VcfRecord::Builder& call, const MeasureVector& 
         const MeasureWrapper& measure {p.get<0>()};
         if (is_requested_annotation(measure)) {
             const Measure::ResultType& measured_value {p.get<1>()};
-            measure.annotate(call, measured_value, header);
+            measure.annotate(call, measured_value, header, output_config_.aggregate_allele_annotations);
         }
     }
 }
@@ -401,7 +401,7 @@ VcfHeader VariantCallFilter::make_header(const VcfReader& source) const
     if (measure_annotations_requested()) {
         for (const auto& measure : measures_) {
             if (is_requested_annotation(measure)) {
-                measure.annotate(builder);
+                measure.annotate(builder, output_config_.aggregate_allele_annotations);
             }
         }
     }
