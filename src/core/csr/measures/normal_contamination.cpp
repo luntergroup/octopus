@@ -128,6 +128,7 @@ Measure::ResultType NormalContamination::do_evaluate(const VcfRecord& call, cons
                 normal_samples.push_back(tup.get<0>());
             }
         }
+        if (normal_samples.empty()) return result;
         const auto& genotypes = get_value<Genotypes>(facets.at("Genotypes"));
         const auto somatic_haplotypes = get_somatic_haplotypes(call, genotypes, somatic_samples, normal_samples, alleles);
         const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments")).haplotypes;
