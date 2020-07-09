@@ -83,7 +83,7 @@ def is_osx():
 def is_centos(version=None):
     if platform.system() == "Linux":
         dist, dist_version, _ = platform.linux_distribution()
-        if dist != "CentOS":
+        if "CentOS" not in dist:
             return False
         if version is None:
             return True
@@ -203,12 +203,30 @@ def get_brewed_compiler_binaries(homebrew_dir):
         gxx_bin_name =  gcc_bin_name.replace('cc', '++')
         return os.path.join(gcc_bin_dir, gcc_bin_name), os.path.join(gcc_bin_dir, gxx_bin_name)
 
+def patch_homebrew_centos_gcc9(homebrew_dir):
+    homebrew_bin_dir = os.path.join(homebrew_dir, 'bin')
+    patchelf_bin = os.path.join(homebrew_bin_dir, 'patchelf')
+    homebrew_ld = os.path.join(homebrew_dir, 'lib/ld.so')
+    gcc_dir = os.path.join(homebrew_dir, 'Cellar/' + latest_gcc)
+    gcc_version = os.listdir(gcc_dir)[0]
+    gcc_dir = os.path.join(gcc_dir, gcc_version)
+    gcc_bin_dir = os.path.join(gcc_dir, 'bin')
+    bins = [os.path.join(gcc_bin_dir, ex) for ex in os.listdir(gcc_bin_dir)]
+    for b in bins: os.chmod(b, 0o755)
+    call([patchelf_bin, "--set-interpreter", homebrew_ld] + bins)
+    for b in bins: os.chmod(b, 0o555)
+    libexec_dir = os.path.join(gcc_dir, 'libexec/gcc/x86_64-pc-linux-gnu/' + gcc_version)
+    libexec_libs = ['cc1', 'cc1obj', 'cc1objplus', 'cc1plus', 'collect2', 'f951', 'lto1', 'lto-wrapper', 'plugin/gengtype', 'install-tools/fixincl']
+    libexec_libs = [os.path.join(libexec_dir, f) for f in libexec_libs]
+    call([patchelf_bin, "--set-interpreter", homebrew_ld] + libexec_libs)
+
 def install_dependencies(build_dir):
     brew_bin = install_homebrew(build_dir)
     compiled_dependencies, recompile_dependencies = get_required_dependencies()
     if call([brew_bin, 'install'] + compiled_dependencies) == 0 and \
             call([brew_bin, 'install', '--build-from-source'] + recompile_dependencies) == 0:
         dependencies_dir = os.path.join(build_dir, get_homebrew_name())
+        if is_centos(): patch_homebrew_centos_gcc9(dependencies_dir)
         cc, cxx = get_brewed_compiler_binaries(dependencies_dir)
         binaries = {'cmake': os.path.join(dependencies_dir, 'bin/cmake'),
                     'c_compiler': cc, 'cxx_compiler': cxx}
