@@ -5,6 +5,7 @@ import os.path
 import sys
 from subprocess import call, check_output
 import platform
+import distro
 import argparse
 from shutil import move, rmtree, copyfileobj
 import multiprocessing
@@ -82,7 +83,7 @@ def is_osx():
 
 def is_centos(version=None):
     if platform.system() == "Linux":
-        dist, dist_version, _ = platform.linux_distribution()
+        dist, dist_version, _ = distro.linux_distribution()
         if "CentOS" not in dist:
             return False
         if version is None:
