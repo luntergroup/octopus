@@ -85,7 +85,7 @@ The other packages will need to be installed manually:
 
 - CMake installation instructions are given [here](https://askubuntu.com/a/865294).
 - Htslib installation instructions are given [here](https://github.com/samtools/htslib). Note you may need to install `autoconf` (`sudo apt-get install autoconf`).
-- Instructions on installing Boost are given [here](https://stackoverflow.com/a/24086375/2970186).
+- Instructions on installing Boost are given [here](https://stackoverflow.com/a/24086375/2970186). Note: You will need version 1.65.0 or later.
 
 These instructions are replicated in the [user documentation](https://github.com/luntergroup/octopus/blob/develop/doc/manuals/user/octopus-user-manual.pdf) (Appendix).
 
