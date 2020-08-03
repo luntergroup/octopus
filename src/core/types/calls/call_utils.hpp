@@ -45,7 +45,7 @@ private:
 };
 
 std::vector<unsigned>
-compute_haplotype_order(const std::vector<Genotype<Allele>>& genotypes, const ReferenceGenome& reference);
+compute_haplotype_order(std::vector<Genotype<Allele>>& genotypes, const ReferenceGenome& reference);
 
 } // namespace detail
 

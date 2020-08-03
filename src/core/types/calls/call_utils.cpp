@@ -8,12 +8,24 @@ namespace octopus {
 namespace detail {
 
 std::vector<unsigned>
-compute_haplotype_order(const std::vector<Genotype<Allele>>& genotypes, const ReferenceGenome& reference)
+compute_haplotype_order(std::vector<Genotype<Allele>>& genotypes, const ReferenceGenome& reference)
 {
     if (!genotypes.empty()) {
         const auto ploidy = genotypes.front().ploidy();
         const auto region = encompassing_region(genotypes);
         assert(std::all_of(std::cbegin(genotypes), std::cend(genotypes), [ploidy] (const auto& g) { return g.ploidy() == ploidy; }));
+        const static auto allele_order_less = [] (const auto& lhs, const auto& rhs) {
+            if (begins_equal(lhs, rhs)) {
+                return ends_before(rhs, lhs);
+            } else {
+                return lhs < rhs;
+            }
+        };
+        // Overlapping genotypes are a real issue here since HaplotypeBuilder::push_back requires 
+        // non-ovrlapping alleles. By changing the default genotype order so that 'big' deletions 
+        // come before 'little' deletions (when starting on the same position) we at least prevent
+        // this common scenario. This will not prevent other complex overlaps however (TODO). 
+        std::sort(std::begin(genotypes), std::end(genotypes), allele_order_less);
         std::vector<std::pair<Haplotype, unsigned>> haplotypes {};
         haplotypes.reserve(ploidy);
         for (unsigned haplotype_idx {0}; haplotype_idx < ploidy; ++haplotype_idx) {
