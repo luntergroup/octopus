@@ -241,6 +241,8 @@ set(CORE_SOURCES
     core/types/calls/cell_variant_call.cpp
     core/types/calls/polyclone_variant_call.hpp
     core/types/calls/polyclone_variant_call.cpp
+    core/types/calls/cnv_call.hpp
+    core/types/calls/cnv_call.cpp
     core/types/calls/call_wrapper.hpp
     core/types/calls/call_wrapper.cpp
     core/types/calls/call_utils.hpp

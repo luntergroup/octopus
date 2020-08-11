@@ -27,8 +27,13 @@ SomaticCall::SomaticCall(Variant variant,
     genotype_stats_.reserve(stats.size());
     for (auto& p : stats) {
         auto& sample_stats = p.second;
-        genotype_calls_.emplace(p.first, GenotypeCall {sample_stats.somatic.empty() ? genotype_call.germline() : demote(genotype_call), genotype_posterior});
-        genotype_stats_.emplace(p.first, concat(std::move(sample_stats.germline), std::move(sample_stats.somatic)));
+        const bool is_somatic {!sample_stats.somatic.empty()};
+        genotype_calls_.emplace(p.first, GenotypeCall {is_somatic ? demote(genotype_call) : genotype_call.germline(), genotype_posterior});
+        std::vector<ExtendedAlleleStats> merged_stats {};
+        merged_stats.reserve(sample_stats.germline.size() + sample_stats.somatic.size());
+        for (auto& s : sample_stats.germline) merged_stats.push_back({std::move(s), false});
+        for (auto& s : sample_stats.somatic) merged_stats.push_back({std::move(s), true});
+        genotype_stats_.emplace(p.first, std::move(merged_stats));
     }
 }
 
@@ -47,19 +52,23 @@ void SomaticCall::decorate(VcfRecord::Builder& record) const
     if (posterior_) {
         record.set_info("PP", utils::to_string(posterior_->score()));
     }
-    record.add_format({"HPC", "MAP_HF", "HF_CR"});
+    record.add_format({"HSS", "HPC", "MAP_HF", "HF_CR"});
     for (const auto& p : genotype_stats_) {
-        std::vector<std::string> hpcs {}, map_hfs {}, hf_crs {};
+        std::vector<std::string> somatic_status {}, hpcs {}, map_hfs {}, hf_crs {};
         const auto ploidy = this->genotype_calls_.at(p.first).genotype.ploidy();
         assert(ploidy == p.second.size());
+        somatic_status.reserve(ploidy);
         hpcs.reserve(ploidy);
         map_hfs.reserve(ploidy);
         hf_crs.reserve(2 * ploidy);
-        for (const auto& stats : p.second) {
+        for (const auto& s : p.second) {
+            somatic_status.push_back(std::to_string(s.is_somatic_haplotype));
+            const auto& stats = s.stats;
             hpcs.push_back(to_string_sf(stats.pseudo_count));
             map_hfs.push_back(to_string_sf(stats.map_vaf));
             hf_crs.insert(std::cend(hf_crs), {to_string_sf(stats.vaf_credible_region.first), to_string_sf(stats.vaf_credible_region.second)});
         }
+        record.set_format(p.first, "HSS", std::move(somatic_status));
         record.set_format(p.first, "HPC", std::move(hpcs));
         record.set_format(p.first, "MAP_HF", std::move(map_hfs));
         record.set_format(p.first, "HF_CR", std::move(hf_crs));

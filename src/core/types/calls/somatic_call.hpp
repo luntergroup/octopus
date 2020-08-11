@@ -9,6 +9,7 @@
 #include <vector>
 
 #include <boost/optional.hpp>
+#include <boost/container/flat_map.hpp>
 
 #include "config/common.hpp"
 #include "core/types/allele.hpp"
@@ -56,7 +57,13 @@ public:
     virtual bool requires_model_evaluation() const noexcept override { return true; }
     
 protected:
-    using SquashedGenotypeStatsMap = std::unordered_map<SampleName, std::vector<AlleleStats>>;
+    struct ExtendedAlleleStats
+    {
+        AlleleStats stats;
+        bool is_somatic_haplotype;
+    };
+
+    using SquashedGenotypeStatsMap = boost::container::flat_map<SampleName, std::vector<ExtendedAlleleStats>>;
     
     SquashedGenotypeStatsMap genotype_stats_;
     

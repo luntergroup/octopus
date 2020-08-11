@@ -13,5 +13,6 @@
 #include "denovo_reference_reversion_call.hpp"
 #include "cell_variant_call.hpp"
 #include "polyclone_variant_call.hpp"
+#include "cnv_call.hpp"
 
 #endif

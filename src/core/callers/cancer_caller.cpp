@@ -37,6 +37,7 @@
 #include "core/types/calls/germline_variant_call.hpp"
 #include "core/types/calls/reference_call.hpp"
 #include "core/types/calls/somatic_call.hpp"
+#include "core/types/calls/cnv_call.hpp"
 
 namespace octopus {
 
@@ -94,7 +95,8 @@ CancerCaller::CallTypeSet CancerCaller::do_call_types() const
 {
     return {
         std::type_index(typeid(GermlineVariantCall)),
-        std::type_index(typeid(SomaticCall))
+        std::type_index(typeid(SomaticCall)),
+        std::type_index(typeid(CNVCall))
     };
 }
 
@@ -1042,18 +1044,39 @@ octopus::VariantCall::GenotypeCall demote(GermlineGenotypeCall call)
 }
 
 std::unique_ptr<octopus::VariantCall>
-transform_germline_call(GermlineVariantCall&& variant_call, GermlineGenotypeCall&& genotype_call,
-                        const std::vector<SampleName>& samples, const std::vector<SampleName>& somatic_samples)
+transform_germline_cnv_call(GermlineVariantCall&& variant_call, GermlineGenotypeCall&& genotype_call,
+                            const std::vector<SampleName>& samples, const std::vector<SampleName>& somatic_samples)
 {
     std::vector<std::pair<SampleName, Call::GenotypeCall>> genotypes {};
+    CNVCall::SomaticHaplotypeMap somatic_haplotypes {};
+    somatic_haplotypes.reserve(samples.size());
+    const auto germline_ploidy = genotype_call.genotype.ploidy();
+    const auto somatic_ploidy = genotype_call.somatic.ploidy();
     for (const auto& sample : samples) {
         if (std::find(std::cbegin(somatic_samples), std::cend(somatic_samples), sample) == std::cend(somatic_samples)) {
             genotypes.emplace_back(sample, demote(genotype_call));
+            somatic_haplotypes.emplace(sample, CNVCall::SomaticHaplotypeVector(germline_ploidy));
         } else {
             auto copy = genotype_call;
             for (auto allele : genotype_call.somatic) copy.genotype.emplace(allele);
             genotypes.emplace_back(sample, demote(std::move(copy)));
+            CNVCall::SomaticHaplotypeVector sample_somatic_haplotypes(germline_ploidy + somatic_ploidy);
+            std::fill_n(std::rbegin(sample_somatic_haplotypes), somatic_ploidy, true);
+            somatic_haplotypes.emplace(sample, std::move(sample_somatic_haplotypes));
         }
+    }
+    return std::make_unique<CNVCall>(variant_call.variant.get(), std::move(genotypes),
+                                     variant_call.segregation_quality, variant_call.posterior,
+                                     std::move(somatic_haplotypes));
+}
+
+std::unique_ptr<octopus::VariantCall>
+transform_germline_call(GermlineVariantCall&& variant_call, GermlineGenotypeCall&& genotype_call,
+                        const std::vector<SampleName>& samples)
+{
+    std::vector<std::pair<SampleName, Call::GenotypeCall>> genotypes {};
+    for (const auto& sample : samples) {
+        genotypes.emplace_back(sample, demote(genotype_call));
     }
     return std::make_unique<octopus::GermlineVariantCall>(variant_call.variant.get(), std::move(genotypes),
                                                           variant_call.segregation_quality, variant_call.posterior);
@@ -1266,8 +1289,13 @@ CancerCaller::call_variants(const std::vector<Variant>& candidates, const Latent
                    std::make_move_iterator(std::begin(germline_genotype_calls)),
                    std::back_inserter(result),
                    [this, &somatic_samples] (auto&& variant_call, auto&& genotype_call) {
-                       return transform_germline_call(std::move(variant_call), std::move(genotype_call),
-                                                      samples_, somatic_samples);
+                       if (somatic_samples.empty()) {
+                           return transform_germline_call(std::move(variant_call), std::move(genotype_call), samples_);
+                       } else {
+                           return transform_germline_cnv_call(std::move(variant_call), std::move(genotype_call),
+                                                              samples_, somatic_samples);
+                       }
+                       
                    });
     std::inplace_merge(std::begin(result), itr, std::end(result),
                        [] (const auto& lhs, const auto& rhs) { return *lhs < *rhs; });
