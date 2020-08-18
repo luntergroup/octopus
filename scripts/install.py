@@ -17,7 +17,7 @@ forest_url_base = os.path.join(google_cloud_octopus_base, "forests")
 forests = ['germline', 'somatic']
 
 latest_llvm = 'llvm'
-latest_gcc = 'gcc@9'
+latest_gcc = 'gcc@10'
 
 required_git_version = 1, 8, 0
 
