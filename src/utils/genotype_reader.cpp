@@ -55,7 +55,7 @@ bool is_complex(const VcfRecord::NucleotideSequence& ref, const VcfRecord::Nucle
 
 bool is_ref_pad_size_known(const VcfRecord::NucleotideSequence& allele, const VcfRecord& call) noexcept
 {
-    return allele != call.ref() && !is_complex(call.ref(), allele);
+    return allele != call.ref() && !is_complex(call.ref(), allele) && !is_delete_masked(allele) && !is_missing(allele);
 }
 
 auto num_matching_lhs_bases(const VcfRecord::NucleotideSequence& lhs, const VcfRecord::NucleotideSequence& rhs) noexcept
@@ -106,30 +106,62 @@ auto get_region(const VcfRecord& call, ContigRegion)
     return contig_region(call);
 }
 
+auto extract_phase_region(const VcfRecord& call, const SampleName& sample)
+{
+    auto result = get_phase_region(call, sample);
+    if (result) return *result;
+    return GenomicRegion {call.chrom(), contig_region(call)};
+}
+
+struct CallWrapper : public Mappable<CallWrapper>
+{
+    CallWrapper(const VcfRecord& record, GenomicRegion phase_region)
+    : call {std::cref(record)}
+    , phase_region {std::move(phase_region)}
+    {}
+    CallWrapper(const VcfRecord& record, const SampleName& sample)
+    : CallWrapper {record, extract_phase_region(record, sample)}
+    {}
+    
+    std::reference_wrapper<const VcfRecord> call;
+    GenomicRegion phase_region;
+    const GenomicRegion& mapped_region() const noexcept { return phase_region; }
+    const VcfRecord& get() const noexcept { return call.get(); }
+};
+
 template <typename AlleleType, typename RegionType>
 boost::optional<AlleleType>
-make_allele(const VcfRecord& call, VcfRecord::NucleotideSequence allele_sequence, const int max_ref_pad,
-            const boost::optional<RegionType>& upstream_region = boost::none)
+make_allele(const VcfRecord& call, VcfRecord::NucleotideSequence allele_sequence, 
+            const int max_ref_pad = 0,
+            const boost::optional<RegionType>& upstream_defined_region = boost::none,
+            const boost::optional<RegionType>& downstream_defined_region = boost::none)
 {
     if (is_missing(allele_sequence)) {
         return boost::none;
     } else {
         auto region = get_region(call, RegionType {});
         if (is_delete_masked(allele_sequence)) {
-            if (upstream_region && overlaps(region, *upstream_region)) {
-                const auto num_defined_bases = static_cast<std::size_t>(overlap_size(region, *upstream_region));
-                if (num_defined_bases >= call.ref().size()) {
+            if ((upstream_defined_region && overlaps(region, *upstream_defined_region))
+             || (downstream_defined_region && overlaps(region, *downstream_defined_region))) {
+                const auto num_upstream_defined_bases = upstream_defined_region ? static_cast<std::size_t>(overlap_size(region, *upstream_defined_region)) : std::size_t {0};
+                const auto num_downstream_defined_bases = downstream_defined_region ? static_cast<std::size_t>(overlap_size(region, *downstream_defined_region)) : std::size_t {0};
+                if (num_upstream_defined_bases + num_downstream_defined_bases >= call.ref().size()) {
                     allele_sequence.clear();
-                    region = expand_lhs(region, -1);
+                    region = head_region(region);
                 } else {
                     allele_sequence = call.ref();
-                    allele_sequence.erase(std::cbegin(allele_sequence), std::next(std::cbegin(allele_sequence), num_defined_bases));
-                    region = right_overhang_region(region, *upstream_region);
+                    allele_sequence.erase(std::cbegin(allele_sequence), std::next(std::cbegin(allele_sequence), num_upstream_defined_bases));
+                    allele_sequence.erase(std::prev(std::cend(allele_sequence), num_downstream_defined_bases), std::cend(allele_sequence));
+                    region = expand(region, -static_cast<GenomicRegion::Distance>(num_upstream_defined_bases), -static_cast<GenomicRegion::Distance>(num_downstream_defined_bases));
                 }
             } else {
                 allele_sequence.clear();
                 region = head_region(region);
             }
+        } else if (allele_sequence == call.ref() && upstream_defined_region && overlaps(region, *upstream_defined_region)) {
+            const auto num_upstream_defined_bases = static_cast<std::size_t>(overlap_size(region, *upstream_defined_region));
+            allele_sequence.erase(std::cbegin(allele_sequence), std::next(std::cbegin(allele_sequence), num_upstream_defined_bases));
+            region = right_overhang_region(region, *upstream_defined_region);
         } else if (max_ref_pad > 0) {
             auto p = std::mismatch(std::cbegin(call.ref()), std::next(std::cbegin(call.ref()), max_ref_pad),
                                    std::cbegin(allele_sequence), std::cend(allele_sequence));
@@ -140,9 +172,52 @@ make_allele(const VcfRecord& call, VcfRecord::NucleotideSequence allele_sequence
     }
 }
 
-auto extract_genotype(const VcfRecord& call, const SampleName& sample, const ReferenceGenome& reference,
-                      const boost::optional<ContigRegion>& upstream_region = boost::none)
+template <typename RegionType, typename Iterator, typename UnaryOperator>
+auto get_defined_region(const Iterator first_call, const Iterator last_call, 
+                        const SampleName& sample,
+                        UnaryOperator call_getter)
 {
+    boost::optional<RegionType> result {};
+    std::for_each(first_call, last_call, [&] (const auto& c) {
+        const auto& call = call_getter(c);
+        const auto& genotype = call.genotype(sample);
+        for (const auto& allele_idx : genotype) {
+            const auto& allele = get_allele(call, allele_idx);
+            if (!is_missing(allele) && !is_delete_masked(allele)) {
+                if (result) {
+                    result = closed_region(*result, get_region(call, RegionType {}));
+                } else {
+                    result = get_region(call, RegionType {});
+                }
+            }
+        }
+    });
+    return result;
+}
+
+template <typename RegionType, typename Iterator, typename UnaryOperator>
+auto get_overlapped_defined_region(const Iterator first_call, const Iterator last_call, 
+                                   const SampleName& sample,
+                                   const VcfRecord& target,
+                                   UnaryOperator call_getter)
+{
+    const auto overlapped_calls = overlap_range(first_call, last_call, target);
+    return get_defined_region<RegionType>(std::cbegin(overlapped_calls), std::cend(overlapped_calls), sample, call_getter);
+}
+
+template <typename RegionType, typename Iterator>
+auto get_overlapped_defined_region(const Iterator first_call, const Iterator last_call, 
+                                   const SampleName& sample,
+                                   const VcfRecord& target)
+{
+    return get_overlapped_defined_region<RegionType>(first_call, last_call, sample, target, [] (const auto& call) { return call; });
+}
+
+auto extract_genotype(const std::size_t call_idx, const SampleName& sample,
+                      const std::vector<CallWrapper>& calls, 
+                      const ReferenceGenome& reference)
+{
+    const VcfRecord& call {calls[call_idx].call};
     if (is_refcall(call)) {
         auto refallele = demote(make_reference_allele(mapped_region(call), reference));
         return std::vector<boost::optional<ContigAllele>>(call.ploidy(sample), refallele);
@@ -153,8 +228,11 @@ auto extract_genotype(const VcfRecord& call, const SampleName& sample, const Ref
     if (ploidy == 0) return result;
     boost::optional<int> max_ref_pad {};
     std::vector<std::size_t> unknown_pad_indices {};
-    for (std::size_t i {0}; i < ploidy; ++i) {
-        auto& allele = genotype[i];
+    const static auto call_wrapper_get = [] (const auto& call) { return call.get(); };
+    const auto upstream_defined_region = get_overlapped_defined_region<ContigRegion>(std::cbegin(calls), std::next(std::cbegin(calls), call_idx), sample, call, call_wrapper_get);
+    const auto downstream_defined_region = get_overlapped_defined_region<ContigRegion>(std::next(std::cbegin(calls), call_idx + 1), std::cend(calls), sample, call, call_wrapper_get);
+    for (std::size_t genotype_idx {0}; genotype_idx < ploidy; ++genotype_idx) {
+        auto& allele = genotype[genotype_idx];
         if (is_ref_pad_size_known(allele, call)) {
             const auto allele_pad = num_matching_lhs_bases(call.ref(), allele);
             if (max_ref_pad) {
@@ -162,16 +240,16 @@ auto extract_genotype(const VcfRecord& call, const SampleName& sample, const Ref
             } else {
                 max_ref_pad = allele_pad;
             }
-            result[i] = make_allele<ContigAllele>(call, std::move(allele), allele_pad, upstream_region);
+            result[genotype_idx] = make_allele<ContigAllele>(call, std::move(allele), allele_pad, upstream_defined_region, downstream_defined_region);
         } else {
-            unknown_pad_indices.push_back(i);
+            unknown_pad_indices.push_back(genotype_idx);
         }
     }
     if (!max_ref_pad) {
         max_ref_pad = has_non_complex_indel(call) ? 1 : 0;
     }
-    for (auto idx : unknown_pad_indices) {
-        result[idx] = make_allele<ContigAllele>(call, std::move(genotype[idx]), *max_ref_pad, upstream_region);
+    for (auto genotype_idx : unknown_pad_indices) {
+        result[genotype_idx] = make_allele<ContigAllele>(call, std::move(genotype[genotype_idx]), *max_ref_pad, upstream_defined_region, downstream_defined_region);
     }
     return result;
 }
@@ -196,7 +274,7 @@ bool is_missing_or_spanning_deletion(const VcfRecord::AlleleIndex index, const V
 } // namespace
 
 std::vector<boost::optional<Allele>>
-get_resolved_alleles(const std::vector<VcfRecord>& calls, 
+get_resolved_alleles(const std::vector<VcfRecord>& calls,
                      const std::size_t call_idx,
                      const VcfRecord::SampleName& sample,
                      const ReferencePadPolicy ref_pad_policy)
@@ -205,10 +283,8 @@ get_resolved_alleles(const std::vector<VcfRecord>& calls,
     const auto& call = calls[call_idx];
     const auto& gt = call.genotype(sample);
     const auto call_region = mapped_region(call);
-    boost::optional<GenomicRegion> defined_region {};
-    if (call_idx > 0) {
-        defined_region = encompassing_region(std::cbegin(calls), std::next(std::cbegin(calls), call_idx));
-    }
+    const auto upstream_defined_region = get_overlapped_defined_region<GenomicRegion>(std::cbegin(calls), std::next(std::cbegin(calls), call_idx), sample, call);
+    const auto downstream_defined_region = get_overlapped_defined_region<GenomicRegion>(std::next(std::cbegin(calls), call_idx + 1), std::cend(calls), sample, call);
     std::vector<boost::optional<Allele>> result(1 + call.alt().size());
     if (ref_pad_policy != ReferencePadPolicy::leave) {
         std::vector<std::pair<VcfRecord::AlleleIndex, Allele::NucleotideSequence>> unique_alleles {};
@@ -231,7 +307,7 @@ get_resolved_alleles(const std::vector<VcfRecord>& calls,
                 } else {
                     max_ref_pad = pad_size;
                 }
-                result[unique_alleles[idx].first] = make_allele<Allele>(call, std::move(allele), pad_size, defined_region);
+                result[unique_alleles[idx].first] = make_allele<Allele>(call, std::move(allele), pad_size, upstream_defined_region, downstream_defined_region);
             } else {
                 unknwown_pad_allele_indices.push_back(idx);
             }
@@ -241,12 +317,12 @@ get_resolved_alleles(const std::vector<VcfRecord>& calls,
         }
         for (const auto idx : unknwown_pad_allele_indices) {
             auto& allele = unique_alleles[idx].second;
-            result[unique_alleles[idx].first] = make_allele<Allele>(call, std::move(allele), *max_ref_pad, defined_region);
+            result[unique_alleles[idx].first] = make_allele<Allele>(call, std::move(allele), *max_ref_pad, upstream_defined_region, downstream_defined_region);
         }
     } else {
         for (const auto allele_index : gt) {
             if (!result[allele_index] && !is_missing(allele_index, call)) {
-                result[allele_index] = make_allele<Allele>(call, get_allele(call, allele_index), 0, defined_region);
+                result[allele_index] = make_allele<Allele>(call, get_allele(call, allele_index), 0, upstream_defined_region, downstream_defined_region);
             }
         }
     }
@@ -254,29 +330,6 @@ get_resolved_alleles(const std::vector<VcfRecord>& calls,
 }
 
 namespace {
-
-auto extract_phase_region(const VcfRecord& call, const SampleName& sample)
-{
-    auto result = get_phase_region(call, sample);
-    if (result) return *result;
-    return GenomicRegion {call.chrom(), contig_region(call)};
-}
-
-struct CallWrapper : public Mappable<CallWrapper>
-{
-    CallWrapper(const VcfRecord& record, GenomicRegion phase_region)
-    : call {std::cref(record)}
-    , phase_region {std::move(phase_region)}
-    {}
-    CallWrapper(const VcfRecord& record, const SampleName& sample)
-    : CallWrapper {record, extract_phase_region(record, sample)}
-    {}
-    
-    std::reference_wrapper<const VcfRecord> call;
-    GenomicRegion phase_region;
-    const GenomicRegion& mapped_region() const noexcept { return phase_region; }
-    const VcfRecord& get() const noexcept { return call.get(); }
-};
 
 auto wrap_calls(const std::vector<VcfRecord>& calls, const SampleName& sample)
 {
@@ -353,19 +406,13 @@ extract_genotype(const std::vector<CallWrapper>& phased_calls,
     assert(contains(region, encompassing_region(phased_calls)));
     const auto max_ploidy = get_max_ploidy(phased_calls, sample);
     std::vector<Haplotype::Builder> haplotypes(max_ploidy, Haplotype::Builder {region, reference});
-    boost::optional<ContigRegion> defined_region {};
-    for (const auto& call : phased_calls) {
-        auto genotype = extract_genotype(call.call, sample, reference, defined_region);
+    for (std::size_t call_idx {0}; call_idx < phased_calls.size(); ++call_idx) {
+        auto genotype = extract_genotype(call_idx, sample, phased_calls, reference);
         assert(genotype.size() <= max_ploidy);
         for (unsigned i {0}; i < genotype.size(); ++i) {
             if (genotype[i] && haplotypes[i].can_push_back(*genotype[i])) {
                 haplotypes[i].push_back(std::move(*genotype[i]));
             }
-        }
-        if (defined_region) {
-            defined_region = closed_region(*defined_region, contig_region(call));
-        } else {
-            defined_region = contig_region(call);
         }
     }
     return make_genotype(std::move(haplotypes));
