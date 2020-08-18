@@ -102,7 +102,6 @@ Measure::ResultType DuplicateAlleleDepth::do_evaluate(const VcfRecord& call, con
                             if (num_dups > 1) --num_dups; // One 'duplicate' read is not actually a duplicate
                             result += num_dups;
                         }
-                        if (result < 0) result = 0;
                         return result;
                     };
                     result[s][a] = compute_duplicate_support(*sample_alleles[a]);
