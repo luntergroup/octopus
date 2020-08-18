@@ -141,10 +141,11 @@ make_allele(const VcfRecord& call, VcfRecord::NucleotideSequence allele_sequence
     } else {
         auto region = get_region(call, RegionType {});
         if (is_delete_masked(allele_sequence)) {
-            if ((upstream_defined_region && overlaps(region, *upstream_defined_region))
-             || (downstream_defined_region && overlaps(region, *downstream_defined_region))) {
-                const auto num_upstream_defined_bases = upstream_defined_region ? static_cast<std::size_t>(overlap_size(region, *upstream_defined_region)) : std::size_t {0};
-                const auto num_downstream_defined_bases = downstream_defined_region ? static_cast<std::size_t>(overlap_size(region, *downstream_defined_region)) : std::size_t {0};
+            const bool consider_upstream {upstream_defined_region && overlaps(region, *upstream_defined_region)};
+            const bool consider_downstream {downstream_defined_region && overlaps(region, *downstream_defined_region)};
+            if (consider_upstream || consider_downstream) {
+                const auto num_upstream_defined_bases = consider_upstream ? static_cast<std::size_t>(overlap_size(region, *upstream_defined_region)) : std::size_t {0};
+                const auto num_downstream_defined_bases = consider_downstream ? static_cast<std::size_t>(overlap_size(region, *downstream_defined_region)) : std::size_t {0};
                 if (num_upstream_defined_bases + num_downstream_defined_bases >= call.ref().size()) {
                     allele_sequence.clear();
                     region = head_region(region);
