@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
 
 import os
-import os.path
 import sys
+from pathlib import Path
 from subprocess import call, check_output
 import platform
 import distro
 import argparse
-from shutil import move, rmtree, copyfileobj
+import shutil
 import multiprocessing
 import urllib.request
 import gzip
 
-google_cloud_octopus_base = "https://storage.googleapis.com/luntergroup/octopus"
-forest_url_base = os.path.join(google_cloud_octopus_base, "forests")
+google_cloud_octopus_base = Path("https://storage.googleapis.com/luntergroup/octopus")
+forest_url_base = google_cloud_octopus_base / "forests"
 forests = ['germline', 'somatic']
 
 latest_llvm = 'llvm'
@@ -52,9 +52,9 @@ def to_short_version_str(version):
     return res
 
 def get_octopus_version(octopus_build_dir):
-    cmake_generated_dir = os.path.join(octopus_build_dir, 'generated')
-    cmake_version_header = os.path.join(cmake_generated_dir, "version.hpp")
-    header = open(cmake_version_header).read().splitlines()
+    cmake_generated_dir = octopus_build_dir / 'generated'
+    cmake_version_header = cmake_generated_dir / "version.hpp"
+    header = cmake_version_header.open().read().splitlines()
     result = Version()
     for line in header:
         tokens = line.split()
@@ -111,7 +111,7 @@ def download_homebrew():
     git_clone('https://github.com/Homebrew/brew')
 
 def is_old_brew_config_git(brew_bin):
-    brew_config = check_output([brew_bin, 'config']).decode("utf-8").split()
+    brew_config = check_output([str(brew_bin), 'config']).decode("utf-8").split()
     if 'Git:' in brew_config:
         brew_git_version = tuple(int(v) for v in brew_config[brew_config.index('Git:') + 1].split('.'))
         return brew_git_version < required_git_version
@@ -122,7 +122,7 @@ def which(program):
     return check_output(['which', program]).decode("utf-8").strip()
 
 def git_version(git_bin):
-    return tuple([int(v) for v in check_output([git_bin, '--version']).decode("utf-8").strip().split()[-1].split('.')])
+    return tuple([int(v) for v in check_output([str(git_bin), '--version']).decode("utf-8").strip().split()[-1].split('.')])
 
 def hack_old_brewed_git():
     env_git = which('git')
@@ -134,35 +134,35 @@ def hack_old_brewed_git():
         os.environ["HOMEBREW_NO_ENV_FILTERING"] = "1"
 
 def gcc_version(gcc_bin):
-    return tuple(int(v) for v in check_output([gcc_bin, '-dumpversion']).decode("utf-8").strip().split('.'))
+    return tuple(int(v) for v in check_output([str(gcc_bin), '-dumpversion']).decode("utf-8").strip().split('.'))
 
 def hack_centos6_brewed_gcc(brew_bin_dir):
     # See https://github.com/Homebrew/linuxbrew-core/issues/4803
     # and https://github.com/Homebrew/linuxbrew-core/issues/4077
     # and https://github.com/Linuxbrew/brew/wiki/Symlink-GCC
     try:
-        os.symlink(which('gcc'), os.path.join(brew_bin_dir, 'gcc-' + '.'.join(str(v) for v in gcc_version(which('gcc'))[:2])))
-        os.symlink(which('g++'), os.path.join(brew_bin_dir, 'g++-' + '.'.join(str(v) for v in gcc_version(which('g++'))[:2])))
-        os.symlink(which('gfortran'), os.path.join(brew_bin_dir, 'gfortran-' + '.'.join(str(v) for v in gcc_version(which('gfortran'))[:2])))
+        os.symlink(which('gcc'), brew_bin_dir / ('gcc-' + '.'.join(str(v) for v in gcc_version(which('gcc'))[:2])))
+        os.symlink(which('g++'), brew_bin_dir / ('g++-' + '.'.join(str(v) for v in gcc_version(which('g++'))[:2])))
+        os.symlink(which('gfortran'), brew_bin_dir / ('gfortran-' + '.'.join(str(v) for v in gcc_version(which('gfortran'))[:2])))
     except FileExistsError:
         return
 
 def init_homebrew(brew_bin_dir):
-    brew_bin = os.path.join(brew_bin_dir, 'brew')
+    brew_bin = brew_bin_dir / 'brew'
     if is_old_brew_config_git(brew_bin):
         hack_old_brewed_git()
     if is_centos((6,)):
         hack_centos6_brewed_gcc(brew_bin_dir)
-    call([brew_bin, 'update'])
+    call([str(brew_bin), 'update'])
 
 def install_homebrew(build_dir):
-    brew_dir = os.path.join(build_dir, get_homebrew_name())
-    if not os.path.exists(brew_dir):
+    brew_dir = build_dir / get_homebrew_name()
+    if not brew_dir.exists():
         download_homebrew()
-    brew_bin_dir = os.path.join(brew_dir, 'bin')
-    os.environ['PATH']= brew_bin_dir + os.pathsep + os.path.join(brew_dir, 'sbin') + os.pathsep + os.environ['PATH']
+    brew_bin_dir = brew_dir / 'bin'
+    os.environ['PATH'] = os.pathsep.join([str(brew_bin_dir), str(brew_dir / 'sbin'), os.environ['PATH']])
     init_homebrew(brew_bin_dir)
-    return os.path.join(brew_bin_dir, 'brew') # brew binary
+    return brew_bin_dir / 'brew' # brew binary
 
 def get_glibc_version():
     try:
@@ -190,69 +190,69 @@ def get_required_dependencies():
     return compiled, recompile
 
 def get_brewed_compiler_binaries(homebrew_dir):
-    cellar_dir = os.path.join(homebrew_dir, 'Cellar')
+    cellar_dir = homebrew_dir / 'Cellar'
     if is_osx():
-        llvm_dir = os.path.join(cellar_dir, latest_llvm)
-        llvm_version = os.listdir(llvm_dir)[0]
-        llvm_bin_dir = os.path.join(llvm_dir, os.path.join(llvm_version, 'bin'))
-        return os.path.join(llvm_bin_dir, 'clang'), os.path.join(llvm_bin_dir, 'clang++')
+        llvm_dir = cellar_dir / latest_llvm
+        llvm_version = os.listdir(str(llvm_dir))[0]
+        llvm_bin_dir = llvm_dir / llvm_version / 'bin'
+        return llvm_bin_dir / 'clang', llvm_bin_dir / 'clang++'
     else:
-        gcc_dir = os.path.join(cellar_dir, latest_gcc)
-        gcc_version = os.listdir(gcc_dir)[0]
-        gcc_bin_dir = os.path.join(gcc_dir, os.path.join(gcc_version, 'bin'))
+        gcc_dir = cellar_dir / latest_gcc
+        gcc_version = os.listdir(str(gcc_dir))[0]
+        gcc_bin_dir = gcc_dir /gcc_version / 'bin'
         gcc_bin_name = latest_gcc.replace('@', '-')
         gxx_bin_name =  gcc_bin_name.replace('cc', '++')
-        return os.path.join(gcc_bin_dir, gcc_bin_name), os.path.join(gcc_bin_dir, gxx_bin_name)
+        return gcc_bin_dir / gcc_bin_name, gcc_bin_dir / gxx_bin_name
 
 def patch_homebrew_centos_gcc9(homebrew_dir):
-    homebrew_bin_dir = os.path.join(homebrew_dir, 'bin')
-    patchelf_bin = os.path.join(homebrew_bin_dir, 'patchelf')
-    homebrew_ld = os.path.join(homebrew_dir, 'lib/ld.so')
-    gcc_dir = os.path.join(homebrew_dir, 'Cellar/' + latest_gcc)
-    gcc_version = os.listdir(gcc_dir)[0]
-    gcc_dir = os.path.join(gcc_dir, gcc_version)
-    gcc_bin_dir = os.path.join(gcc_dir, 'bin')
-    bins = [os.path.join(gcc_bin_dir, ex) for ex in os.listdir(gcc_bin_dir)]
+    homebrew_bin_dir = homebrew_dir / 'bin'
+    patchelf_bin = homebrew_bin_dir / 'patchelf'
+    homebrew_ld = homebrew_dir / 'lib' / 'ld.so'
+    gcc_dir = homebrew_dir / 'Cellar' / latest_gcc
+    gcc_version = os.listdir(str(gcc_dir))[0]
+    gcc_dir = gcc_dir / gcc_version
+    gcc_bin_dir = gcc_dir / 'bin'
+    bins = [str(gcc_bin_dir / ex) for ex in os.listdir(str(gcc_bin_dir))]
     for b in bins: os.chmod(b, 0o755)
-    call([patchelf_bin, "--set-interpreter", homebrew_ld] + bins)
+    call([str(patchelf_bin), "--set-interpreter", str(homebrew_ld)] + bins)
     for b in bins: os.chmod(b, 0o555)
-    libexec_dir = os.path.join(gcc_dir, 'libexec/gcc/x86_64-pc-linux-gnu/' + gcc_version)
+    libexec_dir = gcc_dir / 'libexec' / 'gcc' / 'x86_64-pc-linux-gnu' / gcc_version
     libexec_libs = ['cc1', 'cc1obj', 'cc1objplus', 'cc1plus', 'collect2', 'f951', 'lto1', 'lto-wrapper', 'plugin/gengtype', 'install-tools/fixincl']
-    libexec_libs = [os.path.join(libexec_dir, f) for f in libexec_libs]
-    call([patchelf_bin, "--set-interpreter", homebrew_ld] + libexec_libs)
+    libexec_libs = [str(libexec_dir / f) for f in libexec_libs]
+    call([str(patchelf_bin), "--set-interpreter", str(homebrew_ld)] + libexec_libs)
 
 def install_dependencies(build_dir):
     brew_bin = install_homebrew(build_dir)
     compiled_dependencies, recompile_dependencies = get_required_dependencies()
-    if call([brew_bin, 'install'] + compiled_dependencies) == 0 and \
-            call([brew_bin, 'install', '--build-from-source'] + recompile_dependencies) == 0:
-        dependencies_dir = os.path.join(build_dir, get_homebrew_name())
+    if call([str(brew_bin), 'install'] + compiled_dependencies) == 0 and \
+            call([str(brew_bin), 'install', '--build-from-source'] + recompile_dependencies) == 0:
+        dependencies_dir = build_dir / get_homebrew_name()
         if is_centos(): patch_homebrew_centos_gcc9(dependencies_dir)
         cc, cxx = get_brewed_compiler_binaries(dependencies_dir)
-        binaries = {'cmake': os.path.join(dependencies_dir, 'bin/cmake'),
+        binaries = {'cmake': dependencies_dir / 'bin' / 'cmake',
                     'c_compiler': cc, 'cxx_compiler': cxx}
         return dependencies_dir, binaries
     else:
         return None, None
 
 def unzip_gz(filename, out_filename=None):
-    with gzip.open(filename, 'rb') as f_in:
+    with gzip.open(str(filename), 'rb') as f_in:
         if out_filename is None:
             if filename.endswith('.gz'):
                 out_filename = filename[:-3]
             else:
                 out_filename = filename + '_unzipped'
-        with open(filename, 'wb') as f_out:
-            copyfileobj(f_in, f_out)
+        with filename.open(mode='wb') as f_out:
+            shutil.copyfileobj(f_in, f_out)
 
 def download_forests(forest_dir, version):
-    if not os.path.exists(forest_dir):
+    if not forest_dir.exists():
         print("No forest directory found, making one")
         os.makedirs(forest_dir)
     for forest in forests:
         forest_name = forest + '.v' + to_short_version_str(version) + '.forest.gz'
-        forest_url = os.path.join(forest_url_base, forest_name)
-        forest_file = os.path.join(forest_dir, forest_name)
+        forest_url = forest_url_base / forest_name
+        forest_file = forest_dir / forest_name
         try:
             print("Downloading " + forest_url + " to " + forest_file)
             download_file(forest_url, forest_file)
@@ -261,38 +261,38 @@ def download_forests(forest_dir, version):
             print("Failed to download forest " + forest_name)
 
 def main(args):
-    script_dir = os.path.dirname(os.path.realpath(__file__))
-    octopus_dir = os.path.dirname(script_dir)
-    root_cmake = os.path.join(octopus_dir, "CMakeLists.txt")
-
-    if not os.path.exists(root_cmake):
+    script_dir = Path(__file__).resolve().parent
+    octopus_dir = script_dir.parent
+    root_cmake = octopus_dir / "CMakeLists.txt"
+    
+    if not root_cmake.exists():
         print("octopus source directory corrupted: root CMakeLists.txt is missing. Please re-download source code.")
         exit(1)
 
-    octopus_build_dir = os.path.join(octopus_dir, "build")
+    octopus_build_dir = octopus_dir / "build"
 
-    if not os.path.exists(octopus_build_dir):
+    if not octopus_build_dir.exists():
         print("octopus source directory corrupted: build directory is missing. Please re-download source code.")
         exit(1)
 
-    bin_dir = os.path.join(octopus_dir, "bin")
+    bin_dir = octopus_dir / "bin"
 
-    if not os.path.exists(bin_dir):
+    if not bin_dir.exists():
         print("No bin directory found, making one")
-        os.makedirs(bin_dir)
+        bin_dir.mkdir(parents=True)
 
     if args["clean"]:
         print("Cleaning build directory")
-        move(os.path.join(octopus_build_dir, "cmake"), os.path.join(octopus_dir, "cmake"))
-        rmtree(octopus_build_dir)
-        os.makedirs(octopus_build_dir)
-        move(os.path.join(octopus_dir, "cmake"), os.path.join(octopus_build_dir, "cmake"))
+        (octopus_build_dir / "cmake").rename(octopus_dir / "cmake")
+        shutil.rmtree(str(octopus_build_dir))
+        octopus_build_dir.mkdir(parents=True)
+        (octopus_dir / "cmake").rename(octopus_build_dir / "cmake")
 
-    cmake_cache_file = "CMakeCache.txt"
-    os.chdir(octopus_build_dir) # so cmake doesn't pollute root directory
+    cmake_cache_file = Path("CMakeCache.txt")
+    os.chdir(str(octopus_build_dir)) # so cmake doesn't pollute root directory
 
-    if not args["keep_cache"] and os.path.exists(cmake_cache_file):
-        os.remove(cmake_cache_file)
+    if not args["keep_cache"] and cmake_cache_file.exists():
+        cmake_cache_file.unlink()
 
     dependencies_dir, dependencies_binaries = None, None
     if args["dependencies"]:
@@ -300,7 +300,7 @@ def main(args):
 
     cmake_options = []
     if args["prefix"]:
-        cmake_options.append("-DCMAKE_INSTALL_PREFIX=" + args["prefix"])
+        cmake_options.append("-DCMAKE_INSTALL_PREFIX=" + str(args["prefix"]))
     if args["debug"]:
         cmake_options.append("-DCMAKE_BUILD_TYPE=Debug")
     elif args["sanitize"]:
@@ -313,47 +313,47 @@ def main(args):
         cmake_options.append("-DCMAKE_VERBOSE_MAKEFILE:BOOL=ON")
     if dependencies_dir is not None:
         if args["c_compiler"]:
-            cmake_options.append("-DCMAKE_C_COMPILER=" + args["c_compiler"])
+            cmake_options.append("-DCMAKE_C_COMPILER=" + str(args["c_compiler"]))
         else:
-            cmake_options.append("-DCMAKE_C_COMPILER=" + dependencies_binaries["c_compiler"])
+            cmake_options.append("-DCMAKE_C_COMPILER=" + str(dependencies_binaries["c_compiler"]))
         if args["cxx_compiler"]:
-            cmake_options.append("-DCMAKE_CXX_COMPILER=" + args["cxx_compiler"])
+            cmake_options.append("-DCMAKE_CXX_COMPILER=" + str(args["cxx_compiler"]))
         else:
-            cmake_options.append("-DCMAKE_CXX_COMPILER=" + dependencies_binaries["cxx_compiler"])
+            cmake_options.append("-DCMAKE_CXX_COMPILER=" + str(dependencies_binaries["cxx_compiler"]))
         if args["boost"]:
-            cmake_options.append("-DBOOST_ROOT=" + args["boost"])
+            cmake_options.append("-DBOOST_ROOT=" + str(args["boost"]))
             cmake_options.append("-DBoost_NO_BOOST_CMAKE=TRUE")
             cmake_options.append("-DBoost_NO_SYSTEM_PATHS=TRUE")
         else:
-            cmake_options.append("-DBOOST_ROOT=" + dependencies_dir)
+            cmake_options.append("-DBOOST_ROOT=" + str(dependencies_dir))
             cmake_options.append("-DBoost_NO_BOOST_CMAKE=TRUE")
             cmake_options.append("-DBoost_NO_SYSTEM_PATHS=TRUE")
         if args["htslib"]:
-            cmake_options.append("-DHTSLIB_ROOT=" + args["htslib"])
+            cmake_options.append("-DHTSLIB_ROOT=" + str(args["htslib"]))
             cmake_options.append("-DHTSlib_NO_SYSTEM_PATHS=TRUE")
         else:
-            cmake_options.append("-DHTSLIB_ROOT=" + dependencies_dir)
+            cmake_options.append("-DHTSLIB_ROOT=" + str(dependencies_dir))
             cmake_options.append("-DHTSlib_NO_SYSTEM_PATHS=TRUE")
         if args["gmp"]:
-            cmake_options.append("-DGMP_ROOT=" + args["gmp"])
+            cmake_options.append("-DGMP_ROOT=" + str(args["gmp"]))
         else:
-            cmake_options.append("-DGMP_ROOT=" + dependencies_dir)
+            cmake_options.append("-DGMP_ROOT=" + str(dependencies_dir))
 
-        ret = call([dependencies_binaries['cmake']] + cmake_options + [".."])
+        ret = call([str(dependencies_binaries['cmake'])] + cmake_options + [".."])
     else:
         if args["c_compiler"]:
-            cmake_options.append("-DCMAKE_C_COMPILER=" + args["c_compiler"])
+            cmake_options.append("-DCMAKE_C_COMPILER=" + str(args["c_compiler"]))
         if args["cxx_compiler"]:
-            cmake_options.append("-DCMAKE_CXX_COMPILER=" + args["cxx_compiler"])
+            cmake_options.append("-DCMAKE_CXX_COMPILER=" + str(args["cxx_compiler"]))
         if args["boost"]:
-            cmake_options.append("-DBOOST_ROOT=" + args["boost"])
+            cmake_options.append("-DBOOST_ROOT=" + str(args["boost"]))
             cmake_options.append("-DBoost_NO_BOOST_CMAKE=TRUE")
             cmake_options.append("-DBoost_NO_SYSTEM_PATHS=TRUE")
         if args["htslib"]:
-            cmake_options.append("-DHTSLIB_ROOT=" + args["htslib"])
+            cmake_options.append("-DHTSLIB_ROOT=" + str(args["htslib"]))
             cmake_options.append("-DHTSlib_NO_SYSTEM_PATHS=TRUE")
         if args["gmp"]:
-            cmake_options.append("-DGMP_ROOT=" + args["gmp"])
+            cmake_options.append("-DGMP_ROOT=" + str(args["gmp"]))
 
         try:
             # CMake version 3 is called cmake3 in CentOS (see https://github.com/luntergroup/octopus/issues/37).
@@ -379,7 +379,7 @@ def main(args):
 
         if args["forests"]:
             if len(forests) > 0:
-                forest_dir = os.path.join(octopus_dir, "resources/forests")
+                forest_dir = octopus_dir / "resources " / "forests"
                 download_forests(forest_dir, octopus_version)
 
     sys.exit(ret)
@@ -388,7 +388,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--prefix',
                         required=False,
-                        type=str,
+                        type=Path,
                         help='Install into given location')
     parser.add_argument('-D', '--dependencies',
                         default=False,
@@ -400,11 +400,11 @@ if __name__ == '__main__':
                         action='store_true')
     parser.add_argument('-c', '--c_compiler',
                         required=False,
-                        type=str,
+                        type=Path,
                         help='C compiler path to use')
     parser.add_argument('-cxx', '--cxx_compiler',
                         required=False,
-                        type=str,
+                        type=Path,
                         help='C++ compiler path to use')
     parser.add_argument('--keep_cache',
                         default=False,
@@ -427,15 +427,15 @@ if __name__ == '__main__':
                         type=int)
     parser.add_argument('--boost',
                         required=False,
-                        type=str,
+                        type=Path,
                         help='The Boost library root')
     parser.add_argument('--htslib',
                         required=False,
-                        type=str,
+                        type=Path,
                         help='The HTSlib library root')
     parser.add_argument('--gmp',
                         required=False,
-                        type=str,
+                        type=Path,
                         help='The GMP library root')
     parser.add_argument('-F', '--forests',
                         default=False,
