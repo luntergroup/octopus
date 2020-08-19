@@ -72,7 +72,7 @@ OptionMap parse_options(const int argc, const char** argv)
      po::bool_switch()->default_value(false),
      "Replace all symlinks to their resolved targets")
     
-    ("threads",
+    ("threads,tentacles",
      po::value<int>()->implicit_value(0),
      "Maximum number of threads to be used. If no argument is provided unlimited threads are assumed")
     
