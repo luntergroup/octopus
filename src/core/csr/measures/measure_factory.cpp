@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "measure_factory.hpp"
@@ -44,7 +44,6 @@ void init(MeasureMakerMap& measure_makers)
     measure_makers[name<DeNovoContamination>()]         = [] () { return make_wrapped_measure<DeNovoContamination>(); };
     measure_makers[name<ReadSideBias>()]                = [] () { return make_wrapped_measure<ReadSideBias>(); };
     measure_makers[name<AltAlleleCount>()]              = [] () { return make_wrapped_measure<AltAlleleCount>(); };
-    measure_makers[name<OverlapsTandemRepeat>()]        = [] () { return make_wrapped_measure<OverlapsTandemRepeat>(); };
     measure_makers[name<STRLength>()]                   = [] () { return make_wrapped_measure<STRLength>(); };
     measure_makers[name<STRPeriod>()]                   = [] () { return make_wrapped_measure<STRPeriod>(); };
     measure_makers[name<PosteriorProbability>()]        = [] () { return make_wrapped_measure<PosteriorProbability>(); };
@@ -60,12 +59,16 @@ void init(MeasureMakerMap& measure_makers)
     measure_makers[name<VariantLength>()]               = [] () { return make_wrapped_measure<VariantLength>(); };
     measure_makers[name<BaseMismatchCount>()]           = [] () { return make_wrapped_measure<BaseMismatchCount>(); };
     measure_makers[name<BaseMismatchFraction>()]        = [] () { return make_wrapped_measure<BaseMismatchFraction>(); };
+    measure_makers[name<BaseMismatchQuality>()]         = [] () { return make_wrapped_measure<BaseMismatchQuality>(); };
     measure_makers[name<AssignedDepth>()]               = [] () { return make_wrapped_measure<AssignedDepth>(); };
     measure_makers[name<DuplicateConcordance>()]        = [] () { return make_wrapped_measure<DuplicateConcordance>(); };
     measure_makers[name<DuplicateAlleleDepth>()]        = [] () { return make_wrapped_measure<DuplicateAlleleDepth>(); };
     measure_makers[name<DuplicateAlleleFraction>()]     = [] () { return make_wrapped_measure<DuplicateAlleleFraction>(); };
     measure_makers[name<ErrorRate>()]                   = [] () { return make_wrapped_measure<ErrorRate>(); };
     measure_makers[name<ErrorRateStdev>()]              = [] () { return make_wrapped_measure<ErrorRateStdev>(); };
+    measure_makers[name<IsTransversion>()]              = [] () { return make_wrapped_measure<IsTransversion>(); };
+    measure_makers[name<PhaseLength>()]                 = [] () { return make_wrapped_measure<PhaseLength>(); };
+    measure_makers[name<MaxReadLength>()]               = [] () { return make_wrapped_measure<MaxReadLength>(); };
 }
 
 class BadParameterList : public UserError
@@ -137,6 +140,14 @@ MeasureWrapper make_measure(std::string name)
     if (!params.empty()) {
         result.set_parameters(std::move(params));
     }
+    return result;
+}
+
+std::vector<MeasureWrapper> make_measures(std::vector<std::string> names)
+{
+    std::vector<MeasureWrapper> result {};
+    result.reserve(names.size());
+    std::transform(std::cbegin(names), std::cend(names), std::back_inserter(result), make_measure);
     return result;
 }
 

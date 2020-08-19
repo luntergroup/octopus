@@ -35,12 +35,13 @@ public:
   Tree(const Tree&) = delete;
   Tree& operator=(const Tree&) = delete;
 
-  void init(const Data* data, uint mtry, size_t dependent_varID, size_t num_samples, uint seed,
+  void init(const Data* data, uint mtry, size_t num_samples, uint seed,
       std::vector<size_t>* deterministic_varIDs, std::vector<size_t>* split_select_varIDs,
       std::vector<double>* split_select_weights, ImportanceMode importance_mode, uint min_node_size,
       bool sample_with_replacement, bool memory_saving_splitting, SplitRule splitrule,
-      std::vector<double>* case_weights, bool keep_inbag, std::vector<double>* sample_fraction, double alpha,
-      double minprop, bool holdout, uint num_random_splits);
+      std::vector<double>* case_weights, std::vector<size_t>* manual_inbag, bool keep_inbag,
+      std::vector<double>* sample_fraction, double alpha, double minprop, bool holdout, uint num_random_splits,
+      uint max_depth);
 
   virtual void allocateMemory() = 0;
 
@@ -48,7 +49,8 @@ public:
 
   void predict(const Data* prediction_data, bool oob_prediction);
 
-  void computePermutationImportance(std::vector<double>& forest_importance, std::vector<double>& forest_variance);
+  void computePermutationImportance(std::vector<double>& forest_importance, std::vector<double>& forest_variance,
+      std::vector<double>& forest_importance_casewise);
 
   void appendToFile(std::ofstream& file);
   virtual void appendToFileInternal(std::ofstream& file) = 0;
@@ -86,8 +88,8 @@ protected:
   size_t dropDownSamplePermuted(size_t permuted_varID, size_t sampleID, size_t permuted_sampleID);
   void permuteAndPredictOobSamples(size_t permuted_varID, std::vector<size_t>& permutations);
 
-  virtual double computePredictionAccuracyInternal() = 0;
-
+  virtual double computePredictionAccuracyInternal(std::vector<double>* prediction_error_casewise) = 0;
+  
   void bootstrap();
   void bootstrapWithoutReplacement();
 
@@ -97,9 +99,10 @@ protected:
   virtual void bootstrapClassWise();
   virtual void bootstrapWithoutReplacementClassWise();
 
+  void setManualInbag();
+
   virtual void cleanUpInternal() = 0;
 
-  size_t dependent_varID;
   uint mtry;
 
   // Number of samples (all samples, not only inbag for this tree)
@@ -120,6 +123,9 @@ protected:
   // Bootstrap weights
   const std::vector<double>* case_weights;
 
+  // Pre-selected bootstrap samples
+  const std::vector<size_t>* manual_inbag;
+
   // Splitting variable for each node
   std::vector<size_t> split_varIDs;
 
@@ -130,8 +136,12 @@ protected:
   // Vector of left and right child node IDs, 0 for no child
   std::vector<std::vector<size_t>> child_nodeIDs;
 
-  // For each node a vector with IDs of samples in node
-  std::vector<std::vector<size_t>> sampleIDs;
+  // All sampleIDs in the tree, will be re-ordered while splitting
+  std::vector<size_t> sampleIDs;
+
+  // For each node a vector with start and end positions
+  std::vector<size_t> start_pos;
+  std::vector<size_t> end_pos;
 
   // IDs of OOB individuals, sorted
   std::vector<size_t> oob_sampleIDs;
@@ -165,6 +175,9 @@ protected:
   double alpha;
   double minprop;
   uint num_random_splits;
+  uint max_depth;
+  uint depth;
+  size_t last_left_nodeID;
 };
 
 } // namespace ranger

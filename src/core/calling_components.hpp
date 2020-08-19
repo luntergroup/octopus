@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef calling_components_hpp
@@ -64,6 +64,7 @@ public:
     const boost::optional<Path>& temp_directory() const noexcept;
     boost::optional<unsigned> num_threads() const noexcept;
     const HaplotypeLikelihoodModel& haplotype_likelihood_model() const noexcept;
+    HaplotypeLikelihoodModel realignment_haplotype_likelihood_model() const;
     const CallerFactory& caller_factory() const noexcept;
     boost::optional<VcfWriter&> filtered_output() noexcept;
     boost::optional<const VcfWriter&> filtered_output() const noexcept;
@@ -77,7 +78,7 @@ public:
     boost::optional<Path> filter_request() const;
     boost::optional<Path> bamout() const;
     BAMRealigner::Config bamout_config() const noexcept;
-    boost::optional<ReadSetProfile> reads_profile() const noexcept;
+    boost::optional<const ReadSetProfile&> reads_profile() const noexcept;
     boost::optional<Path> data_profile() const;
     IndelProfiler::ProfileConfig profiler_config() const;
     
@@ -105,6 +106,7 @@ private:
         boost::optional<ReadSetProfile> reads_profile;
         ReadPipe read_pipe;
         HaplotypeLikelihoodModel haplotype_likelihood_model;
+        HaplotypeLikelihoodModel realignment_haplotype_likelihood_model;
         CallerFactory caller_factory;
         boost::optional<ReadPipe> filter_read_pipe;
         VcfWriter output;

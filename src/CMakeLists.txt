@@ -36,6 +36,7 @@ set(CONCEPTS_SOURCES
     concepts/comparable.hpp
     concepts/mappable.hpp
     concepts/mappable_range.hpp
+    concepts/indexed.hpp
 )
 
 set(BASICS_SOURCES
@@ -196,6 +197,9 @@ set(UTILS_SOURCES
     utils/read_duplicates.hpp
     utils/read_duplicates.cpp
     utils/array_tricks.hpp
+    utils/reorder.hpp
+    utils/free_memory.hpp
+    utils/erase_if.hpp
 )
 
 set(CORE_SOURCES
@@ -235,8 +239,14 @@ set(CORE_SOURCES
     core/types/calls/denovo_reference_reversion_call.cpp
     core/types/calls/cell_variant_call.hpp
     core/types/calls/cell_variant_call.cpp
+    core/types/calls/polyclone_variant_call.hpp
+    core/types/calls/polyclone_variant_call.cpp
+    core/types/calls/cnv_call.hpp
+    core/types/calls/cnv_call.cpp
     core/types/calls/call_wrapper.hpp
     core/types/calls/call_wrapper.cpp
+    core/types/calls/call_utils.hpp
+    core/types/calls/call_utils.cpp
     core/tools/vcf_header_factory.hpp
     core/tools/vcf_header_factory.cpp
     core/tools/vcf_record_factory.hpp
@@ -260,6 +270,10 @@ set(CORE_SOURCES
     core/csr/facets/ploidies.cpp
     core/csr/facets/pedigree.hpp
     core/csr/facets/pedigree.cpp
+    core/csr/facets/repeat_context.hpp
+    core/csr/facets/repeat_context.cpp
+    core/csr/facets/reads_summary.hpp
+    core/csr/facets/reads_summary.cpp
     core/csr/facets/facet_factory.hpp
     core/csr/facets/facet_factory.cpp
 
@@ -357,8 +371,6 @@ set(CORE_SOURCES
     core/csr/measures/read_side_bias.cpp
     core/csr/measures/alt_allele_count.hpp
     core/csr/measures/alt_allele_count.cpp
-    core/csr/measures/overlaps_tandem_repeat.hpp
-    core/csr/measures/overlaps_tandem_repeat.cpp
     core/csr/measures/str_length.hpp
     core/csr/measures/str_length.cpp
     core/csr/measures/str_period.hpp
@@ -389,6 +401,8 @@ set(CORE_SOURCES
     core/csr/measures/base_mismatch_count.cpp
     core/csr/measures/base_mismatch_fraction.hpp
     core/csr/measures/base_mismatch_fraction.cpp
+    core/csr/measures/base_mismatch_quality.hpp
+    core/csr/measures/base_mismatch_quality.cpp
     core/csr/measures/assigned_depth.hpp
     core/csr/measures/assigned_depth.cpp
     core/csr/measures/duplicate_concordance.hpp
@@ -401,7 +415,13 @@ set(CORE_SOURCES
     core/csr/measures/error_rate.cpp
     core/csr/measures/error_rate_stdev.hpp
     core/csr/measures/error_rate_stdev.cpp
-
+    core/csr/measures/is_transversion.hpp
+    core/csr/measures/is_transversion.cpp
+    core/csr/measures/phase_length.hpp
+    core/csr/measures/phase_length.cpp
+    core/csr/measures/max_read_length.hpp
+    core/csr/measures/max_read_length.cpp
+    
     core/models/haplotype_likelihood_array.hpp
     core/models/haplotype_likelihood_array.cpp
     core/models/haplotype_likelihood_model.hpp
@@ -540,6 +560,8 @@ set(CORE_SOURCES
     core/types/variant.cpp
     core/types/phylogeny.hpp
     core/types/phylogeny.cpp
+    core/types/indexed_haplotype.hpp
+    core/types/shared_haplotype.hpp
 
     core/calling_components.hpp
     core/calling_components.cpp
@@ -591,6 +613,7 @@ set(WarningIgnores
     -Wno-unused-parameter
     -Wno-unused-function
     -Wno-missing-braces
+    -Wno-deprecated-copy
 )
 
 set(GCCWarningIgnores
@@ -624,6 +647,7 @@ set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
 set(THREADS_PREFER_PTHREAD_FLAG TRUE)
 
 if (NOT BUILD_SHARED_LIBS)
+    set(CMAKE_FIND_LIBRARY_SUFFIXES ".a" ${CMAKE_FIND_LIBRARY_SUFFIXES})
     set(HTSlib_USE_STATIC_LIBS ON)
 endif()
 
@@ -644,13 +668,15 @@ if (BUILD_TESTING)
     message(STATUS "Boost include dir: " ${Boost_INCLUDE_DIR})
     message(STATUS "Boost libraries: " ${Boost_LIBRARIES})
     find_package(GMP REQUIRED)
+    message(STATUS "GMP include dir: " ${GMP_INCLUDES})
+    message(STATUS "GMP libraries: " ${GMP_LIBRARIES})
     find_package (HTSlib 1.4 REQUIRED)
     find_package(Threads REQUIRED)
     target_include_directories (Octopus PUBLIC
         ${octopus_SOURCE_DIR}/lib
         ${octopus_SOURCE_DIR}/src
         ${Boost_INCLUDE_DIR}
-        ${GMP_INCLUDE_DIR}
+        ${GMP_INCLUDES}
         ${HTSlib_INCLUDE_DIRS})
     target_link_libraries (Octopus tandem ranger ${Boost_LIBRARIES} ${GMP_LIBRARIES} ${HTSlib_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
     check_ipo_supported(RESULT ipo_supported OUTPUT output)
@@ -681,13 +707,15 @@ elseif (CMAKE_BUILD_TYPE MATCHES Debug)
     message(STATUS "Boost include dir: " ${Boost_INCLUDE_DIR})
     message(STATUS "Boost libraries: " ${Boost_LIBRARIES})
     find_package(GMP REQUIRED)
+    message(STATUS "GMP include dir: " ${GMP_INCLUDES})
+    message(STATUS "GMP libraries: " ${GMP_LIBRARIES})
     find_package (HTSlib 1.4 REQUIRED)
     find_package(Threads REQUIRED)
     target_include_directories (octopus-debug PUBLIC
         ${octopus_SOURCE_DIR}/lib
         ${octopus_SOURCE_DIR}/src
         ${Boost_INCLUDE_DIR}
-        ${GMP_INCLUDE_DIR}
+        ${GMP_INCLUDES}
         ${HTSlib_INCLUDE_DIRS})
     target_link_libraries (octopus-debug tandem ranger ${Boost_LIBRARIES} ${GMP_LIBRARIES} ${HTSlib_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
     configure_file (
@@ -712,13 +740,15 @@ elseif (CMAKE_BUILD_TYPE MATCHES RelWithDebInfo)
     message(STATUS "Boost include dir: " ${Boost_INCLUDE_DIR})
     message(STATUS "Boost libraries: " ${Boost_LIBRARIES})
     find_package(GMP REQUIRED)
+    message(STATUS "GMP include dir: " ${GMP_INCLUDES})
+    message(STATUS "GMP libraries: " ${GMP_LIBRARIES})
     find_package (HTSlib 1.4 REQUIRED)
     find_package(Threads REQUIRED)
     target_include_directories (octopus-sanitize PUBLIC
         ${octopus_SOURCE_DIR}/lib
         ${octopus_SOURCE_DIR}/src
         ${Boost_INCLUDE_DIR}
-        ${GMP_INCLUDE_DIR}
+        ${GMP_INCLUDES}
         ${HTSlib_INCLUDE_DIRS})
     target_link_libraries (octopus-sanitize tandem ranger ${Boost_LIBRARIES} ${GMP_LIBRARIES} ${HTSlib_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${SanitizeFlags})
     configure_file (
@@ -742,15 +772,22 @@ else()
     message(STATUS "Boost include dir: " ${Boost_INCLUDE_DIR})
     message(STATUS "Boost libraries: " ${Boost_LIBRARIES})
     find_package(GMP REQUIRED)
+    message(STATUS "GMP include dir: " ${GMP_INCLUDES})
+    message(STATUS "GMP libraries: " ${GMP_LIBRARIES})
     find_package (HTSlib 1.4 REQUIRED)
     find_package(Threads REQUIRED)
     target_include_directories (octopus PUBLIC
         ${octopus_SOURCE_DIR}/lib
         ${octopus_SOURCE_DIR}/src
         ${Boost_INCLUDE_DIR}
-        ${GMP_INCLUDE_DIR}
+        ${GMP_INCLUDES}
         ${HTSlib_INCLUDE_DIRS})
     target_link_libraries (octopus tandem ranger ${Boost_LIBRARIES} ${GMP_LIBRARIES} ${HTSlib_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
+    if (NOT BUILD_SHARED_LIBS)
+        if (CMAKE_COMPILER_IS_GNUCXX)
+            target_link_libraries(octopus m mvec -static -static-libgcc -static-libstdc++)
+        endif()
+    endif()
     check_ipo_supported(RESULT ipo_supported OUTPUT output)
     if(ipo_supported)
         message(STATUS "IPO is supported!")

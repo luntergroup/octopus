@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "haplotype_filter.hpp"
@@ -375,10 +375,11 @@ filter_to_n(std::vector<Haplotype>& haplotypes, const std::vector<SampleName>& s
 
 std::vector<HaplotypeReference>
 extract_removable(const std::vector<Haplotype>& haplotypes,
-                  const HaplotypePosteriorMap& haplotype_posteriors,
+                  const HaplotypeReferenceProbabilityMap& haplotype_posteriors,
                   const std::vector<SampleName>& samples,
                   const HaplotypeLikelihoodArray& haplotype_likelihoods,
-                  const std::size_t max_to_remove, const double min_posterior)
+                  const std::size_t max_to_remove,
+                  const double min_posterior)
 {
     using std::begin; using std::end; using std::cbegin; using std::cend; using std::back_inserter;
     std::vector<std::pair<HaplotypeReference, double>> sorted {};
@@ -391,34 +392,46 @@ extract_removable(const std::vector<Haplotype>& haplotypes,
         }
     }
     auto first_safe = std::partition(begin(sorted), end(sorted), [=] (const auto& p) { return p.second < min_posterior; });
-    auto num_unsafe = static_cast<std::size_t>(std::distance(begin(sorted), first_safe));
-    const auto extractor = [] (const auto& p) { return p.first; };
-    if (static_cast<std::size_t>(std::distance(begin(sorted), first_safe)) > max_to_remove) {
-        auto first_unsafe = std::next(begin(sorted), num_unsafe - max_to_remove);
+    const auto num_unsafe = static_cast<std::size_t>(std::distance(begin(sorted), first_safe));
+    const auto get_second = [] (const auto& p) { return p.first; };
+    if (num_unsafe > max_to_remove) {
+        const auto num_unsafe_to_keep = num_unsafe - max_to_remove;
+        auto first_unsafe = std::next(begin(sorted), num_unsafe_to_keep);
         std::partial_sort(begin(sorted), first_unsafe, first_safe,
                           [] (const auto& lhs, const auto& rhs) { return lhs.second > rhs.second; });
         const auto min_safe_posterior = std::prev(first_unsafe)->second;
-        first_unsafe = std::partition(first_unsafe, first_safe,
-                                      [min_safe_posterior] (const auto& p) {
-                                          return maths::almost_equal(p.second, min_safe_posterior);
-                                      });
-        std::reverse(begin(sorted), first_unsafe);
-        const auto assignment_bound_itr = std::prev(first_unsafe);
-        const AssignmentCount assignments {
-            boost::make_transform_iterator(assignment_bound_itr, extractor),
-            boost::make_transform_iterator(first_safe, extractor),
-            samples, haplotype_likelihoods
-        };
-        const auto max_unsafe_assignment = assignments(assignment_bound_itr->first);
-        first_safe = std::partition(first_unsafe, first_safe,
-                                    [&assignments, max_unsafe_assignment] (const auto& p) {
-                                        return assignments(p.first) <= max_unsafe_assignment;
-                                    });
-        first_safe = std::rotate(begin(sorted), first_unsafe, first_safe);
+        const auto equals_min_safe_posterior = [=] (const auto& p) { return maths::almost_equal(p.second, min_safe_posterior); };
+        first_unsafe = std::partition(first_unsafe, first_safe, equals_min_safe_posterior);
+        if (first_unsafe != first_safe) {
+            std::reverse(begin(sorted), first_unsafe);
+            const auto assignment_bound_itr = std::prev(first_unsafe);
+            const AssignmentCount assignments {boost::make_transform_iterator(assignment_bound_itr, get_second),
+                                               boost::make_transform_iterator(first_safe, get_second),
+                                               samples, haplotype_likelihoods};
+            const auto max_unsafe_assignment = assignments(assignment_bound_itr->first);
+            const auto not_greater_than_max_unsafe_assignment = [&assignments, max_unsafe_assignment] (const auto& p) {
+                return assignments(p.first) <= max_unsafe_assignment;
+            };
+            first_safe = std::partition(first_unsafe, first_safe, not_greater_than_max_unsafe_assignment);
+            first_safe = std::rotate(begin(sorted), first_unsafe, first_safe);
+        } else {
+            first_unsafe = std::find_if(begin(sorted), first_unsafe, equals_min_safe_posterior);
+            const AssignmentCount assignments {boost::make_transform_iterator(first_unsafe, get_second),
+                                               boost::make_transform_iterator(first_safe, get_second),
+                                               samples, haplotype_likelihoods};
+            const auto assignment_greater = [&] (const auto& lhs, const auto& rhs) {
+                const auto lhs_assignments = assignments(lhs.first);
+                const auto rhs_assignments = assignments(rhs.first);
+                return lhs_assignments != rhs_assignments ? lhs_assignments > rhs_assignments : lhs.first.get() > rhs.first.get();
+            };
+            std::sort(first_unsafe, first_safe, assignment_greater);
+            first_unsafe = std::next(begin(sorted), num_unsafe_to_keep);
+            first_safe = std::rotate(begin(sorted), first_unsafe, first_safe);
+        }
     }
     std::vector<HaplotypeReference> result {};
     result.reserve(std::distance(begin(sorted), first_safe));
-    std::transform(begin(sorted), first_safe, back_inserter(result), extractor);
+    std::transform(begin(sorted), first_safe, back_inserter(result), get_second);
     return result;
 }
 

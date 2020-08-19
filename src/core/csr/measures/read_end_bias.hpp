@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef read_end_bias_hpp
@@ -20,6 +20,7 @@ class ReadEndBias : public Measure
     const static std::string name_;
     double end_fraction_ = 0.03;
     std::unique_ptr<Measure> do_clone() const override;
+    ValueType get_value_type() const override;
     void do_set_parameters(std::vector<std::string> params) override;
     ResultType do_evaluate(const VcfRecord& call, const FacetMap& facets) const override;
     ResultCardinality do_cardinality() const noexcept override;

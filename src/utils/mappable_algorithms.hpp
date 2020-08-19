@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef mappable_algorithms_hpp
@@ -1980,6 +1980,7 @@ unsigned min_coverage(const Range& mappables)
 {
     if (mappables.empty()) return 0;
     const auto positional_coverage = calculate_positional_coverage(mappables);
+    if (positional_coverage.empty()) return 0;
     return *std::min_element(std::cbegin(positional_coverage), std::cend(positional_coverage));
 }
 
@@ -2000,6 +2001,7 @@ unsigned max_coverage(const Range& mappables)
 {
     if (mappables.empty()) return 0;
     const auto positional_coverage = calculate_positional_coverage(mappables);
+    if (positional_coverage.empty()) return 0;
     return *std::max_element(std::cbegin(positional_coverage), std::cend(positional_coverage));
 }
 

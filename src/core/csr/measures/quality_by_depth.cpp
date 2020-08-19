@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "quality_by_depth.hpp"
@@ -19,10 +19,15 @@ std::unique_ptr<Measure> QualityByDepth::do_clone() const
     return std::make_unique<QualityByDepth>(*this);
 }
 
+Measure::ValueType QualityByDepth::get_value_type() const
+{
+    return double {};
+}
+
 Measure::ResultType QualityByDepth::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
-    auto depth = boost::get<std::size_t>(depth_.evaluate(call, facets));
-    boost::optional<double> result {};
+    const auto depth = boost::get<std::size_t>(boost::get<ValueType>(depth_.evaluate(call, facets)));
+    Optional<ValueType> result {};
     if (depth > 0) {
         result = static_cast<double>(*call.qual()) / depth;
     }

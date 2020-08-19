@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "genome_walker.hpp"
@@ -17,21 +17,43 @@
 
 namespace octopus { namespace coretools {
 
-GenomeWalker::GenomeWalker(unsigned max_included,
-                           IndicatorPolicy indicator_policy,
-                           ExtensionPolicy extension_policy)
-: max_included_ {max_included}
-, indicator_policy_ {indicator_policy}
-, extension_policy_ {extension_policy}
+GenomeWalker::GenomeWalker(Config config)
+: config_ {config}
 {}
 
 namespace {
+
+bool use_read_templates_for_lagging(const GenomeWalker::ReadTemplatePolicy policy) noexcept
+{
+    return policy == GenomeWalker::ReadTemplatePolicy::indicators || policy == GenomeWalker::ReadTemplatePolicy::indicators_and_extension;
+}
+
+bool use_read_templates_for_extension(const GenomeWalker::ReadTemplatePolicy policy) noexcept
+{
+    return policy == GenomeWalker::ReadTemplatePolicy::extension || policy == GenomeWalker::ReadTemplatePolicy::indicators_and_extension;
+}
+
+template <typename BidirIt>
+BidirIt find_first_shared_helper(const ReadMap& reads, boost::optional<const TemplateMap&> read_templates,
+                                 BidirIt first, BidirIt last, const Allele& allele)
+{
+    BidirIt result;
+    if (read_templates) {
+        result = find_first_shared(*read_templates, first, last, allele);
+    } else {
+        result = find_first_shared(reads, first, last, allele);
+    }
+    if (result != last) {
+        while (result != first && (are_adjacent(*std::prev(result), *result) || overlaps(*std::prev(result), *result))) --result;
+    }
+    return result;
+}
 
 template <typename BidirIt>
 bool is_sandwich_allele(BidirIt first, BidirIt allele, BidirIt last)
 {
     if (allele != first && allele != last && std::next(allele) != last) {
-        return overlaps(*std::prev(allele), *allele) && overlaps(*allele, *std::next(allele));
+        return has_overlapped(first, std::prev(allele), *allele) && has_overlapped(std::next(allele), last, *allele);
     } else {
         return false;
     }
@@ -138,7 +160,7 @@ bool is_optimal_to_extend(const BidirIt first_included, const BidirIt proposed_i
            || is_close(proposed_included, first_excluded);
 }
 
-}
+} // namespace
 
 GenomicRegion
 GenomeWalker::walk(const GenomicRegion& previous_region,
@@ -158,7 +180,7 @@ GenomeWalker::walk(const GenomicRegion& previous_region,
     if (included_itr == last_allele_itr) {
         return shift(tail_region(rightmost_region(alleles)), 1);
     }
-    if (max_included_ == 0) {
+    if (config_.max_alleles == 0) {
         if (included_itr != last_allele_itr) {
             return *intervening_region(previous_region, *included_itr);
         } else {
@@ -166,12 +188,16 @@ GenomeWalker::walk(const GenomicRegion& previous_region,
         }
     }
     unsigned num_indicators {0};
-    switch (indicator_policy_) {
+    boost::optional<const TemplateMap&> indicator_read_templates {};
+    if (read_templates && use_read_templates_for_lagging(config_.read_template_policy)) {
+        indicator_read_templates = read_templates;
+    }
+    switch (config_.indicator_policy) {
         case IndicatorPolicy::includeNone: break;
         case IndicatorPolicy::includeIfSharedWithNovelRegion:
         {
             if (distance(first_previous_itr, included_itr) > 0) {
-                auto it = find_first_shared(reads, first_previous_itr, included_itr, *included_itr);
+                auto it = find_first_shared_helper(reads, indicator_read_templates, first_previous_itr, included_itr, *included_itr);
                 if (it != included_itr) {
                     auto expanded_leftmost = mapped_region(*it);
                     std::for_each(it, included_itr, [&] (const auto& allele) {
@@ -195,7 +221,7 @@ GenomeWalker::walk(const GenomicRegion& previous_region,
             if (distance(first_previous_itr, included_itr) > 0) {
                 auto it = included_itr;
                 while (true) {
-                    const auto it2 = find_first_shared(reads, first_previous_itr, it, *it);
+                    const auto it2 = find_first_shared_helper(reads, indicator_read_templates, first_previous_itr, it, *it);
                     if (it2 == it) {
                         it = it2;
                         break;
@@ -214,19 +240,23 @@ GenomeWalker::walk(const GenomicRegion& previous_region,
     auto first_included_itr = get_first_included(first_previous_itr, included_itr, num_indicators);
     auto num_remaining_alleles = static_cast<unsigned>(distance(included_itr, last_allele_itr));
     unsigned num_excluded_alleles {0};
-    auto num_included = max_included_;
-    if (extension_policy_ == ExtensionPolicy::includeIfWithinReadLengthOfFirstIncluded) {
+    auto num_included = config_.max_alleles;
+    if (config_.extension_policy == ExtensionPolicy::includeIfWithinReadLengthOfFirstIncluded) {
         auto max_alleles_within_read_length = static_cast<unsigned>(max_count_if_shared_with_first(reads, first_included_itr, last_allele_itr));
         num_included = min({num_included, num_remaining_alleles, max_alleles_within_read_length + 1});
         num_excluded_alleles = max_alleles_within_read_length - num_included;
     } else {
         num_included = min(num_included, num_remaining_alleles);
     }
+    boost::optional<const TemplateMap&> extension_read_templates {};
+    if (read_templates && use_read_templates_for_extension(config_.read_template_policy)) {
+        extension_read_templates = read_templates;
+    }
     assert(num_included > 0);
     auto first_excluded_itr = next(included_itr, num_included);
     while (--num_included > 0 && is_optimal_to_extend(first_included_itr, next(included_itr), first_excluded_itr,
                                                       last_allele_itr, reads, num_included + num_excluded_alleles)) {
-        if (!can_extend(*included_itr, *next(included_itr), reads, read_templates)) {
+        if (!can_extend(*included_itr, *next(included_itr), reads, extension_read_templates)) {
             break;
         }
         ++included_itr;
@@ -240,20 +270,23 @@ bool
 GenomeWalker::can_extend(const Allele& active, const Allele& novel,
                          const ReadMap& reads, boost::optional<const TemplateMap&> read_templates) const
 {
-    if (extension_policy_ == ExtensionPolicy::includeIfAllSamplesSharedWithFrontier) {
+    if (config_.max_extension && inner_distance(active, novel) > *config_.max_extension) {
+        return false;
+    }
+    if (config_.extension_policy == ExtensionPolicy::includeIfAllSamplesSharedWithFrontier) {
         if (read_templates) {
             return all_shared(*read_templates, active, novel);
         } else {
             return all_shared(reads, active, novel);
         }
-    } else if (extension_policy_ == ExtensionPolicy::includeIfAnySampleSharedWithFrontier) {
+    } else if (config_.extension_policy == ExtensionPolicy::includeIfAnySampleSharedWithFrontier) {
         if (read_templates) {
             return has_shared(*read_templates, active, novel);
         } else {
             return has_shared(reads, active, novel);
         }
     }
-    return extension_policy_ == ExtensionPolicy::noLimit;
+    return config_.extension_policy == ExtensionPolicy::noLimit;
 }
 
 } // namespace coretools

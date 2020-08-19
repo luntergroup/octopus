@@ -30,38 +30,32 @@ public:
 
   virtual ~ForestSurvival() override = default;
 
-  void loadForest(size_t dependent_varID, size_t num_trees,
-      std::vector<std::vector<std::vector<size_t>> >& forest_child_nodeIDs,
+  void loadForest(size_t num_trees, std::vector<std::vector<std::vector<size_t>> >& forest_child_nodeIDs,
       std::vector<std::vector<size_t>>& forest_split_varIDs, std::vector<std::vector<double>>& forest_split_values,
-      size_t status_varID, std::vector<std::vector<std::vector<double>> >& forest_chf,
-      std::vector<double>& unique_timepoints, std::vector<bool>& is_ordered_variable);
+      std::vector<std::vector<std::vector<double>> >& forest_chf, std::vector<double>& unique_timepoints,
+      std::vector<bool>& is_ordered_variable);
 
   std::vector<std::vector<std::vector<double>>> getChf() const;
 
-  size_t getStatusVarId() const {
-    return status_varID;
-  }
   const std::vector<double>& getUniqueTimepoints() const {
     return unique_timepoints;
   }
 
 private:
-  void initInternal(std::string status_variable_name) override;
+  std::vector<double> unique_timepoints;
+  std::vector<size_t> response_timepointIDs;
+  
+  void initInternal() override;
   void growInternal() override;
   void allocatePredictMemory() override;
   void predictInternal(size_t sample_idx) override;
   void computePredictionErrorInternal() override;
-  void writeOutputInternal() override;
-  void writeConfusionFile() override;
-  void writePredictionFile() override;
-  void saveToFileInternal(std::ofstream& outfile) override;
+  void writeOutputInternal() const override;
+  void writeConfusionFile() const override;
+  void writePredictionFile() const override;
+  void saveToFileInternal(std::ofstream& outfile) const override;
   void loadFromFileInternal(std::ifstream& infile) override;
 
-  size_t status_varID;
-  std::vector<double> unique_timepoints;
-  std::vector<size_t> response_timepointIDs;
-
-private:
   const std::vector<double>& getTreePrediction(size_t tree_idx, size_t sample_idx) const;
   size_t getTreePredictionTerminalNodeID(size_t tree_idx, size_t sample_idx) const;
 };

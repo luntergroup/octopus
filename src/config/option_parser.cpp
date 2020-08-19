@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "option_parser.hpp"
@@ -13,6 +13,7 @@
 
 #include <boost/filesystem/path.hpp>
 #include <boost/filesystem/operations.hpp>
+#include <boost/lexical_cast.hpp>
 
 #include "utils/path_utils.hpp"
 #include "utils/memory_footprint.hpp"
@@ -67,27 +68,31 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<fs::path>(),
      "Sets the working directory")
     
+    ("resolve-symlinks",
+     po::bool_switch()->default_value(false),
+     "Replace all symlinks to their resolved targets")
+    
     ("threads,tentacles",
      po::value<int>()->implicit_value(0),
      "Maximum number of threads to be used. If no argument is provided unlimited threads are assumed")
     
-    ("max-reference-cache-footprint,X",
+    ("max-reference-cache-memory,X",
      po::value<MemoryFootprint>()->default_value(*parse_footprint("500MB"), "500MB"),
-     "Maximum memory footprint for cached reference sequence")
+     "Maximum memory for cached reference sequence")
     
-    ("target-read-buffer-footprint,B",
+    ("target-read-buffer-memory,B",
      po::value<MemoryFootprint>()->default_value(*parse_footprint("6GB"), "6GB"),
-     "None-binding request to limit the memory footprint of buffered read data")
+     "None-binding request to limit the memory of buffered read data")
     
+    ("target-working-memory",
+     po::value<MemoryFootprint>(),
+     "Target working memory per thread for computation, not including read or reference data")
+     
     ("max-open-read-files",
      po::value<int>()->default_value(250),
      "Limits the number of read files that are open simultaneously")
-    
-     ("target-working-memory",
-     po::value<MemoryFootprint>(),
-     "Target working memory footprint for analysis, not including read or reference buffers")
-     
-     ("temp-directory-prefix",
+
+    ("temp-directory-prefix",
      po::value<fs::path>()->default_value("octopus-temp"),
      "File name prefix of temporary directory for calling")
     
@@ -121,7 +126,7 @@ OptionMap parse_options(const int argc, const char** argv)
 
     ("one-based-indexing",
      po::bool_switch()->default_value(false),
-     "Assume one based indexing rather than zero based for input region options")
+     "Assume one-based indexing rather than zero-based for input region options")
     
     ("samples,S",
      po::value<std::vector<std::string>>()->multitoken(),
@@ -133,7 +138,7 @@ OptionMap parse_options(const int argc, const char** argv)
     
     ("ignore-unmapped-contigs",
      po::bool_switch()->default_value(false),
-     "Ignore any contigs that are not present in the read files")
+     "Ignore any contigs that are not mapped in the read files")
     
     ("pedigree",
      po::value<fs::path>(),
@@ -151,10 +156,10 @@ OptionMap parse_options(const int argc, const char** argv)
      po::bool_switch()->default_value(false),
      "Only reports call sites (i.e. drop sample genotype information)")
     
-    ("regenotype",
-     po::value<fs::path>(),
-     "VCF file specifying calls to regenotype, only sites in this files will appear in the"
-     " final output")
+    // ("regenotype",
+    //  po::value<fs::path>(),
+    //  "VCF file specifying calls to regenotype, only sites in this files will appear in the"
+    //  " final output")
     
     ("bamout",
      po::value<fs::path>(),
@@ -166,16 +171,15 @@ OptionMap parse_options(const int argc, const char** argv)
      
     ("data-profile",
      po::value<fs::path>(),
-     "Output a profile of polymorphisms and errors found in the data")
+     "Output a profile of variation and errors found in the data")
     
     ("fast",
      po::bool_switch()->default_value(false),
-     "Turns off some features to improve runtime, at the cost of decreased calling accuracy."
-     " Equivalent to '-a off -l minimal -x 50`")
+     "Turns off some features to improve runtime, at the cost of worse calling accuracy and phasing")
     
     ("very-fast",
      po::bool_switch()->default_value(false),
-     "Same as --fast but also disables inactive flank scoring")
+     "Like --fast but even faster")
     ;
     
     po::options_description read_preprocessing("Read preprocessing");
@@ -217,12 +221,12 @@ OptionMap parse_options(const int argc, const char** argv)
      "Disable read segment overlap masking")
      
     ("mask-inverted-soft-clipping",
-    po::bool_switch()->default_value(false),
-    "Mask soft clipped sequence that is an inverted copy of a proximate sequence")
+     po::bool_switch()->default_value(false),
+     "Mask soft clipped sequence that is an inverted copy of a proximate sequence")
     
     ("mask-3prime-shifted-soft-clipped-heads",
-    po::bool_switch()->default_value(false),
-    "Mask soft clipped read head sequence that is a copy of a proximate 3' sequence")
+     po::bool_switch()->default_value(false),
+     "Mask soft clipped read head sequence that is a copy of a proximate 3' sequence")
 
     ("split-long-reads",
      po::bool_switch()->default_value(false),
@@ -233,7 +237,7 @@ OptionMap parse_options(const int argc, const char** argv)
      "Allows reads marked as unmapped to be used for calling")
     
     ("min-mapping-quality",
-     po::value<int>()->default_value(20),
+     po::value<int>()->default_value(10),
      "Minimum read mapping quality required to consider a read for calling")
     
     ("good-base-quality",
@@ -355,8 +359,8 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<std::vector<fs::path>>()->multitoken(),
      "Files containing lists of source candidate variant files")
      
-    ("min-source-quality",
-     po::value<Phred<double>>()->implicit_value(Phred<double> {2.0}),
+    ("min-source-candidate-quality",
+     po::value<Phred<double>>(),
      "Only variants with quality above this value are considered for candidate generation")
     
     ("use-filtered-source-candidates",
@@ -410,6 +414,10 @@ OptionMap parse_options(const int argc, const char** argv)
      "Aligned bases with quality less than this will be converted to reference before"
      " being inserted into the De Bruijn graph")
     
+    ("allow-cycles",
+     po::bool_switch()->default_value(false),
+     "Allow cyclic assembly graphs")
+    
     ("min-kmer-prune",
      po::value<int>()->default_value(2),
      "Minimum number of read observations to keep a kmer in the assembly graph before bubble extraction")
@@ -449,28 +457,24 @@ OptionMap parse_options(const int argc, const char** argv)
      " is skipped")
     
     ("extension-level",
-     po::value<ExtensionLevel>()->default_value(ExtensionLevel::normal),
-     "Level of haplotype extension [MINIMAL, CONSERVATIVE, NORMAL, AGGRESSIVE, UNLIMITED]")
+     po::value<ExtensionLevel>()->default_value(ExtensionLevel::moderate),
+     "Level of haplotype extension [MINIMAL, CONSERVATIVE, MODERATE, AGGRESSIVE, UNLIMITED]")
      
     ("lagging-level",
-     po::value<LaggingLevel>()->default_value(LaggingLevel::normal),
-     "Level of haplotype lagging [NONE, NORMAL, AGGRESSIVE]")
+     po::value<LaggingLevel>()->default_value(LaggingLevel::moderate),
+     "Level of haplotype lagging [NONE, CONSERVATIVE, MODERATE, OPTIMISTIC, AGGRESSIVE]")
     
     ("backtrack-level",
      po::value<BacktrackLevel>()->default_value(BacktrackLevel::none),
-     "Level of backtracking [NONE, NORMAL, AGGRESSIVE]")
+     "Level of backtracking [NONE, MODERATE, AGGRESSIVE]")
     
     ("min-protected-haplotype-posterior",
-     po::value<Phred<double>>()->default_value(Phred<double> {100.0}, "100"),
+     po::value<double>()->default_value(1e-10, "1e-10"),
      "Haplotypes with posterior probability less than this may be pruned from the haplotype tree")
     
     ("dont-protect-reference-haplotype",
      po::bool_switch()->default_value(false),
      "Do not protect the reference haplotype from filtering")
-    
-    ("bad-region-tolerance",
-     po::value<BadRegionTolerance>()->default_value(BadRegionTolerance::normal),
-     "Tolerance for skipping regions that are considered unlikely to be callable [LOW, NORMAL, HIGH, UNLIMITED]")
     ;
     
     po::options_description general_variant_calling("Variant calling (general)");
@@ -506,13 +510,17 @@ OptionMap parse_options(const int argc, const char** argv)
      "Caller will report reference confidence calls for each position [POSITIONAL],"
      " or in automatically sized blocks [BLOCKED]")
      
-    ("refcall-block-merge-threshold",
+    ("refcall-block-merge-quality",
      po::value<Phred<double>>()->default_value(Phred<double> {10.0}),
      "Threshold to merge adjacent refcall positions when using blocked refcalling")
      
     ("min-refcall-posterior",
-     po::value<Phred<double>>()->default_value(Phred<double> {2.0}),
-     "Report reference alleles with posterior probability (phred scale) greater than this")
+     po::value<Phred<double>>()->default_value(Phred<double> {0}),
+     "Report reference alleles with posterior probability (QUAL) greater than this")
+
+    ("max-refcall-posterior",
+     po::value<Phred<double>>(),
+     "Maximum allowed posterior probability (QUAL) for reference calls")
     
     ("snp-heterozygosity,z",
      po::value<float>()->default_value(0.001, "0.001"),
@@ -531,12 +539,12 @@ OptionMap parse_options(const int argc, const char** argv)
     "Use a uniform prior model when calculating genotype posteriors")
     
     ("max-genotypes",
-     po::value<int>()->default_value(5000),
+     po::value<int>(),
      "Maximum number of genotypes that must be evaluated")
     
-    ("max-joint-genotypes",
-     po::value<int>()->default_value(1000000),
-     "Maximum number of joint genotype vectors that must be considered when computing joint"
+    ("max-genotype-combinations",
+     po::value<int>(),
+     "Maximum number of genotype combinations that can be considered when computing joint"
      " genotype posterior probabilities")
     
     ("use-independent-genotype-priors",
@@ -544,8 +552,8 @@ OptionMap parse_options(const int argc, const char** argv)
      "Use independent genotype priors for joint calling")
     
     ("model-posterior",
-     po::bool_switch()->default_value(false),
-     "Calculate model posteriors for every call")
+     po::value<ModelPosteriorPolicy>()->default_value(ModelPosteriorPolicy::special),
+     "Policy for calculating model posteriors for variant calls [ALL, OFF, SPECIAL]")
     
     ("disable-inactive-flank-scoring",
      po::bool_switch()->default_value(false),
@@ -567,39 +575,51 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<int>()->default_value(16),
      "Maximum number of indel errors that must be tolerated for haplotype likelihood calculation")
     
+    ("use-wide-hmm-scores",
+     po::bool_switch()->default_value(false),
+     "Use 32-bits rather than 16-bits for HMM scores")
+
     ("read-linkage",
      po::value<ReadLinkage>()->default_value(ReadLinkage::paired),
      "Read linkage information to use for calling [NONE, PAIRED, LINKED]")
      
     ("min-phase-score",
-     po::value<Phred<double>>()->default_value(Phred<double> {10.0}),
+     po::value<Phred<double>>()->default_value(Phred<double> {5.0}),
      "Minimum phase score (phred scale) required to report sites as phased")
+    
+    ("disable-early-phase-detection",
+     po::bool_switch()->default_value(false),
+     "Disable phase detection before haplotypes fully extended")
+
+    ("bad-region-tolerance",
+     po::value<BadRegionTolerance>()->default_value(BadRegionTolerance::normal),
+     "Tolerance for skipping regions that are considered unlikely to be callable [LOW, NORMAL, HIGH, UNLIMITED]")
     ;
     
     po::options_description cancer("Cancer calling model");
     cancer.add_options()
-    ("normal-sample,N",
-     po::value<std::string>(),
-     "Normal sample - all other samples are considered tumour")
+    ("normal-samples,N",
+     po::value<std::vector<std::string>>()->multitoken(),
+     "Normal samples - all other samples are considered tumour")
     
     ("max-somatic-haplotypes",
      po::value<int>()->default_value(2),
      "Maximum number of somatic haplotypes that may be considered")
     
-    ("somatic-snv-mutation-rate",
+    ("somatic-snv-prior",
      po::value<float>()->default_value(1e-04, "0.0001"),
-     "Expected SNV somatic mutation rate, per megabase pair, for this sample")
+     "Prior probability for an SNV somatic mutation at a given base for this sample")
     
-    ("somatic-indel-mutation-rate",
+    ("somatic-indel-prior",
      po::value<float>()->default_value(1e-06, "0.000001"),
-     "Expected INDEL somatic mutation rate, per megabase pair, for this sample")
+     "Prior probability for an INDEL somatic mutation at a given position for this sample")
     
     ("min-expected-somatic-frequency",
-     po::value<float>()->default_value(0.03, "0.03"),
+     po::value<float>()->default_value(0.01, "0.01"),
      "Minimum expected somatic allele frequency in the sample")
     
     ("min-credible-somatic-frequency",
-     po::value<float>()->default_value(0.01, "0.01"),
+     po::value<float>()->default_value(0.005, "0.005"),
      "Minimum credible somatic allele frequency that will be reported")
     
      ("tumour-germline-concentration",
@@ -633,13 +653,13 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<std::string>(),
      "Paternal sample")
     
-    ("denovo-snv-mutation-rate",
+    ("denovo-snv-prior",
      po::value<float>()->default_value(1.3e-8, "1.3e-8"),
-     "SNV de novo mutation rate, per base per generation")
+     "Prior probability for an SNV de novo mutation at a given base in the offspring")
     
-    ("denovo-indel-mutation-rate",
+    ("denovo-indel-prior",
      po::value<float>()->default_value(1e-9, "1e-9"),
-     "INDEL de novo mutation rate, per base per generation")
+     "Prior probability for an INDEL de novo mutation at a given position in the offspring")
     
     ("min-denovo-posterior",
      po::value<Phred<double>>()->default_value(Phred<double> {3}),
@@ -653,23 +673,47 @@ OptionMap parse_options(const int argc, const char** argv)
     po::options_description polyclone("Polyclone calling model");
     polyclone.add_options()
     ("max-clones",
-     po::value<int>()->default_value(3),
+     po::value<int>()->default_value(4),
      "Maximum number of unique clones to consider")
     
     ("min-clone-frequency",
      po::value<float>()->default_value(0.01, "0.01"),
      "Minimum expected clone frequency in the sample")
+    
+    ("clone-prior",
+     po::value<float>()->default_value(0.01, "0.01"),
+     "Prior probability of each clone in the sample")
+    
+    ("clone-concentration",
+     po::value<float>()->default_value(1, "1"),
+     "Prior mixture concentration for each clone in the sample")
     ;
     
     po::options_description cell("Cell calling model");
     cell.add_options()
-    ("max-phylogeny-size",
-    po::value<int>()->default_value(3),
-    "Maximum number of nodes in cell phylogeny to consider")
+    ("max-copy-loss",
+     po::value<int>()->default_value(1),
+     "Maximum number of haplotype losses in the phylogeny")
     
+    ("max-copy-gain",
+     po::value<int>()->default_value(0),
+     "Maximum number of haplotype gains in the phylogeny")
+    
+    ("somatic-cnv-prior",
+     po::value<float>()->default_value(1e-5, "1e-5"),
+     "Prior probability of a given base in a sample being affected by a CNV")
+     
     ("dropout-concentration",
-    po::value<float>()->default_value(2, "2"),
-    "Allelic dropout concentration parameter")
+    po::value<float>()->default_value(5, "5"),
+    "Allelic dropout concentration parameter (default for all samples)")
+    
+    ("sample-dropout-concentrations",
+     po::value<std::vector<SampleDropoutConcentrationPair>>()->multitoken(),
+     "Sample allelic dropout concentration parameter (format SAMPLE=CONCENTRATION")
+    
+    ("phylogeny-concentration",
+     po::value<float>()->default_value(20, "20"),
+     "Concentration prior for clones in phylogeny")
     ;
     
     po::options_description call_filtering("Call filtering and annotation");
@@ -710,17 +754,21 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<fs::path>(),
      "Filter the given Octopus VCF without calling")
     
-    ("forest-file",
+    ("forest-model",
      po::value<fs::path>(),
-     "Trained Ranger random forest file")
+     "Trained Ranger random forest model file")
     
-    ("somatic-forest-file",
+    ("somatic-forest-model",
      po::value<fs::path>(),
-     "Trained Ranger random forest file for somatic variants")
+     "Trained Ranger random forest model file for somatic variants")
     
     ("min-forest-quality",
      po::value<Phred<double>>()->default_value(Phred<double> {3}),
      "Minimum PASSing random forest probability (Phred scale)")
+
+    ("use-germline-forest-for-somatic-normals",
+     po::bool_switch()->default_value(false),
+     "Use the germline forest model for evaluating somatic variant normal sample genotypes rather than the somatic forest model")
     ;
     
     po::options_description all("Octopus command line options");
@@ -1104,19 +1152,20 @@ void validate(const OptionMap& vm)
         "min-mapping-quality", "good-base-quality", "min-good-bases", "min-read-length",
         "max-read-length", "min-base-quality", "max-variant-size",
         "num-fallback-kmers", "max-assemble-region-overlap", "assembler-mask-base-quality",
-        "min-kmer-prune", "max-bubbles", "max-holdout-depth"
+        "min-kmer-prune", "max-bubbles", "max-holdout-depth", "max-copy-loss", "max-copy-gain"
     };
     const std::vector<std::string> strictly_positive_int_options {
         "max-open-read-files", "downsample-above", "downsample-target", "min-supporting-reads",
         "max-region-to-assemble", "fallback-kmer-gap", "organism-ploidy",
         "max-haplotypes", "haplotype-holdout-threshold", "haplotype-overflow",
-        "max-genotypes", "max-joint-genotypes", "max-somatic-haplotypes", "max-clones",
-        "max-vb-seeds", "max-indel-errors", "max-base-quality"
+        "max-genotypes", "max-genotype-combinations", "max-somatic-haplotypes", "max-clones",
+        "max-vb-seeds", "max-indel-errors", "max-base-quality", "max-phylogeny-size"
     };
     const std::vector<std::string> probability_options {
         "snp-heterozygosity", "snp-heterozygosity-stdev", "indel-heterozygosity",
-        "somatic-mutation-rate", "min-expected-somatic-frequency", "min-credible-somatic-frequency", "somatic-credible-mass",
-        "denovo-snv-mutation-rate", "denovo-indel-mutation-rate", "min-candidate-credible-vaf-probability"
+        "somatic-snv-prior", "somatic-indel-prior", "min-expected-somatic-frequency", "min-credible-somatic-frequency", "somatic-credible-mass",
+        "denovo-snv-prior", "denovo-indel-prior", "min-candidate-credible-vaf-probability",
+        "somatic-cnv-prior", "clone-prior"
     };
     conflicting_options(vm, "maternal-sample", "normal-sample");
     conflicting_options(vm, "paternal-sample", "normal-sample");
@@ -1247,8 +1296,8 @@ std::istream& operator>>(std::istream& in, ExtensionLevel& level)
         level = ExtensionLevel::minimal;
     else if (token == "CONSERVATIVE")
         level = ExtensionLevel::conservative;
-    else if (token == "NORMAL")
-        level = ExtensionLevel::normal;
+    else if (token == "MODERATE")
+        level = ExtensionLevel::moderate;
     else if (token == "AGGRESSIVE")
         level = ExtensionLevel::aggressive;
     else if (token == "UNLIMITED")
@@ -1266,8 +1315,8 @@ std::ostream& operator<<(std::ostream& out, const ExtensionLevel& level)
     case ExtensionLevel::conservative:
         out << "CONSERVATIVE";
         break;
-    case ExtensionLevel::normal:
-        out << "NORMAL";
+    case ExtensionLevel::moderate:
+        out << "MODERATE";
         break;
     case ExtensionLevel::aggressive:
         out << "AGGRESSIVE";
@@ -1285,8 +1334,8 @@ std::istream& operator>>(std::istream& in, BacktrackLevel& level)
     in >> token;
     if (token == "NONE")
         level = BacktrackLevel::none;
-    else if (token == "NORMAL")
-        level = BacktrackLevel::normal;
+    else if (token == "MODERATE")
+        level = BacktrackLevel::moderate;
     else if (token == "AGGRESSIVE")
         level = BacktrackLevel::aggressive;
     else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token, "backtrack-level"};
@@ -1299,8 +1348,8 @@ std::ostream& operator<<(std::ostream& out, const BacktrackLevel& level)
     case BacktrackLevel::none:
         out << "NONE";
         break;
-    case BacktrackLevel::normal:
-        out << "NORMAL";
+    case BacktrackLevel::moderate:
+        out << "MODERATE";
         break;
     case BacktrackLevel::aggressive:
         out << "AGGRESSIVE";
@@ -1315,8 +1364,12 @@ std::istream& operator>>(std::istream& in, LaggingLevel& level)
     in >> token;
     if (token == "NONE")
         level = LaggingLevel::none;
-    else if (token == "NORMAL")
-        level = LaggingLevel::normal;
+    else if (token == "CONSERVATIVE")
+        level = LaggingLevel::conservative;
+    else if (token == "MODERATE")
+        level = LaggingLevel::moderate;
+    else if (token == "OPTIMISTIC")
+        level = LaggingLevel::optimistic;
     else if (token == "AGGRESSIVE")
         level = LaggingLevel::aggressive;
     else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token, "lagging-level"};
@@ -1329,8 +1382,14 @@ std::ostream& operator<<(std::ostream& out, const LaggingLevel& level)
         case LaggingLevel::none:
             out << "NONE";
             break;
-        case LaggingLevel::normal:
-            out << "NORMAL";
+        case LaggingLevel::conservative:
+            out << "CONSERVATIVE";
+            break;
+        case LaggingLevel::moderate:
+            out << "MODERATE";
+            break;
+        case LaggingLevel::optimistic:
+            out << "OPTIMISTIC";
             break;
         case LaggingLevel::aggressive:
             out << "AGGRESSIVE";
@@ -1504,6 +1563,54 @@ std::ostream& operator<<(std::ostream& out, const ReadDeduplicationDetectionPoli
     return out;
 }
 
+std::istream& operator>>(std::istream& in, ModelPosteriorPolicy& result)
+{
+    std::string token;
+    in >> token;
+    if (token == "ALL")
+        result = ModelPosteriorPolicy::all;
+    else if (token == "OFF")
+        result = ModelPosteriorPolicy::off;
+    else if (token == "SPECIAL")
+        result = ModelPosteriorPolicy::special;
+    else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token, "model-posterior"};
+    return in;
+}
+
+std::ostream& operator<<(std::ostream& out, const ModelPosteriorPolicy& policy)
+{
+    switch (policy) {
+        case ModelPosteriorPolicy::all:
+            out << "ALL";
+            break;
+        case ModelPosteriorPolicy::off:
+            out << "OFF";
+            break;
+        case ModelPosteriorPolicy::special:
+            out << "SPECIAL";
+            break;
+    }
+    return out;
+}
+
+std::istream& operator>>(std::istream& in, SampleDropoutConcentrationPair& result)
+{
+    std::string token;
+    in >> token;
+    const auto equal_pos = token.find_last_of("=");
+    const auto concentration = token.substr(equal_pos + 1);
+    token.erase(equal_pos);
+    result.sample = std::move(token);
+    result.concentration = boost::lexical_cast<float>(concentration);
+    return in;
+}
+
+std::ostream& operator<<(std::ostream& os, const SampleDropoutConcentrationPair& concentration)
+{
+    os << concentration.sample << '=' << concentration.concentration;
+    return os;
+}
+
 namespace {
 
 template <typename T>
@@ -1626,6 +1733,10 @@ std::ostream& operator<<(std::ostream& os, const OptionMap& options)
             os << options[label].as<RealignedBAMType>();
         } else if (is_type<ReadDeduplicationDetectionPolicy>(value)) {
             os << options[label].as<ReadDeduplicationDetectionPolicy>();
+        } else if (is_vector_type<SampleDropoutConcentrationPair>(value)) {
+            write_vector<SampleDropoutConcentrationPair>(options, label, os, bullet);
+        } else if (is_type<ModelPosteriorPolicy>(value)) {
+            os << options[label].as<ModelPosteriorPolicy>();
         } else {
             os << "UnknownType(" << ((boost::any)value.value()).type().name() << ")";
         }

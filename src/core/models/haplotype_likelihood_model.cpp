@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "haplotype_likelihood_model.hpp"
@@ -41,7 +41,9 @@ const HaplotypeLikelihoodModel::Config& HaplotypeLikelihoodModel::config() const
 
 void HaplotypeLikelihoodModel::set(Config config)
 {
-    if (config.max_indel_error != this->config_.max_indel_error) {
+    if (config.use_int_scores) {
+        hmm_ = HMM {config.max_indel_error, HMM::ScoreType::int32};
+    } else {
         hmm_ = HMM {config.max_indel_error};
     }
     config_ = std::move(config);
@@ -101,8 +103,12 @@ HaplotypeLikelihoodModel::HaplotypeLikelihoodModel(std::unique_ptr<SnvErrorModel
 , haplotype_gap_open_penalities_ {}
 , haplotype_gap_extend_penalities_ {}
 , config_ {config}
-, hmm_ {config.max_indel_error}
 {
+    if (config.use_int_scores) {
+        hmm_ = HMM {config.max_indel_error, HMM::ScoreType::int32};
+    } else {
+        hmm_ = HMM {config.max_indel_error};
+    }
     if (config_.mapping_quality_cap_trigger && *config_.mapping_quality_cap_trigger >= config_.mapping_quality_cap) {
         config_.mapping_quality_cap_trigger = boost::none;
     }

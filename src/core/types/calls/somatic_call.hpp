@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef somatic_call_hpp
@@ -9,6 +9,7 @@
 #include <vector>
 
 #include <boost/optional.hpp>
+#include <boost/container/flat_map.hpp>
 
 #include "config/common.hpp"
 #include "core/types/allele.hpp"
@@ -56,10 +57,19 @@ public:
     virtual bool requires_model_evaluation() const noexcept override { return true; }
     
 protected:
-    GenotypeStatsMap genotype_stats_;
+    struct ExtendedAlleleStats
+    {
+        AlleleStats stats;
+        bool is_somatic_haplotype;
+    };
+
+    using SquashedGenotypeStatsMap = boost::container::flat_map<SampleName, std::vector<ExtendedAlleleStats>>;
+    
+    SquashedGenotypeStatsMap genotype_stats_;
     
 private:
     virtual std::unique_ptr<Call> do_clone() const override;
+    virtual void reorder_genotype_fields(const SampleName& sample, const std::vector<unsigned>& order) override;
 };
 
 } // namespace octopus

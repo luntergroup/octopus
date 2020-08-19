@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "mapping_quality_zero_count.hpp"
@@ -20,14 +20,21 @@ std::unique_ptr<Measure> MappingQualityZeroCount::do_clone() const
     return std::make_unique<MappingQualityZeroCount>(*this);
 }
 
+Measure::ValueType MappingQualityZeroCount::get_value_type() const
+{
+    return std::size_t {};
+}
+
 Measure::ResultType MappingQualityZeroCount::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
+    ValueType result {};
     if (recalculate_) {
         const auto& reads = get_value<OverlappingReads>(facets.at("OverlappingReads"));
-        return count_mapq_zero(reads);
+        result = count_mapq_zero(reads, mapped_region(call));
     } else {
-        return static_cast<std::size_t>(std::stoull(call.info_value("MQ0").front()));
+        result = static_cast<std::size_t>(std::stoull(call.info_value("MQ0").front()));
     }
+    return result;
 }
 
 Measure::ResultCardinality MappingQualityZeroCount::do_cardinality() const noexcept

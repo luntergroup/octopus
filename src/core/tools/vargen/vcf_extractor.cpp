@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "vcf_extractor.hpp"
@@ -15,14 +15,16 @@
 
 namespace octopus { namespace coretools {
 
-VcfExtractor::VcfExtractor(std::unique_ptr<const VcfReader> reader)
+VcfExtractor::VcfExtractor(std::unique_ptr<VcfReader> reader)
 : VcfExtractor {std::move(reader), Options {}}
 {}
 
-VcfExtractor::VcfExtractor(std::unique_ptr<const VcfReader> reader, Options options)
+VcfExtractor::VcfExtractor(std::unique_ptr<VcfReader> reader, Options options)
 : reader_ {std::move(reader)}
 , options_ {options}
-{}
+{
+    reader_->close();
+}
 
 std::unique_ptr<VariantGenerator> VcfExtractor::do_clone() const
 {
@@ -33,9 +35,7 @@ namespace {
 
 static bool is_canonical(const VcfRecord::NucleotideSequence& allele)
 {
-    return allele != vcfspec::missingValue
-           && std::none_of(std::cbegin(allele), std::cend(allele),
-                           [](const auto base) { return base == vcfspec::deletedBase; });
+    return allele != vcfspec::missingValue && allele != vcfspec::deleteMaskAllele;
 }
 
 template <typename Iterator>
@@ -96,10 +96,12 @@ void extract_variants(const VcfRecord& record, Container& result, const bool spl
 
 std::vector<Variant> VcfExtractor::do_generate(const RegionSet& regions) const
 {
+    reader_->open();
     std::vector<Variant> result {};
     for (const auto& region : regions) {
         utils::append(fetch_variants(region), result);
     }
+    reader_->close();
     return result;
 }
 

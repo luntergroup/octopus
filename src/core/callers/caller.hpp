@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef caller_hpp
@@ -20,6 +20,7 @@
 #include "basics/read_pileup.hpp"
 #include "core/types/variant.hpp"
 #include "core/types/haplotype.hpp"
+#include "core/types/indexed_haplotype.hpp"
 #include "core/tools/coretools.hpp"
 #include "core/models/haplotype_likelihood_array.hpp"
 #include "core/tools/vcf_record_factory.hpp"
@@ -46,6 +47,7 @@ public:
     using CallTypeSet = std::set<std::type_index>;
     
     enum class RefCallType { none, blocked, positional };
+    enum class ModelPosteriorPolicy { all, off, special };
     
     struct Components
     {
@@ -61,15 +63,16 @@ public:
     struct Parameters
     {
         RefCallType refcall_type;
-        boost::optional<Phred<double>> refcall_block_merge_threshold;
+        boost::optional<Phred<double>> refcall_block_merge_threshold, max_refcall_posterior;
         bool call_sites_only;
         unsigned max_haplotypes;
-        Phred<double> haplotype_extension_threshold, saturation_limit;
-        bool allow_model_filtering;
+        double haplotype_extension_threshold, saturation_limit;
+        ModelPosteriorPolicy model_posterior_policy;
         bool protect_reference_haplotype;
         boost::optional<MemoryFootprint> target_max_memory;
         ExecutionPolicy execution_policy;
-        bool use_paired_reads, use_linked_reads;
+        ReadLinkageType read_linkage;
+        bool try_early_phase_detection;
     };
     
     using ReadMap = octopus::ReadMap;
@@ -97,7 +100,6 @@ public:
     std::vector<VcfRecord> regenotype(const std::vector<Variant>& variants, ProgressMeter& progress_meter) const;
     
 protected:
-    using HaplotypeReference = std::reference_wrapper<const Haplotype>;
     using HaplotypeBlock = HaplotypeGenerator::HaplotypeBlock;
     
     std::reference_wrapper<const ReferenceGenome> reference_;
@@ -109,8 +111,8 @@ protected:
     
     struct Latents
     {
-        using HaplotypeProbabilityMap = std::unordered_map<HaplotypeReference, double>;
-        using GenotypeProbabilityMap  = ProbabilityMatrix<Genotype<Haplotype>>;
+        using HaplotypeProbabilityMap = std::unordered_map<IndexedHaplotype<>, double>;
+        using GenotypeProbabilityMap  = ProbabilityMatrix<Genotype<IndexedHaplotype<>>>;
         
         virtual ~Latents() noexcept = default;
         
@@ -154,7 +156,7 @@ private:
     infer_latents(const HaplotypeBlock& haplotypes,
                   const HaplotypeLikelihoodArray& haplotype_likelihoods) const = 0;
     
-    virtual Genotype<Haplotype> call_genotype(const Latents& latents, const SampleName& sample) const;
+    virtual Genotype<IndexedHaplotype<>> call_genotype(const Latents& latents, const SampleName& sample) const;
     
     virtual boost::optional<double>
     calculate_model_posterior(const HaplotypeBlock& haplotypes,
@@ -244,7 +246,6 @@ private:
                                                    const ReadPileupMap& pileups) const;
     std::vector<Allele>
     generate_reference_alleles(const GenomicRegion& region,
-                               const std::vector<Variant>& candidates,
                                const std::vector<CallWrapper>& calls) const;
     std::vector<Allele> generate_reference_alleles(const GenomicRegion& region) const;
     ReadPileupMap make_pileups(const ReadMap& reads, const Latents& latents, const GenomicRegion& region) const;

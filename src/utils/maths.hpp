@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef maths_hpp
@@ -35,6 +35,12 @@ namespace constants
 {
     template <typename T = double>
     constexpr T ln10Div10 = T {0.230258509299404568401799145468436420760110148862877297603};
+}
+
+template <typename RealType>
+bool is_subnormal(const RealType x) noexcept
+{
+    return std::fpclassify(x) == FP_SUBNORMAL;
 }
 
 template <typename RealType,
@@ -77,6 +83,23 @@ int count_leading_zeros(const T x)
 {
     if (x == 0.0) return 0;
     return -std::ceil(std::log10(std::abs(x - std::numeric_limits<T>::epsilon())));
+}
+
+template <typename IntegerType,
+          typename = std::enable_if_t<std::is_integral<IntegerType>::value>>
+constexpr IntegerType ipow(const IntegerType base, const IntegerType exponent) noexcept
+{
+    if (exponent == 0) return 1;
+    if (exponent == 1) return base;
+    const auto y = ipow(base, exponent / 2);
+    return exponent % 2 == 0 ? y * y : base * y * y;
+}
+
+template <typename IntegerType,
+          typename = std::enable_if_t<std::is_integral<IntegerType>::value>>
+bool is_safe_ipow(const IntegerType base, const IntegerType exponent) noexcept
+{
+    return exponent * std::log(base) <= std::log(std::numeric_limits<IntegerType>::max());
 }
 
 template <typename RealType>
@@ -188,18 +211,18 @@ T median(const Range& values)
     return detail::median_const<T>(std::cbegin(values), std::cend(values));
 }
 
-template <typename InputIt, typename UnaryOperation>
-auto stdev(InputIt first, InputIt last, UnaryOperation unary_op)
+template <typename ForwardIterator, typename UnaryOperation>
+auto stdev(ForwardIterator first, ForwardIterator last, UnaryOperation unary_op)
 {
     const auto m = mean(first, last, unary_op);
     const auto n = std::distance(first, last);
-    std::vector<double> diff(n);
-    std::transform(first, last, std::begin(diff), [&] (const auto& x) { return unary_op(x) - m; });
-    return std::sqrt(std::inner_product(std::begin(diff), std::end(diff), std::begin(diff), 0.0) / n);
+    const auto sum_square = [&] (auto total, const auto& x) { return total + std::pow(unary_op(x) - m, 2); };
+    const auto ss = std::accumulate(first, last, 0.0, sum_square);
+    return std::sqrt(ss / n);
 }
 
-template <typename InputIt>
-auto stdev(InputIt first, InputIt last)
+template <typename ForwardIterator>
+auto stdev(ForwardIterator first, ForwardIterator last)
 {
     return stdev(first, last, IdFunction {});
 }
@@ -400,33 +423,33 @@ template <typename RealType, typename IntegerType,
           typename = std::enable_if_t<std::is_integral<IntegerType>::value>>
 RealType log_factorial(IntegerType x)
 {
-    if (x == 0 || x == 1) return 0;
-    if (x == 2) return std::log(2);
-    if (x == 3) return std::log(6);
-    if (x == 4) return std::log(24);
-    if (x > 100) {
-        return x * std::log(x) - x; // Stirling's approximation
-    } else {
-        std::vector<IntegerType> lx(x);
-        std::iota(std::begin(lx), std::end(lx), 1);
-        std::vector<RealType> tx(x);
-        std::transform(std::cbegin(lx), std::cend(lx), std::begin(tx),
-                       [] (IntegerType a) { return std::log(static_cast<RealType>(a)); });
-        return std::accumulate(std::cbegin(tx), std::cend(tx), RealType {0});
-    }
+    return std::lgamma(x + 1);
+}
+
+template <typename InputIt, typename Log>
+auto entropy(InputIt first, InputIt last, Log&& log)
+{
+    using RealType = typename std::iterator_traits<InputIt>::value_type;
+    static_assert(std::is_floating_point<RealType>::value,
+                  "entropy is only defined for floating point values");
+    const auto add_entropy = [&] (auto total, auto p) { return total + (p > 0 ? p * log(p) : 0); };
+    return -std::accumulate(first, last, RealType {0}, add_entropy);
+}
+
+template <typename Range, typename Log>
+auto entropy(const Range& values, Log&& log)
+{
+    return entropy(std::cbegin(values), std::cend(values), std::forward<Log>(log));
 }
 
 template <typename InputIt>
 auto entropy(InputIt first, InputIt last)
 {
-    using RealType = typename std::iterator_traits<InputIt>::value_type;
-    static_assert(std::is_floating_point<RealType>::value,
-                  "entropy is only defined for floating point values");
-    return -std::accumulate(first, last, RealType {0}, [] (auto curr, auto p) { return curr + p * std::log(p); });
+    return entropy(first, last, [] (auto x) { return std::log(x); });
 }
 
-template <typename Container>
-auto entropy(const Container& values)
+template <typename Range>
+auto entropy(const Range& values)
 {
     return entropy(std::cbegin(values), std::cend(values));
 }
@@ -434,14 +457,11 @@ auto entropy(const Container& values)
 template <typename InputIt>
 auto entropy2(InputIt first, InputIt last)
 {
-    using RealType = typename std::iterator_traits<InputIt>::value_type;
-    static_assert(std::is_floating_point<RealType>::value,
-                  "entropy2 is only defined for floating point values");
-    return -std::accumulate(first, last, RealType {0}, [] (auto curr, auto p) { return curr + p * std::log2(p); });
+    return entropy(first, last, [] (auto x) { return std::log2(x); });
 }
 
-template <typename Container>
-auto entropy2(const Container& values)
+template <typename Range>
+auto entropy2(const Range& values)
 {
     return entropy2(std::cbegin(values), std::cend(values));
 }
@@ -449,17 +469,40 @@ auto entropy2(const Container& values)
 template <typename InputIt>
 auto entropy10(InputIt first, InputIt last)
 {
-    using RealType = typename std::iterator_traits<InputIt>::value_type;
-    static_assert(std::is_floating_point<RealType>::value,
-                  "entropy10 is only defined for floating point values");
-    return -std::accumulate(first, last, RealType {0}, [] (auto curr, auto p) { return curr + p * std::log10(p); });
+    return entropy(first, last, [] (auto x) { return std::log10(x); });
 }
 
-template <typename Container>
-auto entropy10(const Container& values)
+template <typename Range>
+auto entropy10(const Range& values)
 {
     return entropy10(std::cbegin(values), std::cend(values));
 }
+
+template <typename RealType, typename IntegerType,
+          typename = std::enable_if_t<std::is_integral<IntegerType>::value>,
+          typename = std::enable_if_t<std::is_floating_point<RealType>::value>>
+RealType log_binomial_coefficient(const IntegerType n, const IntegerType k)
+{
+    return log_factorial<RealType>(n) - (log_factorial<RealType>(k) + log_factorial<RealType>(n - k));
+}
+
+template <typename IntegerType, typename RealType = double,
+          typename = std::enable_if_t<std::is_integral<IntegerType>::value>,
+          typename = std::enable_if_t<std::is_floating_point<RealType>::value>>
+RealType log_fisher_exact_test(const IntegerType a, const IntegerType b, const IntegerType c, const IntegerType d)
+{
+    return log_binomial_coefficient<RealType>(a + b, b) + log_binomial_coefficient<RealType>(c + d, d)
+                - log_binomial_coefficient<RealType>(a + b + c + d, b + d);
+}
+
+template <typename IntegerType, typename RealType = double,
+          typename = std::enable_if_t<std::is_integral<IntegerType>::value>,
+          typename = std::enable_if_t<std::is_floating_point<RealType>::value>>
+RealType fisher_exact_test(const IntegerType a, const IntegerType b, const IntegerType c, const IntegerType d)
+{
+    return std::exp(log_fisher_exact_test<IntegerType, RealType>(a, b, c, d));
+}
+
 
 template <typename IntegerType, typename RealType,
           typename = std::enable_if_t<std::is_integral<IntegerType>::value>,
@@ -1031,32 +1074,59 @@ RealType dirichlet_marginal_sf(const std::vector<RealType>& alphas, const std::s
     return beta_sf(alphas[k], a_0 - alphas[k], x);
 }
 
-template <typename Container>
-void log_each(Container& values)
+template <typename Range>
+void log_each(Range& values)
 {
     for (auto& v : values) v = std::log(v);
 }
 
-template <typename Container>
-void exp_each(Container& values)
+template <typename Range>
+void exp_each(Range& values)
 {
     for (auto& v : values) v = std::exp(v);
 }
 
-template <typename Container>
-auto normalise_logs(Container& logs)
+template <typename ForwardIterator>
+auto normalise(const ForwardIterator first, const ForwardIterator last)
 {
-    const auto norm = log_sum_exp(logs);
-    for (auto& p : logs) p -= norm;
+    using T = typename std::iterator_traits<ForwardIterator>::value_type;
+    const auto norm = std::accumulate(first, last, T {});
+    if (norm > 0) std::for_each(first, last, [norm] (auto& value) { value /= norm; });
     return norm;
 }
 
-template <typename Container>
-auto normalise_exp(Container& logs)
+template <typename Range>
+auto normalise(Range& values)
 {
-    const auto norm = log_sum_exp(logs);
-    for (auto& p : logs) p = std::exp(p - norm);
+    return normalise(std::begin(values), std::end(values));
+}
+
+template <typename ForwardIterator>
+auto normalise_logs(const ForwardIterator first, const ForwardIterator last)
+{
+    const auto norm = log_sum_exp(first, last);
+    std::for_each(first, last, [norm] (auto& value) { value -= norm; });
     return norm;
+}
+
+template <typename Range>
+auto normalise_logs(Range& logs)
+{
+    return normalise_logs(std::begin(logs), std::end(logs));
+}
+
+template <typename ForwardIterator>
+auto normalise_exp(const ForwardIterator first, const ForwardIterator last)
+{
+    const auto norm = log_sum_exp(first, last);
+    std::transform(first, last, first, [norm] (auto& value) { return std::exp(value - norm); });
+    return norm;
+}
+
+template <typename Range>
+auto normalise_exp(Range& logs)
+{
+    return normalise_exp(std::begin(logs), std::end(logs));
 }
 
 } // namespace maths

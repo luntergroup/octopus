@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "variant_call_filter.hpp"
@@ -193,6 +193,14 @@ std::vector<T> copy_each_first(const std::vector<std::pair<T, _>>& items)
     return result;
 }
 
+template <typename Range>
+bool can_add_to_phase_block(const VcfRecord& call, const GenomicRegion& call_phase_region, const Range& block)
+{
+    if (block.empty()) return true;
+    if (overlaps(block.back().second, call_phase_region)) return true;
+    return is_refcall(call) && is_same_contig(call, block.back().first);
+}
+
 } // namespace
 
 VariantCallFilter::CallBlock
@@ -202,7 +210,7 @@ VariantCallFilter::read_next_block(VcfIterator& first, const VcfIterator& last, 
     for (; first != last; ++first) {
         const VcfRecord& call {*first};
         auto call_phase_region = get_phase_region(call, samples);
-        if (!block.empty() && !overlaps(block.back().second, call_phase_region)) {
+        if (!can_add_to_phase_block(call, call_phase_region, block)) {
             return copy_each_first(block);
         }
         block.emplace_back(call, std::move(call_phase_region));
@@ -255,7 +263,8 @@ VariantCallFilter::MeasureVector VariantCallFilter::measure(const VcfRecord& cal
 VariantCallFilter::MeasureBlock VariantCallFilter::measure(const CallBlock& block) const
 {
     const auto facets = compute_facets(block);
-    return measure(block, facets);
+    auto result = measure(block, facets);
+    return result;
 }
 
 std::vector<VariantCallFilter::MeasureBlock> VariantCallFilter::measure(const std::vector<CallBlock>& blocks) const
@@ -314,7 +323,7 @@ void VariantCallFilter::annotate(VcfRecord::Builder& call, const MeasureVector& 
         const MeasureWrapper& measure {p.get<0>()};
         if (is_requested_annotation(measure)) {
             const Measure::ResultType& measured_value {p.get<1>()};
-            measure.annotate(call, measured_value, header);
+            measure.annotate(call, measured_value, header, output_config_.aggregate_allele_annotations);
         }
     }
 }
@@ -332,11 +341,7 @@ VariantCallFilter::compute_joint_quality(const ClassificationList& sample_classi
         }
     }
     if (!sample_classification_qualities.empty()) {
-        if (sample_classification_qualities.size() == 1) {
-            return sample_classification_qualities.front();
-        } else {
-            return compute_joint_probability(sample_classification_qualities);
-        }
+        return compute_joint_quality(sample_classification_qualities);
     }
     return boost::none;
 }
@@ -362,15 +367,18 @@ Phred<double> ln_probability_true_to_phred(const double ln_prob_true)
     }
 }
 
-Phred<double> VariantCallFilter::compute_joint_probability(const std::vector<Phred<double>>& qualities) const
+Phred<double> VariantCallFilter::compute_joint_quality(const std::vector<Phred<double>>& qualities) const
 {
+    assert(!qualities.empty());
+    if (qualities.size() == 1) return qualities.front();
     if (std::any_of(std::cbegin(qualities), std::cend(qualities), [] (auto p) { return p.score() <= 0; })) {
         return Phred<double> {0.0};
     }
     std::vector<double> log_probs(qualities.size());
     std::transform(std::cbegin(qualities), std::cend(qualities), std::begin(log_probs),
                    [] (auto p) { return std::log(p.probability_true()); });
-    return ln_probability_true_to_phred(std::accumulate(std::cbegin(log_probs), std::cend(log_probs), 0.0));
+    const auto ln_prob_all_good = std::accumulate(std::cbegin(log_probs), std::cend(log_probs), 0.0);
+    return ln_probability_true_to_phred(ln_prob_all_good / log_probs.size());
 }
 
 std::vector<std::string> VariantCallFilter::compute_reason_union(const ClassificationList& sample_classifications) const
@@ -393,7 +401,7 @@ VcfHeader VariantCallFilter::make_header(const VcfReader& source) const
     if (measure_annotations_requested()) {
         for (const auto& measure : measures_) {
             if (is_requested_annotation(measure)) {
-                measure.annotate(builder);
+                measure.annotate(builder, output_config_.aggregate_allele_annotations);
             }
         }
     }
@@ -480,7 +488,7 @@ void VariantCallFilter::annotate(VcfRecord::Builder& call, const Classification 
     if (quality_name) {
         call.add_info(*quality_name);
         if (status.quality) {
-            call.set_info(*quality_name, utils::to_string(status.quality->score(), 2));
+            call.set_info(*quality_name, utils::to_string(status.quality->score(), 3, utils::PrecisionRule::sf));
         } else {
             call.set_info_missing(*quality_name);
         }
@@ -505,6 +513,10 @@ Measure::FacetMap VariantCallFilter::compute_facets(const CallBlock& block) cons
 
 std::vector<Measure::FacetMap> VariantCallFilter::compute_facets(const std::vector<CallBlock>& blocks) const
 {
+    if (debug_log_ && !blocks.empty()) {
+        const auto blocks_region = closed_region(blocks.front().front(), blocks.back().back());
+        stream(*debug_log_) << "Computing facets in blocks region " << blocks_region << " containing " << blocks.size() << " blocks";
+    }
     auto facets = facet_factory_.make(facet_names_, blocks, workers_);
     std::vector<Measure::FacetMap> result {};
     result.reserve(blocks.size());

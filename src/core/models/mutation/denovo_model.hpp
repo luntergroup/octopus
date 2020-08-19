@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef denovo_model_hpp
@@ -13,6 +13,7 @@
 #include <boost/functional/hash.hpp>
 
 #include "core/types/haplotype.hpp"
+#include "core/types/indexed_haplotype.hpp"
 #include "containers/mappable_block.hpp"
 #include "../pairhmm/pair_hmm.hpp"
 #include "indel_mutation_model.hpp"
@@ -26,7 +27,7 @@ public:
     
     struct Parameters
     {
-        double snv_mutation_rate, indel_mutation_rate;
+        double snv_prior, indel_prior;
     };
     
     enum class CachingStrategy { none, value, address };
@@ -46,13 +47,13 @@ public:
     
     Parameters parameters() const;
     
-    void prime(MappableBlock<Haplotype> haplotypes);
+    void prime(const MappableBlock<Haplotype>& haplotypes);
     void unprime() noexcept;
     bool is_primed() const noexcept;
     
     // ln p(target | given)
     LogProbability evaluate(const Haplotype& target, const Haplotype& given) const;
-    LogProbability evaluate(unsigned target, unsigned given) const;
+    LogProbability evaluate(const IndexedHaplotype<>& target, const IndexedHaplotype<>& given) const;
     
 private:
     struct AddressPairHash
@@ -79,7 +80,6 @@ private:
     IndelMutationModel indel_model_;
     boost::optional<LogProbability> min_ln_probability_;
     std::size_t num_haplotypes_hint_;
-    MappableBlock<Haplotype> haplotypes_;
     CachingStrategy caching_;
     
     mutable hmm::Alignment alignment_;
@@ -95,12 +95,12 @@ private:
     mutable HMM hmm_;
     
     LocalIndelModel generate_local_indel_model(const Haplotype& given) const;
-    void set_local_indel_model(unsigned given) const;
+    void set_local_indel_model(const IndexedHaplotype<>& given) const;
     HMM::ParameterType make_hmm_parameters() const noexcept;
     bool can_try_align_with_hmm(const Haplotype& target, const Haplotype& given) const noexcept;
     void align_with_hmm(const Haplotype& target, const Haplotype& given) const;
     LogProbability evaluate_uncached(const Haplotype& target, const Haplotype& given, bool gap_penalties_cached = false) const;
-    LogProbability evaluate_uncached(unsigned target, unsigned given) const;
+    LogProbability evaluate_uncached(const IndexedHaplotype<>& target, const IndexedHaplotype<>& given) const;
     LogProbability evaluate_basic_cache(const Haplotype& target, const Haplotype& given) const;
     LogProbability evaluate_address_cache(const Haplotype& target, const Haplotype& given) const;
 };

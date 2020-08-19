@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef cancer_genotype_prior_model_hpp
@@ -11,6 +11,7 @@
 #include <cassert>
 
 #include "core/types/haplotype.hpp"
+#include "core/types/indexed_haplotype.hpp"
 #include "core/types/genotype.hpp"
 #include "core/types/cancer_genotype.hpp"
 #include "genotype_prior_model.hpp"
@@ -40,8 +41,7 @@ public:
     SomaticMutationModel& mutation_model() noexcept;
     const SomaticMutationModel& mutation_model() const noexcept;
     
-    LogProbability evaluate(const CancerGenotype<Haplotype>& genotype) const;
-    LogProbability evaluate(const CancerGenotypeIndex& genotype) const;
+    LogProbability evaluate(const CancerGenotype<IndexedHaplotype<>>& genotype) const;
 
 private:
     std::reference_wrapper<const GenotypePriorModel> germline_model_;
@@ -50,32 +50,16 @@ private:
     // p(somatic | germline)
     template <typename G, typename H>
     LogProbability ln_probability_of_somatic_given_genotype(const H& somatic, const G& germline) const;
-    LogProbability ln_probability_of_somatic_given_haplotype(const Haplotype& somatic, const Haplotype& germline) const;
-    LogProbability ln_probability_of_somatic_given_haplotype(unsigned somatic_index, unsigned germline_index) const;
+    LogProbability ln_probability_of_somatic_given_haplotype(const IndexedHaplotype<>& somatic, const IndexedHaplotype<>& germline) const;
 };
-
-namespace detail {
-
-inline auto get_ploidy(const Genotype<Haplotype>& genotype) noexcept
-{
-    return genotype.ploidy();
-}
-
-inline auto get_ploidy(const GenotypeIndex& genotype) noexcept
-{
-    return static_cast<unsigned>(genotype.size());
-}
-
-} // namespace detail
 
 // p(somatic | germline) = 1 / M sum [k = 1 -> M] p(somatic | germline_k) (M = germline ploidy)
 template <typename G, typename H>
 CancerGenotypePriorModel::LogProbability
 CancerGenotypePriorModel::ln_probability_of_somatic_given_genotype(const H& somatic, const G& germline) const
 {
-    const auto ploidy = detail::get_ploidy(germline);
-    assert(ploidy > 0);
-    switch (ploidy) {
+    assert(ploidy(germline) > 0);
+    switch (ploidy(germline)) {
         case 1: return ln_probability_of_somatic_given_haplotype(somatic, germline[0]);
         case 2:
         {
@@ -94,12 +78,12 @@ CancerGenotypePriorModel::ln_probability_of_somatic_given_genotype(const H& soma
         }
         default:
         {
-            std::vector<LogProbability> tmp(ploidy);
+            std::vector<LogProbability> tmp(ploidy(germline));
             std::transform(std::cbegin(germline), std::cend(germline), std::begin(tmp),
-                           [this, &somatic] (const auto& haplotype) {
-                               return this->ln_probability_of_somatic_given_haplotype(somatic, haplotype);
+                           [&] (const auto& haplotype) {
+                               return ln_probability_of_somatic_given_haplotype(somatic, haplotype);
                            });
-            return maths::log_sum_exp(tmp) - std::log(ploidy);
+            return maths::log_sum_exp(tmp) - std::log(ploidy(germline));
         }
     }
 }

@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "denovo_random_forest_filter.hpp"
@@ -11,7 +11,6 @@
 namespace octopus { namespace csr {
 
 DeNovoRandomForestVariantCallFilter::DeNovoRandomForestVariantCallFilter(FacetFactory facet_factory,
-                                                                         std::vector<MeasureWrapper> measures,
                                                                          Path germline_forest, Path denovo_forest,
                                                                          OutputOptions output_config,
                                                                          ConcurrencyPolicy threading,
@@ -20,9 +19,8 @@ DeNovoRandomForestVariantCallFilter::DeNovoRandomForestVariantCallFilter(FacetFa
                                                                          boost::optional<ProgressMeter&> progress)
 : RandomForestFilter {
     std::move(facet_factory),
-    std::move(measures),
     {make_wrapped_measure<IsDenovo>(true)},
-    [] (const MeasureVector& measures) -> std::int8_t { return !boost::get<bool>(measures.front()); },
+    [] (const MeasureVector& measures) -> std::int8_t { return !get_value_type<bool>(measures.front()); },
     {std::move(germline_forest), std::move(denovo_forest)},
     std::move(output_config),
     std::move(threading),
@@ -32,7 +30,6 @@ DeNovoRandomForestVariantCallFilter::DeNovoRandomForestVariantCallFilter(FacetFa
 } {}
 
 DeNovoRandomForestVariantCallFilter::DeNovoRandomForestVariantCallFilter(FacetFactory facet_factory,
-                                                                         std::vector<MeasureWrapper> measures,
                                                                          Path denovo_forest,
                                                                          OutputOptions output_config,
                                                                          ConcurrencyPolicy threading,
@@ -41,9 +38,8 @@ DeNovoRandomForestVariantCallFilter::DeNovoRandomForestVariantCallFilter(FacetFa
                                                                          boost::optional<ProgressMeter&> progress)
 : RandomForestFilter {
     std::move(facet_factory),
-    std::move(measures),
     {make_wrapped_measure<IsDenovo>(false)},
-    [] (const MeasureVector& measures) -> std::int8_t { return !boost::get<bool>(measures.front()); },
+    [] (const MeasureVector& measures) -> std::int8_t { return !get_value_type<bool>(measures.front()); },
     {std::move(denovo_forest)},
     std::move(output_config),
     std::move(threading),

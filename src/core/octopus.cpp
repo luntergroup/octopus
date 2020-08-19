@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "octopus.hpp"
@@ -132,7 +132,7 @@ bool has_reads(const GenomicRegion& region, ContigCallingComponents& components)
 auto get_call_types(const GenomeCallingComponents& components, const std::vector<ContigName>& contigs)
 {
     CallTypeSet result {};
-    for (const auto& contig : components.contigs()) {
+    for (const auto& contig : contigs) {
         const auto tmp_caller = components.caller_factory().make(contig);
         auto caller_call_types = tmp_caller->call_types();
         result.insert(std::begin(caller_call_types), std::end(caller_call_types));
@@ -279,19 +279,25 @@ void write_calls(std::deque<VcfRecord>&& calls, VcfWriter& out)
     calls.shrink_to_fit();
 }
 
+struct WindowConfig
+{
+    boost::optional<GenomicRegion::Size> min_size = boost::none, max_size = boost::none;
+};
+
+static const WindowConfig default_window_config {5'000, 25'000'000};
+
 auto find_max_window(const ContigCallingComponents& components,
-                     const GenomicRegion& remaining_call_region)
+                     const GenomicRegion& target_region)
 {
     const auto& rm = components.read_manager.get();
-    if (!rm.has_reads(components.samples.get(), remaining_call_region)) {
-        return remaining_call_region;
+    if (!rm.has_reads(components.samples.get(), target_region)) {
+        return target_region;
     }
-    auto result = rm.find_covered_subregion(components.samples, remaining_call_region,
-                                            components.read_buffer_size);
-    if (ends_before(result, remaining_call_region)) {
-        auto rest = right_overhang_region(remaining_call_region, result);
+    auto result = rm.find_covered_subregion(components.samples, target_region, components.read_buffer_size);
+    if (ends_before(result, target_region)) {
+        auto rest = right_overhang_region(target_region, result);
         if (!rm.has_reads(components.samples.get(), rest)) {
-            result = remaining_call_region;
+            result = target_region;
         }
     }
     return result;
@@ -299,20 +305,24 @@ auto find_max_window(const ContigCallingComponents& components,
 
 auto propose_call_subregion(const ContigCallingComponents& components,
                             const GenomicRegion& remaining_call_region,
-                            boost::optional<GenomicRegion::Size> min_size = boost::none)
+                            const WindowConfig& config)
 {
     if (is_empty(remaining_call_region)) {
         return remaining_call_region;
     }
-    const auto max_window = find_max_window(components, remaining_call_region);
+    auto target = remaining_call_region;
+    if (config.max_size && size(target) > *config.max_size) {
+        target = head_region(target, *config.max_size);
+    }
+    const auto max_window = find_max_window(components, target);
     if (ends_before(remaining_call_region, max_window)) {
         return remaining_call_region;
     }
-    if (min_size && size(max_window) < *min_size) {
-        if (size(remaining_call_region) < *min_size) {
+    if (config.min_size && size(max_window) < *config.min_size) {
+        if (size(remaining_call_region) < *config.min_size) {
             return remaining_call_region;
         }
-        return expand_rhs(head_region(max_window), *min_size);
+        return expand_rhs(head_region(max_window), *config.min_size);
     }
     return max_window;
 }
@@ -320,10 +330,10 @@ auto propose_call_subregion(const ContigCallingComponents& components,
 auto propose_call_subregion(const ContigCallingComponents& components,
                             const GenomicRegion& current_subregion,
                             const GenomicRegion& input_region,
-                            boost::optional<GenomicRegion::Size> min_size = boost::none)
+                            const WindowConfig& config)
 {
     assert(contains(input_region, current_subregion));
-    return propose_call_subregion(components, right_overhang_region(input_region, current_subregion), min_size);
+    return propose_call_subregion(components, right_overhang_region(input_region, current_subregion), config);
 }
 
 void buffer_connecting_calls(std::deque<VcfRecord>& calls,
@@ -403,10 +413,12 @@ void run_octopus_on_contig(ContigCallingComponents&& components)
     
     assert(!components.regions.empty());
     
+    const auto window_config = default_window_config;
+    
     std::deque<VcfRecord> calls;
     std::vector<VcfRecord> connecting_calls {};
     auto input_region = components.regions.front();
-    auto subregion    = propose_call_subregion(components, input_region);
+    auto subregion    = propose_call_subregion(components, input_region, window_config);
     auto first_input_region      = std::cbegin(components.regions);
     const auto last_input_region = std::cend(components.regions);
     
@@ -421,13 +433,13 @@ void run_octopus_on_contig(ContigCallingComponents&& components)
         }
         resolve_connecting_calls(connecting_calls, calls, components);
         
-        auto next_subregion = propose_call_subregion(components, subregion, input_region);
+        auto next_subregion = propose_call_subregion(components, subregion, input_region, window_config);
         
         if (is_empty(next_subregion)) {
             ++first_input_region;
             if (first_input_region != last_input_region) {
                 input_region = *first_input_region;
-                next_subregion = propose_call_subregion(components, input_region);
+                next_subregion = propose_call_subregion(components, input_region, window_config);
             }
         }
         assert(connecting_calls.empty());
@@ -581,12 +593,17 @@ struct TaskMakerSyncPacket
     std::atomic_bool all_done;
 };
 
-void make_region_tasks(const GenomicRegion& region, const ContigCallingComponents& components, const ExecutionPolicy policy,
-                       TaskQueue& result, TaskMakerSyncPacket& sync, const bool last_region_in_contig, const bool last_contig)
+void make_region_tasks(const GenomicRegion& region,
+                       const ContigCallingComponents& components,
+                       const ExecutionPolicy policy,
+                       TaskQueue& result,
+                       TaskMakerSyncPacket& sync,
+                       const bool last_region_in_contig,
+                       const bool last_contig,
+                       const WindowConfig& window_config)
 {
-    static constexpr GenomicRegion::Size minTaskSize {5'000};
     std::unique_lock<std::mutex> lock {sync.mutex, std::defer_lock};
-    auto subregion = propose_call_subregion(components, region, minTaskSize);
+    auto subregion = propose_call_subregion(components, region, window_config);
     if (ends_equal(subregion, region)) {
         lock.lock();
         sync.cv.wait(lock, [&] () { return sync.ready; });
@@ -604,7 +621,7 @@ void make_region_tasks(const GenomicRegion& region, const ContigCallingComponent
         bool done {false};
         while (true) {
             while (batch.size() < std::max(sync.batch_size_hint.load(), 1u) || !sync.waiting) {
-                subregion = propose_call_subregion(components, subregion, region, minTaskSize);
+                subregion = propose_call_subregion(components, subregion, region, window_config);
                 batch.push_back(subregion);
                 assert(!ends_before(region, subregion));
                 if (ends_equal(subregion, region)) {
@@ -637,14 +654,18 @@ void make_region_tasks(const GenomicRegion& region, const ContigCallingComponent
     }
 }
 
-void make_contig_tasks(const ContigCallingComponents& components, const ExecutionPolicy policy,
-                       TaskQueue& result, TaskMakerSyncPacket& sync, const bool last_contig)
+void make_contig_tasks(const ContigCallingComponents& components,
+                       const ExecutionPolicy policy,
+                       TaskQueue& result,
+                       TaskMakerSyncPacket& sync,
+                       const bool last_contig,
+                       const WindowConfig& window_config)
 {
     if (components.regions.empty()) return;
     std::for_each(std::cbegin(components.regions), std::prev(std::cend(components.regions)), [&] (const auto& region) {
-        make_region_tasks(region, components, policy, result, sync, false, last_contig);
+        make_region_tasks(region, components, policy, result, sync, false, last_contig, window_config);
     });
-    make_region_tasks(components.regions.back(), components, policy, result, sync, true, last_contig);
+    make_region_tasks(components.regions.back(), components, policy, result, sync, true, last_contig, window_config);
 }
 
 ExecutionPolicy make_execution_policy(const GenomeCallingComponents& components)
@@ -662,9 +683,14 @@ auto make_contig_components(const ContigName& contig, GenomeCallingComponents& c
     return result;
 }
 
-void make_tasks_helper(TaskMap& tasks, std::vector<ContigName> contigs, GenomeCallingComponents& components,
-                       const unsigned num_threads, ExecutionPolicy execution_policy, TaskMakerSyncPacket& sync)
+void make_tasks_helper(TaskMap& tasks,
+                       std::vector<ContigName> contigs,
+                       GenomeCallingComponents& components,
+                       const unsigned num_threads,
+                       ExecutionPolicy execution_policy,
+                       TaskMakerSyncPacket& sync)
 {
+    const auto window_config = default_window_config;
     try {
         static auto debug_log = get_debug_log();
         if (debug_log) stream(*debug_log) << "Making tasks for " << contigs.size() << " contigs";
@@ -672,7 +698,7 @@ void make_tasks_helper(TaskMap& tasks, std::vector<ContigName> contigs, GenomeCa
             const auto& contig = contigs[i];
             if (debug_log) stream(*debug_log) << "Making tasks for contig " << contig;
             auto contig_components = make_contig_components(contig, components, num_threads);
-            make_contig_tasks(contig_components, execution_policy, tasks[contig], sync, i == contigs.size() - 1);
+            make_contig_tasks(contig_components, execution_policy, tasks[contig], sync, i == contigs.size() - 1, window_config);
             if (debug_log) stream(*debug_log) << "Finished making tasks for contig " << contig;
         }
         if (debug_log) *debug_log << "Finished making tasks";
@@ -693,8 +719,11 @@ void make_tasks_helper(TaskMap& tasks, std::vector<ContigName> contigs, GenomeCa
     }
 }
 
-std::thread make_task_maker_thread(TaskMap& tasks, GenomeCallingComponents& components, const unsigned num_threads,
-                                   TaskMakerSyncPacket& sync)
+std::thread
+make_task_maker_thread(TaskMap& tasks,
+                       GenomeCallingComponents& components,
+                       const unsigned num_threads,
+                       TaskMakerSyncPacket& sync)
 {
     auto contigs = components.contigs();
     if (contigs.empty()) {
@@ -792,9 +821,9 @@ auto run(Task task, ContigCallingComponents components, CallerSyncPacket& sync)
             lock.unlock();
             sync.cv.notify_all();
             return result;
-        } catch (...) {
+        } catch (const std::exception& e) {
             logging::ErrorLogger error_log {};
-            stream(error_log) << "Encountered a problem whilst calling " << task;
+            stream(error_log) << "Encountered a problem whilst calling " << task << "(" << e.what() << ")";
             using namespace std::chrono_literals;
             std::this_thread::sleep_for(2s); // Try to make sure the error is logged before raising
             std::unique_lock<std::mutex> lock {sync.mutex};
@@ -864,58 +893,20 @@ void resolve_connecting_calls(CompletedTask& lhs, CompletedTask& rhs,
                               const ContigCallingComponentFactory& calling_components)
 {
     static auto debug_log = get_debug_log();
-    using std::begin; using std::end; using std::cbegin; using std::cend; using std::make_move_iterator;
     if (lhs.calls.empty() || rhs.calls.empty()) return;
     const auto first_lhs_connecting = find_first_lhs_connecting(lhs.calls, encompassing_region(rhs.calls));
     const auto last_rhs_connecting  = find_last_rhs_connecting(encompassing_region(lhs.calls), rhs.calls);
-    if (first_lhs_connecting == cend(lhs.calls) && last_rhs_connecting == cbegin(rhs.calls)) {
-        return;
-    }
     if (debug_log) {
-        stream(*debug_log) << "Resolving connecting calls between tasks " << lhs << " & " << rhs;
-    }
-    std::deque<VcfRecord> merged_calls {};
-    std::set_union(first_lhs_connecting, cend(lhs.calls),
-                   cbegin(rhs.calls), last_rhs_connecting,
-                   std::back_inserter(merged_calls));
-    lhs.calls.erase(first_lhs_connecting, cend(lhs.calls));
-    rhs.calls.erase(cbegin(rhs.calls), last_rhs_connecting);
-    if (is_consistent(merged_calls)) {
-        rhs.calls.insert(begin(rhs.calls),
-                         make_move_iterator(begin(merged_calls)),
-                         make_move_iterator(end(merged_calls)));
-    } else {
-        const auto unresolved_region = encompassing_region(mapped_region(merged_calls.front()),
-                                                           mapped_region(merged_calls.back()));
-        const auto components = calling_components();
-        auto num_unresolved_region_reads = components.read_manager.get().count_reads(components.samples, unresolved_region);
-        if (num_unresolved_region_reads <= components.read_buffer_size) {
-            merged_calls.clear();
-            merged_calls.shrink_to_fit();
-            if (debug_log) {
-                stream(*debug_log) << "Calls are inconsistent in connecting region " << unresolved_region
-                                   << ". Recalling the region";
-            }
-            logging::WarningLogger warn_log {};
-            stream(warn_log) << "Recalling " << unresolved_region
-                             << " due to call inconsistency between thread tasks. This may increase expected runtime";
-            auto resolved_calls = components.caller->call(unresolved_region, components.progress_meter);
-            if (!resolved_calls.empty()) {
-                if (!contains(unresolved_region, encompassing_region(resolved_calls))) {
-                    // TODO
-                }
-                // TODO: we may need to adjust phase regions in calls past the unresolved_region
-                rhs.calls.insert(begin(rhs.calls),
-                                 make_move_iterator(begin(resolved_calls)),
-                                 make_move_iterator(end(resolved_calls)));
-            }
-        } else {
-            // TODO: we could try to manually resolve the calls. Very difficult.
-            logging::WarningLogger log {};
-            stream(log) << "Skipping region " << unresolved_region
-                        << " as there are too many reads to analyse the whole region, and partitions give inconsistent calls";
+        const auto num_lhs_conflicting = std::distance(first_lhs_connecting, std::cend(lhs.calls));
+        const auto num_rhs_conflicting = std::distance(std::cbegin(rhs.calls), last_rhs_connecting);
+        if (num_lhs_conflicting + num_rhs_conflicting > 0) {
+            stream(*debug_log) << "Resolving connecting calls between tasks " 
+                           << lhs << "(" << num_lhs_conflicting << " conflicting)"
+                           << " & " << rhs << "(" << num_rhs_conflicting << " conflicting)";
         }
     }
+    // Keep RHS calls otherwise we might mess up phase sets of downstream calls
+    lhs.calls.erase(first_lhs_connecting, std::cend(lhs.calls));
 }
 
 void resolve_connecting_calls(std::deque<CompletedTask>& adjacent_tasks,
@@ -1321,12 +1312,19 @@ bool use_unfiltered_call_region_hints_for_filtering(const GenomeCallingComponent
 
 HaplotypeLikelihoodModel make_filtering_haplotype_likelihood_model(const GenomeCallingComponents& components)
 {
-    auto result = components.haplotype_likelihood_model();
-    auto new_config = result.config();
-    new_config.use_mapping_quality = false;
-    new_config.use_flank_state = false;
-    result.set(std::move(new_config));
-    return result;
+    return components.realignment_haplotype_likelihood_model();
+}
+
+Pedigree get_pedigree(const GenomeCallingComponents& components)
+{
+    auto result = components.pedigree();
+    if (!result) {
+        result = Pedigree {components.samples().size()};
+        for (const auto& sample : components.samples()) {
+            result->add_founder({sample});
+        }
+    }
+    return *result;
 }
 
 void run_csr(GenomeCallingComponents& components)
@@ -1356,7 +1354,7 @@ void run_csr(GenomeCallingComponents& components)
         const auto filter = filter_factory.make(components.reference(), std::move(buffered_rp), in.fetch_header(),
                                                 components.ploidies(),
                                                 make_filtering_haplotype_likelihood_model(components),
-                                                components.pedigree(),
+                                                get_pedigree(components),
                                                 progress, components.num_threads());
         assert(filter);
         VcfWriter& out {*components.filtered_output()};
@@ -1407,7 +1405,7 @@ void run_variant_calling(GenomeCallingComponents& components, UserCommandInfo in
         if (!components.filter_request()) {
             run_calling(components);
         }
-    } catch (const ProgramError& e) {
+    } catch (const Error& e) {
         try {
             if (debug_log) *debug_log << "Encountered an error whilst calling, attempting to cleanup";
             cleanup(components);
@@ -1429,6 +1427,18 @@ void run_variant_calling(GenomeCallingComponents& components, UserCommandInfo in
     components.output().close();
     try {
         run_csr(components);
+    } catch (const Error& e) {
+        try {
+            if (debug_log) *debug_log << "Encountered an error whilst filtering, attempting to cleanup";
+            cleanup(components);
+        } catch (...) {}
+        throw;
+    } catch (const std::exception& e) {
+        try {
+            if (debug_log) *debug_log << "Encountered an error whilst filtering, attempting to cleanup";
+            cleanup(components);
+        } catch (...) {}
+        throw CallingBug {e};
     } catch (...) {
         try {
             if (debug_log) *debug_log << "Encountered an error whilst filtering, attempting to cleanup";
@@ -1453,7 +1463,7 @@ bool is_stdout_final_output(const GenomeCallingComponents& components)
 bool check_bam_realign(const GenomeCallingComponents& components)
 {
     logging::WarningLogger warn_log {};
-    if (components.read_manager().num_files() != components.samples().size()) {
+    if (!components.read_manager().all_readers_have_one_sample()) {
         warn_log << "BAM realignment currently only supported for single sample BAMs";
         return false;
     }

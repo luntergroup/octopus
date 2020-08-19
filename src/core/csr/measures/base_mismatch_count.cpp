@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "base_mismatch_count.hpp"
@@ -12,9 +12,8 @@
 #include "io/variant/vcf_record.hpp"
 #include "basics/aligned_read.hpp"
 #include "core/types/allele.hpp"
-#include "core/tools/read_assigner.hpp"
-#include "utils/genotype_reader.hpp"
 #include "../facets/samples.hpp"
+#include "../facets/alleles.hpp"
 #include "../facets/read_assignments.hpp"
 
 namespace octopus { namespace csr {
@@ -24,6 +23,11 @@ const std::string BaseMismatchCount::name_ = "BMC";
 std::unique_ptr<Measure> BaseMismatchCount::do_clone() const
 {
     return std::make_unique<BaseMismatchCount>(*this);
+}
+
+Measure::ValueType BaseMismatchCount::get_value_type() const
+{
+    return int {};
 }
 
 namespace {
@@ -77,29 +81,29 @@ unsigned count_mismatches(const AlignedRead& read, const Allele& allele)
 Measure::ResultType BaseMismatchCount::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     const auto& samples = get_value<Samples>(facets.at("Samples"));
-    const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments"));
-    std::vector<int> result {};
+    const auto& alleles = get_value<Alleles>(facets.at("Alleles"));
+    const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments")).alleles;
+    Array<ValueType> result {};
     result.reserve(samples.size());
     for (const auto& sample : samples) {
-        std::vector<Allele> alleles; bool has_ref;
-        std::tie(alleles, has_ref) = get_called_alleles(call, sample);
         int sample_result {0};
-        if (!alleles.empty()) {
-            const auto sample_allele_support = compute_allele_support(alleles, assignments, sample);
-            for (const auto& p : sample_allele_support) {
-                for (const auto& read : p.second) {
-                    sample_result += count_mismatches(read, p.first);
+        const auto& support = assignments.at(sample);
+        for (const auto& allele : get_called(alleles, call, sample)) {
+            const auto support_set_itr = support.find(allele);
+            if (support_set_itr != std::cend(support)) { 
+                for (const auto& read : support_set_itr->second) {
+                    sample_result += count_mismatches(read, allele);
                 }
             }
         }
-        result.push_back(sample_result);
+        result.emplace_back(sample_result);
     }
     return result;
 }
 
 Measure::ResultCardinality BaseMismatchCount::do_cardinality() const noexcept
 {
-    return ResultCardinality::num_samples;
+    return ResultCardinality::samples;
 }
 
 const std::string& BaseMismatchCount::do_name() const
@@ -114,7 +118,7 @@ std::string BaseMismatchCount::do_describe() const
 
 std::vector<std::string> BaseMismatchCount::do_requirements() const
 {
-    return {"Samples", "ReadAssignments"};
+    return {"Samples", "Alleles", "ReadAssignments"};
 }
 
 } // namespace csr

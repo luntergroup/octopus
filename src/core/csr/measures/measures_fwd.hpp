@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef measures_fwd_hpp
@@ -31,7 +31,6 @@
 #include "core/csr/measures/denovo_contamination.hpp"
 #include "core/csr/measures/read_side_bias.hpp"
 #include "core/csr/measures/alt_allele_count.hpp"
-#include "core/csr/measures/overlaps_tandem_repeat.hpp"
 #include "core/csr/measures/str_length.hpp"
 #include "core/csr/measures/str_period.hpp"
 #include "core/csr/measures/posterior_probability.hpp"
@@ -47,11 +46,15 @@
 #include "core/csr/measures/variant_length.hpp"
 #include "core/csr/measures/base_mismatch_count.hpp"
 #include "core/csr/measures/base_mismatch_fraction.hpp"
+#include "core/csr/measures/base_mismatch_quality.hpp"
 #include "core/csr/measures/assigned_depth.hpp"
 #include "core/csr/measures/duplicate_concordance.hpp"
 #include "core/csr/measures/duplicate_allele_depth.hpp"
 #include "core/csr/measures/duplicate_allele_fraction.hpp"
 #include "core/csr/measures/error_rate.hpp"
 #include "core/csr/measures/error_rate_stdev.hpp"
+#include "core/csr/measures/is_transversion.hpp"
+#include "core/csr/measures/phase_length.hpp"
+#include "core/csr/measures/max_read_length.hpp"
 
 #endif

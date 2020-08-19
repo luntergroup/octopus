@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "coalescent_model.hpp"
@@ -231,37 +231,6 @@ void CoalescentModel::fill_site_buffer(const Haplotype& haplotype) const
     }
     site_buffer1_ = std::move(site_buffer2_);
     site_buffer2_.clear();
-}
-
-void CoalescentModel::fill_site_buffer(const std::vector<unsigned>& haplotype_indices) const
-{
-    site_buffer1_.clear();
-    std::fill(std::begin(index_flag_buffer_), std::end(index_flag_buffer_), false);
-    unsigned num_unique_nonempty_indices {0};
-    auto middle = std::begin(site_buffer1_);
-    for (auto index : haplotype_indices) {
-        if (!index_flag_buffer_[index]) {
-            auto& variants = index_cache_[index];
-            if (!variants) {
-                variants = haplotypes_[index].difference(reference_);
-            }
-            if (!variants->empty()) {
-                middle = site_buffer1_.insert(std::cend(site_buffer1_), std::cbegin(*variants), std::cend(*variants));
-                ++num_unique_nonempty_indices;
-            }
-            index_flag_buffer_[index] = true;
-        }
-    }
-    if (num_unique_nonempty_indices == 2) {
-        assert(site_buffer2_.empty());
-        std::merge(std::begin(site_buffer1_), middle, middle, std::end(site_buffer1_), std::back_inserter(site_buffer2_));
-        site_buffer2_.erase(std::unique(std::begin(site_buffer2_), std::end(site_buffer2_)), std::end(site_buffer2_));
-        site_buffer1_ = std::move(site_buffer2_);
-        site_buffer2_.clear();
-    } else if (num_unique_nonempty_indices > 2) {
-        std::sort(std::begin(site_buffer1_), std::end(site_buffer1_));
-        site_buffer1_.erase(std::unique(std::begin(site_buffer1_), std::end(site_buffer1_)), std::end(site_buffer1_));
-    }
 }
 
 void CoalescentModel::fill_site_buffer_uncached(const Haplotype& haplotype) const

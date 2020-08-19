@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "call.hpp"
@@ -19,6 +19,11 @@ std::unique_ptr<Call> Call::clone() const
 Phred<double> Call::quality() const noexcept
 {
     return quality_;
+}
+
+void Call::set_quality(Phred<double> new_quality) noexcept
+{
+    quality_ = new_quality;
 }
 
 Call::GenotypeCall& Call::get_genotype_call(const SampleName& sample)
@@ -91,6 +96,12 @@ void Call::set_model_posterior(Phred<double> p) noexcept
 boost::optional<Phred<double>> Call::model_posterior() const noexcept
 {
     return model_posterior_;
+}
+
+void Call::reorder_genotype(const SampleName& sample, const std::vector<unsigned>& order)
+{
+    genotype_calls_.at(sample).genotype.reorder(order);
+    reorder_genotype_fields(sample, order);
 }
 
 } // namespace octopus

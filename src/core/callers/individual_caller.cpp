@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "individual_caller.hpp"
@@ -27,6 +27,7 @@
 #include "utils/mappable_algorithms.hpp"
 #include "utils/read_stats.hpp"
 #include "utils/append.hpp"
+#include "utils/select_top_k.hpp"
 #include "logging/logging.hpp"
 
 namespace octopus {
@@ -75,8 +76,8 @@ std::size_t IndividualCaller::do_remove_duplicates(HaplotypeBlock& haplotypes) c
 // IndividualCaller::Latents public methods
 
 IndividualCaller::Latents::Latents(const SampleName& sample,
-                                   const HaplotypeBlock& haplotypes,
-                                   std::vector<Genotype<Haplotype>>&& genotypes,
+                                   const IndexedHaplotypeBlock& haplotypes,
+                                   IndividualCaller::GenotypeBlock genotypes,
                                    ModelInferences&& inferences)
 : genotype_posteriors_ {}
 , haplotype_posteriors_ {}
@@ -84,7 +85,7 @@ IndividualCaller::Latents::Latents(const SampleName& sample,
 {
     GenotypeProbabilityMap genotype_log_posteriors {std::cbegin(genotypes), std::cend(genotypes)};
     insert_sample(sample, inferences.posteriors.genotype_log_probabilities, genotype_log_posteriors);
-    genotype_log_posteriors_  = std::make_shared<GenotypeProbabilityMap>(std::move(genotype_log_posteriors));
+    genotype_log_posteriors_ = std::make_shared<GenotypeProbabilityMap>(std::move(genotype_log_posteriors));
     GenotypeProbabilityMap genotype_posteriors {std::make_move_iterator(std::begin(genotypes)), std::make_move_iterator(std::end(genotypes))};
     insert_sample(sample, inferences.posteriors.genotype_probabilities, genotype_posteriors);
     genotype_posteriors_  = std::make_shared<GenotypeProbabilityMap>(std::move(genotype_posteriors));
@@ -106,7 +107,7 @@ IndividualCaller::Latents::genotype_posteriors() const noexcept
 // IndividualCaller::Latents private methods
 
 IndividualCaller::Latents::HaplotypeProbabilityMap
-IndividualCaller::Latents::calculate_haplotype_posteriors(const HaplotypeBlock& haplotypes)
+IndividualCaller::Latents::calculate_haplotype_posteriors(const IndexedHaplotypeBlock& haplotypes)
 {
     assert(genotype_posteriors_ != nullptr);
     HaplotypeProbabilityMap result {haplotypes.size()};
@@ -115,7 +116,7 @@ IndividualCaller::Latents::calculate_haplotype_posteriors(const HaplotypeBlock& 
     }
     const auto& sample = std::cbegin(*genotype_posteriors_)->first;
     for (const auto& p : (*genotype_posteriors_)[sample]) {
-        for (const auto& haplotype : p.first.copy_unique_ref()) {
+        for (const auto& haplotype : collapse(p.first)) {
             result.at(haplotype) += p.second;
         }
     }
@@ -126,16 +127,16 @@ std::unique_ptr<IndividualCaller::Caller::Latents>
 IndividualCaller::infer_latents(const HaplotypeBlock& haplotypes,
                                 const HaplotypeLikelihoodArray& haplotype_likelihoods) const
 {
-    std::vector<GenotypeIndex> genotype_indices {};
-    auto genotypes = generate_all_genotypes(haplotypes, parameters_.ploidy, genotype_indices);
+    const auto indexed_haplotypes = index(haplotypes);
+    auto genotypes = propose_genotypes(haplotypes, indexed_haplotypes, haplotype_likelihoods);
     if (debug_log_) stream(*debug_log_) << "There are " << genotypes.size() << " candidate genotypes";
     auto prior_model = make_prior_model(haplotypes);
     prior_model->prime(haplotypes);
     model::IndividualModel model {*prior_model, debug_log_, trace_log_};
     model.prime(haplotypes);
     haplotype_likelihoods.prime(sample());
-    auto inferences = model.evaluate(genotypes, genotype_indices, haplotype_likelihoods);
-    return std::make_unique<Latents>(sample(), haplotypes, std::move(genotypes), std::move(inferences));
+    auto inferences = model.evaluate(genotypes, haplotype_likelihoods);
+    return std::make_unique<Latents>(sample(), indexed_haplotypes, std::move(genotypes), std::move(inferences));
 }
 
 boost::optional<double>
@@ -162,8 +163,10 @@ IndividualCaller::calculate_model_posterior(const HaplotypeBlock& haplotypes,
                                             const HaplotypeLikelihoodArray& haplotype_likelihoods,
                                             const Latents& latents) const
 {
-    const auto genotypes = generate_all_genotypes(haplotypes, parameters_.ploidy + 1);
+    const auto indexed_haplotypes = index(haplotypes);
+    const auto genotypes = generate_all_genotypes(indexed_haplotypes, parameters_.ploidy + 1);
     const auto prior_model = make_prior_model(haplotypes);
+    prior_model->prime(haplotypes);
     const model::IndividualModel model {*prior_model, debug_log_};
     haplotype_likelihoods.prime(sample());
     const auto inferences = model.evaluate(genotypes, haplotype_likelihoods);
@@ -172,7 +175,7 @@ IndividualCaller::calculate_model_posterior(const HaplotypeBlock& haplotypes,
 
 namespace {
 
-using GenotypeProbabilityMap = ProbabilityMatrix<Genotype<Haplotype>>::InnerMap;
+using GenotypeProbabilityMap = ProbabilityMatrix<Genotype<IndexedHaplotype<>>>::InnerMap;
 using VariantReference = std::reference_wrapper<const Variant>;
 using VariantPosteriorVector = std::vector<std::pair<VariantReference, Phred<double>>>;
 
@@ -211,7 +214,7 @@ struct GenotypeCall
     Phred<double> posterior;
 };
 
-using GenotypeCalls = std::vector<GenotypeCall>;
+using GenotypeCallVector = std::vector<GenotypeCall>;
 
 // allele posterior calculations
 
@@ -220,11 +223,9 @@ auto marginalise_contained(const GenotypeOrAllele& element, const GenotypeProbab
 {
     thread_local std::vector<double> buffer {};
     buffer.clear();
-    for (const auto& p : genotype_log_posteriors) {
-        if (!contains(p.first, element)) {
-            buffer.push_back(p.second);
-        }
-    }
+    for_each_contains(std::cbegin(genotype_log_posteriors), std::cend(genotype_log_posteriors), element,
+                     [&] (const auto& p, bool contain) { if (!contain) buffer.push_back(p.second); },
+                     [] (const auto& p) { return p.first; });
     if (!buffer.empty()) {
         return log_probability_false_to_phred(std::min(maths::log_sum_exp(buffer), 0.0));
     } else {
@@ -251,14 +252,15 @@ bool has_callable(const VariantPosteriorVector& variant_posteriors, const Phred<
                        [=] (const auto& p) noexcept { return p.second >= min_posterior; });
 }
 
-bool contains_alt(const Genotype<Haplotype>& genotype_call, const VariantReference& candidate)
+bool contains_alt(const Genotype<IndexedHaplotype<>>& genotype_call, const VariantReference& candidate)
 {
     return includes(genotype_call, candidate.get().alt_allele());
 }
 
-VariantCalls call_candidates(const VariantPosteriorVector& candidate_posteriors,
-                             const Genotype<Haplotype>& genotype_call,
-                             const Phred<double> min_posterior)
+VariantCalls
+call_candidates(const VariantPosteriorVector& candidate_posteriors,
+                const Genotype<IndexedHaplotype<>>& genotype_call,
+                const Phred<double> min_posterior)
 {
     VariantCalls result {};
     result.reserve(candidate_posteriors.size());
@@ -275,12 +277,6 @@ template <typename PairIterator>
 PairIterator find_map(PairIterator first, PairIterator last)
 {
     return std::max_element(first, last, [] (const auto& lhs, const auto& rhs) { return lhs.second < rhs.second; });
-}
-
-template <typename T>
-bool is_homozygous_reference(const Genotype<T>& g)
-{
-    return is_reference(g[0]) && g.is_homozygous();
 }
 
 auto call_genotype(const GenotypeProbabilityMap& genotype_log_posteriors, const bool ignore_hom_ref = false)
@@ -304,11 +300,12 @@ auto call_genotype(const GenotypeProbabilityMap& genotype_log_posteriors, const 
     }
 }
 
-GenotypeCalls call_genotypes(const Genotype<Haplotype>& genotype_call,
-                             const GenotypeProbabilityMap& genotype_log_posteriors,
-                             const std::vector<GenomicRegion>& variant_regions)
+GenotypeCallVector
+call_genotypes(const Genotype<IndexedHaplotype<>>& genotype_call,
+               const GenotypeProbabilityMap& genotype_log_posteriors,
+               const std::vector<GenomicRegion>& variant_regions)
 {
-    GenotypeCalls result {};
+    GenotypeCallVector result {};
     result.reserve(variant_regions.size());
     for (const auto& region : variant_regions) {
         auto genotype_chunk = copy<Allele>(genotype_call, region);
@@ -335,7 +332,7 @@ transform_call(const SampleName& sample, VariantCall&& variant_call, GenotypeCal
 }
 
 auto transform_calls(const SampleName& sample, VariantCalls&& variant_calls,
-                     GenotypeCalls&& genotype_calls)
+                     GenotypeCallVector&& genotype_calls)
 {
     std::vector<std::unique_ptr<octopus::VariantCall>> result {};
     result.reserve(variant_calls.size());
@@ -401,35 +398,46 @@ const GenomicRegion& mapped_region(const GenotypeProbabilityMap& genotype_poster
     return mapped_region(std::cbegin(genotype_posteriors)->first);
 }
 
-bool has_variation(const Allele& allele, const GenotypeProbabilityMap& genotype_posteriors)
+bool contains_helper(const Haplotype& haplotype, const Allele& allele)
 {
-    if (!genotype_posteriors.empty() && !contains(mapped_region(genotype_posteriors), allele)) {
-        return false;
+    if (!is_indel(allele)) {
+        return haplotype.contains(allele);
+    } else {
+        return haplotype.includes(allele);
     }
-    return std::any_of(std::cbegin(genotype_posteriors), std::cend(genotype_posteriors),
-                       [&allele] (const auto& p) {
-                           return !is_homozygous(p.first, allele);
-                       });
 }
 
-auto marginalise_homozygous(const Allele& allele, const GenotypeProbabilityMap& genotype_posteriors)
+bool has_variation(const Allele& allele, const GenotypeProbabilityMap& genotype_posteriors)
 {
-    auto p = std::accumulate(std::cbegin(genotype_posteriors), std::cend(genotype_posteriors), 0.0,
-                             [&] (const auto curr, const auto& p) {
-                                 return curr + (is_homozygous(p.first, allele) ? 0.0 : p.second);
-                             });
-    return probability_false_to_phred(p);
+    return !genotype_posteriors.empty()
+        && contains(mapped_region(genotype_posteriors), allele)
+        && !all_of_is_homozygous(std::cbegin(genotype_posteriors), std::cend(genotype_posteriors), allele,
+                                 [] (const auto& p) { return p.first; });
+}
+
+auto marginalise_homozygous(const Allele& allele, const GenotypeProbabilityMap& genotype_log_posteriors)
+{
+    std::deque<double> buffer {};
+    for_each_is_homozygous(std::cbegin(genotype_log_posteriors), std::cend(genotype_log_posteriors), allele,
+                           [&] (const auto& p, bool is_hom) { if (!is_hom) buffer.push_back(p.second); },
+                           [] (const auto& p) { return p.first; });
+    if (!buffer.empty()) {
+        return log_probability_false_to_phred(std::min(maths::log_sum_exp(buffer), 0.0));
+    } else {
+        return Phred<> {std::numeric_limits<double>::infinity()};
+    }
 }
 
 using ReadPileupRange = ContainedRange<ReadPileups::const_iterator>;
 
 auto compute_homozygous_posterior(const Allele& allele,
                                   const GenotypeProbabilityMap& genotype_posteriors,
+                                  const GenotypeProbabilityMap& genotype_log_posteriors,
                                   const ReadPileupRange& pileups)
 {
     assert(!empty(pileups));
     if (has_variation(allele, genotype_posteriors)) {
-        return marginalise_homozygous(allele, genotype_posteriors);
+        return marginalise_homozygous(allele, genotype_log_posteriors);
     } else {
         std::vector<AlignedRead::BaseQuality> reference_qualities {}, non_reference_qualities {};
         Allele::NucleotideSequence reference_sequence {};
@@ -456,14 +464,14 @@ auto compute_homozygous_posterior(const Allele& allele,
         auto het_alt_ln_likelihood = std::inner_product(std::cbegin(reference_ln_likelihoods), std::cend(reference_ln_likelihoods),
                                                         std::cbegin(non_reference_ln_likelihoods), 0.0, std::plus<> {},
                                                         [] (auto ref, auto alt) { return maths::log_sum_exp(ref, alt) - std::log(2); });
-        const auto hom_ref_ln_posterior = hom_ref_ln_likelihood - maths::log_sum_exp(hom_ref_ln_likelihood, het_alt_ln_likelihood);
-        
-        return probability_false_to_phred(1.0 - std::exp(hom_ref_ln_posterior));
+        const auto het_ln_posterior = het_alt_ln_likelihood - maths::log_sum_exp(hom_ref_ln_likelihood, het_alt_ln_likelihood);
+        return log_probability_false_to_phred(het_ln_posterior);
     }
 }
 
 auto call_reference(const std::vector<Allele>& reference_alleles,
                     const GenotypeProbabilityMap& genotype_posteriors,
+                    const GenotypeProbabilityMap& genotype_log_posteriors,
                     const ReadPileups& pileups,
                     const Phred<double> min_call_posterior)
 {
@@ -473,7 +481,7 @@ auto call_reference(const std::vector<Allele>& reference_alleles,
     auto active_pileup_itr = std::cbegin(pileups);
     for (const auto& allele : reference_alleles) {
         const auto active_pileups = contained_range(active_pileup_itr, std::cend(pileups), contig_region(allele));
-        const auto posterior = compute_homozygous_posterior(allele, genotype_posteriors, active_pileups);
+        const auto posterior = compute_homozygous_posterior(allele, genotype_posteriors, genotype_log_posteriors, active_pileups);
         if (posterior >= min_call_posterior) {
             result.push_back({allele, posterior});
         }
@@ -511,8 +519,9 @@ IndividualCaller::call_reference(const std::vector<Allele>& alleles,
                                  const ReadPileupMap& pileups) const
 {
     const auto& genotype_posteriors = (*latents.genotype_posteriors_)[sample()];
-    auto calls = octopus::call_reference(alleles, genotype_posteriors, pileups.at(sample()),
-                                         parameters_.min_refcall_posterior);
+    const auto& genotype_log_posteriors = (*latents.genotype_log_posteriors_)[sample()];
+    auto calls = octopus::call_reference(alleles, genotype_posteriors, genotype_log_posteriors,
+                                         pileups.at(sample()),parameters_.min_refcall_posterior);
     return transform_calls(std::move(calls), sample(), parameters_.ploidy);
 }
 
@@ -533,6 +542,110 @@ std::unique_ptr<GenotypePriorModel> IndividualCaller::make_prior_model(const Hap
     }
 }
 
+namespace {
+template <typename Container>
+void erase_complement_indices(Container& values, const std::vector<std::size_t>& indices)
+{
+    std::vector<bool> keep(values.size(), true);
+    for (auto idx : indices) keep[idx] = false;
+    if (!indices.empty()) {
+        std::size_t idx {0};
+        const auto is_not_index = [&] (const auto& v) { return keep[idx++]; };
+        values.erase(std::remove_if(std::begin(values), std::end(values), is_not_index), std::end(values));
+    } else {
+        values.clear();
+    }
+}
+
+template <typename Container, typename Range>
+void select_top_k(Container& items, const Range& probabilities, const std::size_t k)
+{
+    const auto best_indices = select_top_k_indices(probabilities, k, false);
+    erase_complement_indices(items, best_indices);
+}
+
+template <typename Container, typename T, typename Compare = std::less<T>>
+void 
+sort_by_other(Container& items, const std::vector<T>& other,
+              Compare&& comp = Compare {})
+{
+    assert(items.size() == other.size());
+    using U = typename Container::value_type;
+    std::vector<std::pair<U, std::reference_wrapper<const T>>> zipped {};
+    zipped.reserve(items.size());
+    for (std::size_t i {0}; i < items.size(); ++i) {
+        zipped.emplace_back(std::move(items[i]), other[i]);
+    }
+    const auto comp_helper = [&] (const auto& lhs, const auto& rhs) {
+        return comp(lhs.second, rhs.second);
+    };
+    std::sort(std::begin(zipped), std::end(zipped), comp_helper);
+    for (std::size_t i {0}; i < items.size(); ++i) {
+        items[i] = std::move(zipped[i].first);
+    }
+}
+
+template <typename IndexType>
+void erase_duplicates(MappableBlock<Genotype<IndexedHaplotype<IndexType>>>& genotypes)
+{
+    using std::begin; using std::end;
+    std::sort(begin(genotypes), end(genotypes), GenotypeLess {});
+    genotypes.erase(std::unique(begin(genotypes), end(genotypes)), end(genotypes));
+}
+
+} // namespace
+
+IndividualCaller::GenotypeBlock
+IndividualCaller::propose_genotypes(const HaplotypeBlock& haplotypes,
+                                    const IndexedHaplotypeBlock& indexed_haplotypes,
+                                    const HaplotypeLikelihoodArray& haplotype_likelihoods) const
+{
+    const auto num_possible_genotypes = num_genotypes_noexcept(haplotypes.size(), parameters_.ploidy);
+    GenotypeBlock result {mapped_region(haplotypes)};
+    if (!parameters_.max_genotypes || (num_possible_genotypes && *num_possible_genotypes <= *parameters_.max_genotypes)) {
+        result = generate_all_genotypes(indexed_haplotypes, parameters_.ploidy);
+    } else {
+        if (debug_log_) {
+            if (num_possible_genotypes) {
+                stream(*debug_log_) << "Applying genotype reduction as there are " << *num_possible_genotypes << " possible genotypes";
+            } else {
+                *debug_log_ << "Applying genotype reduction as the number of possible genotypes calculation overflowed";
+            }
+        }
+        auto ploidy = parameters_.ploidy - 1;
+        for (; ploidy > 1; --ploidy) {
+            const auto num_ploidy_genotypes = num_genotypes_noexcept(haplotypes.size(), ploidy);
+            if (num_ploidy_genotypes && *num_ploidy_genotypes <= *parameters_.max_genotypes) break;
+        }
+        if (debug_log_) stream(*debug_log_) << "Starting genotype reduction with ploidy " << ploidy;
+        result = generate_all_genotypes(indexed_haplotypes, ploidy);
+        auto prior_model = make_prior_model(haplotypes);
+        prior_model->prime(haplotypes);
+        model::IndividualModel model {*prior_model};
+        model.prime(haplotypes);
+        haplotype_likelihoods.prime(sample());
+        for (; ploidy < parameters_.ploidy; ++ploidy) {
+            if (debug_log_) stream(*debug_log_) << "Finding good genotypes with ploidy " << ploidy << " from " << result.size();
+            const auto ploidy_inferences = model.evaluate(result, haplotype_likelihoods);
+            sort_by_other(result, ploidy_inferences.posteriors.genotype_log_probabilities);
+            GenotypeBlock next_result {};
+            next_result.reserve(*parameters_.max_genotypes);
+            // We dont know the right number of seed genotypes since there can be
+            // duplicated after expansion with a new haplotype.
+            for (int n {0}; n < 3 && next_result.size() < *parameters_.max_genotypes; ++n) {
+                const std::size_t num_seeds {std::max((*parameters_.max_genotypes - next_result.size()) / haplotypes.size(), std::size_t {1})};
+                const auto seed_itr = std::prev(std::cend(result), num_seeds);
+                extend(seed_itr, std::cend(result), indexed_haplotypes, std::back_inserter(next_result));
+                erase_duplicates(next_result);
+                result.erase(seed_itr, std::cend(result));
+                result.shrink_to_fit();
+            }
+            result = std::move(next_result);
+        }
+    }
+    return result;
+}
+
 namespace debug {
 
 template <typename S>
@@ -546,7 +659,7 @@ void print_genotype_posteriors(S&& stream,
     } else {
         stream << "Printing top " << m << " genotype posteriors " << '\n';
     }
-    using GenotypeReference = std::reference_wrapper<const Genotype<Haplotype>>;
+    using GenotypeReference = std::reference_wrapper<const Genotype<IndexedHaplotype<>>>;
     std::vector<std::pair<GenotypeReference, double>> v {};
     v.reserve(genotype_posteriors.size());
     std::copy(std::cbegin(genotype_posteriors), std::cend(genotype_posteriors), std::back_inserter(v));
@@ -555,7 +668,7 @@ void print_genotype_posteriors(S&& stream,
                       [] (const auto& lhs, const auto& rhs) { return lhs.second > rhs.second; });
     std::for_each(std::begin(v), mth,
                   [&] (const auto& p) {
-                      print_variant_alleles(stream, p.first);
+                      print_variant_alleles(stream, p.first.get());
                       stream << " " << p.second << '\n';
                   });
 }

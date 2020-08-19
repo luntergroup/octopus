@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef call_hpp
@@ -10,6 +10,7 @@
 #include <iterator>
 
 #include <boost/optional.hpp>
+#include <boost/container/flat_map.hpp>
 
 #include "config/common.hpp"
 #include "basics/phred.hpp"
@@ -69,6 +70,7 @@ public:
     std::unique_ptr<Call> clone() const;
     
     Phred<double> quality() const noexcept;
+    void set_quality(Phred<double> new_quality) noexcept;
     
     GenotypeCall& get_genotype_call(const SampleName& sample);
     const GenotypeCall& get_genotype_call(const SampleName& sample) const;
@@ -99,22 +101,22 @@ public:
     
     boost::optional<Phred<double>> model_posterior() const noexcept;
     
+    void reorder_genotype(const SampleName& sample, const std::vector<unsigned>& order);
+    
 protected:
-    std::unordered_map<SampleName, GenotypeCall> genotype_calls_;
-    
+    boost::container::flat_map<SampleName, GenotypeCall> genotype_calls_;
     Phred<double> quality_;
-    
     boost::optional<Phred<double>> model_posterior_;
     
 private:
     virtual std::unique_ptr<Call> do_clone() const = 0;
     virtual void replace_called_alleles(const char old_base, const char replacement_base) = 0;
+    virtual void reorder_genotype_fields(const SampleName& sample, const std::vector<unsigned>& order) {};
 };
 
 template <typename T>
 Call::Call(T&& genotype_calls, Phred<double> quality)
-: genotype_calls_ {std::begin(genotype_calls)
-, std::end(genotype_calls)}
+: genotype_calls_ {std::begin(genotype_calls), std::end(genotype_calls)}
 , quality_ {quality}
 , model_posterior_ {}
 {}

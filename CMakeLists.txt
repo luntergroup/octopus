@@ -7,9 +7,14 @@ include(CheckIPOSupported)
 project(octopus)
 
 set(octopus_VERSION_MAJOR 0)
-set(octopus_VERSION_MINOR 6)
-set(octopus_VERSION_PATCH 3)
-set(octopus_VERSION_RELEASE beta)
+set(octopus_VERSION_MINOR 7)
+set(octopus_VERSION_PATCH 0)
+set(octopus_VERSION_RELEASE "")
+
+# Generate list of compile commands.  This helps debugging and doesn't have a downside.
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+# Avoid warnings when using GMP_ROOT
+cmake_policy(SET CMP0074 NEW)
 
 # Get the current working branch
 execute_process(

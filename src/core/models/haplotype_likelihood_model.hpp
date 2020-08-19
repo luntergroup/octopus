@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef haplotype_likelihood_model_hpp
@@ -40,6 +40,7 @@ public:
         AlignedRead::MappingQuality mapping_quality_cap = 120;
         bool use_flank_state = true;
         unsigned max_indel_error = 8;
+        bool use_int_scores = false;
     };
     
     struct FlankState

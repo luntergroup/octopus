@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef bam_realigner_hpp
@@ -37,8 +37,7 @@ public:
         bool primary_only = true;
         bool copy_hom_ref_reads = false;
         bool simplify_cigars = false;
-        bool use_paired_reads = false;
-        bool use_linked_reads = false;
+        ReadLinkageType read_linkage = ReadLinkageType::paired;
         MemoryFootprint max_buffer = *parse_footprint("50M");
         boost::optional<unsigned> max_threads = 1;
     };

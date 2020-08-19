@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef facet_hpp
@@ -19,6 +19,7 @@
 #include "core/types/haplotype.hpp"
 #include "core/types/genotype.hpp"
 #include "core/tools/read_assigner.hpp"
+#include "basics/tandem_repeat.hpp"
 
 namespace octopus { namespace csr {
 
@@ -26,18 +27,33 @@ class Facet : public Equitable<Facet>
 {
 public:
     using GenotypeMap = std::unordered_map<SampleName, MappableFlatSet<Genotype<Haplotype>>>;
-    using AlleleMap = std::unordered_map<SampleName, MappableFlatSet<Allele>>;
-    using SampleSupportMap = std::unordered_map<SampleName, HaplotypeSupportMap>;
-    using SampleAmbiguityMap = std::unordered_map<SampleName, AmbiguousReadList>;
+    using AlleleMap = std::unordered_map<GenomicRegion, std::unordered_map<SampleName, std::vector<boost::optional<Allele>>>>;
     using LocalPloidyMap = std::unordered_map<SampleName, unsigned>;
     
     struct SupportMaps
     {
-        SampleSupportMap support;
-        SampleAmbiguityMap ambiguous;
+        struct HaplotypeSupportMaps
+        {
+            HaplotypeSupportMap assigned_wrt_reference, assigned_wrt_haplotype;
+            AmbiguousReadList ambiguous_wrt_reference, ambiguous_wrt_haplotype;
+        };
+        std::unordered_map<SampleName, HaplotypeSupportMaps> haplotypes;
+        std::unordered_map<SampleName, AlleleSupportMap> alleles;
     };
     
+    struct ReadsSummary
+    {
+        struct DuplicateReadSet : public Mappable<DuplicateReadSet>
+        {
+            std::vector<AlignedRead> reads;
+            const GenomicRegion& mapped_region() const noexcept { return reads.front().mapped_region(); }
+        };
+        std::vector<DuplicateReadSet> duplicates;
+    };
+    using ReadsSummaryMap = std::unordered_map<SampleName, ReadsSummary>;
+
     using ResultType = boost::variant<std::reference_wrapper<const ReadMap>,
+                                      std::reference_wrapper<const ReadsSummaryMap>,
                                       std::reference_wrapper<const SupportMaps>,
                                       std::reference_wrapper<const std::string>,
                                       std::reference_wrapper<const std::vector<std::string>>,
@@ -45,7 +61,8 @@ public:
                                       std::reference_wrapper<const GenotypeMap>,
                                       std::reference_wrapper<const AlleleMap>,
                                       std::reference_wrapper<const LocalPloidyMap>,
-                                      std::reference_wrapper<const octopus::Pedigree>
+                                      std::reference_wrapper<const octopus::Pedigree>,
+                                      std::reference_wrapper<const std::vector<TandemRepeat>>
                                      >;
     
     Facet() = default;

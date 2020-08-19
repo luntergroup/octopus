@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "strand_bias.hpp"
@@ -19,9 +19,9 @@
 #include "basics/aligned_read.hpp"
 #include "utils/maths.hpp"
 #include "utils/beta_distribution.hpp"
-#include "utils/genotype_reader.hpp"
 #include "utils/string_utils.hpp"
 #include "../facets/samples.hpp"
+#include "../facets/alleles.hpp"
 #include "../facets/read_assignments.hpp"
 
 namespace octopus { namespace csr {
@@ -39,6 +39,11 @@ StrandBias::StrandBias(const double critical_value)
 std::unique_ptr<Measure> StrandBias::do_clone() const
 {
     return std::make_unique<StrandBias>(*this);
+}
+
+Measure::ValueType StrandBias::get_value_type() const
+{
+    return double {};
 }
 
 void StrandBias::do_set_parameters(std::vector<std::string> params)
@@ -65,8 +70,7 @@ namespace {
 
 bool is_canonical(const VcfRecord::NucleotideSequence& allele) noexcept
 {
-    const static VcfRecord::NucleotideSequence deleted_allele {vcfspec::deletedBase};
-    return !(allele == vcfspec::missingValue || allele == deleted_allele);
+    return !(allele == vcfspec::missingValue || allele == vcfspec::deleteMaskAllele);
 }
 
 bool has_called_alt_allele(const VcfRecord& call, const VcfRecord::SampleName& sample)
@@ -105,12 +109,12 @@ DirectionCounts count_directions(const Container& reads, const GenomicRegion& ca
 
 using DirectionCountVector = std::vector<DirectionCounts>;
 
-auto get_direction_counts(const AlleleSupportMap& support, const GenomicRegion& call_region, const unsigned prior = 1)
+auto get_direction_counts(const std::vector<Allele>& alleles, const AlleleSupportMap& support, const GenomicRegion& call_region, const unsigned prior = 1)
 {
     DirectionCountVector result {};
-    result.reserve(support.size());
-    for (const auto& p : support) {
-        result.push_back(count_directions(p.second, call_region));
+    result.reserve(alleles.size());
+    for (const auto& allele : alleles) {
+        result.push_back(count_directions(support.at(allele), call_region));
         result.back().forward += prior;
         result.back().reverse += prior;
     }
@@ -176,17 +180,13 @@ double calculate_max_prob_different(const DirectionCountVector& direction_counts
 Measure::ResultType StrandBias::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     const auto& samples = get_value<Samples>(facets.at("Samples"));
-    const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments"));
-    std::vector<boost::optional<double>> result {};
-    result.reserve(samples.size());
-    for (const auto& sample : samples) {
-        boost::optional<double> sample_result {};
+    const auto& alleles = get_value<Alleles>(facets.at("Alleles"));
+    const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments")).alleles;
+    Array<Optional<ValueType>> result(samples.size());
+    for (std::size_t s {0}; s < samples.size(); ++s) {
+        const auto& sample = samples[s];
         if (is_evaluable(call, sample)) {
-            std::vector<Allele> alleles; bool has_ref;
-            std::tie(alleles, has_ref) = get_called_alleles(call, sample);
-            assert(!alleles.empty());
-            const auto sample_allele_support = compute_allele_support(alleles, assignments, sample);
-            const auto direction_counts = get_direction_counts(sample_allele_support, mapped_region(call));
+            const auto direction_counts = get_direction_counts(get_called(alleles, call, sample), assignments.at(sample), mapped_region(call));
             double prob;
             if (use_resampling_) {
                 prob = calculate_max_prob_different(direction_counts, small_sample_size_, min_difference_);
@@ -204,16 +204,15 @@ Measure::ResultType StrandBias::do_evaluate(const VcfRecord& call, const FacetMa
             } else {
                 prob = calculate_max_prob_different(direction_counts, big_sample_size_, min_difference_);
             }
-            sample_result = prob;
+            result[s] = ValueType {prob};
         }
-        result.push_back(sample_result);
     }
     return result;
 }
 
 Measure::ResultCardinality StrandBias::do_cardinality() const noexcept
 {
-    return ResultCardinality::num_samples;
+    return ResultCardinality::samples;
 }
 
 const std::string& StrandBias::do_name() const
@@ -228,7 +227,7 @@ std::string StrandBias::do_describe() const
 
 std::vector<std::string> StrandBias::do_requirements() const
 {
-    return {"Samples", "ReadAssignments"};
+    return {"Samples", "Alleles", "ReadAssignments"};
 }
 
 bool StrandBias::is_equal(const Measure& other) const noexcept

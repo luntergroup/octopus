@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef pedigree_hpp
@@ -23,7 +23,7 @@ public:
     {
         enum class Sex { male, female, hermaphroditic };
         SampleName name;
-        Sex sex;
+        Sex sex = Sex::hermaphroditic;
     };
     
     Pedigree() = default;

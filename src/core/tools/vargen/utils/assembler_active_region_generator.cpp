@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "assembler_active_region_generator.hpp"
@@ -16,6 +16,7 @@
 #include "utils/mappable_algorithms.hpp"
 #include "utils/maths.hpp"
 #include "utils/append.hpp"
+#include "utils/free_memory.hpp"
 
 #include <iostream>
 
@@ -181,7 +182,7 @@ auto expand_each(const Container& regions, const GenomicRegion::Distance n)
 }
 
 auto get_deletion_hotspots(const GenomicRegion& region, const CoverageTracker<GenomicRegion>& tracker,
-                           const boost::optional<ReadSetProfile>& read_profile = boost::none)
+                           const boost::optional<const ReadSetProfile&>& read_profile = boost::none)
 {
     const auto coverages = tracker.get(region);
     const auto mean_coverage = read_profile ? read_profile->depth_stats.combined.genome.all.mean : tracker.mean(region);
@@ -289,9 +290,9 @@ std::vector<GenomicRegion> AssemblerActiveRegionGenerator::generate(const Genomi
 
 void AssemblerActiveRegionGenerator::clear() noexcept
 {
-    coverage_tracker_.clear();
-    interesting_read_coverages_.clear();
-    clipped_coverage_tracker_.clear();
+    free_memory(coverage_tracker_);
+    free_memory(interesting_read_coverages_);
+    free_memory(clipped_coverage_tracker_);
 }
 
 // private methods

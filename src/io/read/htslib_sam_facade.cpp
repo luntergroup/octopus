@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "htslib_sam_facade.hpp"
@@ -231,6 +231,8 @@ auto open_hts_writable_file(const boost::filesystem::path& path)
     const auto extension = path.extension();
     if (extension == ".bam") {
         mode += "b";
+    } else if (extension == "cram") {
+        mode += "c";
     }
     return sam_open(path.c_str(), mode.c_str());
 }
@@ -301,7 +303,7 @@ std::vector<HtslibSamFacade::SampleName> HtslibSamFacade::extract_samples() cons
 std::vector<std::string> HtslibSamFacade::extract_read_groups(const SampleName& sample) const
 {
     std::vector<std::string> result {};
-    for (const auto pair : sample_names_) {
+    for (const auto& pair : sample_names_) {
         if (pair.second == sample) result.emplace_back(pair.first);
     }
     result.shrink_to_fit();
@@ -1019,7 +1021,8 @@ void add_supplementary_alignments(const bam1_t* record, AlignedRead& read)
         for (auto tuple : utils::split(bam_aux2Z(ptr), ';')) {
             auto fields = utils::split(tuple, ',');
             auto cigar = parse_cigar(fields[3]);
-            auto begin_pos = boost::lexical_cast<GenomicRegion::Position>(fields[1]) - 1;
+            auto begin_pos = boost::lexical_cast<GenomicRegion::Position>(fields[1]);
+            if (begin_pos > 0) --begin_pos;
             GenomicRegion region {std::move(fields[0]), begin_pos, begin_pos + reference_size(cigar)};
             auto strand = fields[2] == "+" ? AlignedRead::Direction::forward : AlignedRead::Direction::reverse;
             auto mapping_quality = boost::numeric_cast<AlignedRead::MappingQuality>(boost::lexical_cast<int>(fields[4]));
@@ -1032,19 +1035,21 @@ AlignedRead HtslibSamFacade::HtslibIterator::operator*() const
 {
     using std::begin; using std::end; using std::next; using std::move;
     auto qualities = extract_qualities(hts_bam1_.get());
-    if (qualities.empty()) {
-        throw InvalidBamRecord {hts_facade_.file_path_, extract_read_name(hts_bam1_.get()), "corrupt sequence data"};
-    }
     auto cigar = extract_cigar_string(hts_bam1_.get());
     const auto& info = hts_bam1_->core;
     auto read_begin_tmp = clipped_begin(cigar, info.pos);
     auto sequence = extract_sequence(hts_bam1_.get());
+    if (sequence.size() != qualities.size()) {
+        throw InvalidBamRecord {hts_facade_.file_path_, extract_read_name(hts_bam1_.get()), "corrupt sequence data"};
+    }
     if (read_begin_tmp < 0) {
         // Then the read hangs off the left of the contig, and we must remove bases, base_qualities, and
         // adjust the cigar string as we cannot have a negative begin position
         const auto overhang_size = static_cast<unsigned>(std::abs(read_begin_tmp));
-        sequence.erase(begin(sequence), next(begin(sequence), overhang_size));
-        qualities.erase(begin(qualities), next(begin(qualities), overhang_size));
+        if (!qualities.empty() && qualities.size() == sequence.size()) {
+            sequence.erase(begin(sequence), next(begin(sequence), overhang_size));
+            qualities.erase(begin(qualities), next(begin(qualities), overhang_size));
+        }
         auto soft_clip_size = cigar.front().size();
         if (overhang_size == soft_clip_size) {
             cigar.erase(begin(cigar));
@@ -1183,7 +1188,9 @@ void set_segment(const AlignedRead& read, const std::int32_t tid, bam1_t* result
 
 auto name_bytes(const AlignedRead& read) noexcept
 {
-    return read.name().size() + 1 + read.name().size() % 4;
+    auto result = read.name().size() + 1;
+    if (result % 4 > 0) result +=  4 - (result % 4); // next address must be 4-byte aligned
+    return result;
 }
 
 auto sequence_bytes(const AlignedRead& read) noexcept
@@ -1250,9 +1257,10 @@ void set_name(const AlignedRead& read, bam1_t* result)
 {
     const auto& name = read.name();
     std::copy(std::cbegin(name), std::cend(name), result->data);
-    result->core.l_extranul = name.size() % 4;
-    result->core.l_qname = name.size() + result->core.l_extranul + 1;
-    result->l_data += name_bytes(read);
+    result->core.l_qname = name.size() + 1;
+    result->core.l_extranul = (result->core.l_qname % 4 > 0) ? 4 - (result->core.l_qname % 4) : 0; // next address must be 4 byte aligned
+    result->core.l_qname += result->core.l_extranul;
+    result->l_data += result->core.l_qname;
 }
 
 void set_cigar(const AlignedRead& read, bam1_t* result) noexcept
@@ -1367,7 +1375,9 @@ void HtslibSamFacade::set_fixed_length_data(const AlignedRead& read, bam1_t* res
     if (read.has_other_segment()) {
         set_segment(read, hts_targets_.at(read.next_segment().contig_name()), result);
     } else {
-        result->core.mtid = '*';
+        result->core.mtid = -1;
+        result->core.mpos = 0;
+        result->core.isize = 0;
     }
 }
 

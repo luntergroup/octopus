@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "vcf_type.hpp"
@@ -98,17 +98,18 @@ public:
     UnknownVcfType(std::string type)
     : runtime_error {"Invalid VcfType"}
     , type_ {std::move(type)}
+    , what_ {std::string{runtime_error::what()} + ": " + type_}
     {}
     
     virtual ~UnknownVcfType() noexcept = default;
     
     virtual const char* what() const noexcept
     {
-        return (std::string{runtime_error::what()} + ": " + type_).c_str();
+        return what_.c_str();
     }
     
 private:
-    std::string type_;
+    std::string type_, what_;
 };
 
 class BadVcfType : std::invalid_argument
@@ -118,17 +119,18 @@ public:
     : invalid_argument {"invalid VcfType"}
     , type_ {std::move(type)}
     , value_ {std::move(value)}
+    , what_ {std::string{invalid_argument::what()} + ": " + value_ + " to VcfType " + type_}
     {}
     
     virtual ~BadVcfType() noexcept = default;
     
     virtual const char* what() const noexcept
     {
-        return (std::string{invalid_argument::what()} + ": " + value_ + " to VcfType " + type_).c_str();
+        return what_.c_str();
     }
     
 private:
-    std::string type_, value_;
+    std::string type_, value_, what_;
 };
 
 template <typename T>

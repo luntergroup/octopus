@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "calling_components.hpp"
@@ -115,6 +115,11 @@ const HaplotypeLikelihoodModel& GenomeCallingComponents::haplotype_likelihood_mo
     return components_.haplotype_likelihood_model;
 }
 
+HaplotypeLikelihoodModel GenomeCallingComponents::realignment_haplotype_likelihood_model() const
+{
+    return components_.realignment_haplotype_likelihood_model;
+}
+
 const CallerFactory& GenomeCallingComponents::caller_factory() const noexcept
 {
     return components_.caller_factory;
@@ -173,9 +178,13 @@ BAMRealigner::Config GenomeCallingComponents::bamout_config() const noexcept
     return components_.bamout_config;
 }
 
-boost::optional<ReadSetProfile> GenomeCallingComponents::reads_profile() const noexcept
+boost::optional<const ReadSetProfile&> GenomeCallingComponents::reads_profile() const noexcept
 {
-    return components_.reads_profile;
+    if (components_.reads_profile) {
+        return *components_.reads_profile;
+    } else {
+        return boost::none;
+    }
 }
 
 boost::optional<GenomeCallingComponents::Path> GenomeCallingComponents::data_profile() const
@@ -403,6 +412,7 @@ bool includes(const std::vector<unsigned>& values, const unsigned value) noexcep
 }
 
 auto profile_reads_helper(const std::vector<SampleName>& samples,
+                          const ReferenceGenome& reference,
                           const InputRegionMap& input_regions,
                           const ReadManager& source,
                           const PloidyMap& ploidies,
@@ -411,7 +421,7 @@ auto profile_reads_helper(const std::vector<SampleName>& samples,
     ReadSetProfileConfig config {};
     config.fragment_size = options::max_read_length(options);
     if (samples.size() == 1) {
-        auto result = profile_reads(samples, input_regions, source, config);
+        auto result = profile_reads(samples, reference, input_regions, source, config);
         if (result) result->depth_stats.sample.clear(); // no need to keep this duplicate info
         return result;
     } else if (options::use_same_read_profile_for_all_samples(options)) {
@@ -428,11 +438,11 @@ auto profile_reads_helper(const std::vector<SampleName>& samples,
             }
             if (include_sample) profile_samples.push_back(sample);
         }
-        auto result = profile_reads(profile_samples, input_regions, source, config);
+        auto result = profile_reads(profile_samples, reference, input_regions, source, config);
         if (result) result->depth_stats.sample.clear();
         return result;
     } else {
-        return profile_reads(samples, input_regions, source, config);
+        return profile_reads(samples, reference, input_regions, source, config);
     }
 }
 
@@ -547,6 +557,16 @@ public:
     virtual ~InputVCFError() override = default;
 };
 
+template <typename T>
+boost::optional<const T&> optional_cref(const boost::optional<T>& v)
+{
+    if (v) {
+        return *v;
+    } else {
+        return boost::none;
+    }
+}
+
 } // namespace
 
 GenomeCallingComponents::Components::Components(ReferenceGenome&& reference, ReadManager&& read_manager,
@@ -557,10 +577,11 @@ GenomeCallingComponents::Components::Components(ReferenceGenome&& reference, Rea
 , regions {get_search_regions(options, this->reference, this->read_manager)}
 , contigs {get_contigs(this->regions, this->reference, options::get_contig_output_order(options))}
 , ploidies {options::get_ploidy_map(options)}
-, reads_profile {profile_reads_helper(this->samples, this->regions, this->read_manager, this->ploidies, options)}
+, reads_profile {profile_reads_helper(this->samples, this->reference, this->regions, this->read_manager, this->ploidies, options)}
 , read_pipe {options::make_read_pipe(this->read_manager, this->reference, this->samples, options)}
-, haplotype_likelihood_model {options::make_haplotype_likelihood_model(options, this->reads_profile)}
-, caller_factory {options::make_caller_factory(this->reference, this->read_pipe, this->regions, options, this->reads_profile)}
+, haplotype_likelihood_model {options::make_calling_haplotype_likelihood_model(options, optional_cref(this->reads_profile))}
+, realignment_haplotype_likelihood_model {options::make_realignment_haplotype_likelihood_model(haplotype_likelihood_model, optional_cref(this->reads_profile), options)}
+, caller_factory {options::make_caller_factory(this->reference, this->read_pipe, this->regions, options, optional_cref(this->reads_profile))}
 , filter_read_pipe {}
 , output {std::move(output)}
 , filtered_output {}
@@ -592,16 +613,11 @@ GenomeCallingComponents::Components::Components(ReferenceGenome&& reference, Rea
         if (temp_directory) fs::remove_all(*temp_directory);
         throw;
     }
-    bamout_config.alignment_model = haplotype_likelihood_model;
-    auto new_config = haplotype_likelihood_model.config();
-    new_config.use_mapping_quality = false;
-    new_config.use_flank_state = false;
-    bamout_config.alignment_model.set(std::move(new_config));
+    bamout_config.alignment_model = realignment_haplotype_likelihood_model;
     bamout_config.copy_hom_ref_reads = options::full_bamouts_requested(options);
     bamout_config.max_buffer = read_buffer_footprint;
     bamout_config.max_threads = num_threads;
-    bamout_config.use_paired_reads = options::use_paired_reads(options);
-    bamout_config.use_linked_reads = options::use_linked_reads(options);
+    bamout_config.read_linkage = options::get_read_linkage_type(options);
     profiler_config.alignment_model = bamout_config.alignment_model;
     if (reads_profile && reads_profile->length_stats.median > 1'000) {
         profiler_config.ignore_likely_misaligned_reads = false;

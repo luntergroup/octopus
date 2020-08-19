@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "read_side_bias.hpp"
@@ -16,8 +16,8 @@
 #include "basics/aligned_read.hpp"
 #include "core/types/allele.hpp"
 #include "utils/maths.hpp"
-#include "utils/genotype_reader.hpp"
 #include "../facets/samples.hpp"
+#include "../facets/alleles.hpp"
 #include "../facets/read_assignments.hpp"
 
 namespace octopus { namespace csr {
@@ -27,6 +27,11 @@ const std::string ReadSideBias::name_ = "RSB";
 std::unique_ptr<Measure> ReadSideBias::do_clone() const
 {
     return std::make_unique<ReadSideBias>(*this);
+}
+
+Measure::ValueType ReadSideBias::get_value_type() const
+{
+    return double {};
 }
 
 namespace {
@@ -95,12 +100,15 @@ double calculate_position_bias(const Allele& allele, const ReadRefSupportSet& su
     return calculate_position_bias(forward_counts, reverse_counts);
 }
 
-double calculate_position_bias(const AlleleSupportMap& support)
+double calculate_position_bias(const std::vector<Allele>& alleles, const AlleleSupportMap& support)
 {
     double result {0};
-    for (const auto& p : support) {
-        auto bias = calculate_position_bias(p.first, p.second);
-        result = std::max(result, bias);
+    for (const auto& allele : alleles) {
+        const auto support_set_itr = support.find(allele);
+        if (support_set_itr != std::cend(support)) {
+            auto bias = calculate_position_bias(allele, support_set_itr->second);
+            result = std::max(result, bias);
+        }
     }
     return result;
 }
@@ -110,26 +118,19 @@ double calculate_position_bias(const AlleleSupportMap& support)
 Measure::ResultType ReadSideBias::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     const auto& samples = get_value<Samples>(facets.at("Samples"));
-    const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments"));
-    std::vector<double> result {};
+    const auto& alleles = get_value<Alleles>(facets.at("Alleles"));
+    const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments")).alleles;
+    Array<ValueType> result {};
     result.reserve(samples.size());
     for (const auto& sample : samples) {
-        std::vector<Allele> alleles; bool has_ref;
-        std::tie(alleles, has_ref) = get_called_alleles(call, sample);
-        if (!alleles.empty()) {
-            const auto allele_support = compute_allele_support(alleles, assignments, sample);
-            auto position_bias = calculate_position_bias(allele_support);
-            result.push_back(position_bias);
-        } else {
-            result.push_back(0);
-        }
+        result.emplace_back(calculate_position_bias(get_called(alleles, call, sample), assignments.at(sample)));
     }
     return result;
 }
 
 Measure::ResultCardinality ReadSideBias::do_cardinality() const noexcept
 {
-    return ResultCardinality::num_samples;
+    return ResultCardinality::samples;
 }
 
 const std::string& ReadSideBias::do_name() const
@@ -144,7 +145,7 @@ std::string ReadSideBias::do_describe() const
 
 std::vector<std::string> ReadSideBias::do_requirements() const
 {
-    return {"Samples", "ReadAssignments"};
+    return {"Samples", "Alleles", "ReadAssignments"};
 }
 
 } // namespace csr

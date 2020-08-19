@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "is_refcall.hpp"
@@ -18,32 +18,28 @@ std::unique_ptr<Measure> IsRefcall::do_clone() const
     return std::make_unique<IsRefcall>(*this);
 }
 
-namespace {
-
-bool is_refcall(const VcfRecord& record)
+Measure::ValueType IsRefcall::get_value_type() const
 {
-    return record.alt().size() == 1 && record.alt()[0] == vcf::spec::allele::nonref;
+    return bool {};
 }
-
-} // namespace
 
 Measure::ResultType IsRefcall::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     if (report_sample_status_) {
         const auto& samples = get_value<Samples>(facets.at("Samples"));
-        std::vector<bool> result(samples.size());
+        Array<ValueType> result(samples.size());
         std::transform(std::cbegin(samples), std::cend(samples), std::begin(result),
                        [&call] (const auto& sample) { return call.is_homozygous_ref(sample); });
         return result;
     } else {
-        return is_refcall(call);
+        return ValueType {is_refcall(call)};
     }
 }
 
 Measure::ResultCardinality IsRefcall::do_cardinality() const noexcept
 {
     if (report_sample_status_) {
-        return ResultCardinality::num_samples;
+        return ResultCardinality::samples;
     } else {
         return ResultCardinality::one;
     }

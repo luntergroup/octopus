@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef random_forest_filter_hpp
@@ -34,7 +34,6 @@ public:
     RandomForestFilter() = delete;
     
     RandomForestFilter(FacetFactory facet_factory,
-                       std::vector<MeasureWrapper> measures,
                        Path ranger_forest,
                        OutputOptions output_config,
                        ConcurrencyPolicy threading,
@@ -43,7 +42,6 @@ public:
                        boost::optional<ProgressMeter&> progress = boost::none);
     
     RandomForestFilter(FacetFactory facet_factory,
-                       std::vector<MeasureWrapper> measures,
                        std::vector<MeasureWrapper> chooser_measures,
                        std::function<std::int8_t(std::vector<Measure::ResultType>)> chooser,
                        std::vector<Path> ranger_forests,
@@ -74,12 +72,18 @@ private:
         template <typename F, typename P>
         File(F&& handle, P&& path) : handle {std::forward<F>(handle)}, path {std::forward<P>(path)} {};
     };
+    struct ForestMeasureInfo
+    {
+        std::size_t start_index, number;
+    };
     
     std::vector<Path> forest_paths_;
     std::vector<std::unique_ptr<ranger::Forest>> forests_;
     std::function<std::int8_t(std::vector<Measure::ResultType>)> chooser_;
+    std::vector<ForestMeasureInfo> forest_measure_info_;
     std::size_t num_chooser_measures_;
     Options options_;
+    ConcurrencyPolicy threading_;
     
     mutable std::vector<std::vector<File>> data_;
     mutable std::size_t num_records_;
@@ -90,6 +94,17 @@ private:
     
     const static std::string genotype_quality_name_;
     const static std::string call_quality_name_;
+    
+    RandomForestFilter(FacetFactory facet_factory,
+                       std::vector<std::vector<MeasureWrapper>> forest_measures,
+                       std::vector<MeasureWrapper> chooser_measures,
+                       std::function<std::int8_t(std::vector<Measure::ResultType>)> chooser,
+                       std::vector<Path> ranger_forests,
+                       OutputOptions output_config,
+                       ConcurrencyPolicy threading,
+                       Path temp_directory,
+                       Options options,
+                       boost::optional<ProgressMeter&> progress);
     
     std::string do_name() const override;
     virtual boost::optional<std::string> call_quality_name() const override;

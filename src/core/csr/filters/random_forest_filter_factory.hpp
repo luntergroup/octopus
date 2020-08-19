@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef random_forest_filter_factory_hpp
@@ -13,7 +13,6 @@
 
 #include "basics/phred.hpp"
 #include "logging/progress_meter.hpp"
-#include "../measures/measure.hpp"
 #include "variant_call_filter_factory.hpp"
 #include "variant_call_filter.hpp"
 #include "random_forest_filter.hpp"
@@ -28,7 +27,13 @@ public:
     using Path = RandomForestFilter::Path;
     enum class ForestType { germline, somatic, denovo };
     
-    using Options = RandomForestFilter::Options;
+    struct Options : public RandomForestFilter::Options
+    {
+        Options() = default;
+        Options(RandomForestFilter::Options common);
+        
+        bool use_somatic_forest_for_refcalls;
+    };
     
     RandomForestFilterFactory();
     
@@ -44,20 +49,18 @@ public:
     
     ~RandomForestFilterFactory() = default;
     
-    std::vector<MeasureWrapper> measures() const;
-    
 private:
-    std::vector<MeasureWrapper> measures_;
     std::vector<Path> ranger_forests_;
     std::vector<ForestType> forest_types_;
     Path temp_directory_;
     Options options_;
     
     std::unique_ptr<VariantCallFilterFactory> do_clone() const override;
-    std::unique_ptr<VariantCallFilter> do_make(FacetFactory facet_factory,
-                                               VariantCallFilter::OutputOptions output_config,
-                                               boost::optional<ProgressMeter&> progress,
-                                               VariantCallFilter::ConcurrencyPolicy threading) const override;
+    std::unique_ptr<VariantCallFilter>
+    do_make(FacetFactory facet_factory,
+            VariantCallFilter::OutputOptions output_config,
+            boost::optional<ProgressMeter&> progress,
+            VariantCallFilter::ConcurrencyPolicy threading) const override;
 };
 
 } // namespace csr

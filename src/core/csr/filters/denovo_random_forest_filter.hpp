@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef denovo_random_forest_filter_hpp
@@ -26,7 +26,6 @@ public:
     DeNovoRandomForestVariantCallFilter() = delete;
     
     DeNovoRandomForestVariantCallFilter(FacetFactory facet_factory,
-                                        std::vector<MeasureWrapper> measures,
                                         Path germline_forest, Path denovo_forest,
                                         OutputOptions output_config,
                                         ConcurrencyPolicy threading,
@@ -35,7 +34,6 @@ public:
                                         boost::optional<ProgressMeter&> progress = boost::none);
     // De novo only
     DeNovoRandomForestVariantCallFilter(FacetFactory facet_factory,
-                                        std::vector<MeasureWrapper> measures,
                                         Path denovo_forest,
                                         OutputOptions output_config,
                                         ConcurrencyPolicy threading,

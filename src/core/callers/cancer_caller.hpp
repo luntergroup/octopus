@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef cancer_caller_hpp
@@ -61,7 +61,7 @@ public:
         boost::optional<CoalescentModel::Parameters> germline_prior_model_params;
         SomaticMutationModel::Parameters somatic_mutation_model_params;
         double min_expected_somatic_frequency, credible_mass, min_credible_somatic_frequency;
-        std::size_t max_genotypes = 20000;
+        boost::optional<std::size_t> max_genotypes = 20000;
         unsigned max_somatic_haplotypes = 1;
         NormalContaminationRisk normal_contamination_risk = NormalContaminationRisk::low;
         bool deduplicate_haplotypes_with_germline_model = true;
@@ -136,18 +136,19 @@ private:
     bool has_normal_sample() const noexcept;
     const SampleName& normal_sample() const;
     
-    using GenotypeVector                 = std::vector<Genotype<Haplotype>>;
-    using CancerGenotypeVector           = std::vector<CancerGenotype<Haplotype>>;
-    using GermlineGenotypeReference      = Genotype<Haplotype>;
+    using IndexedHaplotypeBlock          = MappableBlock<IndexedHaplotype<>>;
+    using GenotypeVector                 = MappableBlock<Genotype<IndexedHaplotype<>>>;
+    using CancerGenotypeVector           = MappableBlock<CancerGenotype<IndexedHaplotype<>>>;
+    using GermlineGenotypeReference      = Genotype<IndexedHaplotype<>>;
     using GermlineGenotypeProbabilityMap = std::unordered_map<GermlineGenotypeReference, double>;
     using ProbabilityVector              = std::vector<double>;
     
-    void generate_germline_genotypes(Latents& latents, const HaplotypeBlock& haplotypes) const;
+    void generate_germline_genotypes(Latents& latents, const IndexedHaplotypeBlock& haplotypes) const;
     void generate_cancer_genotypes(Latents& latents, const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
     void generate_cancer_genotypes_with_clean_normal(Latents& latents, const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
     void generate_cancer_genotypes_with_contaminated_normal(Latents& latents, const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
     void generate_cancer_genotypes_with_no_normal(Latents& latents, const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
-    void generate_cancer_genotypes(Latents& latents, const std::vector<Genotype<Haplotype>>& germline_genotypes) const;
+    void generate_cancer_genotypes(Latents& latents, const MappableBlock<Genotype<IndexedHaplotype<>>>& germline_genotypes) const;
     bool has_high_normal_contamination_risk(const Latents& latents) const;
     
     void evaluate_germline_model(Latents& latents, const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
@@ -189,7 +190,8 @@ public:
     
     Latents() = delete;
     
-    Latents(const HaplotypeBlock& haplotypes, const std::vector<SampleName>& samples,
+    Latents(const HaplotypeBlock& haplotypes,
+            const std::vector<SampleName>& samples,
             const CancerCaller::Parameters& parameters);
     
     std::shared_ptr<HaplotypeProbabilityMap> haplotype_posteriors() const override;
@@ -197,23 +199,29 @@ public:
     
 private:
     std::reference_wrapper<const HaplotypeBlock> haplotypes_;
+    MappableBlock<IndexedHaplotype<>> indexed_haplotypes_;
     std::reference_wrapper<const std::vector<SampleName>> samples_;
     std::reference_wrapper<const CancerCaller::Parameters> parameters_;
     
-    std::vector<Genotype<Haplotype>> germline_genotypes_;
-    unsigned somatic_ploidy_ = 1;
-    std::vector<CancerGenotype<Haplotype>> cancer_genotypes_;
-    boost::optional<std::vector<std::vector<unsigned>>> germline_genotype_indices_ = boost::none;
-    boost::optional<std::vector<CancerGenotypeIndex>> cancer_genotype_indices_ = boost::none;
+    // prior stuff
     CancerCaller::ModelPriors model_priors_;
     std::unique_ptr<GenotypePriorModel> germline_prior_model_ = nullptr;
     boost::optional<CancerGenotypePriorModel> cancer_genotype_prior_model_ = boost::none;
     std::unique_ptr<GermlineModel> germline_model_ = nullptr;
+    // germline and CNV model
+    MappableBlock<Genotype<IndexedHaplotype<>>> germline_genotypes_;
     GermlineModel::InferredLatents germline_model_inferences_;
     CNVModel::InferredLatents cnv_model_inferences_;
-    SomaticModel::InferredLatents somatic_model_inferences_;
+    // somatic model
+    std::vector<MappableBlock<CancerGenotype<IndexedHaplotype<>>>> cancer_genotypes_;
+    std::vector<SomaticModel::InferredLatents> somatic_model_inferences_;
+    std::vector<double> somatic_model_posteriors_;
+    std::size_t max_evidence_somatic_model_index_;
+    unsigned inferred_somatic_ploidy_ = 1;
+    // noise model
     boost::optional<SomaticModel::InferredLatents> noise_model_inferences_ = boost::none;
     boost::optional<GermlineModel::InferredLatents> normal_germline_inferences_ = boost::none;
+    // posterior stuff
     CancerCaller::ModelPosteriors model_posteriors_;
     
     mutable std::shared_ptr<HaplotypeProbabilityMap> haplotype_posteriors_ = nullptr;

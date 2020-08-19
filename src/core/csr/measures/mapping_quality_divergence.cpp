@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "mapping_quality_divergence.hpp"
@@ -14,11 +14,10 @@
 
 #include "basics/aligned_read.hpp"
 #include "core/types/allele.hpp"
-#include "core/tools/read_assigner.hpp"
 #include "io/variant/vcf_record.hpp"
-#include "utils/genotype_reader.hpp"
 #include "utils/maths.hpp"
 #include "../facets/samples.hpp"
+#include "../facets/alleles.hpp"
 #include "../facets/read_assignments.hpp"
 
 namespace octopus { namespace csr {
@@ -28,6 +27,11 @@ const std::string MappingQualityDivergence::name_ = "MQD";
 std::unique_ptr<Measure> MappingQualityDivergence::do_clone() const
 {
     return std::make_unique<MappingQualityDivergence>(*this);
+}
+
+Measure::ValueType MappingQualityDivergence::get_value_type() const
+{
+    return int {};
 }
 
 namespace {
@@ -42,13 +46,14 @@ auto extract_mapping_qualities(const ReadRefSupportSet& reads)
     return result;
 }
 
-auto extract_mapping_qualities(const AlleleSupportMap& support, const bool drop_empty = true)
+auto extract_mapping_qualities(const std::vector<Allele>& alleles, const AlleleSupportMap& support, const bool drop_empty = true)
 {
     std::vector<MappingQualityVector> result {};
-    result.reserve(support.size());
-    for (const auto& p : support) {
-        if (!p.second.empty() || !drop_empty) {
-            result.push_back(extract_mapping_qualities(p.second));
+    result.reserve(alleles.size());
+    for (const auto& allele : alleles) {
+        const auto support_set_itr = support.find(allele);
+        if (support_set_itr != std::cend(support) && (!support_set_itr->second.empty() || !drop_empty)) {
+            result.push_back(extract_mapping_qualities(support_set_itr->second));
         }
     }
     return result;
@@ -138,30 +143,24 @@ auto max_pairwise_median_mapping_quality_difference(const std::vector<MappingQua
 Measure::ResultType MappingQualityDivergence::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     const auto& samples = get_value<Samples>(facets.at("Samples"));
-    const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments"));
-    std::vector<boost::optional<int>> result {};
-    result.reserve(samples.size());
-    for (const auto& sample : samples) {
-        boost::optional<int> sample_result {};
+    const auto& alleles = get_value<Alleles>(facets.at("Alleles"));
+    const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments")).alleles;
+    Array<Optional<ValueType>> result(samples.size());
+    for (std::size_t s {0}; s < samples.size(); ++s) {
+        const auto& sample = samples[s];
         if (call.is_heterozygous(sample)) {
-            std::vector<Allele> alleles; bool has_ref;
-            std::tie(alleles, has_ref) = get_called_alleles(call, sample);
-            if (!alleles.empty()) {
-                const auto sample_allele_support = compute_allele_support(alleles, assignments, sample);
-                const auto mapping_qualities = extract_mapping_qualities(sample_allele_support);
-                if (!mapping_qualities.empty()) {
-                    sample_result = max_pairwise_median_mapping_quality_difference(mapping_qualities);
-                }
+            const auto mapping_qualities = extract_mapping_qualities(get_called(alleles, call, sample), assignments.at(sample));
+            if (!mapping_qualities.empty()) {
+                    result[s] = max_pairwise_median_mapping_quality_difference(mapping_qualities);
             }
         }
-        result.push_back(sample_result);
     }
     return result;
 }
 
 Measure::ResultCardinality MappingQualityDivergence::do_cardinality() const noexcept
 {
-    return ResultCardinality::num_samples;
+    return ResultCardinality::samples;
 }
 
 const std::string& MappingQualityDivergence::do_name() const
@@ -176,7 +175,7 @@ std::string MappingQualityDivergence::do_describe() const
 
 std::vector<std::string> MappingQualityDivergence::do_requirements() const
 {
-    return {"Samples", "ReadAssignments"};
+    return {"Samples", "Alleles", "ReadAssignments"};
 }
 
 } // namespace csr
