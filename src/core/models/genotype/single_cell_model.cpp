@@ -424,9 +424,8 @@ SingleCellModel::propose_genotype_combinations(const GenotypeVector& genotypes,
     }
     
     GenotypeCombinationVector result {};
-    auto k = 10 * max_genotype_combinations;
-    while (result.empty()) {
-        result = select_top_k_combinations(cluster_marginal_genotype_posteriors, k, num_groups);
+    for (auto k = 10; result.empty() && k < 10'000; k *= 2) {
+        result = select_top_k_combinations(cluster_marginal_genotype_posteriors, k * max_genotype_combinations, num_groups);
         // Remove combinations with duplicate genotypes as these are redundant according to model.
         erase_combinations_with_duplicate_indices(result, genotypes.size());
         // Reorder the combinations, keeping only the most probable one under the prior
@@ -448,10 +447,13 @@ SingleCellModel::propose_genotype_combinations(const GenotypeVector& genotypes,
             combination = std::move(best_combination);
         }
         unique_stable_erase(result);
-        k *= 2;
     }
     if (result.size() > max_genotype_combinations) {
         result.resize(max_genotype_combinations);
+    } else if (result.empty()) {
+        GenotypeCombination combo(num_groups);
+        std::iota(std::begin(combo), std::end(combo), 0);
+        result.push_back(std::move(combo));
     }
     return result;
 }
