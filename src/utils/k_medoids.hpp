@@ -13,6 +13,7 @@
 #include <random>
 #include <utility>
 #include <cassert>
+#include <limits>
 
 namespace octopus {
 
@@ -83,12 +84,12 @@ std::size_t
 maxmin_distance_point(const std::vector<std::size_t>& medoids, const DistanceMatrix<D>& distances)
 {
     std::size_t result {};
-    auto max_distance = distances[0][0];
+    auto max_distance = std::numeric_limits<D>::lowest();
     for (std::size_t i {0}; i < distances.size(); ++i) {
         if (std::find(std::cbegin(medoids), std::cend(medoids), i) ==  std::cend(medoids)) {
             const auto medoid_less = [&] (auto lhs, auto rhs) { return distances[lhs][i] < distances[rhs][i]; };
             const auto min_medoid = *std::min_element(std::cbegin(medoids), std::cend(medoids), medoid_less);
-            if (distances[min_medoid][i] > max_distance) {
+            if (distances[min_medoid][i] >= max_distance) {
                 result = i;
                 max_distance = distances[min_medoid][i];
             }
