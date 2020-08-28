@@ -151,8 +151,7 @@ private:
                           const GroupConcentrationVector& group_concentrations,
                           const MixtureConcentrationArray& mixture_concentrations,
                           const ProbabilityVector& genotype_priors,
-                          const HaplotypeLikelihoodMatrix& log_likelihoods,
-                          bool ignore_component_mixture_prior = false) const;
+                          const HaplotypeLikelihoodMatrix& log_likelihoods) const;
     void
     update_responsibilities(GroupResponsibilityVector& result,
                             const GroupOptionalLogPriorArray& group_log_priors,
@@ -160,8 +159,7 @@ private:
                             const MixtureConcentrationArray& mixture_concentrations,
                             const ProbabilityVector& genotype_posteriors,
                             const ComponentResponsibilityMatrix& component_responsibilities,
-                            const HaplotypeLikelihoodMatrix& log_likelihoods,
-                            bool ignore_component_mixture_prior = false) const;
+                            const HaplotypeLikelihoodMatrix& log_likelihoods) const;
     ComponentResponsibilityMatrix
     init_responsibilities(const GroupConcentrationVector& group_concentrations,
                           const MixtureConcentrationArray& mixture_concentrations,

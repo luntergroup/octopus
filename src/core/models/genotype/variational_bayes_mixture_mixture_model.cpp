@@ -240,15 +240,13 @@ VariationalBayesMixtureMixtureModel::evaluate(const LogProbabilityVector& genoty
                                               const MixtureConcentrationArray& prior_mixture_concentrations,
                                               LogProbabilityVector genotype_log_posteriors) const
 {
-    auto ignore_component_mixture_prior = !all_equal_sizes(prior_mixture_concentrations.front()); // same for all samples
     Latents latents {};
     latents.genotype_log_posteriors = std::move(genotype_log_posteriors);
     latents.genotype_posteriors = exp(latents.genotype_log_posteriors);
     latents.group_concentrations = prior_group_concentrations;
     latents.mixture_concentrations = prior_mixture_concentrations;
     latents.group_responsibilities = init_responsibilities(group_log_priors, prior_group_concentrations, prior_mixture_concentrations,
-                                                           latents.genotype_posteriors, log_likelihoods,
-                                                           ignore_component_mixture_prior);
+                                                           latents.genotype_posteriors, log_likelihoods);
     latents.component_responsibilities = init_responsibilities(prior_group_concentrations, prior_mixture_concentrations,
                                                                latents.genotype_posteriors, latents.group_responsibilities, log_likelihoods);
     boost::optional<PointInferences> checkpoint {};
@@ -269,19 +267,11 @@ VariationalBayesMixtureMixtureModel::evaluate(const LogProbabilityVector& genoty
 //        assert(curr_evidence + options_.epsilon >= prev_evidence);
         if (curr_evidence <= prev_evidence || (curr_evidence - prev_evidence) < options_.epsilon) {
             prev_evidence = curr_evidence;
-            if (ignore_component_mixture_prior) {
-                // Continue iterating with the priors to see if it can improve the model fit
-                checkpoint = PointInferences {latents, prev_evidence};
-                ignore_component_mixture_prior = false;
-            } else {
-                break;
-            }
         }
         prev_evidence = curr_evidence;
         update_responsibilities(latents.group_responsibilities, group_log_priors,latents.group_concentrations,
                                 latents.mixture_concentrations, latents.genotype_posteriors,
-                                latents.component_responsibilities, log_likelihoods,
-                                ignore_component_mixture_prior);
+                                latents.component_responsibilities, log_likelihoods);
         update_responsibilities(latents.component_responsibilities, latents.group_concentrations, latents.mixture_concentrations,
                                 latents.genotype_posteriors, latents.group_responsibilities, log_likelihoods);
     }
@@ -313,8 +303,7 @@ VariationalBayesMixtureMixtureModel::init_responsibilities(const GroupOptionalLo
                                                            const GroupConcentrationVector& group_concentrations,
                                                            const MixtureConcentrationArray& mixture_concentrations,
                                                            const ProbabilityVector& genotype_priors,
-                                                           const HaplotypeLikelihoodMatrix& log_likelihoods,
-                                                           const bool ignore_component_mixture_prior) const
+                                                           const HaplotypeLikelihoodMatrix& log_likelihoods) const
 {
     const auto S = log_likelihoods.size();
     const auto T = group_concentrations.size();
@@ -349,9 +338,6 @@ VariationalBayesMixtureMixtureModel::init_responsibilities(const GroupOptionalLo
                 }
             }
             for (std::size_t k {0}; k < K; ++k) {
-                if (!ignore_component_mixture_prior) {
-                    result[s][t] += ln_ex_pi[k] * sum(approx_taus[k]);
-                }
                 for (std::size_t g {0}; g < G; ++g) {
                     result[s][t] += genotype_priors[g] * inner_product(approx_taus[k], log_likelihoods[s][g][t][k]);
                 }
@@ -369,8 +355,7 @@ VariationalBayesMixtureMixtureModel::update_responsibilities(GroupResponsibility
                                                              const MixtureConcentrationArray& mixture_concentrations,
                                                              const ProbabilityVector& genotype_posteriors,
                                                              const ComponentResponsibilityMatrix& component_responsibilities,
-                                                             const HaplotypeLikelihoodMatrix& log_likelihoods,
-                                                             const bool ignore_component_mixture_prior) const
+                                                             const HaplotypeLikelihoodMatrix& log_likelihoods) const
 {
     const auto T = group_concentrations.size();
     const auto S = log_likelihoods.size();
@@ -384,9 +369,6 @@ VariationalBayesMixtureMixtureModel::update_responsibilities(GroupResponsibility
             const auto ln_ex_pi = dirichlet_expectation_log(mixture_concentrations[s][t]);
             const auto K = ln_ex_pi.size();
             for (std::size_t k {0}; k < max_K; ++k) {
-                if (!ignore_component_mixture_prior && k < K) {
-                    result[s][t] += ln_ex_pi[k] * sum(component_responsibilities[s][t][k]);
-                }
                 for (std::size_t g {0}; g < G; ++g) {
                     if (k < K) {
                         result[s][t] += genotype_posteriors[g] * inner_product(component_responsibilities[s][t][k], log_likelihoods[s][g][t][k]);
