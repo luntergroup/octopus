@@ -110,10 +110,20 @@ void CigarScanner::add_read(const SampleName& sample, const AlignedRead& read,
             case Flag::substitution:
             {
                 region = GenomicRegion {read_contig, ref_index, ref_index + op_size};
-                add_candidate(region,
-                              reference_.get().fetch_sequence(region),
-                              copy(read_sequence, read_index, op_size),
-                              read, read_index, sample);
+                auto ref_sequence = reference_.get().fetch_sequence(region);
+                if (options_.split_mnvs) {
+                    for (CigarOperation::Size snv_offset {0}; snv_offset < op_size; ++snv_offset) {
+                        add_candidate(GenomicRegion {read_contig, ref_index + snv_offset, ref_index + snv_offset + 1},
+                                      ref_sequence[snv_offset],
+                                      copy(read_sequence, read_index + snv_offset, op_size + snv_offset + 1),
+                                      read, read_index + snv_offset, sample);
+                    }
+                } else {
+                    add_candidate(std::move(region),
+                                  std::move(ref_sequence),
+                                  copy(read_sequence, read_index, op_size),
+                                  read, read_index, sample);
+                }
                 read_index += op_size;
                 ref_index  += op_size;
                 if (options_.misalignment_parameters) misalignment_penalty += op_size * options_.misalignment_parameters->snv_penalty;
