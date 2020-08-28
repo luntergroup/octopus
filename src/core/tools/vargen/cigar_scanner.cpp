@@ -111,11 +111,11 @@ void CigarScanner::add_read(const SampleName& sample, const AlignedRead& read,
             {
                 region = GenomicRegion {read_contig, ref_index, ref_index + op_size};
                 auto ref_sequence = reference_.get().fetch_sequence(region);
-                if (options_.split_mnvs) {
+                if (ref_sequence.size() > 1 && options_.split_mnvs) {
                     for (CigarOperation::Size snv_offset {0}; snv_offset < op_size; ++snv_offset) {
                         add_candidate(GenomicRegion {read_contig, ref_index + snv_offset, ref_index + snv_offset + 1},
                                       ref_sequence[snv_offset],
-                                      copy(read_sequence, read_index + snv_offset, op_size + snv_offset + 1),
+                                      copy(read_sequence, read_index + snv_offset, read_index + snv_offset + 1),
                                       read, read_index + snv_offset, sample);
                     }
                 } else {
