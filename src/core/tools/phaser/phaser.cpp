@@ -429,9 +429,9 @@ calculate_phase_quality(const std::vector<std::size_t>& phase_set,
 {
     auto result = probability_false_to_phred(0.0);
     if (phase_set.size() > 1) {
-        for (std::size_t lhs {0}; lhs < phase_set.size() - 1; ++lhs) {
-            for (auto rhs = lhs + 1; rhs < phase_set.size(); ++rhs) {
-                result = std::min(result, pairwise_phase_qualities[lhs][rhs]);
+        for (auto lhs_itr = std::cbegin(phase_set), penultimate_itr = std::prev(std::cend(phase_set)); lhs_itr != penultimate_itr; ++lhs_itr) {
+            for (auto rhs_itr = std::next(lhs_itr); rhs_itr != std::cend(phase_set); ++rhs_itr) {
+                result = std::min(result, pairwise_phase_qualities[*lhs_itr][*rhs_itr]);
             }
         }
     }
