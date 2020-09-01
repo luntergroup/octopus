@@ -141,28 +141,32 @@ make_allele(const VcfRecord& call, VcfRecord::NucleotideSequence allele_sequence
     } else {
         auto region = get_region(call, RegionType {});
         if (is_delete_masked(allele_sequence)) {
-            const bool consider_upstream {upstream_defined_region && overlaps(region, *upstream_defined_region)};
-            const bool consider_downstream {downstream_defined_region && overlaps(region, *downstream_defined_region)};
-            if (consider_upstream || consider_downstream) {
-                const auto num_upstream_defined_bases = consider_upstream ? static_cast<std::size_t>(overlap_size(region, *upstream_defined_region)) : std::size_t {0};
-                const auto num_downstream_defined_bases = consider_downstream ? static_cast<std::size_t>(overlap_size(region, *downstream_defined_region)) : std::size_t {0};
-                if (num_upstream_defined_bases + num_downstream_defined_bases >= call.ref().size()) {
-                    allele_sequence.clear();
-                    region = head_region(region);
-                } else {
-                    allele_sequence = call.ref();
+            allele_sequence.clear();
+            region = head_region(region);
+            // const bool consider_upstream {upstream_defined_region && overlaps(region, *upstream_defined_region)};
+            // const bool consider_downstream {downstream_defined_region && overlaps(region, *downstream_defined_region)};
+            // if (consider_upstream || consider_downstream) {
+            //     if (consider_upstream) region = right_overhang_region(region, *upstream_defined_region);
+            //     if (consider_downstream) region = left_overhang_region(region, *downstream_defined_region);
+            //     if (is_empty(region)) {
+            //         allele_sequence.clear();
+            //     } else {
+            //         const auto base_itr = std::next(std::cbegin(call.ref()), left_overhang_size(get_region(call, RegionType {}), region));
+            //         allele_sequence.assign(base_itr, std::next(base_itr, size(region)));
+            //     }
+            // } else {
+            //     allele_sequence.clear();
+            //     region = head_region(region);
+            // }
+        } else if (allele_sequence == call.ref()) {
+            if (upstream_defined_region && overlaps(region, *upstream_defined_region)) {
+                const auto num_upstream_defined_bases = static_cast<std::size_t>(overlap_size(region, *upstream_defined_region));
+                if (num_upstream_defined_bases < allele_sequence.size()) {
+                    // Do not allow complete removal of sequence otherwise looks like a spanning deletion 
                     allele_sequence.erase(std::cbegin(allele_sequence), std::next(std::cbegin(allele_sequence), num_upstream_defined_bases));
-                    allele_sequence.erase(std::prev(std::cend(allele_sequence), num_downstream_defined_bases), std::cend(allele_sequence));
-                    region = expand(region, -static_cast<GenomicRegion::Distance>(num_upstream_defined_bases), -static_cast<GenomicRegion::Distance>(num_downstream_defined_bases));
+                    region = right_overhang_region(region, *upstream_defined_region);
                 }
-            } else {
-                allele_sequence.clear();
-                region = head_region(region);
             }
-        } else if (allele_sequence == call.ref() && upstream_defined_region && overlaps(region, *upstream_defined_region)) {
-            const auto num_upstream_defined_bases = static_cast<std::size_t>(overlap_size(region, *upstream_defined_region));
-            allele_sequence.erase(std::cbegin(allele_sequence), std::next(std::cbegin(allele_sequence), num_upstream_defined_bases));
-            region = right_overhang_region(region, *upstream_defined_region);
         } else if (max_ref_pad > 0) {
             auto p = std::mismatch(std::cbegin(call.ref()), std::next(std::cbegin(call.ref()), max_ref_pad),
                                    std::cbegin(allele_sequence), std::cend(allele_sequence));

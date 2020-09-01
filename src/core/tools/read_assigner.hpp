@@ -159,42 +159,24 @@ compute_haplotype_support(const Genotype<Haplotype>& genotype,
                           HaplotypeLikelihoodModel model,
                           AssignmentConfig config = AssignmentConfig {});
 
-template <typename BinaryPredicate>
-AlleleSupportMap
-compute_allele_support(const std::vector<Allele>& alleles,
-                       const HaplotypeSupportMap& haplotype_support,
-                       BinaryPredicate inclusion_pred)
-{
-    AlleleSupportMap result {};
-    result.reserve(alleles.size());
-    for (const auto& allele : alleles) {
-        ReadRefSupportSet allele_support {};
-        for (const auto& p : haplotype_support) {
-            if (inclusion_pred(p.first, allele)) {
-                allele_support.reserve(p.second.size());
-                std::copy_if(std::cbegin(p.second), std::cend(p.second), std::back_inserter(allele_support),
-                             [&allele] (const auto& read) { return overlaps(read, allele); });
-            }
-        }
-        std::sort(std::begin(allele_support), std::end(allele_support));
-        result.emplace(allele, std::move(allele_support));
-    }
-    return result;
-}
+const static auto default_inclusion_pred = [] (const Haplotype& haplotype, const Allele& allele) { return haplotype.includes(allele); };
 
 AlleleSupportMap
 compute_allele_support(const std::vector<Allele>& alleles,
-                       const HaplotypeSupportMap& haplotype_support);
+                       const HaplotypeSupportMap& haplotype_support,
+                       std::function<bool(const Haplotype&, const Allele&)> inclusion_pred = default_inclusion_pred);
 
 std::size_t
 try_assign_ambiguous_reads_to_alleles(const std::vector<Allele>& alleles,
                                       const AmbiguousReadList& ambiguous_reads,
-                                      AlleleSupportMap& allele_support);
+                                      AlleleSupportMap& allele_support,
+                                      std::function<bool(const Haplotype&, const Allele&)> inclusion_pred = default_inclusion_pred);
 
 AlleleSupportMap
 compute_allele_support(const std::vector<Allele>& alleles,
                        const HaplotypeSupportMap& haplotype_support,
-                       const AmbiguousReadList& ambiguous_reads);
+                       const AmbiguousReadList& ambiguous_reads,
+                       std::function<bool(const Haplotype&, const Allele&)> inclusion_pred = default_inclusion_pred);
 
 } // namespace octopus
 

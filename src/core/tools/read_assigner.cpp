@@ -496,39 +496,71 @@ compute_haplotype_support(const Genotype<Haplotype>& genotype,
     return compute_haplotype_support(genotype, reads, std::move(model), ambiguous, config);
 }
 
-AlleleSupportMap
-compute_allele_support(const std::vector<Allele>& alleles, const HaplotypeSupportMap& haplotype_support)
+bool is_redundant_allele(const Allele& allele) noexcept
 {
-    return compute_allele_support(alleles, haplotype_support,
-                                  [] (const Haplotype& haplotype, const Allele& allele) {
-                                      return haplotype.includes(allele);
-                                  });
+    return is_empty_region(allele) && is_sequence_empty(allele);
 }
 
-auto copy_included(const std::vector<Allele>& alleles, const Haplotype& haplotype)
+bool default_includes(const Haplotype& haplotype, const Allele& allele)
+{
+    return haplotype.includes(allele) || (is_redundant_allele(allele) && (haplotype.contains(Allele {expand_rhs(mapped_region(allele), 1), ""})));
+}
+
+AlleleSupportMap
+compute_allele_support(const std::vector<Allele>& alleles,
+                       const HaplotypeSupportMap& haplotype_support,
+                       std::function<bool(const Haplotype&, const Allele&)> inclusion_pred)
+{
+    AlleleSupportMap result {};
+    result.reserve(alleles.size());
+    for (const auto& allele : alleles) {
+        ReadRefSupportSet allele_support {};
+        for (const auto& p : haplotype_support) {
+            if (inclusion_pred(p.first, allele)) {
+                allele_support.reserve(p.second.size());
+                std::copy_if(std::cbegin(p.second), std::cend(p.second), std::back_inserter(allele_support),
+                             [&allele] (const auto& read) { return overlaps(read, allele); });
+            }
+        }
+        std::sort(std::begin(allele_support), std::end(allele_support));
+        result.emplace(allele, std::move(allele_support));
+    }
+    return result;
+}
+
+template <typename BinaryPredicate>
+auto copy_included(const std::vector<Allele>& alleles, 
+                   const Haplotype& haplotype, 
+                   const BinaryPredicate& includes_pred)
 {
     std::vector<Allele> result {};
     result.reserve(alleles.size());
     std::copy_if(std::cbegin(alleles), std::cend(alleles), std::back_inserter(result),
-                [&] (const auto& allele) { return haplotype.includes(allele); });
+                 [&] (const auto& allele) { return includes_pred(haplotype, allele); });
     return result;
 }
 
+template <typename BinaryPredicate>
 struct HaveDifferentAlleles
 {
     bool operator()(const std::shared_ptr<Haplotype>& lhs, const std::shared_ptr<Haplotype>& rhs) const
     {
-        const auto lhs_includes = copy_included(alleles, *lhs);
-        const auto rhs_includes = copy_included(alleles, *rhs);
+        const auto lhs_includes = copy_included(alleles, *lhs, includes_pred);
+        const auto rhs_includes = copy_included(alleles, *rhs, includes_pred);
         return lhs_includes != rhs_includes;
     }
-    HaveDifferentAlleles(const std::vector<Allele>& alleles) : alleles {alleles} {}
+    HaveDifferentAlleles(const std::vector<Allele>& alleles, BinaryPredicate includes_pred) 
+    : alleles {alleles}, includes_pred {includes_pred} {}
     const std::vector<Allele>& alleles;
+    BinaryPredicate includes_pred;
 };
 
-bool have_common_alleles(const std::vector<std::shared_ptr<Haplotype>>& haplotypes, const std::vector<Allele>& alleles)
+template <typename BinaryPredicate>
+bool have_common_alleles(const std::vector<std::shared_ptr<Haplotype>>& haplotypes, 
+                         const std::vector<Allele>& alleles, 
+                         const BinaryPredicate& includes_pred)
 {
-    return std::adjacent_find(std::cbegin(haplotypes), std::cend(haplotypes), HaveDifferentAlleles {alleles}) == std::cend(haplotypes);
+    return std::adjacent_find(std::cbegin(haplotypes), std::cend(haplotypes), HaveDifferentAlleles<BinaryPredicate> {alleles, includes_pred}) == std::cend(haplotypes);
 }
 
 void sort_and_merge(std::deque<AlignedReadConstReference>& src, ReadRefSupportSet& dst)
@@ -541,14 +573,15 @@ void sort_and_merge(std::deque<AlignedReadConstReference>& src, ReadRefSupportSe
 std::size_t
 try_assign_ambiguous_reads_to_alleles(const std::vector<Allele>& alleles,
                                       const AmbiguousReadList& ambiguous_reads,
-                                      AlleleSupportMap& allele_support)
+                                      AlleleSupportMap& allele_support,
+                                      std::function<bool(const Haplotype&, const Allele&)> inclusion_pred)
 {
     std::size_t num_assigned {0};
     std::unordered_map<Allele, std::deque<AlignedReadConstReference>> assigned {};
     assigned.reserve(alleles.size());
     for (const auto& ambiguous_read : ambiguous_reads) {
-        if (ambiguous_read.haplotypes && have_common_alleles(*ambiguous_read.haplotypes, alleles)) {
-            const auto supported_alleles = copy_included(alleles, *ambiguous_read.haplotypes->front());
+        if (ambiguous_read.haplotypes && have_common_alleles(*ambiguous_read.haplotypes, alleles, inclusion_pred)) {
+            const auto supported_alleles = copy_included(alleles, *ambiguous_read.haplotypes->front(), inclusion_pred);
             for (const auto& allele : supported_alleles) {
                 if (overlaps(ambiguous_read, allele)) {
                     assigned[allele].emplace_back(ambiguous_read.read);
@@ -563,10 +596,11 @@ try_assign_ambiguous_reads_to_alleles(const std::vector<Allele>& alleles,
 AlleleSupportMap
 compute_allele_support(const std::vector<Allele>& alleles,
                        const HaplotypeSupportMap& haplotype_support,
-                       const AmbiguousReadList& ambiguous_reads)
+                       const AmbiguousReadList& ambiguous_reads,
+                       std::function<bool(const Haplotype&, const Allele&)> inclusion_pred)
 {
-    auto result = compute_allele_support(alleles, haplotype_support);
-    try_assign_ambiguous_reads_to_alleles(alleles, ambiguous_reads, result);
+    auto result = compute_allele_support(alleles, haplotype_support, inclusion_pred);
+    try_assign_ambiguous_reads_to_alleles(alleles, ambiguous_reads, result, inclusion_pred);
     return result;
 }
 
