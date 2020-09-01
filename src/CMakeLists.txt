@@ -336,6 +336,8 @@ set(CORE_SOURCES
     core/csr/measures/allele_depth.cpp
     core/csr/measures/allele_frequency.hpp
     core/csr/measures/allele_frequency.cpp
+    core/csr/measures/allele_frequency_bias.hpp
+    core/csr/measures/allele_frequency_bias.cpp
     core/csr/measures/strand_bias.hpp
     core/csr/measures/strand_bias.cpp
     core/csr/measures/mapping_quality_divergence.hpp

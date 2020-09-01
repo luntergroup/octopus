@@ -64,7 +64,8 @@ using MeasureToFilterKeyMap = std::unordered_map<std::string, std::string>;
 void init(MeasureToFilterKeyMap& filter_names)
 {
     using namespace octopus::vcf::spec::filter;
-    filter_names[name<AlleleFrequency>()]             = alleleBias;
+    filter_names[name<AlleleFrequency>()]             = lowAlleleFrequency;
+    filter_names[name<AlleleFrequencyBias>()]         = alleleFrequencyBias;
     filter_names[name<Depth>()]                       = lowDepth;
     filter_names[name<MappingQualityDivergence>()]    = highMappingQualityDivergence;
     filter_names[name<MappingQualityZeroCount>()]     = highMappingQualityZeroCount;

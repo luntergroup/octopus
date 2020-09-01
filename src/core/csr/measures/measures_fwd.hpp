@@ -7,6 +7,7 @@
 #include "core/csr/measures/measure.hpp"
 #include "core/csr/measures/allele_depth.hpp"
 #include "core/csr/measures/allele_frequency.hpp"
+#include "core/csr/measures/allele_frequency_bias.hpp"
 #include "core/csr/measures/depth.hpp"
 #include "core/csr/measures/mapping_quality_divergence.hpp"
 #include "core/csr/measures/mapping_quality_zero_count.hpp"

@@ -20,6 +20,7 @@ void init(MeasureMakerMap& measure_makers)
 {
     measure_makers[name<AlleleDepth>()]                 = [] () { return make_wrapped_measure<AlleleDepth>(); };
     measure_makers[name<AlleleFrequency>()]             = [] () { return make_wrapped_measure<AlleleFrequency>(); };
+    measure_makers[name<AlleleFrequencyBias>()]         = [] () { return make_wrapped_measure<AlleleFrequencyBias>(); };
     measure_makers[name<Depth>()]                       = [] () { return make_wrapped_measure<Depth>(); };
     measure_makers[name<MappingQualityDivergence>()]    = [] () { return make_wrapped_measure<MappingQualityDivergence>(); };
     measure_makers[name<MappingQualityZeroCount>()]     = [] () { return make_wrapped_measure<MappingQualityZeroCount>(); };
