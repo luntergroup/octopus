@@ -1109,7 +1109,8 @@ get_assembler_bubble_score_setter(const OptionMap& options) noexcept
     } else if (is_single_cell_calling(options)) {
         return DepthBasedBubbleScoreSetter {options.at("min-bubble-score").as<double>(), 0.25};
     } else {
-        return DepthBasedBubbleScoreSetter {options.at("min-bubble-score").as<double>(), 0.05};
+        const auto ploidy = static_cast<unsigned>(options.at("organism-ploidy").as<int>());
+        return DepthBasedBubbleScoreSetter {options.at("min-bubble-score").as<double>(), 1. / (10 * ploidy)};
     }
 }
 

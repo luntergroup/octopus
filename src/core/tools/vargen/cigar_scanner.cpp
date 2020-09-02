@@ -513,7 +513,7 @@ bool is_good_germline(const Variant& variant, const unsigned depth, const unsign
         if (is_likely_runthrough_artifact(strand_depths, observed_qualities)) return false;
         erase_below(observed_qualities, 20);
         if (depth <= 10) return observed_qualities.size() > 1;
-        return observed_qualities.size() > 2 && static_cast<double>(observed_qualities.size()) / depth > 0.1;
+        return observed_qualities.size() > 2 && static_cast<double>(observed_qualities.size()) / depth > (1. / (5 * copy_number));
     } else if (is_insertion(variant)) {
         if (support == 1 && alt_sequence_size(variant) > 10) return false;
         if (depth < 10) {
@@ -539,9 +539,9 @@ bool is_good_germline(const Variant& variant, const unsigned depth, const unsign
     } else {
         // deletion or mnv
         if (region_size(variant) < 10) {
-            return support > 1 && static_cast<double>(support) / depth > 0.05;
+            return support > 1 && static_cast<double>(support) / depth > (1. / (10 * copy_number));
         } else {
-            return static_cast<double>(support) / (depth - std::sqrt(depth)) > 0.1;
+            return static_cast<double>(support) / (depth - std::sqrt(depth)) > (1. / (5 * copy_number));
         }
     }
 }
