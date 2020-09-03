@@ -249,7 +249,6 @@ VariationalBayesMixtureMixtureModel::evaluate(const LogProbabilityVector& genoty
                                                            latents.genotype_posteriors, log_likelihoods);
     latents.component_responsibilities = init_responsibilities(prior_group_concentrations, prior_mixture_concentrations,
                                                                latents.genotype_posteriors, latents.group_responsibilities, log_likelihoods);
-    boost::optional<PointInferences> checkpoint {};
     auto prev_evidence = std::numeric_limits<double>::lowest();
     for (unsigned i {0}; i < options_.max_iterations; ++i) {
         update_genotype_log_posteriors(latents.genotype_log_posteriors, genotype_log_priors,
@@ -267,6 +266,7 @@ VariationalBayesMixtureMixtureModel::evaluate(const LogProbabilityVector& genoty
 //        assert(curr_evidence + options_.epsilon >= prev_evidence);
         if (curr_evidence <= prev_evidence || (curr_evidence - prev_evidence) < options_.epsilon) {
             prev_evidence = curr_evidence;
+            break;
         }
         prev_evidence = curr_evidence;
         update_responsibilities(latents.group_responsibilities, group_log_priors,latents.group_concentrations,
@@ -275,11 +275,7 @@ VariationalBayesMixtureMixtureModel::evaluate(const LogProbabilityVector& genoty
         update_responsibilities(latents.component_responsibilities, latents.group_concentrations, latents.mixture_concentrations,
                                 latents.genotype_posteriors, latents.group_responsibilities, log_likelihoods);
     }
-    if (checkpoint && checkpoint->approx_log_evidence > prev_evidence) {
-        return *checkpoint;
-    } else {
-        return {std::move(latents), prev_evidence};
-    }
+    return {std::move(latents), prev_evidence};
 }
 
 namespace {
