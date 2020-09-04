@@ -451,12 +451,20 @@ def read_pedigree(vcf_filename):
         return Path(options[options.index('--pedigree') + 1])
     return None
 
-def eval_octopus(octopus, rtg, example, out_dir, threads, kind="germline", measures=None, overwrite=False, keep_raw_calls=False):
+def eval_octopus(octopus, rtg, example, out_dir, threads,
+                 kind="germline", measures=None,
+                 overwrite=False,
+                 keep_raw_calls=False, use_raw_calls=False):
     if example.reads is not None:
         octopus_vcf = out_dir / get_octopus_output_filename(example.reference, example.reads, kind=kind)
         if overwrite or not octopus_vcf.exists():
+            octopus_raw_vcf = example.octopus_vcf
+            if use_raw_calls and octopus_raw_vcf is None:
+                octopus_raw_vcf = Path(str(octopus_vcf).replace(".vcf", ".unfiltered.vcf"))
+                if not octopus_raw_vcf.exists():
+                    octopus_raw_vcf = None
             run_octopus(octopus, example.reference, example.reads, example.regions, threads, octopus_vcf,
-                        config=example.config, octopus_vcf=example.octopus_vcf, kind=kind,
+                        config=example.config, octopus_vcf=octopus_raw_vcf, kind=kind,
                         annotations="all" if measures is None else measures,
                         keep_raw=keep_raw_calls)
     else:
@@ -606,7 +614,7 @@ def main(options):
     for example in examples:
         vcfeval_dirs = eval_octopus(options.octopus, options.rtg, example, options.out, options.threads,
                                     kind=options.kind, measures=measures, overwrite=options.overwrite,
-                                    keep_raw_calls=options.keep_raw_calls)
+                                    keep_raw_calls=options.keep_raw_calls, use_raw_calls=options.use_raw_calls)
         for vcfeval_dir in vcfeval_dirs:
             tp_vcf_path = vcfeval_dir / "tp.vcf.gz"
             tp_train_vcf_path = Path(str(tp_vcf_path).replace("tp.vcf", "tp.train.vcf"))
@@ -693,6 +701,10 @@ if __name__ == '__main__':
     parser.add_argument('--keep-raw-calls',
                         default=False,
                         help='Keep raw unannotated Octopus calls',
+                        action='store_true')
+    parser.add_argument('--use-raw-calls',
+                        default=False,
+                        help='Use raw unannotated Octopus calls if available',
                         action='store_true')
     parser.add_argument('--keep-example-data-files',
                         default=False,
