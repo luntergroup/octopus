@@ -1,5 +1,7 @@
 FROM ubuntu:latest
 
+ENV DEBIAN_FRONTEND=noninteractive
+
 # Get all apt dependencies
 RUN apt-get -y update
 RUN apt-get -y install software-properties-common
@@ -9,10 +11,13 @@ RUN apt-get -y install \
     gcc g++ \
     build-essential \
     git \
-    curl 
+    curl \
+    python3-pip
+
+RUN pip3 install distro
 
 # Install Octopus
 COPY . /octopus
-RUN octopus/scripts/install.py --install-dependencies --download-forests --threads 4
+RUN octopus/scripts/install.py --dependencies --forests --threads 4
 
 ENTRYPOINT ["octopus/bin/octopus"]
