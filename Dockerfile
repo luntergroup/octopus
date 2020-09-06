@@ -17,7 +17,7 @@ RUN apt-get -y install \
 RUN pip3 install distro
 
 # Install Octopus
-COPY . /octopus
-RUN octopus/scripts/install.py --dependencies --forests --threads 4
+COPY . /home/octopus
+RUN /home/octopus/scripts/install.py --dependencies --forests --threads 4
 
-ENTRYPOINT ["octopus/bin/octopus"]
+ENTRYPOINT ["/home/octopus/bin/octopus"]
