@@ -630,14 +630,19 @@ IndividualCaller::propose_genotypes(const HaplotypeBlock& haplotypes,
             sort_by_other(result, ploidy_inferences.posteriors.genotype_log_probabilities);
             GenotypeBlock next_result {};
             next_result.reserve(*parameters_.max_genotypes);
-            // We dont know the right number of seed genotypes since there can be
-            // duplicated after expansion with a new haplotype.
+            // We dont know the right number of seed genotypes since there can be duplicates after expansion with a new haplotype.
             for (int n {0}; n < 3 && next_result.size() < *parameters_.max_genotypes; ++n) {
                 const std::size_t num_seeds {std::max((*parameters_.max_genotypes - next_result.size()) / haplotypes.size(), std::size_t {1})};
-                const auto seed_itr = std::prev(std::cend(result), num_seeds);
-                extend(seed_itr, std::cend(result), indexed_haplotypes, std::back_inserter(next_result));
+                auto seed_itr = std::prev(std::end(result), num_seeds);
+                const static auto is_hom_ref = [] (const auto& genotype) { return is_homozygous_reference(genotype); };
+                if (std::find_if(seed_itr, std::end(result), is_hom_ref) == std::end(result)) {
+                    // Ensure reference genotype is always included, helping to keep QUAL in reasonable range
+                    const auto hom_ref_itr = std::find_if(std::begin(result), seed_itr, is_hom_ref);
+                    std::iter_swap(hom_ref_itr, seed_itr);
+                }
+                extend(seed_itr, std::end(result), indexed_haplotypes, std::back_inserter(next_result));
                 erase_duplicates(next_result);
-                result.erase(seed_itr, std::cend(result));
+                result.erase(seed_itr, std::end(result));
                 result.shrink_to_fit();
             }
             result = std::move(next_result);
