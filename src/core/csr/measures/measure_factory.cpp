@@ -70,6 +70,7 @@ void init(MeasureMakerMap& measure_makers)
     measure_makers[name<IsTransversion>()]              = [] () { return make_wrapped_measure<IsTransversion>(); };
     measure_makers[name<PhaseLength>()]                 = [] () { return make_wrapped_measure<PhaseLength>(); };
     measure_makers[name<MaxReadLength>()]               = [] () { return make_wrapped_measure<MaxReadLength>(); };
+    measure_makers[name<AlleleMappingQuality>()]        = [] () { return make_wrapped_measure<AlleleMappingQuality>(); };
 }
 
 class BadParameterList : public UserError
