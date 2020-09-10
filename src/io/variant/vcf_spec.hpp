@@ -85,6 +85,7 @@ VCF_SPEC_CONSTANT zero {"0"};
 VCF_SPEC_CONSTANT one {"1"};
 VCF_SPEC_CONSTANT per_alt_allele {"A"};
 VCF_SPEC_CONSTANT per_allele {"R"};
+VCF_SPEC_CONSTANT per_haplotype {"."}; // Changes to "P" in VCF 4.4
 VCF_SPEC_CONSTANT per_genotype {"G"};
 VCF_SPEC_CONSTANT unknown {"."};
 
