@@ -26,6 +26,7 @@ compute_allele_support(const std::vector<Allele>& alleles,
                        const ReferenceGenome& reference)
 {
     const auto overlap_aware_includes = [&] (const Haplotype& haplotype, const Allele& allele) -> bool {
+        if (!contains(haplotype, mapped_region(allele))) return false;
         if (haplotype.includes(allele)) {
             if (is_position(allele) && is_reference(allele, reference)) {
                 // not an insertion padding base
