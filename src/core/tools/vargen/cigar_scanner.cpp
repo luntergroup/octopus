@@ -666,8 +666,8 @@ bool is_good_pacbio(const Variant& variant, const unsigned depth, const unsigned
     if (is_snv(variant)) {
         return support > 1 && vaf > 0.1;
     } else if (is_insertion(variant)) {
-        if (alt_sequence_size(variant) > 50) {
-            return vaf > 0.1;
+        if (alt_sequence_size(variant) > 20) {
+            return vaf > 0.05;
         }
         if (support < 2) return false;
         if (alt_sequence_size(variant) <= 2) {
