@@ -29,23 +29,6 @@ Measure::ValueType AlleleDepth::get_value_type() const
     return std::size_t {};
 }
 
-namespace {
-
-bool is_canonical(const VcfRecord::NucleotideSequence& allele) noexcept
-{
-    return !(allele == vcfspec::missingValue || allele == vcfspec::deleteMaskAllele);
-}
-
-bool has_called_alt_allele(const VcfRecord& call, const VcfRecord::SampleName& sample)
-{
-    if (!call.has_genotypes()) return true;
-    const auto& genotype = get_genotype(call, sample);
-    return std::any_of(std::cbegin(genotype), std::cend(genotype),
-                       [&] (const auto& allele) { return allele != call.ref() && is_canonical(allele); });
-}
-
-} // namespace
-
 Measure::ResultType AlleleDepth::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     const auto& samples = get_value<Samples>(facets.at("Samples"));
