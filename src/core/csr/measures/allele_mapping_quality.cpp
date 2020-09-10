@@ -60,7 +60,7 @@ Measure::ResultType AlleleMappingQuality::do_evaluate(const VcfRecord& call, con
         for (std::size_t a {0}; a < num_alleles; ++a) {
             if (sample_alleles[a]) {
                 const auto support_set_itr = support.find(*sample_alleles[a]);
-                if (support_set_itr != std::cend(support)) {
+                if (support_set_itr != std::cend(support) && !support_set_itr->second.empty()) {
                     result[s][a] = calculate_median_mapping_quality(support_set_itr->second);
                 }
             }
