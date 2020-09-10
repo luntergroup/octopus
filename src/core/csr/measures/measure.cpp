@@ -96,7 +96,8 @@ bool is_per_sample(const Measure::ResultCardinality cardinality) noexcept
     using RC = Measure::ResultCardinality;
     return cardinality == RC::samples
         || cardinality == RC::samples_and_alleles
-        || cardinality == RC::samples_and_alt_alleles;
+        || cardinality == RC::samples_and_alt_alleles
+        || cardinality == RC::samples_and_haplotypes;
 }
 
 bool is_one_value_annotation(const Measure::ResultCardinality cardinality) noexcept
@@ -111,6 +112,8 @@ auto get_vcf_number(const Measure::ResultCardinality cardinality, const bool agg
     using namespace vcfspec::header::meta::number;
     if (cardinality == RC::one || cardinality == RC::samples || aggregate_alleles) {
         return one;
+    } else if (cardinality == RC::samples_and_haplotypes) {
+        return per_haplotype;
     } else if (cardinality == RC::alleles || cardinality == RC::samples_and_alleles) {
         return per_allele;
     } else {

@@ -40,14 +40,14 @@ public:
             Array<Optional<ValueType>>,
             Optional<Array<ValueType>>,
             Optional<Array<Optional<ValueType>>>,
-            // one value per sample and (alt) allele
+            // one value per sample and (alt) allele or haplotype
             Array<Array<ValueType>>,
             Array<Array<Optional<ValueType>>>,
             Array<Optional<Array<ValueType>>>,
             Array<Optional<Array<Optional<ValueType>>>>
         >;
 
-    enum class ResultCardinality { one, alleles, alt_alleles, samples, samples_and_alleles, samples_and_alt_alleles };
+    enum class ResultCardinality { one, alleles, alt_alleles, samples, samples_and_alleles, samples_and_alt_alleles, samples_and_haplotypes };
 
     enum class Aggregator { sum, min, min_tail, max, max_tail, mean };
     
