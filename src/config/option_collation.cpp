@@ -1566,7 +1566,9 @@ AlignedRead::MappingQuality calculate_mapping_quality_cap(const OptionMap& optio
 {
     constexpr AlignedRead::MappingQuality minimum {60u}; // BWA cap
     if (read_profile) {
-        if (read_profile->length_stats.median > 200) {
+        if (read_profile->length_stats.median > 1000) {
+            return 240;
+        } else if (read_profile->length_stats.median > 200) {
             return 2 * minimum;
         } else {
             return std::max(read_profile->mapping_quality_stats.max, minimum);
