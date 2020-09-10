@@ -1279,7 +1279,7 @@ bool Caller::is_merge_block_refcalling() const noexcept
 auto get_safe_haplotype_region(const GenomicRegion& region, const HaplotypeLikelihoodModel& model, const ReadMap& reads)
 {
     if (has_coverage(reads)) {
-        auto min_safe_pad = model.pad_requirement() + 1;
+        auto min_safe_pad = model.pad_requirement() + (max_read_length(reads) / 2) + 1;
         return expand(encompassing_region(reads), min_safe_pad);
     } else {
         return region;
