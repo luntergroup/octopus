@@ -16,6 +16,7 @@
 #include "core/types/haplotype.hpp"
 #include "io/variant/vcf_record.hpp"
 #include "../facets/samples.hpp"
+#include "../facets/alleles.hpp"
 #include "../facets/read_assignments.hpp"
 
 namespace octopus { namespace csr {
@@ -35,18 +36,12 @@ Measure::ValueType ErrorRate::get_value_type() const
 namespace {
 
 boost::optional<double> 
-compute_error_rate(const Facet::SupportMaps::HaplotypeSupportMaps& assignments, const GenomicRegion& region) noexcept
+calculate_error_rate(const ReadRefSupportSet& reads)
 {
     std::size_t error_bases {0}, total_bases {0};
-    for (const auto& p : assignments.assigned_wrt_haplotype) {
-        for (const auto& read : overlap_range(p.second, region)) {
-            error_bases += sum_non_matches(read.cigar());
-            total_bases += sequence_size(read);
-        }
-    }
-    for (const auto& read : overlap_range(assignments.ambiguous_wrt_haplotype, region)) {
-        error_bases += sum_non_matches(read.read.cigar());
-        total_bases += sequence_size(read.read);
+    for (const AlignedRead& read : reads) {
+        error_bases += sum_non_matches(read.cigar());
+        total_bases += sequence_size(read);
     }
     if (total_bases > 0) {
         return static_cast<double>(error_bases) / total_bases;
@@ -60,18 +55,29 @@ compute_error_rate(const Facet::SupportMaps::HaplotypeSupportMaps& assignments, 
 Measure::ResultType ErrorRate::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     const auto& samples = get_value<Samples>(facets.at("Samples"));
-    const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments")).haplotypes;
-    Array<Optional<ValueType>> result {};
-    result.reserve(samples.size());
-    for (const auto& sample : samples) {
-        result.emplace_back(compute_error_rate(assignments.at(sample), mapped_region(call)));
+    const auto& alleles = get_value<Alleles>(facets.at("Alleles"));
+    const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments")).alleles;
+    const auto num_alleles = 1 + call.num_alt();
+    Array<Array<Optional<ValueType>>> result(samples.size(), Array<Optional<ValueType>>(num_alleles));
+    for (std::size_t s {0}; s < samples.size(); ++s) {
+        const auto& sample_alleles = get(alleles, call, samples[s]);
+        assert(sample_alleles.size() == num_alleles);
+        const auto& support = assignments.at(samples[s]);
+        for (std::size_t a {0}; a < num_alleles; ++a) {
+            if (sample_alleles[a]) {
+                const auto support_set_itr = support.find(*sample_alleles[a]);
+                if (support_set_itr != std::cend(support)) {
+                    result[s][a] = calculate_error_rate(support_set_itr->second);
+                }
+            }
+        }
     }
     return result;
 }
 
 Measure::ResultCardinality ErrorRate::do_cardinality() const noexcept
 {
-    return ResultCardinality::samples;
+    return ResultCardinality::samples_and_alleles;
 }
 
 const std::string& ErrorRate::do_name() const
@@ -81,12 +87,17 @@ const std::string& ErrorRate::do_name() const
 
 std::string ErrorRate::do_describe() const
 {
-    return "Error rate in reads overlapping the site";
+    return "Error rate in supporting reads";
 }
 
 std::vector<std::string> ErrorRate::do_requirements() const
 {
-    return {"Samples", "ReadAssignments"};
+    return {"Samples", "Alleles", "ReadAssignments"};
+}
+
+boost::optional<Measure::Aggregator> ErrorRate::do_aggregator() const noexcept
+{
+    return Measure::Aggregator::max;
 }
     
 } // namespace csr
