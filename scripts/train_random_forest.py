@@ -335,7 +335,10 @@ def add_vcfeval_missing_homrefs(vcfeval_dir, octopus_vcf, sample=None):
     if subsetted: remove_vcf(octopus_vcf)
 
 def run_vcfeval(rtg, rtg_ref_path, truth_vcf_path, confident_bed_path, octopus_vcf_path, out_dir,
-                bed_regions=None, sample=None, kind="germline", include_homref=True):
+                bed_regions=None, sample=None, 
+                ref_overlap=True,
+                kind="germline", 
+                include_homref=True):
     cmd = [str(rtg), 'vcfeval', \
            '-t', str(rtg_ref_path), \
            '-b', str(truth_vcf_path), \
@@ -354,6 +357,8 @@ def run_vcfeval(rtg, rtg_ref_path, truth_vcf_path, confident_bed_path, octopus_v
             cmd += ['--sample', sample]
         else:
             cmd += ['--sample', truth_samples[0] + "," + sample]
+    if ref_overlap:
+        cmd.append('--ref-overlap')
     sp.call(cmd)
     if sample is not None:
         subset_vcfeval_result_samples(out_dir, sample)
