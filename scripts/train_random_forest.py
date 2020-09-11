@@ -338,7 +338,8 @@ def run_vcfeval(rtg, rtg_ref_path, truth_vcf_path, confident_bed_path, octopus_v
                 bed_regions=None, sample=None, 
                 ref_overlap=True,
                 kind="germline", 
-                include_homref=True):
+                include_homref=True,
+                ploidy=None):
     cmd = [str(rtg), 'vcfeval', \
            '-t', str(rtg_ref_path), \
            '-b', str(truth_vcf_path), \
@@ -359,6 +360,8 @@ def run_vcfeval(rtg, rtg_ref_path, truth_vcf_path, confident_bed_path, octopus_v
             cmd += ['--sample', truth_samples[0] + "," + sample]
     if ref_overlap:
         cmd.append('--ref-overlap')
+    if ploidy is not None and ploidy > 2:
+        cmd += ['--Xdefault-ploidy', str(ploidy)]
     sp.call(cmd)
     if sample is not None:
         subset_vcfeval_result_samples(out_dir, sample)
@@ -456,6 +459,13 @@ def read_pedigree(vcf_filename):
         return Path(options[options.index('--pedigree') + 1])
     return None
 
+def read_organism_ploidy(vcf_filename):
+    options = read_octopus_header_info(vcf_filename)['options'].split(' ')
+    if '--organism-ploidy' in options:
+        return int(options[options.index('--organism-ploidy') + 1])
+    else:
+        return None
+
 def eval_octopus(octopus, rtg, example, out_dir, threads,
                  kind="germline", measures=None,
                  overwrite=False,
@@ -484,7 +494,11 @@ def eval_octopus(octopus, rtg, example, out_dir, threads,
         vcfeval_dir = out_dir / (octopus_vcf.stem + '.eval')
         if not vcfeval_dir.exists() or overwrite:
             if vcfeval_dir.exists(): shutil.rmtree(vcfeval_dir)
-            run_vcfeval(rtg, example.sdf, example.truth, example.confident, octopus_vcf, vcfeval_dir, bed_regions=example.regions, kind=kind)
+            ploidy = None
+            if kind == "germline":
+                ploidy = read_organism_ploidy(octopus_vcf)
+            run_vcfeval(rtg, example.sdf, example.truth, example.confident, octopus_vcf, vcfeval_dir,
+                        bed_regions=example.regions, kind=kind, ploidy=ploidy)
         result.append(vcfeval_dir)
     else:
         for sample in samples:
