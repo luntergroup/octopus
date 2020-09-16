@@ -381,7 +381,7 @@ VcfHeader::Builder get_default_header_builder()
     result.add_format("GP", "G", "Float", "Phred-scaled genotype posterior probabilities");
     result.add_format("GQ", "1", "Integer", "Conditional genotype quality (phred-scaled)");
     result.add_format("HQ", "1", "Integer", "Haplotype qualities");
-    result.add_format("PS", "1", "String", "Phase set");
+    result.add_format("PS", "1", "Integer", "Phase set");
     result.add_format("PQ", "1", "Integer", "Phasing quality");
     result.add_format("EC", "1", "Integer", "Expected alternate allele counts");
     result.add_format("MQ", "1", "Integer", "RMS mapping quality");
