@@ -174,10 +174,25 @@ void safe_realign(std::vector<AlignedRead>& reads, const Haplotype& haplotype, H
     if (!reads.empty()) {
         auto expanded_haplotype = expand_for_realignment(haplotype, reads, model);
         try {
-            realign(reads, expanded_haplotype, std::move(model));
+            realign(reads, expanded_haplotype, model);
         } catch (const HaplotypeLikelihoodModel::ShortHaplotypeError& e) {
             expanded_haplotype = expand(expanded_haplotype, e.required_extension());
-            realign(reads, expanded_haplotype);
+            realign(reads, expanded_haplotype, model);
+        }
+    }
+}
+
+void safe_realign(std::vector<AlignedRead>& reads, const Haplotype& haplotype, HaplotypeLikelihoodModel model,
+                  std::vector<HaplotypeLikelihoodModel::LogProbability>& log_likelihoods)
+{
+    if (!reads.empty()) {
+        auto expanded_haplotype = expand_for_realignment(haplotype, reads, model);
+        try {
+            realign(reads, expanded_haplotype, model, log_likelihoods);
+        } catch (const HaplotypeLikelihoodModel::ShortHaplotypeError& e) {
+            log_likelihoods.clear();
+            expanded_haplotype = expand(expanded_haplotype, e.required_extension());
+            realign(reads, expanded_haplotype, model, log_likelihoods);
         }
     }
 }

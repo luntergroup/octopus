@@ -37,6 +37,8 @@ realign(const std::vector<AlignedRead>& reads, const Haplotype& haplotype,
 
 void safe_realign(std::vector<AlignedRead>& reads, const Haplotype& haplotype, HaplotypeLikelihoodModel model);
 void safe_realign(std::vector<AlignedRead>& reads, const Haplotype& haplotype);
+void safe_realign(std::vector<AlignedRead>& reads, const Haplotype& haplotype, HaplotypeLikelihoodModel model,
+                  std::vector<HaplotypeLikelihoodModel::LogProbability>& log_likelihoods);
 
 std::vector<AlignedRead>
 safe_realign(const std::vector<AlignedRead>& reads, const Haplotype& haplotype, HaplotypeLikelihoodModel model);
