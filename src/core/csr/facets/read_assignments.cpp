@@ -108,12 +108,15 @@ ReadAssignments::ReadAssignments(const ReferenceGenome& reference,
         const auto& sample = p.first;
         const auto& sample_genotypes = p.second;
         result_.haplotypes[sample].assigned_wrt_reference.reserve(sample_genotypes.size());
+        result_.haplotypes[sample].assigned_wrt_haplotype.reserve(sample_genotypes.size());
         result_.alleles[sample] = {}; // make sure sample is present
         for (const auto& genotype : sample_genotypes) {
             auto local_reads = copy_overlapped_to_vector(reads.at(sample), genotype);
             for (const auto& haplotype : genotype) {
                 // So every called haplotype appears in support map, even if no read support
                 result_.haplotypes[sample].assigned_wrt_reference[haplotype] = {};
+                result_.haplotypes[sample].assigned_wrt_haplotype[haplotype] = {};
+                result_.haplotypes[sample].assigned_likelihoods[haplotype] = {};
             }
             if (!local_reads.empty()) {
                 // Try to assign each read to a haplotype
