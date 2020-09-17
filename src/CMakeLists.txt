@@ -423,6 +423,8 @@ set(CORE_SOURCES
     core/csr/measures/phase_length.cpp
     core/csr/measures/max_read_length.hpp
     core/csr/measures/max_read_length.cpp
+    core/csr/measures/mean_likelihood.hpp
+    core/csr/measures/mean_likelihood.cpp
     core/csr/measures/allele_mapping_quality.hpp
     core/csr/measures/allele_mapping_quality.cpp
     
