@@ -12,8 +12,8 @@ import multiprocessing
 import urllib.request
 import gzip
 
-google_cloud_octopus_base = Path("https://storage.googleapis.com/luntergroup/octopus")
-forest_url_base = google_cloud_octopus_base / "forests"
+google_cloud_octopus_base = "https://storage.googleapis.com/luntergroup/octopus"
+forest_url_base = google_cloud_octopus_base + "/forests"
 forests = ['germline', 'somatic']
 
 latest_llvm = 'llvm'
@@ -235,30 +235,28 @@ def install_dependencies(build_dir):
     else:
         return None, None
 
-def unzip_gz(filename, out_filename=None):
-    with gzip.open(str(filename), 'rb') as f_in:
+def unzip_gz(in_filename, out_filename=None):
+    with gzip.open(str(in_filename), 'rb') as gzipped_file:
         if out_filename is None:
-            if filename.endswith('.gz'):
-                out_filename = filename[:-3]
-            else:
-                out_filename = filename + '_unzipped'
-        with filename.open(mode='wb') as f_out:
-            shutil.copyfileobj(f_in, f_out)
+            out_filename = in_filename.with_suffix('')
+        with out_filename.open(mode='wb') as file:
+            shutil.copyfileobj(gzipped_file, file)
 
 def download_forests(forest_dir, version):
     if not forest_dir.exists():
         print("No forest directory found, making one")
         os.makedirs(forest_dir)
     for forest in forests:
-        forest_name = forest + '.v' + to_short_version_str(version) + '.forest.gz'
-        forest_url = forest_url_base / forest_name
-        forest_file = forest_dir / forest_name
+        gzipped_forest_name = forest + '.v' + to_short_version_str(version) + '.forest.gz'
+        gzipped_forest_url = forest_url_base + '/' + gzipped_forest_name
+        gzipped_forest_file = forest_dir / gzipped_forest_name
         try:
-            print("Downloading " + forest_url + " to " + forest_file)
-            download_file(forest_url, forest_file)
-            unzip_gz(forest_file)
+            print("Downloading " + gzipped_forest_url + " to " + str(gzipped_forest_file))
+            download_file(gzipped_forest_url, gzipped_forest_file)
+            unzip_gz(gzipped_forest_file)
+            gzipped_forest_file.unlink()
         except:
-            print("Failed to download forest " + forest_name)
+            print("Failed to download forest " + gzipped_forest_name)
 
 def main(args):
     script_dir = Path(__file__).resolve().parent
@@ -379,7 +377,7 @@ def main(args):
 
         if args["forests"]:
             if len(forests) > 0:
-                forest_dir = octopus_dir / "resources " / "forests"
+                forest_dir = octopus_dir / "resources" / "forests"
                 download_forests(forest_dir, octopus_version)
 
     sys.exit(ret)
