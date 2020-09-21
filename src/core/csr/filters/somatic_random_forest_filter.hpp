@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef somatic_random_forest_filter_hpp
@@ -11,49 +11,46 @@
 #include <boost/filesystem.hpp>
 
 #include "threshold_filter.hpp"
-#include "conditional_random_forest_filter.hpp"
+#include "random_forest_filter.hpp"
 #include "logging/progress_meter.hpp"
 #include "../facets/facet_factory.hpp"
 #include "../measures/measure.hpp"
 
 namespace octopus { namespace csr {
 
-class SomaticRandomForestVariantCallFilter : public ConditionalRandomForestFilter
+class SomaticRandomForestVariantCallFilter : public RandomForestFilter
 {
 public:
+    struct Options : public RandomForestFilter::Options
+    {
+        Options(RandomForestFilter::Options common, bool use_somatic_forest_for_refcalls);
+        bool use_somatic_forest_for_refcalls;
+    };
+    
     SomaticRandomForestVariantCallFilter() = delete;
     
     SomaticRandomForestVariantCallFilter(FacetFactory facet_factory,
-                                         std::vector<MeasureWrapper> measures,
                                          Path germline_forest, Path somatic_forest,
                                          OutputOptions output_config,
                                          ConcurrencyPolicy threading,
-                                         Path temp_directory = "/tmp",
+                                         Path temp_directory,
+                                         Options options,
                                          boost::optional<ProgressMeter&> progress = boost::none);
     // Somatics only
     SomaticRandomForestVariantCallFilter(FacetFactory facet_factory,
-                                         std::vector<MeasureWrapper> measures,
                                          Path somatic_forest,
                                          OutputOptions output_config,
                                          ConcurrencyPolicy threading,
-                                         Path temp_directory = "/tmp",
+                                         Path temp_directory,
+                                         Options options,
                                          boost::optional<ProgressMeter&> progress = boost::none);
     
     SomaticRandomForestVariantCallFilter(const SomaticRandomForestVariantCallFilter&)            = delete;
     SomaticRandomForestVariantCallFilter& operator=(const SomaticRandomForestVariantCallFilter&) = delete;
-    SomaticRandomForestVariantCallFilter(SomaticRandomForestVariantCallFilter&&)                 = default;
-    SomaticRandomForestVariantCallFilter& operator=(SomaticRandomForestVariantCallFilter&&)      = default;
+    SomaticRandomForestVariantCallFilter(SomaticRandomForestVariantCallFilter&&)                 = delete;
+    SomaticRandomForestVariantCallFilter& operator=(SomaticRandomForestVariantCallFilter&&)      = delete;
     
     virtual ~SomaticRandomForestVariantCallFilter() override = default;
-
-protected:
-    virtual void annotate(VcfHeader::Builder& header) const override;
-
-private:
-    const static std::string call_quality_name_;
-    
-    virtual bool is_soft_filtered(const ClassificationList& sample_classifications, const MeasureVector& measures) const override;
-    virtual boost::optional<std::string> call_quality_name() const override;
 };
 
 } // namespace csr

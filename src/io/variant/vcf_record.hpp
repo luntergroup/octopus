@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef vcf_record_hpp
@@ -36,6 +36,7 @@ public:
     using SampleName         = std::string;
     using KeyType            = std::string;
     using ValueType          = std::string;
+    using AlleleIndex        = std::int8_t;
     
     VcfRecord() = default;
     
@@ -45,14 +46,26 @@ public:
     VcfRecord(String1&& chrom, GenomicRegion::Position pos, String2&& id,
               Sequence1&& ref, Sequence2&& alt, boost::optional<QualityType> qual,
               Filters&& filters, Info&& info);
+    // Constructor without genotype fields
+    template <typename String, typename Sequence1, typename Sequence2,
+              typename Filters, typename Info>
+    VcfRecord(GenomicRegion region, String&& id,
+              Sequence1&& ref, Sequence2&& alt, boost::optional<QualityType> qual,
+              Filters&& filters, Info&& info);
     
     // Constructor with genotype fields
     template <typename String1, typename String2, typename Sequence1, typename Sequence2,
-    typename Filters, typename Info, typename Format, typename Genotypes, typename Samples>
+    typename Filters, typename Info, typename Format, typename Samples>
     VcfRecord(String1&& chrom, GenomicRegion::Position pos, String2&& id,
               Sequence1&& ref, Sequence2&& alt, boost::optional<QualityType> qual,
               Filters&& filters, Info&& info,
-              Format&& format, Genotypes&& genotypes, Samples&& samples);
+              Format&& format, Samples&& samples);
+    template <typename String, typename Sequence1, typename Sequence2,
+              typename Filters, typename Info, typename Format, typename Samples>
+    VcfRecord(GenomicRegion region, String&& id,
+              Sequence1&& ref, Sequence2&& alt, boost::optional<QualityType> qual,
+              Filters&& filters, Info&& info,
+              Format&& format, Samples&& samples);
     
     VcfRecord(const VcfRecord&)            = default;
     VcfRecord& operator=(const VcfRecord&) = default;
@@ -92,17 +105,29 @@ public:
     bool is_homozygous(const SampleName& sample) const;
     bool is_heterozygous(const SampleName& sample) const;
     bool is_homozygous_ref(const SampleName& sample) const;
+    bool is_refcall() const;
     bool is_homozygous_non_ref(const SampleName& sample) const;
     bool has_ref_allele(const SampleName& sample) const;
     bool has_alt_allele(const SampleName& sample) const;
+    const std::vector<AlleleIndex>& genotype(const SampleName& sample) const;
     const std::vector<ValueType>& get_sample_value(const SampleName& sample, const KeyType& key) const;
     
     friend std::ostream& operator<<(std::ostream& os, const VcfRecord& record);
     friend Builder;
     
 private:
-    using Genotype = std::pair<std::vector<NucleotideSequence>, bool>;
     using ValueMap = boost::container::flat_map<KeyType, std::vector<ValueType>>;
+    struct Genotype
+    {
+        std::vector<AlleleIndex> indices;
+        bool phased;
+    };
+    struct SampleData
+    {
+        boost::optional<Genotype> genotype;
+        ValueMap other;
+    };
+    using SampleDataMap = boost::container::flat_map<SampleName, SampleData>;
     
     // mandatory fields
     GenomicRegion region_;
@@ -112,14 +137,12 @@ private:
     boost::optional<QualityType> qual_;
     std::vector<KeyType> filter_;
     ValueMap info_;
-    
     // optional fields
     std::vector<KeyType> format_;
-    boost::container::flat_map<SampleName, Genotype> genotypes_;
-    boost::container::flat_map<SampleName, ValueMap> samples_;
+    SampleDataMap samples_;
     
+    const Genotype& get_genotype(const SampleName& sample) const;
     std::string get_allele_number(const NucleotideSequence& allele) const;
-    
     std::vector<SampleName> samples() const;
     void print_info(std::ostream& os) const;
     void print_genotype_allele_numbers(std::ostream& os, const SampleName& sample) const;
@@ -129,6 +152,7 @@ private:
 
 // non-member functions
 
+const VcfRecord::NucleotideSequence& get_allele(const VcfRecord& record, VcfRecord::AlleleIndex index);
 std::vector<VcfRecord::NucleotideSequence> get_genotype(const VcfRecord& record, const VcfRecord::SampleName& sample);
 VcfRecord::NucleotideSequence get_ancestral_allele(const VcfRecord& record);
 std::vector<unsigned> get_allele_count(const VcfRecord& record);
@@ -136,6 +160,7 @@ std::vector<double> get_allele_frequency(const VcfRecord& record);
 
 bool is_info_missing(const VcfRecord::KeyType& key, const VcfRecord& record);
 
+bool is_refcall(const VcfRecord& record);
 bool is_filtered(const VcfRecord& record) noexcept;
 bool is_dbsnp_member(const VcfRecord& record) noexcept;
 bool is_hapmap2_member(const VcfRecord& record) noexcept;
@@ -199,9 +224,10 @@ public:
     Builder& set_format(std::vector<KeyType> format);
     Builder& set_format(std::initializer_list<KeyType> format);
     Builder& add_format(KeyType key);
+    Builder& add_format(std::initializer_list<KeyType> keys);
     Builder& set_homozygous_ref_genotype(const SampleName& sample, unsigned ploidy);
     Builder& reserve_samples(unsigned n);
-    Builder& set_genotype(const SampleName& sample, std::vector<NucleotideSequence> alleles, Phasing phasing);
+    Builder& set_genotype(const SampleName& sample, const std::vector<NucleotideSequence>& alleles, Phasing phasing);
     Builder& set_genotype(const SampleName& sample, const std::vector<boost::optional<unsigned>>& alleles, Phasing is_phased);
     Builder& clear_genotype(const SampleName& sample) noexcept;
     Builder& set_format(const SampleName& sample, const KeyType& key, const ValueType& value);
@@ -220,12 +246,15 @@ public:
     Builder& clear_filter(const SampleName& sample) noexcept;
     Builder& clear_all_sample_filters() noexcept;
     
-    Builder& set_refcall();
     Builder& set_somatic();
     Builder& set_denovo();
     Builder& set_reference_reversion();
     
+    Builder& set_blocked_reference();
+    
     GenomicRegion::Position pos() const noexcept;
+    
+    void collapse_spanning_deletions();
     
     VcfRecord build() const;
     VcfRecord build_once() noexcept;
@@ -240,8 +269,8 @@ private:
     decltype(VcfRecord::filter_) filter_ = {};
     decltype(VcfRecord::info_) info_ = {};
     decltype(VcfRecord::format_) format_ = {};
-    decltype(VcfRecord::genotypes_) genotypes_ = {};
     decltype(VcfRecord::samples_) samples_ = {};
+    boost::optional<GenomicRegion::Position> end_;
 };
 
 template <typename String1, typename String2, typename Sequence1, typename Sequence2,
@@ -256,15 +285,30 @@ VcfRecord::VcfRecord(String1&& chrom, GenomicRegion::Position pos, String2&& id,
 , filter_ {std::forward<Filters>(filters)}
 , info_ {std::forward<Info>(info)}
 , format_ {}
-, genotypes_ {}
+, samples_ {}
+{}
+
+template <typename String, typename Sequence1, typename Sequence2,
+          typename Filters, typename Info>
+VcfRecord::VcfRecord(GenomicRegion region, String&& id,  Sequence1&& ref, Sequence2&& alt,
+                     boost::optional<QualityType> qual, Filters&& filters, Info&& info)
+: region_ {std::move(region)}
+, id_ {std::forward<String>(id)}
+, ref_ {std::forward<Sequence1>(ref)}
+, alt_ {std::forward<Sequence2>(alt)}
+, qual_ {qual}
+, filter_ {std::forward<Filters>(filters)}
+, info_ {std::forward<Info>(info)}
+, format_ {}
 , samples_ {}
 {}
 
 template <typename String1, typename String2, typename Sequence1, typename Sequence2,
-typename Filters, typename Info, typename Format, typename Genotypes, typename Samples>
-VcfRecord::VcfRecord(String1&& chrom, GenomicRegion::Position pos, String2&& id,   Sequence1&& ref, Sequence2&& alt,
+typename Filters, typename Info, typename Format, typename Samples>
+VcfRecord::VcfRecord(String1&& chrom, GenomicRegion::Position pos, String2&& id,
+                     Sequence1&& ref, Sequence2&& alt,
                      boost::optional<QualityType> qual, Filters&& filters,
-                     Info&& info, Format&& format, Genotypes&& genotypes, Samples&& samples)
+                     Info&& info, Format&& format, Samples&& samples)
 : region_ {std::forward<String1>(chrom), pos - 1, pos + static_cast<GenomicRegion::Position>(utils::length(ref)) - 1}
 , id_ {std::forward<String2>(id)}
 , ref_ {std::forward<Sequence1>(ref)}
@@ -273,7 +317,23 @@ VcfRecord::VcfRecord(String1&& chrom, GenomicRegion::Position pos, String2&& id,
 , filter_ {std::forward<Filters>(filters)}
 , info_ {std::forward<Info>(info)}
 , format_ {std::forward<Format>(format)}
-, genotypes_ {std::forward<Genotypes>(genotypes)}
+, samples_ {std::forward<Samples>(samples)}
+{}
+
+template <typename String, typename Sequence1, typename Sequence2,
+          typename Filters, typename Info, typename Format, typename Samples>
+VcfRecord::VcfRecord(GenomicRegion region, String&& id,
+                     Sequence1&& ref, Sequence2&& alt,
+                     boost::optional<QualityType> qual, Filters&& filters,
+                     Info&& info, Format&& format, Samples&& samples)
+: region_ {std::move(region)}
+, id_ {std::forward<String>(id)}
+, ref_ {std::forward<Sequence1>(ref)}
+, alt_ {std::forward<Sequence2>(alt)}
+, qual_ {qual}
+, filter_ {std::forward<Filters>(filters)}
+, info_ {std::forward<Info>(info)}
+, format_ {std::forward<Format>(format)}
 , samples_ {std::forward<Samples>(samples)}
 {}
 

@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef read_reader_hpp
@@ -32,10 +32,12 @@ class ReadReader : public Equitable<ReadReader>
 public:
     using Path = boost::filesystem::path;
     
-    using SampleName      = IReadReaderImpl::SampleName;
-    using ReadContainer   = IReadReaderImpl::ReadContainer;
-    using SampleReadMap   = IReadReaderImpl::SampleReadMap;
-    using PositionList    = IReadReaderImpl::PositionList;
+    using SampleName    = IReadReaderImpl::SampleName;
+    using ReadContainer = IReadReaderImpl::ReadContainer;
+    using SampleReadMap = IReadReaderImpl::SampleReadMap;
+    using PositionList  = IReadReaderImpl::PositionList;
+    using AlignedReadReadVisitor = IReadReaderImpl::AlignedReadReadVisitor;
+    using ContigRegionVisitor    = IReadReaderImpl::ContigRegionVisitor;
     
     ReadReader() = default;
     
@@ -64,6 +66,24 @@ public:
     GenomicRegion::Size reference_size(const GenomicRegion::ContigName& contig) const;
     boost::optional<std::vector<GenomicRegion::ContigName>> mapped_contigs() const;
     boost::optional<std::vector<GenomicRegion>> mapped_regions() const;
+    
+    bool iterate(const GenomicRegion& region,
+                 AlignedReadReadVisitor visitor) const;
+    bool iterate(const SampleName& sample,
+                 const GenomicRegion& region,
+                 AlignedReadReadVisitor visitor) const;
+    bool iterate(const std::vector<SampleName>& samples,
+                 const GenomicRegion& region,
+                 AlignedReadReadVisitor visitor) const;
+    
+    bool iterate(const GenomicRegion& region,
+                 ContigRegionVisitor visitor) const;
+    bool iterate(const SampleName& sample,
+                 const GenomicRegion& region,
+                 ContigRegionVisitor visitor) const;
+    bool iterate(const std::vector<SampleName>& samples,
+                 const GenomicRegion& region,
+                 ContigRegionVisitor visitor) const;
     
     bool has_reads(const GenomicRegion& region) const;
     bool has_reads(const SampleName& sample,

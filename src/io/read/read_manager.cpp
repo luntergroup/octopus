@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "read_manager.hpp"
@@ -21,6 +21,7 @@ namespace octopus { namespace io {
 ReadManager::ReadManager(std::vector<Path> read_file_paths, unsigned max_open_files)
 : max_open_files_ {max_open_files}
 , num_files_ {static_cast<unsigned>(read_file_paths.size())}
+, all_readers_single_sample_ {true}
 , closed_readers_ {
     std::make_move_iterator(std::begin(read_file_paths)),
     std::make_move_iterator(std::end(read_file_paths))}
@@ -32,8 +33,18 @@ ReadManager::ReadManager(std::vector<Path> read_file_paths, unsigned max_open_fi
     setup_reader_samples_and_regions();
     open_initial_files();
     samples_.reserve(reader_paths_containing_sample_.size());
+    std::unordered_set<Path, PathHash> found {};
     for (const auto& pair : reader_paths_containing_sample_) {
         samples_.emplace_back(pair.first);
+        if (all_readers_single_sample_) {
+            for (const auto& path : pair.second) {
+                if (found.count(path) == 1) {
+                    all_readers_single_sample_ = false;
+                    break;
+                }
+                found.insert(path);
+            }
+        }
     }
     std::sort(std::begin(samples_), std::end(samples_));
 }
@@ -49,11 +60,30 @@ ReadManager::ReadManager(ReadManager&& other)
     using std::move;
     max_open_files_                 = move(other.max_open_files_);
     num_files_                      = move(other.num_files_);
+    all_readers_single_sample_      = move(other.all_readers_single_sample_);
     closed_readers_                 = move(other.closed_readers_);
     open_readers_                   = move(other.open_readers_);
     reader_paths_containing_sample_ = move(other.reader_paths_containing_sample_);
     possible_regions_in_readers_    = move(other.possible_regions_in_readers_);
     samples_                        = move(other.samples_);
+}
+
+ReadManager& ReadManager::operator=(ReadManager&& other)
+{
+    if (this != &other) {
+        std::unique_lock<std::mutex> lock_lhs {mutex_, std::defer_lock}, lock_rhs {other.mutex_, std::defer_lock};
+        std::lock(lock_lhs, lock_rhs);
+        using std::move;
+        max_open_files_                 = move(other.max_open_files_);
+        num_files_                      = move(other.num_files_);
+        all_readers_single_sample_      = move(other.all_readers_single_sample_);
+        closed_readers_                 = move(other.closed_readers_);
+        open_readers_                   = move(other.open_readers_);
+        reader_paths_containing_sample_ = move(other.reader_paths_containing_sample_);
+        possible_regions_in_readers_    = move(other.possible_regions_in_readers_);
+        samples_                        = move(other.samples_);
+    }
+    return *this;
 }
 
 void swap(ReadManager& lhs, ReadManager& rhs) noexcept
@@ -64,6 +94,7 @@ void swap(ReadManager& lhs, ReadManager& rhs) noexcept
     using std::swap;
     swap(lhs.max_open_files_,                 rhs.max_open_files_);
     swap(lhs.num_files_,                      rhs.num_files_);
+    swap(lhs.all_readers_single_sample_,             rhs.all_readers_single_sample_);
     swap(lhs.closed_readers_,                 rhs.closed_readers_);
     swap(lhs.open_readers_,                   rhs.open_readers_);
     swap(lhs.reader_paths_containing_sample_, rhs.reader_paths_containing_sample_);
@@ -101,6 +132,11 @@ std::vector<ReadManager::Path> ReadManager::paths() const
     }
     std::sort(std::begin(result), std::end(result));
     return result;
+}
+
+bool ReadManager::all_readers_have_one_sample() const
+{
+    return all_readers_single_sample_;
 }
 
 unsigned ReadManager::num_samples() const noexcept
@@ -159,6 +195,46 @@ unsigned ReadManager::drop_samples(std::vector<SampleName> samples)
     }
     num_files_ -= dropped_reader_paths.size();
     return dropped_reader_paths.size();
+}
+
+void ReadManager::iterate(const GenomicRegion& region,
+                          AlignedReadReadVisitor visitor) const
+{
+    iterate(samples(), region, visitor);
+}
+
+void ReadManager::iterate(const SampleName& sample,
+                          const GenomicRegion& region,
+                          AlignedReadReadVisitor visitor) const
+{
+    iterate(std::vector<SampleName> {sample}, region, visitor);
+}
+
+void ReadManager::iterate(const std::vector<SampleName>& samples,
+                          const GenomicRegion& region,
+                          AlignedReadReadVisitor visitor) const
+{
+    iterate_helper(samples, region, visitor);
+}
+
+void ReadManager::iterate(const GenomicRegion& region,
+                          ContigRegionVisitor visitor) const
+{
+    iterate(samples(), region, visitor);
+}
+
+void ReadManager::iterate(const SampleName& sample,
+                          const GenomicRegion& region,
+                          ContigRegionVisitor visitor) const
+{
+    iterate(std::vector<SampleName> {sample}, region, visitor);
+}
+
+void ReadManager::iterate(const std::vector<SampleName>& samples,
+                          const GenomicRegion& region,
+                          ContigRegionVisitor visitor) const
+{
+    iterate_helper(samples, region, visitor);
 }
 
 bool ReadManager::has_reads(const SampleName& sample, const GenomicRegion& region) const

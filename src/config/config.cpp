@@ -1,9 +1,14 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "config.hpp"
 
 #include <ostream>
+#include <sstream>
+#include <algorithm>
+
+#include <boost/range/algorithm_ext/erase.hpp>
+#include <boost/algorithm/string/classification.hpp>
 
 #include "version.hpp"
 #include "system.hpp"
@@ -47,13 +52,25 @@ const VersionNumber Version {VERSION_MAJOR,
                              get_git_branch_name(),
                              get_git_commit()};
 
+static auto get_simd_extension()
+{
+    if (AVX512_AVAILABLE) {
+        return SystemInfo::SIMDExtension::avx512;
+    } else if (AVX2_AVAILABLE) {
+        return SystemInfo::SIMDExtension::avx2;
+    } else {
+        return SystemInfo::SIMDExtension::sse2;
+    }
+}
+
 const SystemInfo System {SYSTEM_PROCESSOR,
                          SYSTEM_NAME,
                          SYSTEM_VERSION,
                          COMPILER_NAME,
                          COMPILER_VERSION,
                          BOOSTLIB_VERSION,
-                         BUILD_TYPE};
+                         BUILD_TYPE,
+                         get_simd_extension()};
 
 std::ostream& operator<<(std::ostream& os, const VersionNumber& version)
 {
@@ -73,13 +90,36 @@ std::ostream& operator<<(std::ostream& os, const VersionNumber& version)
     return os;
 }
 
+std::ostream& operator<<(std::ostream& os, const SystemInfo::SIMDExtension simd)
+{
+    using SIMD = SystemInfo::SIMDExtension;
+    switch (simd) {
+        case SIMD::sse2: os << "SSE2"; break;
+        case SIMD::avx2: os << "AVX2"; break;
+        case SIMD::avx512: os << "AVX512"; break;
+    }
+    return os;
+}
+
+std::string to_string(const VersionNumber& version, const bool spaces)
+{
+    std::ostringstream ss {};
+    ss << config::Version;
+    auto result = ss.str();
+    if (!spaces) {
+        std::replace(result.begin(), result.end(), ' ', '_');
+        boost::remove_erase_if(result, boost::is_any_of("()"));
+    }
+    return result;
+}
+
 const std::string HelpForum {"https://github.com/luntergroup/octopus/issues"};
 
 const std::string BugReport {"https://github.com/luntergroup/octopus/issues"};
 
 const std::vector<std::string> Authors {"Daniel Cooke"};
 
-const std::string CopyrightNotice {"Copyright (c) 2015-2019 University of Oxford"};
+const std::string CopyrightNotice {"Copyright (c) 2015-2020 University of Oxford"};
 
 const unsigned CommandLineWidth {72};
 

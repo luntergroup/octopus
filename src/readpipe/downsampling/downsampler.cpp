@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "downsampler.hpp"
@@ -20,6 +20,7 @@
 #include "utils/mappable_algorithms.hpp"
 #include "utils/read_algorithms.hpp"
 #include "utils/append.hpp"
+#include "utils/random_select.hpp"
 
 // Use boost distributions as std distributions not guaranteed to be deterministic across compilers.
 // Generators are however.
@@ -56,40 +57,33 @@ auto calculate_minimum_coverages(const ForwardIt first, const ForwardIt last,
     return result;
 }
 
-auto sample(const PositionCoverages& required_coverage)
+template <typename RandomGenerator>
+auto sample(const PositionCoverages& required_coverage, RandomGenerator& generator)
 {
-    static std::mt19937 generator {42};
     // TODO: Do we really need to keep regenerating this distribution?
     boost::random::discrete_distribution<std::size_t> dist {std::cbegin(required_coverage), std::cend(required_coverage)};
     return dist(generator);
 }
 
-template <typename BidirIt>
-BidirIt random_sample(const BidirIt first, const BidirIt last)
+template <typename T, typename RandomGenerator>
+auto random_sample(const OverlapRange<T>& range, RandomGenerator& generator)
 {
-    static std::mt19937 generator {42};
-    boost::random::uniform_int_distribution<std::size_t> dist(0, std::distance(first, last) - 1);
-    return std::next(first, dist(generator));
+    return random_select(std::begin(range), std::end(range), generator).base();
 }
 
-template <typename T>
-auto random_sample(const OverlapRange<T>& range)
-{
-    return random_sample(std::begin(range), std::end(range)).base();
-}
-
-template <typename BidirIt>
+template <typename BidirIt, typename RandomGenerator>
 auto pick_sample(BidirIt first_unsampled, BidirIt last_unsampled,
                  const std::vector<GenomicRegion>& positions,
                  const PositionCoverages& required_coverage,
-                 const AlignedRead::MappingDomain::Size max_read_size)
+                 const AlignedRead::MappingDomain::Size max_read_size,
+                 RandomGenerator& generator)
 {
     assert(first_unsampled < last_unsampled);
     const auto candidates = overlap_range(first_unsampled, last_unsampled,
-                                          positions[sample(required_coverage)],
+                                          positions[sample(required_coverage, generator)],
                                           max_read_size);
     assert(!candidates.empty());
-    return random_sample(candidates);
+    return random_sample(candidates, generator);
 }
 
 void reduce(PositionCoverages& coverages, const ReadWrapper& read, const GenomicRegion& region)
@@ -150,9 +144,9 @@ auto extract_sampled(std::vector<ReadWrapper>& reads,
 
 } // namespace
 
-template <typename InputIt>
+template <typename InputIt, typename RandomGenerator>
 auto sample(const InputIt first_read, const InputIt last_read, const GenomicRegion& region,
-            const unsigned target_coverage)
+            const unsigned target_coverage, RandomGenerator& generator)
 {
     if (first_read == last_read) return std::vector<AlignedRead> {};
     const auto positions = decompose(region);
@@ -166,7 +160,8 @@ auto sample(const InputIt first_read, const InputIt last_read, const GenomicRegi
     auto last_unsampled_itr  = std::end(reads);
     while (!has_minimum_coverage(required_coverage)) {
         const auto sampled_itr = pick_sample(first_unsampled_itr, last_unsampled_itr,
-                                             positions, required_coverage, max_read_size);
+                                             positions, required_coverage, max_read_size,
+                                             generator);
         reduce(required_coverage, *sampled_itr, region);
         remove_sample(first_unsampled_itr, sampled_itr, last_unsampled_itr);
     }
@@ -216,6 +211,7 @@ Downsampler::Report sample(ReadContainer& reads, const unsigned trigger_coverage
     std::vector<std::vector<AlignedRead>> unsampled_read_blocks {};
     unsampled_read_blocks.reserve(targets.size());
     std::size_t num_reads {0};
+    std::mt19937 generator {891106};
     
     // Downsample in reverse order because erasing near back of MappableFlatMultiSet is much
     // cheaper than erasing near front.
@@ -223,7 +219,7 @@ Downsampler::Report sample(ReadContainer& reads, const unsigned trigger_coverage
         const auto contained = bases(contained_range(begin(reads), end(reads), region));
         num_reads += std::distance(end(contained), end(reads));
         unsampled_read_blocks.emplace_back(make_move_iterator(end(contained)), make_move_iterator(end(reads)));
-        auto sampled_reads = sample(begin(contained), end(contained), region, target_coverage);
+        auto sampled_reads = sample(begin(contained), end(contained), region, target_coverage, generator);
         num_reads += sampled_reads.size();
         const auto num_reads_in_target = size(contained);
         assert(num_reads_in_target >= sampled_reads.size());

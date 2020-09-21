@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include <iostream>
@@ -89,13 +89,13 @@ int main(const int argc, const char** argv)
             logging::InfoLogger info_log {};
             const auto start = std::chrono::system_clock::now();
             sanity_check(options);
+            log_command_line_options(options);
             auto components = collate_genome_calling_components(options);
             auto end = std::chrono::system_clock::now();
             using utils::TimeInterval;
             stream(info_log) << "Done initialising calling components in " << TimeInterval {start, end};
-            options.clear();
             if (validate(components)) {
-                run_octopus(components, to_string(argc, argv));
+                run_octopus(components, {to_string(argc, argv), to_string(options, true, false)});
             }
             log_program_end();
         } catch (const Error& e) {

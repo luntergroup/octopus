@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "error_model_factory.hpp"
@@ -25,9 +25,10 @@ namespace octopus {
 static constexpr std::array<LibraryPreparation, 3> libraries {
     LibraryPreparation::pcr, LibraryPreparation::pcr_free, LibraryPreparation::tenx
 };
-static constexpr std::array<Sequencer, 6> sequencers {
+static constexpr std::array<Sequencer, 8> sequencers {
     Sequencer::hiseq_2000, Sequencer::hiseq_2500, Sequencer::hiseq_4000,
-    Sequencer::xten, Sequencer::novaseq, Sequencer::bgiseq_500
+    Sequencer::xten, Sequencer::novaseq, Sequencer::bgiseq_500,
+    Sequencer::pacbio, Sequencer::pacbio_ccs
 };
 
 std::ostream& operator<<(std::ostream& out, const LibraryPreparation& library)
@@ -88,7 +89,7 @@ std::istream& operator>>(std::istream& in, LibraryPreparation& result)
     utils::capitalise(token);
     if (token == "PCR")
         result = LibraryPreparation::pcr;
-    else if (token == "PCR-FREE")
+    else if (token == "PCR-FREE" || token == "PCRF")
         result = LibraryPreparation::pcr_free;
     else if (token == "10X")
         result = LibraryPreparation::tenx;
@@ -116,6 +117,12 @@ std::ostream& operator<<(std::ostream& out, const Sequencer& sequencer)
             break;
         case Sequencer::bgiseq_500:
             out << "BGISEQ-500";
+            break;
+        case Sequencer::pacbio:
+            out << "PacBio";
+            break;
+        case Sequencer::pacbio_ccs:
+            out << "PacBioCCS";
             break;
     }
     return out;
@@ -162,6 +169,10 @@ std::istream& operator>>(std::istream& in, Sequencer& result)
         result = Sequencer::novaseq;
     else if (token == "BGISEQ-500")
         result = Sequencer::bgiseq_500;
+    else if (token == "PACBIO")
+        result = Sequencer::pacbio;
+    else if (token == "PACBIOCCS")
+        result = Sequencer::pacbio_ccs;
     else throw UnknownSequencer {token};
     return in;
 }
@@ -257,6 +268,24 @@ static const RepeatBasedIndelModelParameterMap builtin_indel_models {{
         }
     },
     {
+        {LibraryPreparation::pcr_free, Sequencer::pacbio},
+        {
+            {13,13,11,10,9,8,7,7,7,6,6,6,6,6,6,6,6,6,6,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,4,4,4,4,4,4,4,4,4,4,4,4},
+            {13,13,10,8,7,7,7,7,5,5,5,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4},
+            {13,13,8,7,6,6,5,5,5,5,5,4,4,4,4,4,4,4,4,4,4,4,4,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3},
+            {13,13,7,6,5,5,5,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4}
+        }
+    },
+    {
+        {LibraryPreparation::pcr_free, Sequencer::pacbio_ccs},
+        {
+            {31,31,27,24,21,18,16,14,13,12,11,10,10,9,9,8,8,8,8,7,7,7,7,7,7,7,6,6,6,6,6,6,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5},
+            {31,31,25,21,18,16,14,12,10,9,8,8,6,6,6,6,6,5,5,5,4,4,4,4,4,4,4,4,4,4,4,4},
+            {31,31,24,22,20,17,15,14,12,11,10,10,9,9,9,8,8,8,8,7,7,7,7,6,6,6,6,5,5,5,5,5,5,5,5,5,5,5,4,4,4,4,4,4,4,4,3,3,3,3},
+            {31,31,22,19,17,15,14,13,11,11,10,10,9,9,8,8,7,7,6,6,6,6,5,5,5,5,5,5,5,5,5,4,4,4,4,4,4,3}
+        }
+    },
+    {
         {LibraryPreparation::pcr, Sequencer::hiseq_2000},
         {
             {45,45,43,41,40,36,34,30,24,20,16,13,12,11,10,10,9,9,8,8,7,7,7,6,6,6,6,5,5,5,4,4,4,4,4,4,4,4,4,4,3},
@@ -308,6 +337,24 @@ static const RepeatBasedIndelModelParameterMap builtin_indel_models {{
             {60,60,48,45,42,38,32,26,22,17,14,12,10,9,8,7,6,6,6,5,5,5,5,5,4,4,4,4,4,4,4,4,3},
             {60,60,44,42,36,29,22,19,17,15,15,14,14,13,13,13,12,12,12,11, 11,10,10,10,9,9,9,8,8,8,8,8,8,7,7,6,6,6,5,4,4,4,4,3},
             {60,60,41,36,28,23,21,20,19,18,18,17,17,16,15,15,14,13,12,12,12,12,10,9,9,9,9,8,8,7,7,7,7,6,6,6,6,5,5,5,5,4,4,4,4,4,4,4,3}
+        }
+    },
+    {
+        {LibraryPreparation::pcr, Sequencer::pacbio},
+        {
+            {13,13,11,10,9,8,7,7,7,6,6,6,6,6,6,6,6,6,6,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,4,4,4,4,4,4,4,4,4,4,4,4},
+            {13,13,10,8,7,7,7,7,5,5,5,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4},
+            {13,13,8,7,6,6,5,5,5,5,5,4,4,4,4,4,4,4,4,4,4,4,4,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3},
+            {13,13,7,6,5,5,5,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4}
+        }
+    },
+    {
+        {LibraryPreparation::pcr, Sequencer::pacbio_ccs},
+        {
+            {40,40,31,29,28,24,21,19,17,15,13,12,11,10,10,9,9,8,8,8,7,7,6,6,6,6,5,5,5,5,4},
+            {40,40,33,31,28,22,17,13,12,10,9,8,7,6,5,5,5,4,4,4,4,4,4,4,4,4,4,3},
+            {40,40,30,27,22,18,16,15,13,13,12,12,11,11,11,10,10,10,9,9,9,8,8,8,7,7,6,6,6,6,5,5,5,4},
+            {40,40,28,25,19,16,15,14,12,12,12,12,11,11,10,10,10,9,9,9,8,7,7,7,5,5,5,5,5,4,4,4,4,4,4,4,4,4,4,4,4,3}
         }
     },
     {
@@ -371,6 +418,11 @@ BasicRepeatBasedIndelErrorModel::Parameters lookup_builtin_indel_model(const Mod
     return builtin_indel_models.at(config);
 }
 
+bool use_snv_error_model(const ModelConfig config)
+{
+    return config.sequencer != Sequencer::pacbio && config.sequencer != Sequencer::pacbio_ccs;
+}
+
 using RepeatBasedSnvModelParameterMap = std::unordered_map<LibraryPreparation, BasicRepeatBasedSNVErrorModel::Parameters>;
 
 static const RepeatBasedSnvModelParameterMap builtin_snv_models {{
@@ -398,9 +450,13 @@ static const RepeatBasedSnvModelParameterMap builtin_snv_models {{
     }}
 }};
 
-BasicRepeatBasedSNVErrorModel::Parameters lookup_builtin_snv_model(const ModelConfig config)
+boost::optional<BasicRepeatBasedSNVErrorModel::Parameters> lookup_builtin_snv_model(const ModelConfig config)
 {
-    return builtin_snv_models.at(config.library);
+    if (use_snv_error_model(config)) {
+        return builtin_snv_models.at(config.library);
+    } else {
+        return boost::none;
+    }
 }
 
 class MalformedErrorModelFile : public MalformedFileError
@@ -413,7 +469,12 @@ public:
 
 std::unique_ptr<SnvErrorModel> make_snv_error_model(const ModelConfig config)
 {
-    return std::make_unique<BasicRepeatBasedSNVErrorModel>(lookup_builtin_snv_model(config));
+    auto model = lookup_builtin_snv_model(config);
+    if (model) {
+        return std::make_unique<BasicRepeatBasedSNVErrorModel>(std::move(*model));
+    } else {
+        return nullptr;
+    }
 }
 
 std::unique_ptr<IndelErrorModel> make_indel_error_model(const ModelConfig config)
@@ -444,16 +505,20 @@ ErrorModel make_error_model(const std::string& label)
     return {make_indel_error_model(config), make_snv_error_model(config)};
 }
 
-ErrorModel make_error_model(const boost::filesystem::path& model_file_name)
+ErrorModel make_error_model(const boost::filesystem::path& model_filename)
 {
-    std::ifstream model_file {model_file_name.string()};
+    std::ifstream model_file {model_filename.string()};
     std::string model_str {static_cast<std::stringstream const&>(std::stringstream() << model_file.rdbuf()).str()};
-    auto open_model = make_penalty_map(std::move(model_str));
-    if (!open_model) {
-        throw MalformedErrorModelFile {model_file_name};
+    auto params = make_penalty_map(std::move(model_str));
+    if (!params.open) {
+        throw MalformedErrorModelFile {model_filename};
     }
     ErrorModel result {};
-    result.indel = std::make_unique<CustomRepeatBasedIndelErrorModel>(std::move(*open_model));
+    if (params.extend) {
+        result.indel = std::make_unique<CustomRepeatBasedIndelErrorModel>(std::move(*params.open), std::move(*params.extend));
+    } else {
+        result.indel = std::make_unique<CustomRepeatBasedIndelErrorModel>(std::move(*params.open));
+    }
     result.snv = make_snv_error_model(default_model_config);
     return result;
 }

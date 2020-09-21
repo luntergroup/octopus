@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef passing_filter_hpp
@@ -26,14 +26,15 @@ public:
                              ConcurrencyPolicy threading,
                              boost::optional<ProgressMeter&> progress = boost::none);
     
-    PassingVariantCallFilter(const PassingVariantCallFilter&)           = delete;
+    PassingVariantCallFilter(const PassingVariantCallFilter&)            = delete;
     PassingVariantCallFilter& operator=(const PassingVariantCallFilter&) = delete;
-    PassingVariantCallFilter(PassingVariantCallFilter&&)                 = default;
-    PassingVariantCallFilter& operator=(PassingVariantCallFilter&&)      = default;
+    PassingVariantCallFilter(PassingVariantCallFilter&&)                 = delete;
+    PassingVariantCallFilter& operator=(PassingVariantCallFilter&&)      = delete;
     
     virtual ~PassingVariantCallFilter() override = default;
 
 private:
+    std::string do_name() const override;
     void annotate(VcfHeader::Builder& header) const override;
     Classification classify(const MeasureVector& measures) const override;
 };

@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef haplotype_hpp
@@ -20,12 +20,12 @@
 #include "basics/contig_region.hpp"
 #include "basics/cigar_string.hpp"
 #include "allele.hpp"
+#include "variant.hpp"
 
 namespace octopus {
 
 class GenomicRegion;
 class ReferenceGenome;
-class Variant;
 
 /*
     A Haplotype is an ordered, non-overlapping, set of Alleles, and therefore implictly
@@ -100,6 +100,7 @@ public:
     
     friend bool contains(const Haplotype& lhs, const Haplotype& rhs);
     friend Haplotype detail::do_copy(const Haplotype& haplotype, const GenomicRegion& region, std::true_type);
+    friend Haplotype copy(const Haplotype&, const std::vector<GenomicRegion>&);
     friend bool is_reference(const Haplotype& haplotype);
     friend Haplotype expand(const Haplotype& haplotype, MappingDomain::Position n);
     friend Haplotype remap(const Haplotype& haplotype, const GenomicRegion& region);
@@ -114,8 +115,13 @@ private:
     NucleotideSequence sequence_;
     std::size_t cached_hash_;
     std::reference_wrapper<const ReferenceGenome> reference_;
-    
+
+public:
     using AlleleIterator = decltype(explicit_alleles_)::const_iterator;
+    
+    std::pair<AlleleIterator, AlleleIterator> alleles() const noexcept;
+
+private:
     
     void append(NucleotideSequence& result, const ContigAllele& allele) const;
     void append(NucleotideSequence& result, AlleleIterator first, AlleleIterator last) const;
@@ -196,7 +202,7 @@ Haplotype::Haplotype(R&& region, ForwardIt first_allele, ForwardIt last_allele,
 class Haplotype::Builder
 {
 public:
-    Builder() = default;
+    Builder() = delete;
     
     explicit Builder(const GenomicRegion& region, const ReferenceGenome& reference);
     
@@ -208,7 +214,9 @@ public:
     ~Builder() = default;
     
     bool can_push_back(const ContigAllele& allele) const noexcept;
+    bool can_push_back(const Allele& allele) const noexcept;
     bool can_push_front(const ContigAllele& allele) const noexcept;
+    bool can_push_front(const Allele& allele) const noexcept;
     
     void push_back(const ContigAllele& allele);
     void push_front(const ContigAllele& allele);
@@ -221,8 +229,8 @@ public:
     
     Haplotype build();
     
-    friend Haplotype detail::do_copy(const Haplotype& haplotype, const GenomicRegion& region,
-                                     std::true_type);
+    friend Haplotype detail::do_copy(const Haplotype& haplotype, const GenomicRegion& region, std::true_type);
+    friend Haplotype copy(const Haplotype&, const std::vector<GenomicRegion>&);
     
 private:
     GenomicRegion region_;
@@ -242,6 +250,7 @@ bool is_sequence_empty(const Haplotype& haplotype) noexcept;
 
 bool contains(const Haplotype& lhs, const Allele& rhs);
 bool contains(const Haplotype& lhs, const Haplotype& rhs);
+bool includes(const Haplotype& lhs, const Allele& rhs);
 
 template <typename MappableType>
 MappableType copy(const Haplotype& haplotype, const GenomicRegion& region)
@@ -250,6 +259,8 @@ MappableType copy(const Haplotype& haplotype, const GenomicRegion& region)
 }
 
 ContigAllele copy(const Haplotype& haplotype, const ContigRegion& region);
+
+Haplotype copy(const Haplotype& haplotype, const std::vector<GenomicRegion>& regions);
 
 template <typename MappableType, typename Container,
           typename = std::enable_if_t<std::is_same<typename Container::value_type, Haplotype>::value>>
@@ -285,7 +296,7 @@ Haplotype remap(const Haplotype& haplotype, const GenomicRegion& region);
 
 std::vector<Variant> difference(const Haplotype& lhs, const Haplotype& rhs);
 
-bool operator==(const Haplotype& lhs, const Haplotype& rhs);
+bool operator==(const Haplotype& lhs, const Haplotype& rhs) noexcept;
 bool operator<(const Haplotype& lhs, const Haplotype& rhs);
 
 struct HaveSameAlleles
@@ -312,13 +323,11 @@ struct StrictLess
 };
 
 // Removes all duplicates haplotypes (w.r.t operator==) keeping the duplicate which is considered least complex w.r.t cmp.
-template <typename Cmp>
-unsigned remove_duplicates(std::vector<Haplotype>& haplotypes, const Cmp& cmp)
+template <typename RandomIt, typename Compare>
+RandomIt remove_duplicates(RandomIt first_itr, RandomIt last_itr, const Compare& cmp)
 {
-    using std::begin; using std::end;
-    std::sort(begin(haplotypes), end(haplotypes), StrictLess {});
-    auto first_dup_itr  = begin(haplotypes);
-    const auto last_itr = end(haplotypes);
+    std::sort(first_itr, last_itr, StrictLess {});
+    auto first_dup_itr  = first_itr;
     while (true) {
         first_dup_itr = std::adjacent_find(first_dup_itr, last_itr);
         if (first_dup_itr == last_itr) break;
@@ -335,14 +344,29 @@ unsigned remove_duplicates(std::vector<Haplotype>& haplotypes, const Cmp& cmp)
         std::iter_swap(first_dup_itr, dup_keep_itr);
         first_dup_itr = last_dup_itr;
     }
-    const auto last_keep_itr = std::unique(begin(haplotypes), end(haplotypes));
-    const auto result = std::distance(last_keep_itr, end(haplotypes));
-    haplotypes.erase(last_keep_itr, last_itr);
-    return static_cast<unsigned>(result);
+    return std::unique(first_itr, last_itr);
 }
 
-unsigned remove_duplicates(std::vector<Haplotype>& haplotypes);
-unsigned remove_duplicates(std::vector<Haplotype>& haplotypes, Haplotype reference);
+template <typename Container, typename Compare>
+unsigned remove_duplicates(Container& haplotypes, const Compare& cmp)
+{
+    const auto erasable_itr = remove_duplicates(std::begin(haplotypes), std::end(haplotypes), cmp);
+    const auto result = std::distance(erasable_itr, std::end(haplotypes));
+    haplotypes.erase(erasable_itr, std::end(haplotypes));
+    return result;
+}
+
+template <typename Container>
+unsigned remove_duplicates(Container& haplotypes)
+{
+    return remove_duplicates(haplotypes, IsLessComplex {});
+}
+template <typename Container>
+unsigned remove_duplicates(Container& haplotypes, Haplotype reference)
+{
+    IsLessComplex cmp {std::move(reference)};
+    return remove_duplicates(haplotypes, cmp);
+}
 
 std::ostream& operator<<(std::ostream& os, const Haplotype& haplotype);
 

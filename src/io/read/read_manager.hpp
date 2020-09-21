@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef read_manager_hpp
@@ -35,6 +35,8 @@ public:
     using SampleName    = IReadReaderImpl::SampleName;
     using ReadContainer = IReadReaderImpl::ReadContainer;
     using SampleReadMap = IReadReaderImpl::SampleReadMap;
+    using AlignedReadReadVisitor = IReadReaderImpl::AlignedReadReadVisitor;
+    using ContigRegionVisitor    = IReadReaderImpl::ContigRegionVisitor;
     
     ReadManager() = default;
     
@@ -44,7 +46,7 @@ public:
     ReadManager(const ReadManager&)            = delete;
     ReadManager& operator=(const ReadManager&) = delete;
     ReadManager(ReadManager &&);
-    ReadManager& operator=(ReadManager &&)     = default;
+    ReadManager& operator=(ReadManager &&);
     
     ~ReadManager() = default;
     
@@ -54,9 +56,28 @@ public:
     bool good() const noexcept;
     unsigned num_files() const noexcept;
     std::vector<Path> paths() const; // Managed files
+    bool all_readers_have_one_sample() const;
     unsigned num_samples() const noexcept;
     const std::vector<SampleName>& samples() const;
     unsigned drop_samples(std::vector<SampleName> samples);
+    
+    void iterate(const GenomicRegion& region,
+                 AlignedReadReadVisitor visitor) const;
+    void iterate(const SampleName& sample,
+                 const GenomicRegion& region,
+                 AlignedReadReadVisitor visitor) const;
+    void iterate(const std::vector<SampleName>& samples,
+                 const GenomicRegion& region,
+                 AlignedReadReadVisitor visitor) const;
+    
+    void iterate(const GenomicRegion& region,
+                 ContigRegionVisitor visitor) const;
+    void iterate(const SampleName& sample,
+                 const GenomicRegion& region,
+                 ContigRegionVisitor visitor) const;
+    void iterate(const std::vector<SampleName>& samples,
+                 const GenomicRegion& region,
+                 ContigRegionVisitor visitor) const;
     
     bool has_reads(const SampleName& sample, const GenomicRegion& region) const;
     bool has_reads(const std::vector<SampleName>& samples, const GenomicRegion& region) const;
@@ -92,6 +113,7 @@ private:
     
     unsigned max_open_files_ = 200;
     unsigned num_files_;
+    bool all_readers_single_sample_;
     
     mutable ClosedReaderSet closed_readers_;
     mutable OpenReaderMap open_readers_;
@@ -119,6 +141,11 @@ private:
     Path choose_reader_to_close() const;
     void close_readers(unsigned n) const;
     
+    template <typename Visitor>
+    void iterate_helper(const std::vector<SampleName>& samples,
+                        const GenomicRegion& region,
+                        Visitor visitor) const;
+    
     void add_possible_regions_to_reader_map(const Path& reader_path, const std::vector<GenomicRegion>& regions);
     void add_reader_to_sample_map(const Path& reader_path, const std::vector<SampleName>& samples_in_reader);
     bool could_reader_contain_region(const Path& reader_path, const GenomicRegion& region) const;
@@ -128,6 +155,30 @@ private:
     std::vector<Path> get_possible_reader_paths(const std::vector<SampleName>& samples,
                                                 const GenomicRegion& region) const;
 };
+
+template <typename Visitor>
+void ReadManager::iterate_helper(const std::vector<SampleName>& samples,
+                                 const GenomicRegion& region,
+                                 Visitor visitor) const
+{
+    if (all_readers_are_open()) {
+        for (const auto& p : open_readers_) {
+            if (!p.second.iterate(samples, region, visitor)) return;
+        }
+    } else {
+        std::lock_guard<std::mutex> lock {mutex_};
+        auto reader_paths = get_reader_paths_containing_samples(samples);
+        auto reader_itr = partition_open(reader_paths);
+        while (!reader_paths.empty()) {
+            auto itr = std::find_if(reader_itr, end(reader_paths), [&] (const auto& reader_path) {
+                return !open_readers_.at(reader_path).iterate(samples, region, visitor);
+            });
+            if (itr != end(reader_paths)) break;
+            reader_paths.erase(reader_itr, end(reader_paths));
+            reader_itr = open_readers(begin(reader_paths), end(reader_paths));
+        }
+    }
+}
 
 } // namespace io
 

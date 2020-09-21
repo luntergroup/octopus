@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef variational_bayes_mixture_model_hpp
@@ -563,36 +563,99 @@ auto calculate_evidence_lower_bound(const VBAlphaVector<K>& prior_alphas,
     
 }
 
-template <std::size_t K>
-void check_normalisation(VBLatents<K>& latents)
+inline void check_normalisation(ProbabilityVector& probabilities) noexcept
 {
-    const auto total_posterior = std::accumulate(std::cbegin(latents.genotype_posteriors), std::cend(latents.genotype_posteriors), 0.0);
-    if (total_posterior > 1.0) {
-        for (auto& p : latents.genotype_posteriors) p /= total_posterior;
-    }
+    const auto mass = std::accumulate(std::cbegin(probabilities), std::cend(probabilities), 0.0);
+    if (mass > 1.0) for (auto& p : probabilities) p /= mass;
 }
 
 template <std::size_t K>
-std::pair<VBLatents<K>, double>
-get_max_evidence_latents(const VBAlphaVector<K>& prior_alphas,
-                         const LogProbabilityVector& genotype_log_priors,
-                         const VBReadLikelihoodMatrix<K>& log_likelihoods,
-                         std::vector<VBLatents<K>>&& latents)
+void check_normalisation(VBLatents<K>& latents) noexcept
 {
-    std::vector<double> seed_evidences(latents.size());
-    std::transform(std::cbegin(latents), std::cend(latents), std::begin(seed_evidences),
+    check_normalisation(latents.genotype_posteriors);
+}
+
+inline std::size_t max_element_index(const ProbabilityVector& probabilities) noexcept
+{
+    return std::distance(std::cbegin(probabilities), std::max_element(std::cbegin(probabilities), std::cend(probabilities)));
+}
+
+template <std::size_t K>
+auto
+find_map_modes(const std::vector<VBLatents<K>>& latents, 
+               const std::vector<double>& log_evidences)
+{
+    const auto num_genotypes = latents.front().genotype_posteriors.size(); 
+    std::vector<std::size_t> map_genotypes(num_genotypes, latents.size());
+    for (std::size_t i {0}; i < latents.size(); ++i) {
+        const auto map_genotype_idx = max_element_index(latents[i].genotype_posteriors);
+        if (map_genotypes[map_genotype_idx] == latents.size() || log_evidences[i] > log_evidences[map_genotypes[map_genotype_idx]]) {
+            map_genotypes[map_genotype_idx] = i;
+        }
+    }
+    std::vector<std::size_t> result {};
+    result.reserve(latents.size());
+    for (std::size_t g {0}; g < num_genotypes; ++g) {
+        if (map_genotypes[g] < latents.size()) {
+            result.push_back(map_genotypes[g]);
+        }
+    }
+    return result;
+}
+
+template <std::size_t K>
+ProbabilityVector
+compute_evidence_weighted_genotype_posteriors(const std::vector<VBLatents<K>>& latents, 
+                                              const std::vector<double>& log_evidences)
+{
+    assert(!latents.empty());
+    assert(latents.size() == log_evidences.size());
+    const auto modes = find_map_modes(latents, log_evidences);
+    std::vector<double> mode_weights(modes.size());
+    std::transform(std::cbegin(modes), std::cend(modes), std::begin(mode_weights), [&] (auto mode) { return log_evidences[mode]; });
+    maths::normalise_exp(mode_weights);
+    const auto num_genotypes = latents.front().genotype_posteriors.size();    
+    ProbabilityVector result(num_genotypes);
+    for (std::size_t i {0}; i < modes.size(); ++i) {
+        const auto mode_weight = mode_weights[i];
+        const auto& mode_genotype_posteriors = latents[modes[i]].genotype_posteriors;
+        std::transform(std::cbegin(mode_genotype_posteriors), std::cend(mode_genotype_posteriors),
+                       std::cbegin(result), std::begin(result), 
+                       [mode_weight] (auto seed_posterior, auto curr_posterior) {
+                           return curr_posterior + mode_weight * seed_posterior;
+                       });
+    }
+    check_normalisation(result);
+    return result;
+}
+
+template <std::size_t K>
+std::vector<double>
+calculate_log_evidences(const std::vector<VBLatents<K>>& latents,
+                        const VBAlphaVector<K>& prior_alphas,
+                        const LogProbabilityVector& genotype_log_priors,
+                        const VBReadLikelihoodMatrix<K>& log_likelihoods)
+{
+    std::vector<double> result(latents.size());
+    std::transform(std::cbegin(latents), std::cend(latents), std::begin(result),
                    [&] (const auto& seed_latents) {
                        return calculate_evidence_lower_bound(prior_alphas, genotype_log_priors, log_likelihoods, seed_latents);
                    });
-    const auto max_itr = std::max_element(std::cbegin(seed_evidences), std::cend(seed_evidences));
-    const auto max_idx = std::distance(std::cbegin(seed_evidences), max_itr);
-    return std::make_pair(std::move(latents[max_idx]), *max_itr);
+    return result;
 }
 
 } // namespace detail
 
 template <std::size_t K>
-std::pair<VBLatents<K>, double>
+struct VBResultPacket
+{
+    VBLatents<K> map_latents;
+    double max_log_evidence;
+    ProbabilityVector evidence_weighted_genotype_posteriors;
+};
+
+template <std::size_t K>
+VBResultPacket<K>
 run_variational_bayes(const VBAlphaVector<K>& prior_alphas,
                       const LogProbabilityVector& genotype_log_priors,
                       const VBReadLikelihoodMatrix<K>& log_likelihoods,
@@ -601,9 +664,11 @@ run_variational_bayes(const VBAlphaVector<K>& prior_alphas,
 {
     assert(!seeds.empty());
     auto latents = detail::run_variational_bayes(prior_alphas, genotype_log_priors, log_likelihoods, params, std::move(seeds));
-    auto result = detail::get_max_evidence_latents(prior_alphas, genotype_log_priors, log_likelihoods, std::move(latents));
-    detail::check_normalisation(result.first);
-    return result;
+    const auto log_evidences = detail::calculate_log_evidences(latents, prior_alphas, genotype_log_priors, log_likelihoods);
+    auto weighted_genotype_posteriors = detail::compute_evidence_weighted_genotype_posteriors(latents, log_evidences);
+    auto max_evidence_idx = detail::max_element_index(log_evidences);
+    detail::check_normalisation(latents[max_evidence_idx]);
+    return {std::move(latents[max_evidence_idx]), log_evidences[max_evidence_idx], std::move(weighted_genotype_posteriors)};
 }
 
 inline VBReadLikelihoodArray::VBReadLikelihoodArray(const BaseType& underlying_likelihoods)

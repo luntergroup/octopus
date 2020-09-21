@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef calling_components_hpp
@@ -21,9 +21,11 @@
 #include "io/read/read_manager.hpp"
 #include "io/variant/vcf_writer.hpp"
 #include "readpipe/read_pipe_fwd.hpp"
+#include "core/models/haplotype_likelihood_model.hpp"
 #include "core/callers/caller_factory.hpp"
 #include "core/csr/filters/variant_call_filter_factory.hpp"
 #include "core/tools/bam_realigner.hpp"
+#include "core/tools/indel_profiler.hpp"
 #include "utils/memory_footprint.hpp"
 #include "utils/input_reads_profiler.hpp"
 #include "logging/progress_meter.hpp"
@@ -61,6 +63,8 @@ public:
     std::size_t read_buffer_size() const noexcept;
     const boost::optional<Path>& temp_directory() const noexcept;
     boost::optional<unsigned> num_threads() const noexcept;
+    const HaplotypeLikelihoodModel& haplotype_likelihood_model() const noexcept;
+    HaplotypeLikelihoodModel realignment_haplotype_likelihood_model() const;
     const CallerFactory& caller_factory() const noexcept;
     boost::optional<VcfWriter&> filtered_output() noexcept;
     boost::optional<const VcfWriter&> filtered_output() const noexcept;
@@ -71,11 +75,12 @@ public:
     bool sites_only() const noexcept;
     const PloidyMap& ploidies() const noexcept;
     boost::optional<Pedigree> pedigree() const;
-    boost::optional<Path> legacy() const;
     boost::optional<Path> filter_request() const;
     boost::optional<Path> bamout() const;
     BAMRealigner::Config bamout_config() const noexcept;
+    boost::optional<const ReadSetProfile&> reads_profile() const noexcept;
     boost::optional<Path> data_profile() const;
+    IndelProfiler::ProfileConfig profiler_config() const;
     
 private:
     struct Components
@@ -97,8 +102,11 @@ private:
         std::vector<SampleName> samples;
         InputRegionMap regions;
         std::vector<GenomicRegion::ContigName> contigs;
+        PloidyMap ploidies;
         boost::optional<ReadSetProfile> reads_profile;
         ReadPipe read_pipe;
+        HaplotypeLikelihoodModel haplotype_likelihood_model;
+        HaplotypeLikelihoodModel realignment_haplotype_likelihood_model;
         CallerFactory caller_factory;
         boost::optional<ReadPipe> filter_read_pipe;
         VcfWriter output;
@@ -107,14 +115,14 @@ private:
         MemoryFootprint read_buffer_footprint;
         std::size_t read_buffer_size;
         ProgressMeter progress_meter;
-        PloidyMap ploidies;
         boost::optional<Pedigree> pedigree;
         bool sites_only;
-        boost::optional<Path> legacy;
         boost::optional<Path> filter_request;
         boost::optional<Path> bamout;
         BAMRealigner::Config bamout_config;
         boost::optional<Path> data_profile;
+        IndelProfiler::ProfileConfig profiler_config;
+        
         // Components that require temporary directory during construction appear last to make
         // exception handling easier.
         boost::optional<Path> temp_directory;
@@ -141,7 +149,7 @@ struct ContigCallingComponents
 {
     std::reference_wrapper<const ReferenceGenome> reference;
     std::reference_wrapper<const ReadManager> read_manager;
-    const InputRegionMap::mapped_type regions;
+    InputRegionMap::mapped_type regions;
     std::reference_wrapper<const std::vector<SampleName>> samples;
     std::unique_ptr<const Caller> caller;
     std::size_t read_buffer_size;

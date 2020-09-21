@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef matrix_map_hpp
@@ -14,14 +14,13 @@
 #include <algorithm>
 #include <memory>
 
-template <
-typename Key1,
-typename Key2,
-typename T,
-typename Hash1 = std::hash<Key1>,
-typename Hash2 = std::hash<Key2>,
-typename KeyEqual1 = std::equal_to<Key1>,
-typename KeyEqual2 = std::equal_to<Key2>
+template <typename Key1,
+          typename Key2,
+          typename T,
+          typename Hash1 = std::hash<Key1>,
+          typename Hash2 = std::hash<Key2>,
+          typename KeyEqual1 = std::equal_to<Key1>,
+          typename KeyEqual2 = std::equal_to<Key2>
 > class MatrixMap
 {
     using Key2ContainerType = std::vector<Key2>;
@@ -546,18 +545,16 @@ public:
         
         value_type operator*() const
         {
-            const auto zip1 = ZipIterator {key2_begin_itr_, std::begin(map_itr_->second)};
-            const auto zip2 = ZipIterator {std::next(key2_begin_itr_, key2_indices_.get().size()),
-                std::end(map_itr_->second)};
-            return std::make_pair(std::ref(map_itr_->first), InnerMap {zip1, zip2, key2_indices_});
+            ZipIterator zip1 {key2_begin_itr_, std::begin(map_itr_->second)};
+            ZipIterator zip2 {std::next(key2_begin_itr_, key2_indices_.get().size()), std::end(map_itr_->second)};
+            return std::make_pair(std::ref(map_itr_->first), InnerMap {std::move(zip1), std::move(zip2), key2_indices_});
         }
         
         auto operator->() const
         {
-            const auto zip1 = ZipIterator {key2_begin_itr_, std::begin(map_itr_->second)};
-            const auto zip2 = ZipIterator {std::next(key2_begin_itr_, key2_indices_.get().size()),
-                std::end(map_itr_->second)};
-            return std::make_unique<value_type>(map_itr_->first, InnerMap {zip1, zip2, key2_indices_});
+            ZipIterator zip1 {key2_begin_itr_, std::begin(map_itr_->second)};
+            ZipIterator zip2 {std::next(key2_begin_itr_, key2_indices_.get().size()), std::end(map_itr_->second)};
+            return std::make_unique<value_type>(map_itr_->first, InnerMap {std::move(zip1), std::move(zip2), key2_indices_});
         }
         
         friend bool operator==(const Iterator& lhs, const Iterator& rhs)

@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "local_reassembler.hpp"
@@ -22,6 +22,7 @@
 #include "utils/append.hpp"
 #include "utils/global_aligner.hpp"
 #include "utils/read_stats.hpp"
+#include "utils/free_memory.hpp"
 #include "io/reference/reference_genome.hpp"
 #include "logging/logging.hpp"
 
@@ -63,6 +64,7 @@ LocalReassembler::LocalReassembler(const ReferenceGenome& reference, Options opt
 , max_bubbles_ {options.max_bubbles}
 , min_bubble_score_ {options.min_bubble_score}
 , max_variant_size_ {options.max_variant_size}
+, cycle_tolerance_ {options.cycle_tolerance}
 {
     if (max_bin_size_ == 0) {
         throw std::runtime_error {"bin size must be greater than zero"};
@@ -101,9 +103,9 @@ void LocalReassembler::Bin::add(const AlignedRead& read)
         read_region = contig_region(read);
     }
     if (is_forward_strand(read)) {
-        forward_read_sequences.emplace_back(read.sequence());
+        forward_read_sequences.push_back({read.sequence(), read.base_qualities()});
     } else {
-        reverse_read_sequences.emplace_back(read.sequence());
+        reverse_read_sequences.push_back({read.sequence(), read.base_qualities()});
     }
 }
 
@@ -115,9 +117,9 @@ void LocalReassembler::Bin::add(const AlignedRead& read, const NucleotideSequenc
         read_region = contig_region(read);
     }
     if (is_forward_strand(read)) {
-        forward_read_sequences.emplace_back(masked_sequence);
+        forward_read_sequences.push_back({masked_sequence, read.base_qualities()});
     } else {
-        reverse_read_sequences.emplace_back(masked_sequence);
+        reverse_read_sequences.push_back({masked_sequence, read.base_qualities()});
     }
 }
 
@@ -165,7 +167,7 @@ bool has_low_quality_match(const AlignedRead& read, const AlignedRead::BaseQuali
     auto quality_itr = std::cbegin(read.base_qualities());
     return std::any_of(std::cbegin(read.cigar()), std::cend(read.cigar()),
                        [&] (const auto& op) {
-                           if (is_match(op)) {
+                           if (is_match_or_substitution(op)) {
                                auto result = std::any_of(quality_itr, std::next(quality_itr, op.size()),
                                                          [=] (auto q) { return q < good_quality; });
                                std::advance(quality_itr, op.size());
@@ -218,7 +220,7 @@ auto transform_low_quality_matches_to_reference(AlignedRead::NucleotideSequence 
             ++ref_itr;
         }
         const auto op = *cigar_itr++;
-        if (is_match(op)) {
+        if (is_match_or_substitution(op)) {
             const auto ref_base = *ref_itr++; // Don't forget to increment ref_itr!
             if (base_quality >= min_quality) {
                 return read_base;
@@ -389,7 +391,7 @@ std::vector<Variant> LocalReassembler::do_generate(const RegionSet& regions) con
 
 void LocalReassembler::do_clear() noexcept
 {
-    read_buffer_.clear();
+    free_memory(read_buffer_);
 }
 
 std::string LocalReassembler::name() const
@@ -450,7 +452,11 @@ void LocalReassembler::finalise_bins(BinList& bins, const RegionSet& active_regi
                std::end(bins));
     for (auto& bin : bins) {
         if (bin.read_region) {
-            bin.region = GenomicRegion {bin.region.contig_name(), *bin.read_region};
+            if (size(bin.region) < max_bin_size_) {
+                bin.region = expand(bin.region, (max_bin_size_ - size(bin.region)) / 2);
+            }
+            assert(overlaps(bin.region.contig_region(), *bin.read_region));
+            bin.region = GenomicRegion {bin.region.contig_name(), *overlapped_region(bin.region.contig_region(), *bin.read_region)};
         }
     }
     // unique in reverse order as we want to keep bigger bins, which
@@ -551,11 +557,11 @@ GenomicRegion LocalReassembler::propose_assembler_region(const GenomicRegion& in
 
 void LocalReassembler::load(const Bin& bin, Assembler& assembler) const
 {
-    for (const auto& sequence : bin.forward_read_sequences) {
-        assembler.insert_read(sequence, Assembler::Direction::forward);
+    for (const auto& read : bin.forward_read_sequences) {
+        assembler.insert_read(read.sequence, read.base_qualities, Assembler::Direction::forward);
     }
-    for (const auto& sequence : bin.reverse_read_sequences) {
-        assembler.insert_read(sequence, Assembler::Direction::reverse);
+    for (const auto& read : bin.reverse_read_sequences) {
+        assembler.insert_read(read.sequence, read.base_qualities, Assembler::Direction::reverse);
     }
 }
 
@@ -835,6 +841,11 @@ auto align(const Assembler::Variant& v, const Model& model)
     return align(v.ref, v.alt, model).cigar;
 }
 
+struct VariantDecompositionConfig
+{
+    enum class ComplexAction { decompose, mnv, ignore } complex;
+};
+
 auto count_variant_types(const CigarString& cigar) noexcept
 {
     bool has_snv {false}, has_insertion {false}, has_deletion {false};
@@ -855,7 +866,9 @@ bool is_complex_alignment(const CigarString& cigar, const Assembler::Variant& v)
     const auto num_variant_types = count_variant_types(cigar);
     return (min_allele_size > 5 && cigar.size() >= min_allele_size && num_variant_types > 1)
            || (min_allele_size > 8 && cigar.size() > 2 * min_allele_size / 3 && num_variant_types > 1)
-           || (min_allele_size > 20 && cigar.size() > min_allele_size / 2 && num_variant_types > 2);
+           || (min_allele_size > 20 && cigar.size() > min_allele_size / 2 && num_variant_types > 2)
+           || (min_allele_size > 50 && cigar.size() > 2 * min_allele_size / 3 && num_variant_types > 2)
+           || (min_allele_size > 100 && cigar.size() > min_allele_size / 3 && num_variant_types > 2);
 }
 
 bool is_good_alignment(const CigarString& cigar, const Assembler::Variant& v) noexcept
@@ -863,20 +876,23 @@ bool is_good_alignment(const CigarString& cigar, const Assembler::Variant& v) no
     return !is_complex_alignment(cigar, v);
 }
 
-std::vector<Assembler::Variant> decompose_with_aligner(Assembler::Variant v, const Model& model)
+std::vector<Assembler::Variant>
+decompose_with_aligner(Assembler::Variant v, const Model& model, const VariantDecompositionConfig config)
 {
     const auto cigar = align(v, model);
     if (is_good_alignment(cigar, v)) {
         return extract_variants(v.ref, v.alt, cigar, v.begin_pos);
-    } else {
+    } else if (config.complex == VariantDecompositionConfig::ComplexAction::mnv) {
         return {std::move(v)};
+    } else {
+        return {};
     }
 }
 
-auto decompose_with_aligner(Assembler::Variant v)
+auto decompose_with_aligner(Assembler::Variant v, const VariantDecompositionConfig config)
 {
     Model model {4, -6, -8, -1};
-    return decompose_with_aligner(std::move(v), model);
+    return decompose_with_aligner(std::move(v), model, config);
 }
 
 bool is_fully_decomposed(const Assembler::Variant v) noexcept
@@ -884,21 +900,23 @@ bool is_fully_decomposed(const Assembler::Variant v) noexcept
     return v.ref.empty() && v.alt.empty();
 }
 
-std::vector<Assembler::Variant> decompose_complex(Assembler::Variant v, const std::vector<Repeat>& reference_repeats)
+std::vector<Assembler::Variant> 
+decompose_complex(Assembler::Variant v, const std::vector<Repeat>& reference_repeats, const VariantDecompositionConfig config)
 {
     auto result = try_to_split_repeats(v, reference_repeats);
     if (!is_fully_decomposed(v)) {
-        utils::append(decompose_with_aligner(std::move(v)), result);
+        utils::append(decompose_with_aligner(std::move(v), config), result);
     }
     return result;
 }
 
-std::vector<Assembler::Variant> decompose(Assembler::Variant v, const std::vector<Repeat>& reference_repeats)
+std::vector<Assembler::Variant> 
+decompose(Assembler::Variant v, const std::vector<Repeat>& reference_repeats, const VariantDecompositionConfig config)
 {
     if (is_mnv(v)) {
         return split_mnv(std::move(v));
     } else {
-        return decompose_complex(std::move(v), reference_repeats);
+        return decompose_complex(std::move(v), reference_repeats, config);
     }
 }
 
@@ -919,12 +937,12 @@ struct VariantLess
 
 using VariantIterator = std::deque<Assembler::Variant>::iterator;
 
-auto decompose(VariantIterator first, VariantIterator last, const std::vector<Repeat>& reference_repeats)
+auto decompose(VariantIterator first, VariantIterator last, const std::vector<Repeat>& reference_repeats, const VariantDecompositionConfig config)
 {
     using std::begin; using std::end; using std::make_move_iterator;
     std::deque<Assembler::Variant> result {};
     std::for_each(make_move_iterator(first), make_move_iterator(last), [&] (auto&& complex) {
-        utils::append(decompose(std::move(complex), reference_repeats), result);
+        utils::append(decompose(std::move(complex), reference_repeats, config), result);
     });
     std::sort(begin(result), end(result), VariantLess {});
     result.erase(std::unique(begin(result), end(result)), end(result));
@@ -954,13 +972,13 @@ void merge(std::deque<Assembler::Variant>&& decomposed, std::deque<Assembler::Va
     std::inplace_merge(begin(variants), first_complex, end(variants), VariantLess {});
 }
 
-void decompose(std::deque<Assembler::Variant>& variants, const ReferenceGenome::GeneticSequence& reference)
+void decompose(std::deque<Assembler::Variant>& variants, const ReferenceGenome::GeneticSequence& reference, const VariantDecompositionConfig config)
 {
     auto tmp = reference;
     auto reference_repeats = find_repeats(tmp);
     const auto first_decomposable = partition_decomposable(variants);
     if (first_decomposable != std::end(variants)) {
-        merge(decompose(first_decomposable, std::end(variants), reference_repeats), variants, first_decomposable);
+        merge(decompose(first_decomposable, std::end(variants), reference_repeats, config), variants, first_decomposable);
     }
 }
 
@@ -989,6 +1007,9 @@ LocalReassembler::try_assemble_region(Assembler& assembler, const NucleotideSequ
     assembler.prune(min_kmer_observations_);
     auto status = AssemblerStatus::success;
     if (!assembler.is_acyclic()) {
+        if (cycle_tolerance_ == Options::CyclicGraphTolerance::none) {
+            return AssemblerStatus::failed;
+        }
         assembler.remove_nonreference_cycles();
         status = AssemblerStatus::partial_success;
     }
@@ -1002,7 +1023,13 @@ LocalReassembler::try_assemble_region(Assembler& assembler, const NucleotideSequ
         trim_reference(variants);
         std::sort(std::begin(variants), std::end(variants), VariantLess {});
         variants.erase(std::unique(std::begin(variants), std::end(variants)), std::end(variants));
-        decompose(variants, reference_sequence);
+        VariantDecompositionConfig decomposition_config {};
+        if (status == AssemblerStatus::success || cycle_tolerance_ == Options::CyclicGraphTolerance::high) {
+            decomposition_config.complex = VariantDecompositionConfig::ComplexAction::mnv;
+        } else {
+            decomposition_config.complex = VariantDecompositionConfig::ComplexAction::ignore;
+        }
+        decompose(variants, reference_sequence, decomposition_config);
         if (status == AssemblerStatus::partial_success) {
             // TODO: Some false positive large deletions are being generated for small kmer sizes.
             // Until Assembler is better able to remove these automatically, filter them here.
@@ -1036,7 +1063,7 @@ double DepthBasedBubbleScoreSetter::operator()(const GenomicRegion& region, cons
     auto result = min_score_;
     for (const auto& p : read_counts) {
         const auto mean_depth = p.second / size(region);
-        result = std::max(result, std::floor(min_allele_frequency_ * mean_depth));
+        result = std::max(result, min_allele_frequency_ * mean_depth);
     }
     return result;
 }

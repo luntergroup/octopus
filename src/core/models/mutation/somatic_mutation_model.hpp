@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef somatic_mutation_model_hpp
@@ -8,6 +8,8 @@
 #include <functional>
 
 #include "core/types/haplotype.hpp"
+#include "core/types/indexed_haplotype.hpp"
+#include "containers/mappable_block.hpp"
 #include "denovo_model.hpp"
 
 namespace octopus {
@@ -32,13 +34,13 @@ public:
     
     ~SomaticMutationModel() = default;
     
-    void prime(std::vector<Haplotype> haplotypes);
+    void prime(MappableBlock<Haplotype> haplotypes);
     void unprime() noexcept;
     bool is_primed() const noexcept;
     
     // ln p(somatic | germline)
     LogProbability evaluate(const Haplotype& somatic, const Haplotype& germline) const;
-    LogProbability evaluate(unsigned somatic, unsigned germline) const;
+    LogProbability evaluate(const IndexedHaplotype<>& somatic, const IndexedHaplotype<>& germline) const;
     
 private:
     DeNovoModel model_;

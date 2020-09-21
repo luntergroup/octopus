@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef haplotype_likelihood_model_hpp
@@ -19,12 +19,11 @@
 #include "basics/contig_region.hpp"
 #include "basics/cigar_string.hpp"
 #include "basics/aligned_read.hpp"
+#include "basics/aligned_template.hpp"
 #include "core/types/haplotype.hpp"
 #include "core/models/error/snv_error_model.hpp"
 #include "core/models/error/indel_error_model.hpp"
 #include "pairhmm/pair_hmm.hpp"
-
-#include "timers.hpp"
 
 namespace octopus {
 
@@ -32,7 +31,7 @@ class HaplotypeLikelihoodModel
 {
 public:
     using LogProbability = double;
-    using Penalty = hmm::MutationModel::Penalty;
+    using Penalty = hmm::Penalty;
     
     struct Config
     {
@@ -40,6 +39,8 @@ public:
         boost::optional<AlignedRead::MappingQuality> mapping_quality_cap_trigger = boost::none;
         AlignedRead::MappingQuality mapping_quality_cap = 120;
         bool use_flank_state = true;
+        unsigned max_indel_error = 8;
+        bool use_int_scores = false;
     };
     
     struct FlankState
@@ -77,7 +78,10 @@ public:
     
     ~HaplotypeLikelihoodModel() = default;
     
-    static unsigned pad_requirement() noexcept;
+    const Config& config() const noexcept;
+    void set(Config config);
+    
+    unsigned pad_requirement() const noexcept;
     
     bool can_use_flank_state() const noexcept;
     
@@ -90,11 +94,17 @@ public:
     LogProbability evaluate(const AlignedRead& read, const MappingPositionVector& mapping_positions) const;
     LogProbability evaluate(const AlignedRead& read, MappingPositionItr first_mapping_position, MappingPositionItr last_mapping_position) const;
     
+    // ln p(read template | haplotype, model)
+    LogProbability evaluate(const AlignedTemplate& reads) const;
+    LogProbability evaluate(const AlignedTemplate& reads, const std::vector<MappingPositionVector>& mapping_positions) const;
+    
     Alignment align(const AlignedRead& read) const;
     Alignment align(const AlignedRead& read, const MappingPositionVector& mapping_positions) const;
     Alignment align(const AlignedRead& read, MappingPositionItr first_mapping_position, MappingPositionItr last_mapping_position) const;
     
 private:
+    using HMM = hmm::PairHMM<hmm::MutationModel>;
+    
     std::unique_ptr<SnvErrorModel> snv_error_model_;
     std::unique_ptr<IndelErrorModel> indel_error_model_;
     
@@ -107,6 +117,7 @@ private:
     
     std::vector<Penalty> haplotype_gap_open_penalities_, haplotype_gap_extend_penalities_;
     Config config_;
+    mutable HMM hmm_;
 };
 
 class HaplotypeLikelihoodModel::ShortHaplotypeError : public std::runtime_error

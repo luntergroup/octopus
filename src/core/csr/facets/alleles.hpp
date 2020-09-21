@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef alleles_hpp
@@ -29,7 +29,14 @@ private:
     Facet::ResultType do_get() const override;
 };
 
-std::vector<Allele> copy_overlapped(const MappableFlatSet<Allele>& alleles, const VcfRecord& call);
+inline const auto& get(const Facet::AlleleMap& alleles, const VcfRecord& call, const SampleName& sample)
+{
+    return alleles.at(mapped_region(call)).at(sample);
+}
+
+std::vector<Allele> get_called(const Facet::AlleleMap& alleles, const VcfRecord& call, const SampleName& sample);
+std::vector<Allele> get_called_alt(const Facet::AlleleMap& alleles, const VcfRecord& call, const SampleName& sample);
+std::vector<Allele> get_unique_called(const Facet::AlleleMap& alleles, const VcfRecord& call, const std::vector<SampleName>& samples);
 
 } // namespace csr
 } // namespace octopus

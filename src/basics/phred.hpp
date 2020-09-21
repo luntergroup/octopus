@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef phred_hpp
@@ -11,6 +11,7 @@
 #include <string>
 #include <iostream>
 #include <functional>
+#include <limits>
 
 #include <boost/multiprecision/cpp_dec_float.hpp>
 
@@ -31,8 +32,12 @@ public:
     
     Phred() = default;
     
-    explicit Phred(const Q score) : score_ {score} // to convert -0.0 to +0.0
+    explicit Phred(const Q score) : score_ {score}
     {
+        if (score_ == 0.0 && std::signbit(score_)) {
+            // to convert -0.0 to +0.0
+            score_ = 0.0;
+        }
         if (score_ < Q {0}) {
             throw std::domain_error {"Phred: negative score " + std::to_string(score)};
         }
@@ -43,8 +48,7 @@ public:
         if (error < Q {0}) {
             throw std::domain_error {"Phred: negative error probability " + std::to_string(error)};
         }
-        static const Q minProbability = std::nextafter(Q {0}, Q {1});
-        score_ = std::abs(Q {-10} * std::log10(std::max(std::min(error.value, Q {1}), minProbability)));
+        score_ = std::abs(Q {-10} * std::log10(std::max(std::min(error.value, Q {1}), std::numeric_limits<Q>::min())));
     }
     
     Phred(const Phred&)            = default;
@@ -78,6 +82,12 @@ public:
 private:
     Q score_;
 };
+
+template <typename Q>
+auto log_probability_false_to_phred(const Q p)
+{
+    return Phred<Q> {p / -maths::constants::ln10Div10<Q>};
+}
 
 template <typename Q>
 auto probability_false_to_phred(const Q p)

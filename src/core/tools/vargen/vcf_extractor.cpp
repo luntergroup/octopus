@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "vcf_extractor.hpp"
@@ -15,14 +15,16 @@
 
 namespace octopus { namespace coretools {
 
-VcfExtractor::VcfExtractor(std::unique_ptr<const VcfReader> reader)
+VcfExtractor::VcfExtractor(std::unique_ptr<VcfReader> reader)
 : VcfExtractor {std::move(reader), Options {}}
 {}
 
-VcfExtractor::VcfExtractor(std::unique_ptr<const VcfReader> reader, Options options)
+VcfExtractor::VcfExtractor(std::unique_ptr<VcfReader> reader, Options options)
 : reader_ {std::move(reader)}
 , options_ {options}
-{}
+{
+    reader_->close();
+}
 
 std::unique_ptr<VariantGenerator> VcfExtractor::do_clone() const
 {
@@ -33,9 +35,7 @@ namespace {
 
 static bool is_canonical(const VcfRecord::NucleotideSequence& allele)
 {
-    return allele != vcfspec::missingValue
-           && std::none_of(std::cbegin(allele), std::cend(allele),
-                           [](const auto base) { return base == vcfspec::deletedBase; });
+    return allele != vcfspec::missingValue && allele != vcfspec::deleteMaskAllele;
 }
 
 template <typename Iterator>
@@ -47,7 +47,7 @@ auto make_allele(const Iterator first_base, const Iterator last_base)
 }
 
 template <typename Container>
-void extract_variants(const VcfRecord& record, Container& result)
+void extract_variants(const VcfRecord& record, Container& result, const bool split_complex)
 {
     for (const auto& alt_allele : record.alt()) {
         if (is_canonical(alt_allele)) {
@@ -57,18 +57,25 @@ void extract_variants(const VcfRecord& record, Container& result)
                 const auto p = std::mismatch(std::cbegin(ref_allele), std::cend(ref_allele),
                                              std::cbegin(alt_allele), std::cend(alt_allele));
                 if (p.first != std::cend(ref_allele) && alt_allele.size() > ref_allele.size()) {
-                    // Split non-reference padded insertions into snv (or mnv) and insertion with empty
-                    // reference (e.g. A -> TT makes two variants A -> T and -> T).
                     const auto ref_pad_size = std::distance(std::cbegin(ref_allele), p.first);
                     begin += ref_pad_size;
                     const auto remaining_ref_size = ref_allele.size() - ref_pad_size;
-                    const auto first_alt_end = std::next(p.second, remaining_ref_size);
-                    result.emplace_back(record.chrom(), begin - 1,
-                                        make_allele(p.first, std::cend(ref_allele)),
-                                        make_allele(p.second, first_alt_end));
-                    begin += remaining_ref_size;
-                    result.emplace_back(record.chrom(), begin - 1, "",
-                                        make_allele(first_alt_end, std::cend(alt_allele)));
+                    if (split_complex) {
+                        // Split non-reference padded insertions into snv (or mnv) and insertion with empty
+                        // reference (e.g. A -> TT makes two variants A -> T and -> T).
+                        const auto first_alt_end = std::next(p.second, remaining_ref_size);
+                        result.emplace_back(record.chrom(), begin - 1,
+                                            make_allele(p.first, std::cend(ref_allele)),
+                                            make_allele(p.second, first_alt_end));
+                        begin += remaining_ref_size;
+                        result.emplace_back(record.chrom(), begin - 1, "",
+                                            make_allele(first_alt_end, std::cend(alt_allele)));
+                    } else {
+                        // otherwise extract as complete MNV
+                        result.emplace_back(record.chrom(), begin - 1,
+                                            make_allele(p.first, std::cend(ref_allele)),
+                                            make_allele(p.second, std::cend(alt_allele)));
+                    }
                 } else {
                     begin += std::distance(std::cbegin(ref_allele), p.first);
                     result.emplace_back(record.chrom(), begin - 1,
@@ -89,10 +96,12 @@ void extract_variants(const VcfRecord& record, Container& result)
 
 std::vector<Variant> VcfExtractor::do_generate(const RegionSet& regions) const
 {
+    reader_->open();
     std::vector<Variant> result {};
     for (const auto& region : regions) {
         utils::append(fetch_variants(region), result);
     }
+    reader_->close();
     return result;
 }
 
@@ -106,7 +115,7 @@ std::vector<Variant> VcfExtractor::fetch_variants(const GenomicRegion& region) c
   std::deque<Variant> variants {};
     for (auto p = reader_->iterate(region, VcfReader::UnpackPolicy::sites); p.first != p.second; ++p.first) {
         if (is_good(*p.first)) {
-            extract_variants(*p.first, variants);
+            extract_variants(*p.first, variants, options_.split_complex);
         }
     }
     std::vector<Variant> result {std::make_move_iterator(std::begin(variants)),

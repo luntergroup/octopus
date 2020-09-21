@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "posterior_probability_by_depth.hpp"
@@ -20,14 +20,19 @@ std::unique_ptr<Measure> PosteriorProbabilityByDepth::do_clone() const
     return std::make_unique<PosteriorProbabilityByDepth>(*this);
 }
 
+Measure::ValueType PosteriorProbabilityByDepth::get_value_type() const
+{
+    return double {};
+}
+
 Measure::ResultType PosteriorProbabilityByDepth::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
-    boost::optional<double> result {};
-    const auto posterior_probability = boost::get<boost::optional<double>>(PosteriorProbability().evaluate(call, facets));
+    Optional<ValueType> result {};
+    const auto posterior_probability = boost::get<Optional<ValueType>>(PosteriorProbability().evaluate(call, facets));
     if (posterior_probability) {
-        auto depth = boost::get<std::size_t>(depth_.evaluate(call, facets));
+        const auto depth = boost::get<std::size_t>(boost::get<ValueType>(depth_.evaluate(call, facets)));
         if (depth > 0) {
-            result = *posterior_probability / depth;
+            result = boost::get<double>(*posterior_probability) / depth;
         }
     }
     return result;

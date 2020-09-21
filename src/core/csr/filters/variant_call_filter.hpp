@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef variant_call_filter_hpp
@@ -44,6 +44,7 @@ public:
         bool clear_info = false;
         bool annotate_all_active_measures = false;
         std::unordered_set<std::string> annotations = {};
+        bool aggregate_allele_annotations = false;
     };
     
     struct ConcurrencyPolicy
@@ -60,10 +61,12 @@ public:
     
     VariantCallFilter(const VariantCallFilter&)            = delete;
     VariantCallFilter& operator=(const VariantCallFilter&) = delete;
-    VariantCallFilter(VariantCallFilter&&)                 = default;
-    VariantCallFilter& operator=(VariantCallFilter&&)      = default;
+    VariantCallFilter(VariantCallFilter&&)                 = delete;
+    VariantCallFilter& operator=(VariantCallFilter&&)      = delete;
     
     virtual ~VariantCallFilter() = default;
+    
+    std::string name() const;
     
     void filter(const VcfReader& source, VcfWriter& dest) const;
     
@@ -101,6 +104,8 @@ protected:
                VcfWriter& dest) const;
     bool measure_annotations_requested() const noexcept;
     void annotate(VcfRecord::Builder& call, const MeasureVector& measures, const VcfHeader& header) const;
+    Phred<double> compute_joint_quality(const std::vector<Phred<double>>& qualities) const;
+    std::vector<std::string> compute_reason_union(const ClassificationList& sample_classifications) const;
     
 private:
     using FacetNameSet = std::vector<std::string>;
@@ -112,12 +117,14 @@ private:
     
     mutable ThreadPool workers_;
     
+    virtual std::string do_name() const = 0;
     virtual void annotate(VcfHeader::Builder& header) const = 0;
     virtual void filter(const VcfReader& source, VcfWriter& dest, const VcfHeader& dest_header) const = 0;
     virtual boost::optional<std::string> call_quality_name() const { return boost::none; }
     virtual boost::optional<std::string> genotype_quality_name() const { return boost::none; }
-    virtual bool is_soft_filtered(const ClassificationList& sample_classifications, const MeasureVector& measures) const;
-    virtual Phred<double> combine_sample_qualities(const std::vector<Phred<double>>& qualities) const;
+    virtual boost::optional<Phred<double>> compute_joint_quality(const ClassificationList& sample_classifications, const MeasureVector& measures) const;
+    virtual bool is_soft_filtered(const ClassificationList& sample_classifications, boost::optional<Phred<double>> joint_quality,
+                                  const MeasureVector& measures, std::vector<std::string>& reasons) const;
     
     VcfHeader make_header(const VcfReader& source) const;
     Measure::FacetMap compute_facets(const CallBlock& block) const;

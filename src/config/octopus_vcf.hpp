@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef octopus_vcf_hpp
@@ -15,7 +15,7 @@ namespace spec {
 
 namespace allele {
 
-VCF_SPEC_CONSTANT nonref {"<NON_REF>"};
+
 
 } // namespace info
 
@@ -37,7 +37,8 @@ VCF_SPEC_CONSTANT lowQuality {"LQ"};
 VCF_SPEC_CONSTANT lowPosteriorProbability {"LPP"};
 VCF_SPEC_CONSTANT lowDepth {"DP"};
 VCF_SPEC_CONSTANT highMappingQualityDivergence {"MQD"};
-VCF_SPEC_CONSTANT alleleBias {"AFB"};
+VCF_SPEC_CONSTANT alleleFrequencyBias {"AFB"};
+VCF_SPEC_CONSTANT lowAlleleFrequency {"AF"};
 VCF_SPEC_CONSTANT alleleDepth {"AD"};
 VCF_SPEC_CONSTANT lowModelPosterior {"MP"};
 VCF_SPEC_CONSTANT lowMappingQuality {"MQ"};
@@ -62,6 +63,11 @@ VCF_SPEC_CONSTANT strandDisequilibrium {"SD"};
 VCF_SPEC_CONSTANT lowClassificationConfidence {"CC"};
 VCF_SPEC_CONSTANT somaticMappingQuality {"SMQ"};
 VCF_SPEC_CONSTANT lowAssignedDepth {"ADP"};
+VCF_SPEC_CONSTANT lowDuplicateConcordance {"LDC"};
+VCF_SPEC_CONSTANT highDuplicateAlleleDepth {"DAD"};
+VCF_SPEC_CONSTANT highDuplicateAlleleFraction {"DAF"};
+VCF_SPEC_CONSTANT highErrorRate {"ER"};
+VCF_SPEC_CONSTANT highErrorRateStdev {"ERS"};
 
 } // namespace filter
 

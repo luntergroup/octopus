@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "read_reader.hpp"
@@ -156,6 +156,52 @@ boost::optional<std::vector<GenomicRegion>> ReadReader::mapped_regions() const
 {
     std::lock_guard<std::mutex> lock {mutex_};
     return impl_->mapped_regions();
+}
+
+bool ReadReader::iterate(const GenomicRegion& region,
+                         AlignedReadReadVisitor visitor) const
+{
+    std::lock_guard<std::mutex> lock {mutex_};
+    return impl_->iterate(region, visitor);
+}
+
+bool ReadReader::iterate(const SampleName& sample,
+                         const GenomicRegion& region,
+                         AlignedReadReadVisitor visitor) const
+{
+    std::lock_guard<std::mutex> lock {mutex_};
+    return impl_->iterate(sample, region, visitor);
+}
+
+bool ReadReader::iterate(const std::vector<SampleName>& samples,
+                         const GenomicRegion& region,
+                         AlignedReadReadVisitor visitor) const
+{
+    std::lock_guard<std::mutex> lock {mutex_};
+    return impl_->iterate(samples, region, visitor);
+}
+
+bool ReadReader::iterate(const GenomicRegion& region,
+                         ContigRegionVisitor visitor) const
+{
+    std::lock_guard<std::mutex> lock {mutex_};
+    return impl_->iterate(region, visitor);
+}
+
+bool ReadReader::iterate(const SampleName& sample,
+                         const GenomicRegion& region,
+                         ContigRegionVisitor visitor) const
+{
+    std::lock_guard<std::mutex> lock {mutex_};
+    return impl_->iterate(sample, region, visitor);
+}
+
+bool ReadReader::iterate(const std::vector<SampleName>& samples,
+                         const GenomicRegion& region,
+                         ContigRegionVisitor visitor) const
+{
+    std::lock_guard<std::mutex> lock {mutex_};
+    return impl_->iterate(samples, region, visitor);
 }
 
 bool ReadReader::has_reads(const GenomicRegion& region) const

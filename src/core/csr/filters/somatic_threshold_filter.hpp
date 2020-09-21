@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef somatic_threshold_filter_hpp
@@ -39,13 +39,14 @@ public:
     
     SomaticThresholdVariantCallFilter(const SomaticThresholdVariantCallFilter&)            = delete;
     SomaticThresholdVariantCallFilter& operator=(const SomaticThresholdVariantCallFilter&) = delete;
-    SomaticThresholdVariantCallFilter(SomaticThresholdVariantCallFilter&&)                 = default;
-    SomaticThresholdVariantCallFilter& operator=(SomaticThresholdVariantCallFilter&&)      = default;
+    SomaticThresholdVariantCallFilter(SomaticThresholdVariantCallFilter&&)                 = delete;
+    SomaticThresholdVariantCallFilter& operator=(SomaticThresholdVariantCallFilter&&)      = delete;
     
     virtual ~SomaticThresholdVariantCallFilter() override = default;
 
 private:
-    virtual bool is_soft_filtered(const ClassificationList& sample_classifications, const MeasureVector& measures) const override;
+    virtual bool is_soft_filtered(const ClassificationList& sample_classifications, boost::optional<Phred<double>> joint_quality,
+                                  const MeasureVector& measures, std::vector<std::string>& reasons) const override;
 };
 
 } // namespace csr

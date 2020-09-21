@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef bam_realigner_hpp
@@ -12,6 +12,7 @@
 #include "basics/aligned_read.hpp"
 #include "core/types/haplotype.hpp"
 #include "core/types/genotype.hpp"
+#include "core/models/haplotype_likelihood_model.hpp"
 #include "containers/mappable_flat_set.hpp"
 #include "io/reference/reference_genome.hpp"
 #include "io/read/read_reader.hpp"
@@ -32,9 +33,11 @@ public:
     
     struct Config
     {
+        HaplotypeLikelihoodModel alignment_model = {};
         bool primary_only = true;
         bool copy_hom_ref_reads = false;
         bool simplify_cigars = false;
+        ReadLinkageType read_linkage = ReadLinkageType::paired;
         MemoryFootprint max_buffer = *parse_footprint("50M");
         boost::optional<unsigned> max_threads = 1;
     };
@@ -48,21 +51,16 @@ public:
     BAMRealigner() = default;
     BAMRealigner(Config config);
     
-    BAMRealigner(const BAMRealigner&)            = default;
-    BAMRealigner& operator=(const BAMRealigner&) = default;
-    BAMRealigner(BAMRealigner&&)                 = default;
-    BAMRealigner& operator=(BAMRealigner&&)      = default;
+    BAMRealigner(const BAMRealigner&)            = delete;
+    BAMRealigner& operator=(const BAMRealigner&) = delete;
+    BAMRealigner(BAMRealigner&&)                 = delete;
+    BAMRealigner& operator=(BAMRealigner&&)      = delete;
     
     ~BAMRealigner() = default;
     
     Report realign(ReadReader& src, VcfReader& variants, ReadWriter& dst,
                    const ReferenceGenome& reference, SampleList samples) const;
     Report realign(ReadReader& src, VcfReader& variants, ReadWriter& dst,
-                   const ReferenceGenome& reference) const;
-    
-    Report realign(ReadReader& src, VcfReader& variants, std::vector<ReadWriter>& dsts,
-                   const ReferenceGenome& reference, SampleList samples) const;
-    Report realign(ReadReader& src, VcfReader& variants, std::vector<ReadWriter>& dsts,
                    const ReferenceGenome& reference) const;
     
 private:
@@ -86,14 +84,12 @@ private:
     void merge(BatchList& src, BatchList& dst) const;
 };
 
-BAMRealigner::Report realign(io::ReadReader::Path src, VcfReader::Path variants, io::ReadWriter::Path dst,
-                             const ReferenceGenome& reference);
-BAMRealigner::Report realign(io::ReadReader::Path src, VcfReader::Path variants, io::ReadWriter::Path dst,
-                             const ReferenceGenome& reference, BAMRealigner::Config config);
-BAMRealigner::Report realign(io::ReadReader::Path src, VcfReader::Path variants, std::vector<io::ReadWriter::Path> dsts,
-                             const ReferenceGenome& reference);
-BAMRealigner::Report realign(io::ReadReader::Path src, VcfReader::Path variants, std::vector<io::ReadWriter::Path> dsts,
-                             const ReferenceGenome& reference, BAMRealigner::Config config);
+BAMRealigner::Report
+realign(io::ReadReader::Path src, VcfReader::Path variants, io::ReadWriter::Path dst,
+        const ReferenceGenome& reference);
+BAMRealigner::Report
+realign(io::ReadReader::Path src, VcfReader::Path variants, io::ReadWriter::Path dst,
+        const ReferenceGenome& reference, BAMRealigner::Config config);
 
 } // namespace octopus
 

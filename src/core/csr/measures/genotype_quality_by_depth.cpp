@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "genotype_quality_by_depth.hpp"
@@ -25,22 +25,32 @@ std::unique_ptr<Measure> GenotypeQualityByDepth::do_clone() const
     return std::make_unique<GenotypeQualityByDepth>(*this);
 }
 
+Measure::ValueType GenotypeQualityByDepth::get_value_type() const
+{
+    return double {};
+}
+
 Measure::ResultType GenotypeQualityByDepth::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
-    const auto depths = boost::get<std::vector<std::size_t>>(depth_.evaluate(call, facets));
-    const auto genotype_qualities = boost::get<std::vector<boost::optional<double>>>(GenotypeQuality().evaluate(call, facets));
+    const auto depths = boost::get<Array<ValueType>>(depth_.evaluate(call, facets));
+    const auto genotype_qualities = boost::get<Array<Optional<ValueType>>>(GenotypeQuality().evaluate(call, facets));
     assert(depths.size() == genotype_qualities.size());
-    std::vector<boost::optional<double>> result(genotype_qualities.size());
+    Array<Optional<ValueType>> result(genotype_qualities.size());
+    const auto genotype_quality_by_depth = [] (const auto gq, const ValueType depth) {
+        Optional<ValueType> result {};
+        if (gq && boost::get<std::size_t>(depth) > 0) {
+            result = boost::get<double>(*gq) / boost::get<std::size_t>(depth);
+        }
+        return result;
+    };
     std::transform(std::cbegin(genotype_qualities), std::cend(genotype_qualities), 
-                   std::cbegin(depths), std::begin(result),
-                   [] (auto gq, auto depth) -> boost::optional<double> {
-                        if (gq && depth > 0) { return *gq / depth; } else { return boost::none; } });
+                   std::cbegin(depths), std::begin(result), genotype_quality_by_depth);
     return result;
 }
 
 Measure::ResultCardinality GenotypeQualityByDepth::do_cardinality() const noexcept
 {
-    return ResultCardinality::num_samples;
+    return ResultCardinality::samples;
 }
 
 const std::string& GenotypeQualityByDepth::do_name() const

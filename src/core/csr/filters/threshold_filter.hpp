@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef threshold_filter_hpp
@@ -29,7 +29,7 @@ public:
     {
         virtual ~Threshold() = default;
         virtual std::unique_ptr<Threshold> clone() const = 0;
-        virtual bool operator()(Measure::ResultType value) const noexcept = 0;
+        virtual bool operator()(const Measure::ResultType& value) const noexcept = 0;
     };
     
     struct ThresholdWrapper
@@ -68,8 +68,8 @@ public:
     
     ThresholdVariantCallFilter(const ThresholdVariantCallFilter&)            = delete;
     ThresholdVariantCallFilter& operator=(const ThresholdVariantCallFilter&) = delete;
-    ThresholdVariantCallFilter(ThresholdVariantCallFilter&&)                 = default;
-    ThresholdVariantCallFilter& operator=(ThresholdVariantCallFilter&&)      = default;
+    ThresholdVariantCallFilter(ThresholdVariantCallFilter&&)                 = delete;
+    ThresholdVariantCallFilter& operator=(ThresholdVariantCallFilter&&)      = delete;
     
     virtual ~ThresholdVariantCallFilter() override = default;
 
@@ -86,6 +86,7 @@ protected:
                             ThresholdIterator first_threshold) const;
     
 private:
+    std::string do_name() const override;
     virtual void annotate(VcfHeader::Builder& header) const override;
     virtual Classification classify(const MeasureVector& measures) const override;
     
@@ -115,19 +116,22 @@ private:
     struct UnaryVisitor : public boost::static_visitor<bool>
     {
         explicit UnaryVisitor(T target, Cmp cmp) : target {target}, cmp {cmp} {}
-        template <typename T_>
-        bool operator()(T_ value) const noexcept { return !cmp(value, target); }
-        template <typename T_>
-        bool operator()(boost::optional<T_> value) const noexcept
+        bool operator()(const Measure::ValueType& value) const noexcept
+        {
+            return boost::apply_visitor(*this, value);
+        }
+        template <typename U>
+        bool operator()(U value) const noexcept
+        {
+             return !cmp(value, target);
+        }
+        template <typename U>
+        bool operator()(const Measure::Optional<U>& value) const noexcept
         {
             return !value || (*this)(*value);
         }
-        bool operator()(boost::any value) const noexcept
-        {
-            return true;
-        }
-        template <typename T_>
-        bool operator()(const std::vector<T_>& values) const noexcept
+        template <typename U>
+        bool operator()(const Measure::Array<U>& values) const noexcept
         {
             return std::all_of(std::cbegin(values), std::cend(values), [this] (const auto& value) { return (*this)(value); });
         }
@@ -147,7 +151,7 @@ struct EqualThreshold : public ThresholdVariantCallFilter::Threshold
     {
         return std::make_unique<EqualThreshold>(*this);
     }
-    bool operator()(Measure::ResultType value) const noexcept
+    bool operator()(const Measure::ResultType& value) const noexcept
     {
         return base_(value);
     }
@@ -163,7 +167,7 @@ struct NotEqualThreshold : public ThresholdVariantCallFilter::Threshold
     {
         return std::make_unique<NotEqualThreshold>(*this);
     }
-    bool operator()(Measure::ResultType value) const noexcept
+    bool operator()(const Measure::ResultType& value) const noexcept
     {
         return base_(value);
     }
@@ -179,7 +183,7 @@ struct LessThreshold : public ThresholdVariantCallFilter::Threshold
     {
         return std::make_unique<LessThreshold>(*this);
     }
-    bool operator()(Measure::ResultType value) const noexcept
+    bool operator()(const Measure::ResultType& value) const noexcept
     {
         return base_(value);
     }
@@ -195,7 +199,7 @@ struct LessEqualThreshold : public ThresholdVariantCallFilter::Threshold
     {
         return std::make_unique<LessEqualThreshold>(*this);
     }
-    bool operator()(Measure::ResultType value) const noexcept
+    bool operator()(const Measure::ResultType& value) const noexcept
     {
         return base_(value);
     }
@@ -211,7 +215,7 @@ struct GreaterThreshold : public ThresholdVariantCallFilter::Threshold
     {
         return std::make_unique<GreaterThreshold>(*this);
     }
-    bool operator()(Measure::ResultType value) const noexcept
+    bool operator()(const Measure::ResultType& value) const noexcept
     {
         return base_(value);
     }
@@ -227,7 +231,7 @@ struct GreaterEqualThreshold : public ThresholdVariantCallFilter::Threshold
     {
         return std::make_unique<GreaterEqualThreshold>(*this);
     }
-    bool operator()(Measure::ResultType value) const noexcept
+    bool operator()(const Measure::ResultType& value) const noexcept
     {
         return base_(value);
     }
@@ -243,7 +247,7 @@ struct BetweenThreshold : public ThresholdVariantCallFilter::Threshold
     {
         return std::make_unique<BetweenThreshold>(*this);
     }
-    bool operator()(Measure::ResultType value) const noexcept
+    bool operator()(const Measure::ResultType& value) const noexcept
     {
         return boost::apply_visitor(visitor_, value);
     }
@@ -252,13 +256,13 @@ private:
     {
         explicit BetweenVisitor(T lower_bound, T upper_bound)
         : lower_bound {lower_bound}, upper_bound {upper_bound} {}
-        template <typename T_>
-        bool operator()(T_ value) const noexcept
+        template <typename U>
+        bool operator()(const U& value) const noexcept
         {
             return lower_bound <= value && value <= upper_bound;
         }
-        template <typename T_>
-        bool operator()(boost::optional<T_> value) const noexcept
+        template <typename U>
+        bool operator()(const boost::optional<U>& value) const noexcept
         {
             return !value || (*this)(*value);
         }

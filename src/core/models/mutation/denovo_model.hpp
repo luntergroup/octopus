@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef denovo_model_hpp
@@ -13,6 +13,8 @@
 #include <boost/functional/hash.hpp>
 
 #include "core/types/haplotype.hpp"
+#include "core/types/indexed_haplotype.hpp"
+#include "containers/mappable_block.hpp"
 #include "../pairhmm/pair_hmm.hpp"
 #include "indel_mutation_model.hpp"
 
@@ -25,7 +27,7 @@ public:
     
     struct Parameters
     {
-        double snv_mutation_rate, indel_mutation_rate;
+        double snv_prior, indel_prior;
     };
     
     enum class CachingStrategy { none, value, address };
@@ -45,13 +47,13 @@ public:
     
     Parameters parameters() const;
     
-    void prime(std::vector<Haplotype> haplotypes);
+    void prime(const MappableBlock<Haplotype>& haplotypes);
     void unprime() noexcept;
     bool is_primed() const noexcept;
     
     // ln p(target | given)
     LogProbability evaluate(const Haplotype& target, const Haplotype& given) const;
-    LogProbability evaluate(unsigned target, unsigned given) const;
+    LogProbability evaluate(const IndexedHaplotype<>& target, const IndexedHaplotype<>& given) const;
     
 private:
     struct AddressPairHash
@@ -64,19 +66,20 @@ private:
         }
     };
     
-    using PenaltyVector = hmm::VariableGapOpenMutationModel::PenaltyVector;
+    using PenaltyVector = hmm::PenaltyVector;
     struct LocalIndelModel
     {
         IndelMutationModel::ContextIndelModel indel;
         PenaltyVector open, extend;
     };
     
+    using HMM = hmm::PairHMM<hmm::VariableGapExtendMutationModel, 32, int>;
+    
     Parameters params_;
-    std::int8_t snv_penalty_;
+    std::int8_t pad_penalty_, snv_penalty_;
     IndelMutationModel indel_model_;
     boost::optional<LogProbability> min_ln_probability_;
     std::size_t num_haplotypes_hint_;
-    std::vector<Haplotype> haplotypes_;
     CachingStrategy caching_;
     
     mutable hmm::Alignment alignment_;
@@ -89,13 +92,15 @@ private:
     mutable std::vector<std::vector<LogProbability>> unguarded_index_cache_;
     mutable std::string padded_given_;
     mutable bool use_unguarded_;
+    mutable HMM hmm_;
     
     LocalIndelModel generate_local_indel_model(const Haplotype& given) const;
-    void set_local_indel_model(unsigned given) const;
-    hmm::VariableGapExtendMutationModel make_hmm_model_from_cache() const;
+    void set_local_indel_model(const IndexedHaplotype<>& given) const;
+    HMM::ParameterType make_hmm_parameters() const noexcept;
+    bool can_try_align_with_hmm(const Haplotype& target, const Haplotype& given) const noexcept;
     void align_with_hmm(const Haplotype& target, const Haplotype& given) const;
     LogProbability evaluate_uncached(const Haplotype& target, const Haplotype& given, bool gap_penalties_cached = false) const;
-    LogProbability evaluate_uncached(unsigned target, unsigned given) const;
+    LogProbability evaluate_uncached(const IndexedHaplotype<>& target, const IndexedHaplotype<>& given) const;
     LogProbability evaluate_basic_cache(const Haplotype& target, const Haplotype& given) const;
     LogProbability evaluate_address_cache(const Haplotype& target, const Haplotype& given) const;
 };

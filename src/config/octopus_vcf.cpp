@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "octopus_vcf.hpp"
@@ -20,6 +20,7 @@ VcfHeader::Builder make_header_template()
     result.add_info("MQ", "1", "Integer", "RMS mapping quality");
     result.add_info("MQ0", "1", "Integer", "Number of MAPQ == 0 reads covering this record");
     result.add_info("NS", "1", "Integer", "Number of samples with data");
+    result.add_info("END", "1", "Integer", "End position on CHROM");
     
     result.add_format("GT", "1", "String", "Genotype");
     result.add_format("DP", "1", "Integer", "Read depth at this position for this sample");
@@ -43,7 +44,8 @@ static const std::unordered_map<std::string, std::string> filter_descriptions
 {spec::filter::lowQuality, "Variant quality is low"},
 {spec::filter::lowPosteriorProbability, "Variant posterior probability is low"},
 {spec::filter::highMappingQualityDivergence, "High Kullback–Leibler divergence between REF and ALT mapping quality distributions"},
-{spec::filter::alleleBias, "The called allele frequencies are not as expected for the given ploidy"},
+{spec::filter::lowAlleleFrequency, "The emperical allele frequency is low"},
+{spec::filter::alleleFrequencyBias, "The called allele frequencies are not as expected for the given ploidy"},
 {spec::filter::lowModelPosterior, "Variant failed model posterior filter"},
 {spec::filter::lowMappingQuality, "Mapping quality across calling region is low"},
 {spec::filter::highMappingQualityZeroCount, "The number of reads with mapping quality zero is low"},
@@ -68,7 +70,12 @@ static const std::unordered_map<std::string, std::string> filter_descriptions
 {spec::filter::lowClassificationConfidence, "Classification confidence is low"},
 {spec::filter::alleleDepth, "Low empirical allele depth"},
 {spec::filter::somaticMappingQuality, "Low somatic mapping quality"},
-{spec::filter::lowAssignedDepth, "Assigned depth is low"}
+{spec::filter::lowAssignedDepth, "Assigned depth is low"},
+{spec::filter::lowDuplicateConcordance, "Duplicate read concordance is low"},
+{spec::filter::highDuplicateAlleleDepth, "Number of duplicate reads supporting allele is high"},
+{spec::filter::highDuplicateAlleleFraction, "High fraction of reads supporting allele are duplicates"},
+{spec::filter::highErrorRate, "High error rate in reads overlapping the site"},
+{spec::filter::highErrorRateStdev, "High error rate standard deviation in reads overlapping the site"}
 };
 
 VcfHeader::Builder& add_filter(VcfHeader::Builder& builder, const std::string& key)

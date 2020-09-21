@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef string_utils_hpp
@@ -27,8 +27,8 @@ std::vector<std::string> split(const std::string& str, const std::string delims)
 std::string join(const std::vector<std::string>& strings, const std::string delim = "");
 std::string join(const std::vector<std::string>& strings, const char delim);
 
-bool is_prefix(const std::string& lhs, const std::string& rhs);
-bool is_suffix(const std::string& lhs, const std::string& rhs);
+bool is_prefix(const std::string& prefix, const std::string& text) noexcept;
+bool is_suffix(const std::string& suffix, const std::string& text) noexcept;
 
 std::size_t length(const char* str);
 std::size_t length(const std::string& str);

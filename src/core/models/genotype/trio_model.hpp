@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef trio_model_hpp
@@ -12,10 +12,11 @@
 
 #include "basics/trio.hpp"
 #include "core/types/haplotype.hpp"
-#include "population_prior_model.hpp"
+#include "core/types/indexed_haplotype.hpp"
 #include "core/models/mutation/denovo_model.hpp"
 #include "core/models/haplotype_likelihood_array.hpp"
 #include "core/types/genotype.hpp"
+#include "population_prior_model.hpp"
 #include "logging/logging.hpp"
 
 namespace octopus { namespace model {
@@ -23,15 +24,15 @@ namespace octopus { namespace model {
 class TrioModel
 {
 public:
-    using GenotypeVector = std::vector<Genotype<Haplotype>>;
+    using GenotypeVector = MappableBlock<Genotype<IndexedHaplotype<>>>;
     
     struct Latents
     {
         struct JointProbability
         {
-            using GenotypeReference = std::reference_wrapper<const Genotype<Haplotype>>;
-            GenotypeReference maternal, paternal, child;
-            double probability;
+            using GenotypeIndex = unsigned;
+            double log_probability, probability;
+            GenotypeIndex maternal, paternal, child;
         };
         using JointProbabilityVector = std::vector<JointProbability>;
         JointProbabilityVector joint_genotype_probabilities;
@@ -41,12 +42,13 @@ public:
     {
         Latents posteriors;
         double log_evidence;
+        boost::optional<double> estimated_lost_log_posterior_mass = boost::none;
     };
     
     struct Options
     {
-        std::size_t max_joint_genotypes;
-        double max_individual_mass_loss = 1e-80, max_joint_mass_loss = 1e-200;
+        boost::optional<std::size_t> max_genotype_combinations = boost::none;
+        double max_individual_log_probability_loss = -1'000, max_joint_log_probability_loss = -10'000;
     };
     
     TrioModel() = delete;
@@ -68,18 +70,16 @@ public:
     
     const PopulationPriorModel& prior_model() const noexcept;
     
-    InferredLatents evaluate(const GenotypeVector& maternal_genotypes,
-                             const GenotypeVector& paternal_genotypes,
-                             const GenotypeVector& child_genotypes,
-                             const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
+    InferredLatents
+    evaluate(const GenotypeVector& maternal_genotypes,
+             const GenotypeVector& paternal_genotypes,
+             const GenotypeVector& child_genotypes,
+             const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
     
     // Use if all samples have same ploidy
-    InferredLatents evaluate(const GenotypeVector& genotypes,
-                             const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
-    
-    InferredLatents evaluate(const GenotypeVector& genotypes,
-                             std::vector<GenotypeIndex>& genotype_indices,
-                             const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
+    InferredLatents
+    evaluate(const GenotypeVector& genotypes,
+             const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
     
 private:
     const Trio& trio_;

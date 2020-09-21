@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "option_collation.hpp"
@@ -129,9 +129,16 @@ fs::path get_working_directory(const OptionMap& options)
     return fs::current_path();
 }
 
+SymblinkResolvePolicy get_symlink_resolve_policy(const OptionMap& options)
+{
+    return options.at("resolve-symlinks").as<bool>() ? SymblinkResolvePolicy::resolve : SymblinkResolvePolicy::dont_resolve;
+}
+
 fs::path resolve_path(const fs::path& path, const OptionMap& options)
 {
-    return ::octopus::resolve_path(path, get_working_directory(options));
+    const auto wd_policy = WorkingDirectoryResolvePolicy::prefer_working_directory;
+    const auto symlink_policy = get_symlink_resolve_policy(options);
+    return ::octopus::resolve_path(path, get_working_directory(options), wd_policy, symlink_policy);
 }
 
 struct Line
@@ -253,7 +260,7 @@ ExecutionPolicy get_thread_execution_policy(const OptionMap& options)
 
 MemoryFootprint get_target_read_buffer_size(const OptionMap& options)
 {
-    return options.at("target-read-buffer-footprint").as<MemoryFootprint>();
+    return options.at("target-read-buffer-memory").as<MemoryFootprint>();
 }
 
 boost::optional<fs::path> get_debug_log_file_name(const OptionMap& options)
@@ -288,7 +295,7 @@ ReferenceGenome make_reference(const OptionMap& options)
 {
     const fs::path input_path {options.at("reference").as<fs::path>()};
     auto resolved_path = resolve_path(input_path, options);
-    auto ref_cache_size = options.at("max-reference-cache-footprint").as<MemoryFootprint>();
+    auto ref_cache_size = options.at("max-reference-cache-memory").as<MemoryFootprint>();
     static constexpr MemoryFootprint min_non_zero_reference_cache_size {1'000}; // 1Kb
     if (ref_cache_size.bytes() > 0 && ref_cache_size < min_non_zero_reference_cache_size) {
         static bool warned {false};
@@ -591,12 +598,48 @@ bool ignore_unmapped_contigs(const OptionMap& options)
     return options.at("ignore-unmapped-contigs").as<bool>();
 }
 
+class MissingSamplesFile : public MissingFileError
+{
+    std::string do_where() const override
+    {
+        return "get_user_samples";
+    }
+public:
+    MissingSamplesFile(fs::path p) : MissingFileError {std::move(p), "samples file"} {};
+};
+
+std::vector<SampleName> read_user_samples(const fs::path& samples_filename)
+{
+    if (!fs::exists(samples_filename)) {
+        MissingSamplesFile e {samples_filename};
+        e.set_location_specified("the command line option '--samples-file'");
+        throw e;
+    }
+    std::ifstream samples_file {samples_filename.string()};
+    std::vector<SampleName> result {};
+    std::string sample {};
+    while (std::getline(samples_file, sample)) {
+        if (!sample.empty()) result.push_back(std::move(sample));
+    }
+    return result;
+}
+
 boost::optional<std::vector<SampleName>> get_user_samples(const OptionMap& options)
 {
+    boost::optional<std::vector<SampleName>> result {};
     if (is_set("samples", options)) {
-        return options.at("samples").as<std::vector<SampleName>>();
+        result = options.at("samples").as<std::vector<SampleName>>();
     }
-    return boost::none;
+    if (is_set("samples-file", options)) {
+        if (!result) result = std::vector<SampleName> {};
+        const auto samples_filename = resolve_path(options.at("samples-file").as<fs::path>(), options);
+        utils::append(read_user_samples(samples_filename), *result);
+    }
+    if (result) {
+        std::sort(std::begin(*result), std::end(*result));
+        result->erase(std::unique(std::begin(*result), std::end(*result)), std::end(*result));
+    }
+    return result;
 }
 
 class MissingReadPathFile : public MissingFileError
@@ -686,9 +729,58 @@ ReadManager make_read_manager(const OptionMap& options)
     return ReadManager {std::move(read_paths), max_open_files};
 }
 
-bool allow_assembler_generation(const OptionMap& options)
+bool denovo_candidate_variant_discovery_enabled(const OptionMap& options)
 {
-    return options.at("assembly-candidate-generator").as<bool>() && !is_fast_mode(options);
+    return !options.at("disable-denovo-variant-discovery").as<bool>();
+}
+
+bool pileup_candidate_variant_generator_enabled(const OptionMap& options)
+{
+    return denovo_candidate_variant_discovery_enabled(options)
+           && !options.at("disable-pileup-candidate-generator").as<bool>();
+}
+
+bool repeat_candidate_variant_generator_enabled(const OptionMap& options)
+{
+    return denovo_candidate_variant_discovery_enabled(options)
+           && !options.at("disable-repeat-candidate-generator").as<bool>();
+}
+
+bool assembler_candidate_variant_generator_enabled(const OptionMap& options)
+{
+    return denovo_candidate_variant_discovery_enabled(options)
+        && !options.at("disable-assembly-candidate-generator").as<bool>()
+        && !is_fast_mode(options);
+}
+
+bool read_preprocessing_disabled(const OptionMap& options)
+{
+    return options.at("disable-read-preprocessing").as<bool>();
+}
+
+AlignedRead::BaseQuality get_max_base_quality(const OptionMap& options)
+{
+    static constexpr AlignedRead::BaseQuality hard_max {125};
+    if (options.count("max-base-quality")) {
+        return std::min(options.at("max-base-quality").as<int>(), static_cast<int>(hard_max));
+    } else {
+        return hard_max;
+    }
+}
+
+bool soft_clip_masking_enabled(const OptionMap& options)
+{
+    return options.at("mask-soft-clipped-bases").as<bool>();
+}
+
+bool adapter_masking_enabled(const OptionMap& options)
+{
+    return !options.at("disable-adapter-masking").as<bool>();
+}
+
+bool overlap_masking_enabled(const OptionMap& options)
+{
+    return !options.at("disable-overlap-masking").as<bool>();
 }
 
 auto make_read_transformers(const ReferenceGenome& reference, const OptionMap& options)
@@ -696,8 +788,8 @@ auto make_read_transformers(const ReferenceGenome& reference, const OptionMap& o
     using namespace octopus::readpipe;
     ReadTransformer prefilter_transformer {}, postfilter_transformer {};
     prefilter_transformer.add(CapitaliseBases {});
-    prefilter_transformer.add(CapBaseQualities {125});
-    if (options.at("read-transforms").as<bool>()) {
+    prefilter_transformer.add(CapBaseQualities {get_max_base_quality(options)});
+    if (!read_preprocessing_disabled(options)) {
         if (is_set("mask-tails", options)) {
             const auto mask_length = static_cast<MaskTail::Length>(options.at("mask-tails").as<int>());
             prefilter_transformer.add(MaskTail {mask_length});
@@ -706,13 +798,13 @@ auto make_read_transformers(const ReferenceGenome& reference, const OptionMap& o
             const auto threshold = static_cast<AlignedRead::BaseQuality>(as_unsigned("mask-low-quality-tails", options));
             prefilter_transformer.add(MaskLowQualityTails {threshold});
         }
-        if (options.at("soft-clip-masking").as<bool>()) {
+        if (soft_clip_masking_enabled(options)) {
             const auto boundary_size = as_unsigned("mask-soft-clipped-boundary-bases", options);
             if (boundary_size > 0) {
                 if (is_set("soft-clip-mask-threshold", options)) {
                     const auto threshold = static_cast<AlignedRead::BaseQuality>(as_unsigned("soft-clip-mask-threshold", options));
                     prefilter_transformer.add(MaskLowQualitySoftClippedBoundaryBases {boundary_size, threshold});
-                } else if (allow_assembler_generation(options)) {
+                } else if (assembler_candidate_variant_generator_enabled(options)) {
                     prefilter_transformer.add(MaskLowQualitySoftClippedBoundaryBases {boundary_size, 3});
                     prefilter_transformer.add(MaskLowAverageQualitySoftClippedTails {10, 5});
                     prefilter_transformer.add(MaskClippedDuplicatedBases {});
@@ -723,7 +815,7 @@ auto make_read_transformers(const ReferenceGenome& reference, const OptionMap& o
                 if (is_set("soft-clip-mask-threshold", options)) {
                     const auto threshold = static_cast<AlignedRead::BaseQuality>(as_unsigned("soft-clip-mask-threshold", options));
                     prefilter_transformer.add(MaskLowQualitySoftClippedBases {threshold});
-                } else if (allow_assembler_generation(options)) {
+                } else if (assembler_candidate_variant_generator_enabled(options)) {
                     prefilter_transformer.add(MaskLowQualitySoftClippedBases {3});
                     prefilter_transformer.add(MaskLowAverageQualitySoftClippedTails {10, 5});
                     prefilter_transformer.add(MaskClippedDuplicatedBases {});
@@ -732,11 +824,11 @@ auto make_read_transformers(const ReferenceGenome& reference, const OptionMap& o
                 }
             }
         }
-        if (options.at("adapter-masking").as<bool>()) {
+        if (adapter_masking_enabled(options)) {
             prefilter_transformer.add(MaskAdapters {});
             postfilter_transformer.add(MaskTemplateAdapters {});
         }
-        if (options.at("overlap-masking").as<bool>()) {
+        if (overlap_masking_enabled(options)) {
             postfilter_transformer.add(MaskStrandOfDuplicatedBases {});
         }
         if (options.at("mask-inverted-soft-clipping").as<bool>()) {
@@ -751,9 +843,23 @@ auto make_read_transformers(const ReferenceGenome& reference, const OptionMap& o
     return std::make_pair(std::move(prefilter_transformer), std::move(postfilter_transformer));
 }
 
-bool is_read_filtering_enabled(const OptionMap& options)
+bool split_long_reads(const OptionMap& options)
 {
-    return options.at("read-filtering").as<bool>();
+    return options.at("split-long-reads").as<bool>();
+}
+
+boost::optional<AlignedRead::NucleotideSequence::size_type> max_read_length(const OptionMap& options)
+{
+    if (split_long_reads(options) && is_set("max-read-length", options)) {
+        return as_unsigned("max-read-length", options);
+    } else {
+        return boost::none;
+    }
+}
+
+bool use_same_read_profile_for_all_samples(const OptionMap& options)
+{
+    return options.at("use-same-read-profile-for-all-samples").as<bool>();
 }
 
 auto make_read_filterer(const OptionMap& options)
@@ -768,7 +874,7 @@ auto make_read_filterer(const OptionMap& options)
     result.add(make_unique<HasValidBaseQualities>());
     result.add(make_unique<HasWellFormedCigar>());
     
-    if (!is_read_filtering_enabled(options)) {
+    if (read_preprocessing_disabled(options)) {
         return result;
     }
     if (!options.at("consider-unmapped-reads").as<bool>()) {
@@ -790,16 +896,29 @@ auto make_read_filterer(const OptionMap& options)
         result.add(make_unique<HasSufficientGoodBaseFraction>(min_base_quality, min_good_base_fraction));
     }
     if (is_set("min-read-length", options)) {
-        result.add(make_unique<IsShort>(as_unsigned("min-read-length", options)));
+        result.add(make_unique<IsLong>(as_unsigned("min-read-length", options)));
+    } else {
+        result.add(make_unique<IsLong>(0));
     }
-    if (is_set("max-read-length", options)) {
-        result.add(make_unique<IsLong>(as_unsigned("max-read-length", options)));
+    if (is_set("max-read-length", options) && !split_long_reads(options)) {
+        result.add(make_unique<IsShort>(as_unsigned("max-read-length", options)));
     }
     if (!options.at("allow-marked-duplicates").as<bool>()) {
         result.add(make_unique<IsNotMarkedDuplicate>());
     }
     if (!options.at("allow-octopus-duplicates").as<bool>()) {
-        result.add(make_unique<IsNotDuplicate<ReadFilterer::ReadIterator>>());
+        using RDDP = ReadDeduplicationDetectionPolicy;
+        const auto duplicate_detection_policy = options.at("duplicate-read-detection-policy").as<RDDP>();
+        switch (duplicate_detection_policy) {
+            case RDDP::relaxed: {
+                result.add(make_unique<IsNotDuplicate<ReadFilterer::ReadIterator, FivePrimeAndCigarDuplicateDefinition>>());
+                break;
+            }
+            case RDDP::aggressive: {
+                result.add(make_unique<IsNotDuplicate<ReadFilterer::ReadIterator, FivePrimeDuplicateDefinition>>());
+                break;
+            }
+        }
     }
     if (!options.at("allow-qc-fails").as<bool>()) {
         result.add(make_unique<IsNotMarkedQcFail>());
@@ -820,13 +939,25 @@ auto make_read_filterer(const OptionMap& options)
     if (options.at("no-adapter-contaminated-reads").as<bool>()) {
         result.add(make_unique<IsNotContaminated>());
     }
+    if (options.at("no-reads-with-decoy-supplementary-alignments").as<bool>()) {
+        result.add(make_unique<NoDecoySupplementaryAlignments>());
+    } else if (!options.at("allow-reads-with-good-decoy-supplementary-alignments").as<bool>()) {
+        result.add(make_unique<NoDecoySupplementaryAlignments>(min_mapping_quality));
+    }
+    if (options.at("no-reads-with-unplaced-or-unlocalized-supplementary-alignments").as<bool>()) {
+        result.add(make_unique<NoUnlocalizedSupplementaryAlignments>());
+        result.add(make_unique<NoUnplacedSupplementaryAlignments>());
+    } else if (!options.at("allow-reads-with-good-unplaced-or-unlocalized-supplementary-alignments").as<bool>()) {
+        result.add(make_unique<NoUnlocalizedSupplementaryAlignments>(min_mapping_quality));
+        result.add(make_unique<NoUnplacedSupplementaryAlignments>(min_mapping_quality));
+    }
     result.shrink_to_fit();
     return result;
 }
 
 bool is_downsampling_enabled(const OptionMap& options)
 {
-    return is_read_filtering_enabled(options) && !options.at("disable-downsampling").as<bool>();
+    return !read_preprocessing_disabled(options) && !options.at("disable-downsampling").as<bool>();
 }
 
 boost::optional<readpipe::Downsampler> make_downsampler(const OptionMap& options)
@@ -844,27 +975,23 @@ ReadPipe make_read_pipe(ReadManager& read_manager, const ReferenceGenome& refere
 {
     auto transformers = make_read_transformers(reference, options);
     if (transformers.second.num_transforms() > 0) {
-        return ReadPipe {read_manager, std::move(transformers.first), make_read_filterer(options),
-                         std::move(transformers.second), make_downsampler(options), std::move(samples)};
+        if (split_long_reads(options)) {
+            return ReadPipe {read_manager, as_unsigned("max-read-length", options), std::move(transformers.first),
+                             make_read_filterer(options),std::move(transformers.second), make_downsampler(options),
+                             std::move(samples)};
+        } else {
+            return ReadPipe {read_manager, std::move(transformers.first), make_read_filterer(options),
+                             std::move(transformers.second), make_downsampler(options), std::move(samples)};
+        }
     } else {
         return ReadPipe {read_manager, std::move(transformers.first), make_read_filterer(options),
                          make_downsampler(options), std::move(samples)};
     }
 }
 
-auto get_default_germline_inclusion_predicate()
+auto get_default_germline_inclusion_predicate(const OptionMap& options)
 {
-    return coretools::DefaultInclusionPredicate {};
-}
-
-bool is_cancer_calling(const OptionMap& options)
-{
-    return options.at("caller").as<std::string>() == "cancer" || options.count("normal-sample") == 1;
-}
-
-bool is_polyclone_calling(const OptionMap& options)
-{
-    return options.at("caller").as<std::string>() == "polyclone";
+    return coretools::KnownCopyNumberInclusionPredicate {static_cast<unsigned>(options.at("organism-ploidy").as<int>())};
 }
 
 bool is_single_cell_calling(const OptionMap& options)
@@ -872,24 +999,30 @@ bool is_single_cell_calling(const OptionMap& options)
     return options.at("caller").as<std::string>() == "cell";
 }
 
-double get_min_somatic_vaf(const OptionMap& options)
+bool is_cancer_calling(const OptionMap& options)
 {
-    const auto min_credible_frequency = options.at("min-credible-somatic-frequency").as<float>();
-    const auto min_expected_frequency = options.at("min-expected-somatic-frequency").as<float>();
-    if (std::min(min_credible_frequency, min_expected_frequency) <= 1.0) {
-        return std::max(min_credible_frequency, min_expected_frequency);
-    } else {
-        return std::min(min_credible_frequency, min_expected_frequency);
-    }
+    return options.at("caller").as<std::string>() == "cancer"
+        || (!is_single_cell_calling(options) && options.count("normal-samples") == 1);
+}
+
+bool is_polyclone_calling(const OptionMap& options)
+{
+    return options.at("caller").as<std::string>() == "polyclone";
+}
+
+auto get_min_credible_vaf_probability(const OptionMap& options)
+{
+    return options.at("min-candidate-credible-vaf-probability").as<float>();
 }
 
 auto get_default_somatic_inclusion_predicate(const OptionMap& options, boost::optional<SampleName> normal = boost::none)
 {
-    const auto min_vaf = get_min_somatic_vaf(options);
+    const auto min_credible_vaf = options.at("min-credible-somatic-frequency").as<float>();
+    const auto min_credible_vaf_probability = get_min_credible_vaf_probability(options);
     if (normal) {
-        return coretools::DefaultSomaticInclusionPredicate {*normal, min_vaf};
+        return coretools::UnknownCopyNumberInclusionPredicate {*normal, min_credible_vaf, min_credible_vaf_probability};
     } else {
-        return coretools::DefaultSomaticInclusionPredicate {min_vaf};
+        return coretools::UnknownCopyNumberInclusionPredicate {min_credible_vaf, min_credible_vaf_probability};
     }
 }
 
@@ -900,8 +1033,9 @@ double get_min_clone_vaf(const OptionMap& options)
 
 auto get_default_polyclone_inclusion_predicate(const OptionMap& options)
 {
-    const auto min_vaf = get_min_clone_vaf(options);
-    return coretools::DefaultSomaticInclusionPredicate {min_vaf};
+    const auto min_vaf = get_min_clone_vaf(options) / 2;
+    const auto min_vaf_probability = get_min_credible_vaf_probability(options);
+    return coretools::UnknownCopyNumberInclusionPredicate {min_vaf, min_vaf_probability};
 }
 
 auto get_default_single_cell_inclusion_predicate(const OptionMap& options)
@@ -909,34 +1043,48 @@ auto get_default_single_cell_inclusion_predicate(const OptionMap& options)
     return coretools::CellInclusionPredicate {};
 }
 
-auto get_default_inclusion_predicate(const OptionMap& options) noexcept
+coretools::CigarScanner::Options::InclusionPredicate get_candidate_variant_inclusion_predicate(const OptionMap& options) noexcept
 {
-    using namespace coretools;
-    using InclusionPredicate = CigarScanner::Options::InclusionPredicate;
     if (is_cancer_calling(options)) {
         boost::optional<SampleName> normal{};
-        if (is_set("normal-sample", options)) {
-            normal = options.at("normal-sample").as<SampleName>();
+        if (is_set("normal-samples", options)) {
+            normal = options.at("normal-samples").as<std::vector<SampleName>>().front();
         }
-        return InclusionPredicate {get_default_somatic_inclusion_predicate(options, normal)};
+        return get_default_somatic_inclusion_predicate(options, normal);
     } else if (is_polyclone_calling(options)) {
-        return InclusionPredicate {get_default_somatic_inclusion_predicate(options)};
+        return get_default_polyclone_inclusion_predicate(options);
     } else if (is_single_cell_calling(options)) {
-        return InclusionPredicate {get_default_single_cell_inclusion_predicate(options)};
+        return get_default_single_cell_inclusion_predicate(options);
     } else {
-        return InclusionPredicate {get_default_germline_inclusion_predicate()};
+        using CVDP = CandidateVariantDiscoveryProtocol;
+        if (options.at("variant-discovery-mode").as<CVDP>() == CVDP::illumina) {
+            return get_default_germline_inclusion_predicate(options);
+        } else {
+            return coretools::PacBioInclusionPredicate {};
+        }
     }
 }
 
-auto get_default_match_predicate() noexcept
+coretools::CigarScanner::Options::MatchPredicate get_candidate_variant_match_predicate(const OptionMap& options)
 {
-    return coretools::DefaultMatchPredicate {};
+    return coretools::TolerantMatchPredicate {};
+}
+
+double get_min_expected_somatic_vaf(const OptionMap& options)
+{
+    const auto min_credible_frequency = options.at("min-credible-somatic-frequency").as<float>();
+    const auto min_expected_frequency = options.at("min-expected-somatic-frequency").as<float>();
+    if (std::min(min_credible_frequency, min_expected_frequency) <= 1.0) {
+        return std::max(min_credible_frequency, min_expected_frequency);
+    } else {
+        return std::min(min_credible_frequency, min_expected_frequency);
+    }
 }
 
 auto get_assembler_region_generator_frequency_trigger(const OptionMap& options)
 {
     if (is_cancer_calling(options)) {
-        return get_min_somatic_vaf(options);
+        return get_min_expected_somatic_vaf(options);
     } else if (is_polyclone_calling(options)) {
         return get_min_clone_vaf(options);
     } else {
@@ -954,9 +1102,29 @@ get_assembler_bubble_score_setter(const OptionMap& options) noexcept
     using namespace octopus::coretools;
     if (is_cancer_calling(options)) {
         return DepthBasedBubbleScoreSetter {options.at("min-bubble-score").as<double>(),
-                                            options.at("min-expected-somatic-frequency").as<float>()};
+                                           options.at("min-expected-somatic-frequency").as<float>()};
+    } else if (is_polyclone_calling(options)) {
+        return DepthBasedBubbleScoreSetter {options.at("min-bubble-score").as<double>(),
+                                            options.at("min-clone-frequency").as<float>() / 2};
+    } else if (is_single_cell_calling(options)) {
+        return DepthBasedBubbleScoreSetter {options.at("min-bubble-score").as<double>(), 0.25};
     } else {
-        return DepthBasedBubbleScoreSetter {options.at("min-bubble-score").as<double>(), 0.05};
+        const auto ploidy = static_cast<unsigned>(options.at("organism-ploidy").as<int>());
+        return DepthBasedBubbleScoreSetter {options.at("min-bubble-score").as<double>(), 1. / (10 * ploidy)};
+    }
+}
+
+boost::optional<double> get_repeat_scanner_min_vaf(const OptionMap& options)
+{
+    using namespace octopus::coretools;
+    if (is_cancer_calling(options)) {
+        return options.at("min-credible-somatic-frequency").as<float>() / 4;
+    } else if (is_polyclone_calling(options)) {
+        return options.at("min-clone-frequency").as<float>() / 4;
+    } else if (is_single_cell_calling(options)) {
+        return 0.005;
+    } else {
+        return boost::none;
     }
 }
 
@@ -1017,7 +1185,22 @@ auto get_max_expected_heterozygosity(const OptionMap& options)
     return std::min(static_cast<double>(heterozygosity + 2 * heterozygosity_stdev), 0.9999);
 }
 
-auto make_variant_generator_builder(const OptionMap& options)
+auto get_assembler_cycle_tolerance(const OptionMap& options)
+{
+    using CGT = coretools::LocalReassembler::Options::CyclicGraphTolerance;
+    if (options.at("allow-cycles").as<bool>()) {
+        using CVDP = CandidateVariantDiscoveryProtocol;
+        if (options.at("variant-discovery-mode").as<CVDP>() == CVDP::illumina) {
+            return CGT::high;
+        } else {
+            return CGT::low;
+        }
+    } else {
+        return CGT::none;
+    }
+}
+
+auto make_variant_generator_builder(const OptionMap& options, const boost::optional<const ReadSetProfile&> read_profile)
 {
     using namespace coretools;
     
@@ -1025,35 +1208,37 @@ auto make_variant_generator_builder(const OptionMap& options)
     logging::ErrorLogger log {};
     
     VariantGeneratorBuilder result {};
-    const bool use_assembler {allow_assembler_generation(options)};
+    const bool use_assembler {assembler_candidate_variant_generator_enabled(options)};
     
-    if (options.at("raw-cigar-candidate-generator").as<bool>()) {
+    if (pileup_candidate_variant_generator_enabled(options)) {
         CigarScanner::Options scanner_options {};
         if (is_set("min-supporting-reads", options)) {
             auto min_support = as_unsigned("min-supporting-reads", options);
-            if (min_support == 0) {
-                warning_log << "The option --min_supporting_reads was set to 0 - assuming this is a typo and setting to 1";
-                ++min_support;
-            }
             scanner_options.include = coretools::SimpleThresholdInclusionPredicate {min_support};
         } else {
-            scanner_options.include = get_default_inclusion_predicate(options);
+            scanner_options.include = get_candidate_variant_inclusion_predicate(options);
         }
-        scanner_options.match = get_default_match_predicate();
+        scanner_options.match = get_candidate_variant_match_predicate(options);
         scanner_options.use_clipped_coverage_tracking = true;
-        CigarScanner::Options::MisalignmentParameters misalign_params {};
-        misalign_params.max_expected_mutation_rate = get_max_expected_heterozygosity(options);
-        misalign_params.snv_threshold = as_unsigned("min-base-quality", options);
-        if (use_assembler) {
-            misalign_params.indel_penalty = 1.5;
-            misalign_params.clip_penalty = 2;
-            misalign_params.min_ln_prob_correctly_aligned = std::log(0.005);
+        if (!options.at("allow-pileup-candidates-from-likely-misaligned-reads").as<bool>()) {
+            CigarScanner::Options::MisalignmentParameters misalign_params {};
+            misalign_params.max_expected_mutation_rate = get_max_expected_heterozygosity(options);
+            misalign_params.snv_threshold = as_unsigned("min-pileup-base-quality", options);
+            if (use_assembler) {
+                misalign_params.indel_penalty = 1.5;
+                misalign_params.clip_penalty = 2;
+                misalign_params.min_ln_prob_correctly_aligned = std::log(0.005);
+            }
+            scanner_options.misalignment_parameters = misalign_params;
+        } else {
+            scanner_options.misalignment_parameters = boost::none;
         }
-        scanner_options.misalignment_parameters = misalign_params;
         result.set_cigar_scanner(std::move(scanner_options));
     }
-    if (options.at("repeat-candidate-generator").as<bool>()) {
-        result.set_repeat_scanner(RepeatScanner::Options {});
+    if (repeat_candidate_variant_generator_enabled(options)) {
+        RepeatScanner::Options repeat_scanner_options {};
+        repeat_scanner_options.min_vaf = get_repeat_scanner_min_vaf(options);
+        result.set_repeat_scanner(repeat_scanner_options);
     }
     if (use_assembler) {
         LocalReassembler::Options reassembler_options {};
@@ -1071,6 +1256,7 @@ auto make_variant_generator_builder(const OptionMap& options)
         reassembler_options.max_bubbles = as_unsigned("max-bubbles", options);
         reassembler_options.min_bubble_score = get_assembler_bubble_score_setter(options);
         reassembler_options.max_variant_size = as_unsigned("max-variant-size", options);
+        reassembler_options.cycle_tolerance = get_assembler_cycle_tolerance(options);
         result.set_local_reassembler(std::move(reassembler_options));
     }
     if (is_set("source-candidates", options) || is_set("source-candidates-file", options)) {
@@ -1105,10 +1291,10 @@ auto make_variant_generator_builder(const OptionMap& options)
             }
             VcfExtractor::Options vcf_options {};
             vcf_options.max_variant_size = as_unsigned("max-variant-size", options);
-            if (is_set("min-source-quality", options)) {
-                vcf_options.min_quality = options.at("min-source-quality").as<Phred<double>>().score();
+            if (is_set("min-source-candidate-quality", options)) {
+                vcf_options.min_quality = options.at("min-source-candidate-quality").as<Phred<double>>().score();
             }
-            vcf_options.extract_filtered = options.at("extract-filtered-source-candidates").as<bool>();
+            vcf_options.extract_filtered = options.at("use-filtered-source-candidates").as<bool>();
             result.add_vcf_extractor(std::move(source_path), vcf_options);
         }
     }
@@ -1128,6 +1314,9 @@ auto make_variant_generator_builder(const OptionMap& options)
         active_region_options.assemble_all = true;
     } else {
         AssemblerActiveRegionGenerator::Options assembler_region_options {};
+        using TT = AssemblerActiveRegionGenerator::Options::TriggerType;
+        assembler_region_options.trigger_types = {TT::indel, TT::structual, TT::clustered};
+        assembler_region_options.read_profile = read_profile;
         assembler_region_options.min_expected_mutation_frequency = get_assembler_region_generator_frequency_trigger(options);
         active_region_options.assembler_active_region_generator_options = assembler_region_options;
     }
@@ -1281,11 +1470,23 @@ auto get_extension_policy(const OptionMap& options)
 {
     using ExtensionPolicy = HaplotypeGenerator::Builder::Policies::Extension;
     switch (options.at("extension-level").as<ExtensionLevel>()) {
+        case ExtensionLevel::minimal: return ExtensionPolicy::minimal;
         case ExtensionLevel::conservative: return ExtensionPolicy::conservative;
-        case ExtensionLevel::normal: return ExtensionPolicy::normal;
-        case ExtensionLevel::optimistic: return ExtensionPolicy::optimistic;
+        case ExtensionLevel::moderate: return ExtensionPolicy::moderate;
         case ExtensionLevel::aggressive: return ExtensionPolicy::aggressive;
-        default: return ExtensionPolicy::normal; // to stop GCC warning
+        case ExtensionLevel::unlimited: return ExtensionPolicy::unlimited;
+        default: return ExtensionPolicy::moderate; // to stop GCC warning
+    }
+}
+
+auto get_backtrack_policy(const OptionMap& options)
+{
+    using BacktrackPolicy = HaplotypeGenerator::Builder::Policies::Backtrack;
+    switch (options.at("backtrack-level").as<BacktrackLevel>()) {
+        case BacktrackLevel::none: return BacktrackPolicy::none;
+        case BacktrackLevel::moderate: return BacktrackPolicy::moderate;
+        case BacktrackLevel::aggressive: return BacktrackPolicy::aggressive;
+        default: return BacktrackPolicy::none; // to stop GCC warning
     }
 }
 
@@ -1293,11 +1494,12 @@ auto get_lagging_policy(const OptionMap& options)
 {
     using LaggingPolicy = HaplotypeGenerator::Builder::Policies::Lagging;
     if (is_fast_mode(options)) return LaggingPolicy::none;
-    switch (options.at("phasing-level").as<PhasingLevel>()) {
-        case PhasingLevel::conservative: return LaggingPolicy::conservative;
-        case PhasingLevel::moderate: return LaggingPolicy::moderate;
-        case PhasingLevel::normal: return LaggingPolicy::normal;
-        case PhasingLevel::aggressive: return LaggingPolicy::aggressive;
+    switch (options.at("lagging-level").as<LaggingLevel>()) {
+        case LaggingLevel::none: return LaggingPolicy::none;
+        case LaggingLevel::conservative: return LaggingPolicy::conservative;
+        case LaggingLevel::moderate: return LaggingPolicy::moderate;
+        case LaggingLevel::optimistic: return LaggingPolicy::optimistic;
+        case LaggingLevel::aggressive: return LaggingPolicy::aggressive;
         default: return LaggingPolicy::none;
     }
 }
@@ -1311,33 +1513,29 @@ auto get_max_haplotypes(const OptionMap& options)
     }
 }
 
-bool have_low_tolerance_for_dense_regions(const OptionMap& options, const boost::optional<ReadSetProfile>& input_reads_profile)
+boost::optional<coretools::BadRegionDetector>
+make_bad_region_detector(const OptionMap& options, const boost::optional<const ReadSetProfile&>& input_reads_profile)
 {
+    auto snp_heterozygosity = options.at("snp-heterozygosity").as<float>();
+    auto indel_heterozygosity = options.at("indel-heterozygosity").as<float>();
     if (is_cancer_calling(options)) {
-        if (as_unsigned("max-somatic-haplotypes", options) < 2) {
-            return false;
-        }
-        if (input_reads_profile) {
-            const auto approx_average_depth = maths::median(input_reads_profile->sample_median_positive_depth);
-            if (approx_average_depth > 2000) {
-                return true;
-            }
-        }
+        snp_heterozygosity += options.at("somatic-snv-prior").as<float>();
+        indel_heterozygosity += options.at("somatic-indel-prior").as<float>();
     }
-    return false;
-}
-
-auto get_dense_variation_detector(const OptionMap& options, const boost::optional<ReadSetProfile>& input_reads_profile)
-{
-    const auto snp_heterozygosity = options.at("snp-heterozygosity").as<float>();
-    const auto indel_heterozygosity = options.at("indel-heterozygosity").as<float>();
     const auto heterozygosity = snp_heterozygosity + indel_heterozygosity;
-    const auto heterozygosity_stdev = options.at("snp-heterozygosity-stdev").as<float>();
-    coretools::DenseVariationDetector::Parameters params {heterozygosity, heterozygosity_stdev};
-    if (have_low_tolerance_for_dense_regions(options, input_reads_profile)) {
-        params.density_tolerance = coretools::DenseVariationDetector::Parameters::Tolerance::low;
+    auto heterozygosity_stdev = options.at("snp-heterozygosity-stdev").as<float>();
+    if (is_cancer_calling(options)) {
+        heterozygosity_stdev *= (1.0 /  options.at("min-expected-somatic-frequency").as<float>());
     }
-    return coretools::DenseVariationDetector {params, input_reads_profile};
+    coretools::BadRegionDetector::Parameters params {heterozygosity, heterozygosity_stdev};
+    using Tolerance = coretools::BadRegionDetector::Parameters::Tolerance;
+    switch (options.at("bad-region-tolerance").as<BadRegionTolerance>()) {
+        case BadRegionTolerance::unlimited: return boost::none;
+        case BadRegionTolerance::high: params.tolerance = Tolerance::high; break;
+        case BadRegionTolerance::normal: params.tolerance = Tolerance::normal; break;
+        case BadRegionTolerance::low: params.tolerance = Tolerance::low; break;
+    }
+    return coretools::BadRegionDetector {params, input_reads_profile};
 }
 
 auto get_max_indicator_join_distance() noexcept
@@ -1345,24 +1543,130 @@ auto get_max_indicator_join_distance() noexcept
     return HaplotypeLikelihoodModel{}.pad_requirement();
 }
 
-auto get_min_flank_pad() noexcept
+bool allow_flank_scoring(const OptionMap& options)
 {
-    return 2 * (2 * HaplotypeLikelihoodModel{}.pad_requirement() - 1);
+    return !options.at("disable-inactive-flank-scoring").as<bool>() && !is_very_fast_mode(options);
 }
 
-auto make_haplotype_generator_builder(const OptionMap& options, const boost::optional<ReadSetProfile>& input_reads_profile)
+auto make_error_model(const OptionMap& options)
+{
+    const auto& model_label = options.at("sequence-error-model").as<std::string>();
+    try {
+        return octopus::make_error_model(model_label);
+    } catch (const UserError& err) {
+        try {
+            const auto model_path = resolve_path(model_label, options);
+            return octopus::make_error_model(model_path);
+        } catch (...) {}
+        throw;
+    }
+}
+
+AlignedRead::MappingQuality calculate_mapping_quality_cap(const OptionMap& options, const boost::optional<const ReadSetProfile&>& read_profile)
+{
+    constexpr AlignedRead::MappingQuality minimum {60u}; // BWA cap
+    if (read_profile) {
+        if (read_profile->length_stats.median > 200) {
+            return 2 * minimum;
+        } else {
+            return std::max(read_profile->mapping_quality_stats.max, minimum);
+        }
+    } else {
+        return minimum;
+    }
+}
+
+AlignedRead::MappingQuality calculate_mapping_quality_cap_trigger(const OptionMap& options, const boost::optional<const ReadSetProfile&>& read_profile)
+{
+    constexpr AlignedRead::MappingQuality minimum {60u}; // BWA cap
+    if (read_profile) {
+        return std::max(read_profile->mapping_quality_stats.max, minimum);
+    } else {
+        return minimum;
+    }
+}
+
+bool model_mapping_quality(const OptionMap& options)
+{
+    return !options.at("dont-model-mapping-quality").as<bool>();
+}
+
+bool use_int_hmm_scores(const OptionMap& options, const boost::optional<const ReadSetProfile&> read_profile)
+{
+    return options.at("use-wide-hmm-scores").as<bool>();
+}
+
+HaplotypeLikelihoodModel
+make_calling_haplotype_likelihood_model(const OptionMap& options, const boost::optional<const ReadSetProfile&> read_profile)
+{
+    auto error_model = make_error_model(options);
+    HaplotypeLikelihoodModel::Config config {};
+    config.use_mapping_quality = model_mapping_quality(options);
+    config.use_flank_state = allow_flank_scoring(options);
+    if (config.use_mapping_quality) {
+        config.mapping_quality_cap = calculate_mapping_quality_cap(options, read_profile);
+        config.mapping_quality_cap_trigger = calculate_mapping_quality_cap_trigger(options, read_profile);
+    }
+    config.max_indel_error = as_unsigned("max-indel-errors", options);
+    config.use_int_scores = use_int_hmm_scores(options, read_profile);
+    return HaplotypeLikelihoodModel {std::move(error_model.snv), std::move(error_model.indel), config};
+}
+
+bool use_int_hmm_scores_for_realignment(const OptionMap& options, const boost::optional<const ReadSetProfile&> read_profile)
+{
+    if (options.at("use-wide-hmm-scores").as<bool>()) return true;
+    if (options.at("split-long-reads").as<bool>()) return true;
+    if (read_profile && read_profile->length_stats.median > 1'000) return true;
+    return false;
+}
+
+unsigned get_realignment_hmm_max_indel_errors(const OptionMap& options, const boost::optional<const ReadSetProfile&> read_profile)
+{
+    return as_unsigned("max-indel-errors", options);
+}
+
+HaplotypeLikelihoodModel 
+make_realignment_haplotype_likelihood_model(const HaplotypeLikelihoodModel& calling_model,
+                                            const boost::optional<const ReadSetProfile&> read_profile,
+                                            const options::OptionMap& options)
+{
+    auto result = calling_model;
+    auto realignment_config = result.config();
+    realignment_config.use_mapping_quality = false;
+    realignment_config.use_flank_state = false;
+    realignment_config.use_int_scores = use_int_hmm_scores_for_realignment(options, read_profile);
+    realignment_config.max_indel_error = get_realignment_hmm_max_indel_errors(options, read_profile);
+    result.set(std::move(realignment_config));
+    return result;
+}
+
+auto get_min_haplotype_flank_pad(const OptionMap& options, const boost::optional<const ReadSetProfile&>& input_reads_profile)
+{
+    auto model = make_calling_haplotype_likelihood_model(options, input_reads_profile);
+    return 2 * model.pad_requirement();
+}
+
+auto make_haplotype_generator_builder(const OptionMap& options, const boost::optional<const ReadSetProfile&> input_reads_profile)
 {
     const auto lagging_policy    = get_lagging_policy(options);
     const auto max_haplotypes    = get_max_haplotypes(options);
     const auto holdout_limit     = as_unsigned("haplotype-holdout-threshold", options);
     const auto overflow_limit    = as_unsigned("haplotype-overflow", options);
     const auto max_holdout_depth = as_unsigned("max-holdout-depth", options);
-    return HaplotypeGenerator::Builder().set_extension_policy(get_extension_policy(options))
-    .set_target_limit(max_haplotypes).set_holdout_limit(holdout_limit).set_overflow_limit(overflow_limit)
-    .set_lagging_policy(lagging_policy).set_max_holdout_depth(max_holdout_depth)
-    .set_max_indicator_join_distance(get_max_indicator_join_distance())
-    .set_dense_variation_detector(get_dense_variation_detector(options, input_reads_profile))
-    .set_min_flank_pad(get_min_flank_pad());
+    auto result = HaplotypeGenerator::Builder()
+        .set_extension_policy(get_extension_policy(options))
+        .set_backtrack_policy(get_backtrack_policy(options))
+        .set_target_limit(max_haplotypes)
+        .set_holdout_limit(holdout_limit)
+        .set_overflow_limit(overflow_limit)
+        .set_lagging_policy(lagging_policy)
+        .set_max_holdout_depth(max_holdout_depth)
+        .set_max_indicator_join_distance(get_max_indicator_join_distance())
+        .set_min_flank_pad(get_min_haplotype_flank_pad(options, input_reads_profile));
+    if (input_reads_profile) {
+        result.set_max_allele_distance(1000 * input_reads_profile->length_stats.max);
+    }
+    return result;
 }
 
 boost::optional<Pedigree> read_ped_file(const OptionMap& options)
@@ -1477,7 +1781,7 @@ auto get_caller_type(const OptionMap& options, const std::vector<SampleName>& sa
 		|| (pedigree && is_trio(samples, *pedigree))) {
         result = "trio";
     }
-    if (is_set("normal-sample", options)) {
+    if (is_cancer_calling(options)) {
         result = "cancer";
     }
     return result;
@@ -1501,11 +1805,65 @@ class BadSampleCount : public UserError
     }
 };
 
+template <typename T>
+void print_with_quotes(const std::vector<T>& values, std::ostream& os, const char* delim = " ")
+{
+    if (!values.empty()) {
+        std::for_each(std::cbegin(values), std::prev(std::cend(values)), [&] (const auto& value) {
+            os << '"' << value << '"' << delim;
+        });
+        os << '"' << values.back() << '"';
+    }
+}
+
+class BadNormalSample : public UserError
+{
+    std::string do_where() const override
+    {
+        return "check_caller";
+    }
+    
+    std::string do_why() const override
+    {
+        std::ostringstream ss {};
+        ss << "The specified normal \"" << given_<< "\""
+           << " is not one of the input samples [";
+        print_with_quotes(available_, ss);
+        ss << "]";
+        return ss.str();
+    }
+    
+    std::string do_help() const override
+    {
+        return "Choose one of the input samples as the normal sample";
+    }
+    SampleName given_;
+    std::vector<SampleName> available_;
+public:
+    BadNormalSample(SampleName given, std::vector<SampleName> available)
+    : given_ {std::move(given)}
+    , available_ {std::move(available)}
+    {}
+};
+
+void check_normal_samples(const std::vector<SampleName>& normals, const std::vector<SampleName>& samples)
+{
+    for (const auto& normal : normals) {
+        if (std::find(std::cbegin(samples), std::cend(samples), normal) == std::cend(samples)) {
+            throw BadNormalSample {normal, samples};
+        }
+    }
+}
+
 void check_caller(const std::string& caller, const std::vector<SampleName>& samples, const OptionMap& options)
 {
     if (caller == "polyclone") {
         if (samples.size() != 1) {
             throw BadSampleCount {};
+        }
+    } else if (caller == "cancer" || caller == "cell") {
+        if (is_set("normal-samples", options)) {
+            check_normal_samples(options.at("normal-samples").as<std::vector<std::string>>(), samples);
         }
     }
 }
@@ -1599,65 +1957,15 @@ public:
     UnimplementedCaller(std::string caller) : caller_ {caller} {}
 };
 
-bool allow_flank_scoring(const OptionMap& options)
+Caller::ModelPosteriorPolicy get_model_posterior_policy(const OptionMap& options)
 {
-    return options.at("inactive-flank-scoring").as<bool>() && !is_very_fast_mode(options);
-}
-
-auto make_error_model(const OptionMap& options)
-{
-    const auto& model_label = options.at("sequence-error-model").as<std::string>();
-    try {
-        return octopus::make_error_model(model_label);
-    } catch (const UserError& err) {
-        try {
-            const auto model_path = resolve_path(model_label, options);
-            return octopus::make_error_model(model_path);
-        } catch (...) {}
-        throw;
+    Caller::ModelPosteriorPolicy result {};
+    switch (options.at("model-posterior").as<ModelPosteriorPolicy>()) {
+        case ModelPosteriorPolicy::all: result = Caller::ModelPosteriorPolicy::all; break;
+        case ModelPosteriorPolicy::off: result = Caller::ModelPosteriorPolicy::off; break;
+        case ModelPosteriorPolicy::special: result = Caller::ModelPosteriorPolicy::special; break;
     }
-}
-
-AlignedRead::MappingQuality calculate_mapping_quality_cap(const OptionMap& options, const boost::optional<ReadSetProfile>& read_profile)
-{
-    constexpr AlignedRead::MappingQuality minimum {60u}; // BWA cap
-    if (read_profile) {
-        if (read_profile->median_read_length > 200) {
-            return 2 * minimum;
-        } else {
-            return std::max(read_profile->max_mapping_quality, minimum);
-        }
-    } else {
-        return minimum;
-    }
-}
-
-AlignedRead::MappingQuality calculate_mapping_quality_cap_trigger(const OptionMap& options, const boost::optional<ReadSetProfile>& read_profile)
-{
-    constexpr AlignedRead::MappingQuality minimum {60u}; // BWA cap
-    if (read_profile) {
-        return std::max(read_profile->max_mapping_quality, minimum);
-    } else {
-        return minimum;
-    }
-}
-
-HaplotypeLikelihoodModel make_likelihood_model(const OptionMap& options, const boost::optional<ReadSetProfile>& read_profile)
-{
-    auto error_model = make_error_model(options);
-    HaplotypeLikelihoodModel::Config config {};
-    config.use_mapping_quality = options.at("model-mapping-quality").as<bool>();
-    config.use_flank_state = allow_flank_scoring(options);
-    if (config.use_mapping_quality) {
-        config.mapping_quality_cap = calculate_mapping_quality_cap(options, read_profile);
-        config.mapping_quality_cap_trigger = calculate_mapping_quality_cap_trigger(options, read_profile);
-    }
-    return HaplotypeLikelihoodModel {std::move(error_model.snv), std::move(error_model.indel), config};
-}
-
-bool allow_model_filtering(const OptionMap& options)
-{
-    return options.count("model-posterior") == 1 && options.at("model-posterior").as<bool>();
+    return result;
 }
 
 auto get_normal_contamination_risk(const OptionMap& options)
@@ -1691,12 +1999,84 @@ bool is_experimental_caller(const std::string& caller) noexcept
     return caller == "population" || caller == "polyclone" || caller == "cell";
 }
 
+ReadLinkageType get_read_linkage_type(const OptionMap& options)
+{
+    switch (options.at("read-linkage").as<ReadLinkage>()) {
+        case ReadLinkage::linked: return ReadLinkageType::paired_and_barcode;
+        case ReadLinkage::paired: return ReadLinkageType::paired;
+        case ReadLinkage::none: return ReadLinkageType::none;
+        default: return ReadLinkageType::paired;
+    }
+}
+
+bool protect_reference_haplotype(const OptionMap& options)
+{
+    return !options.at("dont-protect-reference-haplotype").as<bool>();
+}
+
+boost::optional<std::size_t> get_max_genotypes(const OptionMap& options, const std::string& caller)
+{
+    if (options.count("max-genotypes") == 1) {
+        return as_unsigned("max-genotypes", options);
+    } else if (caller == "cancer") {
+        return 5'000;
+    } else if (caller == "polyclone") {
+        return 100'000;
+    } else if (is_fast_mode(options)) {
+        return 1'000'000;
+    } else {
+        return boost::none;
+    }
+}
+
+boost::optional<std::size_t> get_max_genotype_combinations(const OptionMap& options, const std::string& caller)
+{
+    if (options.count("max-genotype-combinations") == 1) {
+        return as_unsigned("max-genotype-combinations", options);
+    } else if (is_fast_mode(options)) {
+        return 10'000;
+    } else if (caller == "cell") {
+        return 1'000;
+    } else if (caller == "trio") {
+        return 1'000'000;
+    } else if (caller == "population") {
+        return 500'000;
+    } else {
+        return boost::none;
+    }
+}
+
+class TooManyNormalsError : public UserError
+{
+    std::string do_where() const override
+    {
+        return "make_caller_factory";
+    }
+    std::string do_why() const override
+    {
+        return "Only one normal sample is allowed by the cancer calling model";
+    }
+    std::string do_help() const override
+    {
+        return "Only specify one arguement for --normal-sample";
+    }
+};
+
+auto get_sample_dropout_concentrations(const OptionMap& options)
+{
+    std::vector<SampleDropoutConcentrationPair> result {};
+    if (is_set("sample-dropout-concentrations", options)) {
+        result = options.at("sample-dropout-concentrations").as<std::vector<SampleDropoutConcentrationPair>>();
+    }
+    return result;
+}
+
 CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& read_pipe,
                                   const InputRegionMap& regions, const OptionMap& options,
-                                  const boost::optional<ReadSetProfile> read_profile)
+                                  const boost::optional<const ReadSetProfile&> read_profile)
 {
     CallerBuilder vc_builder {reference, read_pipe,
-                              make_variant_generator_builder(options),
+                              make_variant_generator_builder(options, read_profile),
                               make_haplotype_generator_builder(options, read_profile)};
 	const auto pedigree = read_ped_file(options);
     const auto caller = get_caller_type(options, read_pipe.samples(), pedigree);
@@ -1705,7 +2085,7 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
     
     if (is_experimental_caller(caller)) {
         logging::WarningLogger log {};
-        stream(log) << "The " << caller << " calling model is still in development and may not perform as expected";
+        stream(log) << "The " << caller << " calling model is still in development. Do not use for production work!";
     }
     
     if (is_set("refcall", options)) {
@@ -1715,13 +2095,16 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
             vc_builder.set_refcall_type(CallerBuilder::RefCallType::positional);
         } else {
             vc_builder.set_refcall_type(CallerBuilder::RefCallType::blocked);
-            auto block_merge_threshold = options.at("refcall-block-merge-threshold").as<Phred<double>>();
+            auto block_merge_threshold = options.at("refcall-block-merge-quality").as<Phred<double>>();
             if (block_merge_threshold.score() > 0) {
                 vc_builder.set_refcall_merge_block_threshold(block_merge_threshold);
             }
         }
         auto min_refcall_posterior = options.at("min-refcall-posterior").as<Phred<double>>();
         vc_builder.set_min_refcall_posterior(min_refcall_posterior);
+        if (is_set("max-refcall-posterior", options)) {
+            vc_builder.set_max_refcall_posterior(options.at("max-refcall-posterior").as<Phred<double>>());
+        }
     } else {
         vc_builder.set_refcall_type(CallerBuilder::RefCallType::none);
     }
@@ -1736,27 +2119,36 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
     } else {
         vc_builder.set_min_variant_posterior(min_variant_posterior);
     }
+    vc_builder.set_read_linkage(get_read_linkage_type(options));
     vc_builder.set_ploidies(get_ploidy_map(options));
     vc_builder.set_max_haplotypes(get_max_haplotypes(options));
-    vc_builder.set_haplotype_extension_threshold(options.at("haplotype-extension-threshold").as<Phred<double>>());
-    vc_builder.set_reference_haplotype_protection(options.at("protect-reference-haplotype").as<bool>());
+    vc_builder.set_max_genotypes(get_max_genotypes(options, caller));
+    vc_builder.set_max_genotype_combinations(get_max_genotype_combinations(options, caller));
+    vc_builder.set_haplotype_extension_threshold(options.at("min-protected-haplotype-posterior").as<double>());
+    vc_builder.set_reference_haplotype_protection(protect_reference_haplotype(options));
+    vc_builder.set_likelihood_model(make_calling_haplotype_likelihood_model(options, read_profile));
     auto min_phase_score = options.at("min-phase-score").as<Phred<double>>();
     vc_builder.set_min_phase_score(min_phase_score);
+    vc_builder.set_early_phase_detection_policy(!options.at("disable-early-phase-detection").as<bool>());
     if (!options.at("use-uniform-genotype-priors").as<bool>()) {
         vc_builder.set_snp_heterozygosity(options.at("snp-heterozygosity").as<float>());
         vc_builder.set_indel_heterozygosity(options.at("indel-heterozygosity").as<float>());
     }
-    vc_builder.set_model_based_haplotype_dedup(options.at("dedup-haplotypes-with-prior-model").as<bool>());
+    vc_builder.set_model_based_haplotype_dedup(true);
     vc_builder.set_independent_genotype_prior_flag(options.at("use-independent-genotype-priors").as<bool>());
     if (caller == "cancer") {
-        if (is_set("normal-sample", options)) {
-            vc_builder.set_normal_sample(options.at("normal-sample").as<std::string>());
+        if (is_set("normal-samples", options)) {
+            const auto& normals = options.at("normal-samples").as<std::vector<std::string>>();
+            if (normals.size() > 1) {
+                throw TooManyNormalsError {};
+            }
+            vc_builder.set_normal_sample(normals.front());
         }
         vc_builder.set_max_somatic_haplotypes(as_unsigned("max-somatic-haplotypes", options));
-        vc_builder.set_somatic_snv_mutation_rate(options.at("somatic-snv-mutation-rate").as<float>());
-        vc_builder.set_somatic_indel_mutation_rate(options.at("somatic-indel-mutation-rate").as<float>());
+        vc_builder.set_somatic_snv_prior(options.at("somatic-snv-prior").as<float>());
+        vc_builder.set_somatic_indel_prior(options.at("somatic-indel-prior").as<float>());
         vc_builder.set_min_expected_somatic_frequency(options.at("min-expected-somatic-frequency").as<float>());
-        vc_builder.set_credible_mass(options.at("credible-mass").as<float>());
+        vc_builder.set_credible_mass(options.at("somatic-credible-mass").as<float>());
         vc_builder.set_min_credible_somatic_frequency(options.at("min-credible-somatic-frequency").as<float>());
         auto min_somatic_posterior = options.at("min-somatic-posterior").as<Phred<double>>();
         vc_builder.set_min_somatic_posterior(min_somatic_posterior);
@@ -1764,37 +2156,50 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
         vc_builder.set_tumour_germline_concentration(options.at("tumour-germline-concentration").as<float>());
     } else if (caller == "trio") {
         vc_builder.set_trio(make_trio(read_pipe.samples(), options, pedigree));
-        vc_builder.set_snv_denovo_mutation_rate(options.at("denovo-snv-mutation-rate").as<float>());
-        vc_builder.set_indel_denovo_mutation_rate(options.at("denovo-indel-mutation-rate").as<float>());
+        vc_builder.set_snv_denovo_prior(options.at("denovo-snv-prior").as<float>());
+        vc_builder.set_indel_denovo_prior(options.at("denovo-indel-prior").as<float>());
         vc_builder.set_min_denovo_posterior(options.at("min-denovo-posterior").as<Phred<double>>());
     } else if (caller == "polyclone") {
         vc_builder.set_max_clones(as_unsigned("max-clones", options));
+        const double clone_prior = options.at("clone-prior").as<float>();
+        vc_builder.set_clonality_prior([clone_prior] (unsigned clonality) { return maths::geometric_pdf(clonality, 1 - clone_prior); });
+        vc_builder.set_clone_concentration(options.at("clone-concentration").as<float>());
     } else if (caller == "cell") {
+        if (is_set("normal-samples", options)) {
+            for (auto sample : options.at("normal-samples").as<std::vector<std::string>>()) {
+                vc_builder.add_normal_sample(std::move(sample));
+            }
+        }
         vc_builder.set_dropout_concentration(options.at("dropout-concentration").as<float>());
-        vc_builder.set_somatic_snv_mutation_rate(options.at("somatic-snv-mutation-rate").as<float>());
-        vc_builder.set_somatic_indel_mutation_rate(options.at("somatic-indel-mutation-rate").as<float>());
+        for (const SampleDropoutConcentrationPair& p : get_sample_dropout_concentrations(options)) {
+            vc_builder.set_dropout_concentration(p.sample, p.concentration);
+        }
+        vc_builder.set_phylogeny_concentration(options.at("phylogeny-concentration").as<float>());
+        vc_builder.set_somatic_snv_prior(options.at("somatic-snv-prior").as<float>());
+        vc_builder.set_somatic_indel_prior(options.at("somatic-indel-prior").as<float>());
+        vc_builder.set_max_clones(as_unsigned("max-clones", options));
+        vc_builder.set_max_copy_losses(as_unsigned("max-copy-loss", options));
+        vc_builder.set_max_copy_gains(as_unsigned("max-copy-gain", options));
+        vc_builder.set_somatic_cnv_prior(options.at("somatic-cnv-prior").as<float>());
     }
-    vc_builder.set_model_filtering(allow_model_filtering(options));
-    vc_builder.set_max_genotypes(as_unsigned("max-genotypes", options));
+    vc_builder.set_model_posterior_policy(get_model_posterior_policy(options));
     if (is_set("max-vb-seeds", options)) vc_builder.set_max_vb_seeds(as_unsigned("max-vb-seeds", options));
-    if (is_fast_mode(options)) {
-        vc_builder.set_max_joint_genotypes(10'000);
-    } else {
-        vc_builder.set_max_joint_genotypes(as_unsigned("max-joint-genotypes", options));
-    }
     if (call_sites_only(options) && !is_call_filtering_requested(options)) {
         vc_builder.set_sites_only();
     }
-    vc_builder.set_likelihood_model(make_likelihood_model(options, read_profile));
     const auto target_working_memory = get_target_working_memory(options);
     if (target_working_memory) vc_builder.set_target_memory_footprint(*target_working_memory);
     vc_builder.set_execution_policy(get_thread_execution_policy(options));
+    auto bad_region_detector = make_bad_region_detector(options, read_profile);
+    if (bad_region_detector) {
+        vc_builder.set_bad_region_detector(std::move(*bad_region_detector));
+    }
     return CallerFactory {std::move(vc_builder)};
 }
 
 bool is_call_filtering_requested(const OptionMap& options) noexcept
 {
-    return options.at("call-filtering").as<bool>() || options.count("annotations") > 0;
+    return !options.at("disable-call-filtering").as<bool>() || options.count("annotations") > 0;
 }
 
 std::string get_germline_filter_expression(const OptionMap& options)
@@ -1819,7 +2224,7 @@ std::string get_refcall_filter_expression(const OptionMap& options)
 
 bool is_filter_training_mode(const OptionMap& options)
 {
-    return !options.at("call-filtering").as<bool>() && options.count("annotations") > 0;
+    return options.at("disable-call-filtering").as<bool>() && options.count("annotations") > 0;
 }
 
 bool all_active_measure_annotations_requested(const OptionMap& options)
@@ -1843,15 +2248,10 @@ std::set<std::string> get_requested_measure_annotations(const OptionMap& options
     return result;
 }
 
-class MissingForestFile : public MissingFileError
+bool is_random_forest_filtering(const OptionMap& options)
 {
-    std::string do_where() const override
-    {
-        return "make_call_filter_factory";
-    }
-public:
-    MissingForestFile(fs::path p, std::string type) : MissingFileError {std::move(p), std::move(type)} {};
-};
+    return is_set("forest-model", options) || is_set("somatic-forest-model", options);
+}
 
 auto get_caller_type(const OptionMap& options, const std::vector<SampleName>& samples)
 {
@@ -1862,51 +2262,32 @@ std::unique_ptr<VariantCallFilterFactory>
 make_call_filter_factory(const ReferenceGenome& reference, ReadPipe& read_pipe, const OptionMap& options,
                          boost::optional<fs::path> temp_directory)
 {
+    if (!temp_directory) temp_directory = "/tmp";
     std::unique_ptr<VariantCallFilterFactory> result {};
     if (is_call_filtering_requested(options)) {
         const auto caller = get_caller_type(options, read_pipe.samples());
-        if (is_set("forest-file", options)) {
-            auto forest_file = resolve_path(options.at("forest-file").as<fs::path>(), options);
-            if (!fs::exists(forest_file)) {
-                throw MissingForestFile {forest_file, "forest-file"};
+        if (is_random_forest_filtering(options)) {
+            std::vector<RandomForestFilterFactory::Path> forest_files {};
+            std::vector<RandomForestFilterFactory::ForestType> forest_types {};
+            if (is_set("forest-model", options)) {
+                forest_files.push_back(resolve_path(options.at("forest-model").as<fs::path>(), options));
+                forest_types.push_back(RandomForestFilterFactory::ForestType::germline);
             }
-            if (!temp_directory) temp_directory = "/tmp";
+            RandomForestFilterFactory::Options forest_options {};
+            if (is_set("min-forest-quality", options)) forest_options.min_forest_quality = options.at("min-forest-quality").as<Phred<double>>();
             if (caller == "cancer") {
-                if (is_set("somatic-forest-file", options)) {
-                    auto somatic_forest_file = resolve_path(options.at("somatic-forest-file").as<fs::path>(), options);
-                    if (!fs::exists(somatic_forest_file)) {
-                        throw MissingForestFile {somatic_forest_file, "somatic-forest-file"};
-                    }
-                    result = std::make_unique<RandomForestFilterFactory>(forest_file, somatic_forest_file, *temp_directory);
+                if (is_set("somatic-forest-model", options)) {
+                    forest_files.push_back(resolve_path(options.at("somatic-forest-model").as<fs::path>(), options));
+                    forest_types.push_back(RandomForestFilterFactory::ForestType::somatic);
                 } else if (options.at("somatics-only").as<bool>()) {
-                    result = std::make_unique<RandomForestFilterFactory>(forest_file, *temp_directory,
-                                                                         RandomForestFilterFactory::ForestType::somatic);
+                    forest_types.front() = RandomForestFilterFactory::ForestType::somatic;
                 } else {
                     logging::WarningLogger log {};
                     log << "Both germline and somatic forests must be provided for random forest cancer variant filtering";
                 }
-            } else if (caller == "trio") {
-                if (options.at("denovos-only").as<bool>()) {
-                    result = std::make_unique<RandomForestFilterFactory>(forest_file, *temp_directory,
-                                                                         RandomForestFilterFactory::ForestType::denovo);
-                } else {
-                    result = std::make_unique<RandomForestFilterFactory>(forest_file, *temp_directory);
-                }
-            } else {
-                result = std::make_unique<RandomForestFilterFactory>(forest_file, *temp_directory);
+                forest_options.use_somatic_forest_for_refcalls = !options.at("use-germline-forest-for-somatic-normals").as<bool>();
             }
-        } else if (is_set("somatic-forest-file", options)) {
-            if (options.at("somatics-only").as<bool>()) {
-                auto somatic_forest_file = resolve_path(options.at("somatic-forest-file").as<fs::path>(), options);
-                if (!fs::exists(somatic_forest_file)) {
-                    throw MissingForestFile {somatic_forest_file, "somatic-forest-file"};
-                }
-                result = std::make_unique<RandomForestFilterFactory>(somatic_forest_file, *temp_directory,
-                                                                     RandomForestFilterFactory::ForestType::somatic);
-            } else {
-                logging::WarningLogger log {};
-                log << "Both germline and somatic forests must be provided for random forest cancer variant filtering";
-            }
+            result = std::make_unique<RandomForestFilterFactory>(std::move(forest_files), std::move(forest_types), *temp_directory, forest_options);
         } else {
             if (is_filter_training_mode(options)) {
                 result = std::make_unique<TrainingFilterFactory>(get_requested_measure_annotations(options));
@@ -1955,7 +2336,7 @@ make_call_filter_factory(const ReferenceGenome& reference, ReadPipe& read_pipe, 
 
 bool use_calling_read_pipe_for_call_filtering(const OptionMap& options) noexcept
 {
-    return options.at("use-calling-reads-for-filtering").as<bool>();
+    return options.at("use-preprocessed-reads-for-filtering").as<bool>();
 }
 
 bool keep_unfiltered_calls(const OptionMap& options) noexcept
@@ -1973,7 +2354,7 @@ ReadPipe make_default_filter_read_pipe(ReadManager& read_manager, std::vector<Sa
     filterer.add(make_unique<HasValidBaseQualities>());
     filterer.add(make_unique<HasWellFormedCigar>());
     filterer.add(make_unique<IsMapped>());
-    filterer.add(make_unique<IsNotMarkedQcFail>());
+    filterer.add(make_unique<IsLong>(1));
     return ReadPipe {read_manager, std::move(transformer), std::move(filterer), boost::none, std::move(samples)};
 }
 
@@ -1994,18 +2375,107 @@ boost::optional<fs::path> get_output_path(const OptionMap& options)
     return boost::none;
 }
 
-boost::optional<fs::path> create_temp_file_directory(const OptionMap& options)
+class UnwritableTempDirectory : public SystemError
+{
+    std::string do_where() const override { return "create_temp_file_directory"; }
+    std::string do_why() const override
+    {
+        std::ostringstream ss{};
+        ss << "Failed to create temporary directory " << directory_;
+        if (error_) {
+            switch (error_->value()) {
+                case boost::system::errc::permission_denied: {
+                    ss << ": permission denied";
+                    break;
+                }
+                case boost::system::errc::read_only_file_system: {
+                    ss << ": read only file system";
+                    break;
+                }
+                case boost::system::errc::not_enough_memory: {
+                    ss << ": not enough memory";
+                    break;
+                }
+                case boost::system::errc::filename_too_long: {
+                    ss << ": bad path";
+                    break;
+                }
+                case boost::system::errc::io_error: {
+                    ss << ": io error";
+                    break;
+                }
+                default: {
+                    ss << ": unexpected error (error code - " << *error_ << ")";
+                    break;
+                }
+            }
+        }
+        return ss.str();
+    }
+    std::string do_help() const override
+    {
+        std::ostringstream ss {};
+        if (error_) {
+            switch(error_->value()) {
+                case boost::system::errc::permission_denied: {
+                    ss << "Check user has write permissions to " << directory_.parent_path()
+                       << " or select another temp directory location";
+                    break;
+                }
+                case boost::system::errc::read_only_file_system: {
+                    ss << "Check user has write permissions to " << directory_.parent_path()
+                       << " or select another temp directory location";
+                    break;
+                }
+                case boost::system::errc::not_enough_memory: {
+                    ss << "Ensure sufficient disk quota is available";
+                    break;
+                }
+                case boost::system::errc::filename_too_long: {
+                    ss << "Specify another temp directory name";
+                    break;
+                }
+                default: {
+                    ss << "Send a debug report to " << config::BugReport;
+                    break;
+                }
+            }
+        }
+        return ss.str();
+    }
+    
+    fs::path directory_;
+    boost::optional<boost::system::error_code> error_;
+
+public:
+    UnwritableTempDirectory(fs::path directory)
+    : directory_ {std::move(directory)}
+    , error_ {}
+    {}
+    UnwritableTempDirectory(fs::path directory, boost::system::error_code error)
+    : directory_ {std::move(directory)}
+    , error_ {error}
+    {}
+    
+    virtual ~UnwritableTempDirectory() override = default;
+};
+
+fs::path create_temp_file_directory(const OptionMap& options)
 {
     const auto working_directory = get_working_directory(options);
     auto result = working_directory;
     const fs::path temp_dir_base_name {options.at("temp-directory-prefix").as<fs::path>()};
     result /= temp_dir_base_name;
-    constexpr unsigned temp_dir_name_count_limit {10000};
+    constexpr unsigned temp_dir_name_count_limit {10'000};
     unsigned temp_dir_counter {2};
-    
     logging::WarningLogger log {};
-    
-    while (fs::exists(result) && temp_dir_counter <= temp_dir_name_count_limit) {
+    boost::system::error_code error_code {};
+    while (!fs::create_directory(result, error_code) && temp_dir_counter <= temp_dir_name_count_limit) {
+        if (error_code != boost::system::errc::success) {
+            // if create_directory returns false and error code is not set then directory already exists
+            // https://stackoverflow.com/a/51804969/2970186
+            throw UnwritableTempDirectory {result, error_code};
+        }
         if (fs::is_empty(result)) {
             stream(log) << "Found empty temporary directory " << result
             << ", it may need to be deleted manually";
@@ -2014,24 +2484,12 @@ boost::optional<fs::path> create_temp_file_directory(const OptionMap& options)
         result /= temp_dir_base_name.string() + "-" + std::to_string(temp_dir_counter);
         ++temp_dir_counter;
     }
-    
     if (temp_dir_counter > temp_dir_name_count_limit) {
         log << "There are many temporary directories in working directory indicating an error"
         " - new directory request blocked";
-        return boost::none;
+        throw UnwritableTempDirectory {result};
     }
-    
-    if (!fs::create_directory(result)) {
-        stream(log) << "Failed to create temporary directory " << result << " - check permissions";
-        return boost::none;
-    }
-    
     return result;
-}
-
-bool is_legacy_vcf_requested(const OptionMap& options)
-{
-    return options.at("legacy").as<bool>();
 }
 
 boost::optional<fs::path> filter_request(const OptionMap& options)
@@ -2057,7 +2515,7 @@ boost::optional<fs::path> bamout_request(const OptionMap& options)
 
 bool full_bamouts_requested(const OptionMap& options)
 {
-    return options.at("full-bamout").as<bool>();
+    return options.at("bamout-type").as<RealignedBAMType>() == RealignedBAMType::full;
 }
 
 unsigned max_open_read_files(const OptionMap& options)
@@ -2073,7 +2531,6 @@ unsigned estimate_max_open_files(const OptionMap& options)
     result += is_debug_mode(options);
     result += is_trace_mode(options);
     result += is_call_filtering_requested(options);
-    result += is_legacy_vcf_requested(options);
     return result;
 }
 

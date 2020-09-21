@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "cigar_string.hpp"
@@ -100,17 +100,32 @@ bool advances_sequence(const CigarOperation& op) noexcept
 bool is_match(CigarOperation::Flag flag) noexcept
 {
     using Flag = CigarOperation::Flag;
-    switch (flag) {
-        case Flag::alignmentMatch:
-        case Flag::sequenceMatch:
-        case Flag::substitution: return true;
-        default: return false;
-    }
+    return flag == Flag::alignmentMatch || flag == Flag::sequenceMatch;
 }
 
 bool is_match(const CigarOperation& op) noexcept
 {
     return is_match(op.flag());
+}
+
+bool is_substitution(CigarOperation::Flag flag) noexcept
+{
+    return flag == CigarOperation::Flag::substitution;
+}
+
+bool is_substitution(const CigarOperation& op) noexcept
+{
+    return is_substitution(op.flag());
+}
+
+bool is_match_or_substitution(CigarOperation::Flag flag) noexcept
+{
+    return is_match(flag) || is_substitution(flag);
+}
+
+bool is_match_or_substitution(const CigarOperation& op) noexcept
+{
+    return is_match_or_substitution(op.flag());
 }
 
 bool is_insertion(CigarOperation::Flag flag) noexcept
@@ -211,6 +226,18 @@ bool is_soft_clipped(const CigarString& cigar) noexcept
     return is_front_soft_clipped(cigar) || is_back_soft_clipped(cigar);
 }
 
+int sum_matches(const CigarString& cigar) noexcept
+{
+    const static auto add_match = [] (auto total, const CigarOperation& op) noexcept { return total + (is_match(op) ? op.size() : 0); };
+    return std::accumulate(std::cbegin(cigar), std::cend(cigar), 0, add_match);
+}
+
+int sum_non_matches(const CigarString& cigar) noexcept
+{
+    const static auto add_non_match = [] (auto total, const CigarOperation& op) noexcept { return total + (is_match(op) ? 0 : op.size()); };
+    return std::accumulate(std::cbegin(cigar), std::cend(cigar), 0, add_non_match);
+}
+
 bool has_indel(const CigarString& cigar) noexcept
 {
     return std::find_if(std::cbegin(cigar), std::cend(cigar), [] (const auto& op) { return is_indel(op); }) != std::cend(cigar);
@@ -261,10 +288,10 @@ CigarString copy(const CigarString& cigar, CigarOperation::Size offset, CigarOpe
     if (op_itr != last_op_itr && size_pred(*op_itr)) {
         const auto remainder = op_itr->size() - offset;
         if (remainder >= size) {
-            result.emplace_back(size, op_itr->flag());
+            if (size > 0) result.emplace_back(size, op_itr->flag());
             return result;
         }
-        result.emplace_back(remainder, op_itr->flag());
+        if (remainder > 0) result.emplace_back(remainder, op_itr->flag());
         size -= remainder;
         ++op_itr;
     }
@@ -276,7 +303,11 @@ CigarString copy(const CigarString& cigar, CigarOperation::Size offset, CigarOpe
         ++op_itr;
     }
     if (op_itr != last_op_itr) {
-        result.emplace_back(size_pred(*op_itr) ? size : op_itr->size(), op_itr->flag());
+        if (size_pred(*op_itr)) {
+            if (size > 0) result.emplace_back(size, op_itr->flag());
+        } else {
+            result.emplace_back(op_itr->size(), op_itr->flag());
+        }
     }
     return result;
 }
@@ -361,7 +392,7 @@ CigarString collapse_matches(const CigarString& cigar)
     CigarString result {};
     result.reserve(cigar.size());
     for (auto match_end_itr = std::begin(cigar); match_end_itr != std::cend(cigar); ) {
-        const auto f_is_match = [] (const CigarOperation& op) { return is_match(op); };
+        const auto f_is_match = [] (const CigarOperation& op) { return is_match_or_substitution(op); };
         const auto match_begin_itr = std::find_if(match_end_itr, std::end(cigar), f_is_match);
         result.insert(std::cend(result), match_end_itr, match_begin_itr);
         if (match_begin_itr == std::cend(cigar)) break;

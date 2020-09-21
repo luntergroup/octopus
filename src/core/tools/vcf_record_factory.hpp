@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef vcf_record_factory_hpp
@@ -24,9 +24,9 @@ public:
                      std::vector<SampleName> samples, bool sites_only);
     
     VcfRecordFactory(const VcfRecordFactory&)            = default;
-    VcfRecordFactory& operator=(const VcfRecordFactory&) = default;
+    VcfRecordFactory& operator=(const VcfRecordFactory&) = delete;
     VcfRecordFactory(VcfRecordFactory&&)                 = default;
-    VcfRecordFactory& operator=(VcfRecordFactory&&)      = default;
+    VcfRecordFactory& operator=(VcfRecordFactory&&)      = delete;
     
     ~VcfRecordFactory() = default;
     
@@ -37,7 +37,7 @@ private:
     const ReadMap& reads_;
     std::vector<SampleName> samples_;
     bool sites_only_;
-    double max_qual = 10000;
+    double max_qual = 100'000;
     
     VcfRecord make(std::unique_ptr<Call> call) const;
     VcfRecord make_segment(std::vector<std::unique_ptr<Call>>&& calls) const;

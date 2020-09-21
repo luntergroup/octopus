@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef input_reads_profiler_hpp
@@ -6,45 +6,71 @@
 
 #include <cstddef>
 #include <vector>
+#include <iosfwd>
 
 #include <boost/optional.hpp>
 
 #include "config/common.hpp"
 #include "basics/aligned_read.hpp"
+#include "io/reference/reference_genome.hpp"
 #include "io/read/read_manager.hpp"
-#include "readpipe/read_pipe.hpp"
 
 namespace octopus {
 
 struct ReadSetProfileConfig
 {
-    unsigned max_samples_per_sample = 10;
-    unsigned max_sample_size = 100'000;
+    std::size_t max_draws_per_sample = 500;
+    std::size_t target_reads_per_draw = 10'000;
+    std::size_t min_draws_per_contig = 10;
+    boost::optional<AlignedRead::NucleotideSequence::size_type> fragment_size = boost::none;
+    unsigned min_read_lengths = 20;
 };
 
 struct ReadSetProfile
 {
-    std::size_t mean_read_bytes, read_bytes_stdev;
-    std::size_t mean_depth, median_depth, depth_stdev, median_positive_depth, mean_positive_depth;
-    std::vector<std::size_t> sample_mean_depth, sample_median_depth, sample_median_positive_depth, sample_mean_positive_depth;
-    std::vector<std::size_t> sample_depth_stdev;
-    AlignedRead::NucleotideSequence::size_type max_read_length, median_read_length;
-    AlignedRead::MappingQuality max_mapping_quality, median_mapping_quality, rmq_mapping_quality;
+    template <typename T>
+    struct SummaryStats
+    {
+        T max, min, mean, median, stdev;
+    };
+    
+    using DepthSummaryStats = SummaryStats<std::size_t>;
+    struct DepthStats
+    {
+        using DiscreteDistribution = std::vector<double>;
+        DiscreteDistribution distribution;
+        DepthSummaryStats all, positive;
+    };
+    struct GenomeContigDepthStatsPair
+    {
+        using ContigDepthStatsMap = std::unordered_map<GenomicRegion::ContigName, DepthStats>;
+        ContigDepthStatsMap contig;
+        DepthStats genome;
+    };
+    struct SampleCombinedDepthStatsPair
+    {
+        std::unordered_map<SampleName, GenomeContigDepthStatsPair> sample;
+        GenomeContigDepthStatsPair combined;
+    };
+    using MappingQualityStats = SummaryStats<AlignedRead::MappingQuality>;
+    using ReadLengthStats = SummaryStats<AlignedRead::NucleotideSequence::size_type>;
+    using ReadMemoryStats = SummaryStats<MemoryFootprint>;
+    
+    SampleCombinedDepthStatsPair depth_stats;
+    ReadMemoryStats memory_stats;
+    boost::optional<ReadMemoryStats> fragmented_memory_stats;
+    ReadLengthStats length_stats;
+    MappingQualityStats mapping_quality_stats;
 };
 
 boost::optional<ReadSetProfile>
 profile_reads(const std::vector<SampleName>& samples,
-              const InputRegionMap& input_regions,
+              const ReferenceGenome& reference,
+              const InputRegionMap& regions,
               const ReadManager& source,
               ReadSetProfileConfig config = ReadSetProfileConfig {});
 
-boost::optional<std::size_t>
-estimate_mean_read_size(const std::vector<SampleName>& samples,
-                        const InputRegionMap& input_regions,
-                        ReadManager& read_manager,
-                        unsigned max_sample_size = 1000);
-
-std::size_t default_read_size_estimate() noexcept;
+std::ostream& operator<<(std::ostream& os, const ReadSetProfile& profile);
 
 } // namespace octopus
 

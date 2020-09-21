@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef read_filter_hpp
@@ -11,9 +11,12 @@
 #include <memory>
 #include <vector>
 
+#include <boost/optional.hpp>
+
 #include "basics/cigar_string.hpp"
 #include "basics/aligned_read.hpp"
 #include "basics/mappable_reference_wrapper.hpp"
+#include "utils/read_duplicates.hpp"
 
 namespace octopus { namespace readpipe
 {
@@ -220,13 +223,52 @@ struct IsProperTemplate : BasicReadFilter
     
     bool passes(const AlignedRead& read) const noexcept override;
 };
-    
+
 struct IsLocalTemplate : BasicReadFilter
 {
     IsLocalTemplate();
     IsLocalTemplate(std::string name);
     
     bool passes(const AlignedRead& read) const noexcept override;
+};
+
+struct NoUnlocalizedSupplementaryAlignments : BasicReadFilter
+{
+    using MappingQuality = AlignedRead::MappingQuality;
+    
+    NoUnlocalizedSupplementaryAlignments(boost::optional<MappingQuality> min_mapping_quality = boost::none);
+    NoUnlocalizedSupplementaryAlignments(std::string name, boost::optional<MappingQuality> min_mapping_quality = boost::none);
+    
+    bool passes(const AlignedRead& read) const noexcept override;
+
+private:
+    boost::optional<MappingQuality> min_mapping_quality_;
+};
+
+struct NoUnplacedSupplementaryAlignments : BasicReadFilter
+{
+    using MappingQuality = AlignedRead::MappingQuality;
+    
+    NoUnplacedSupplementaryAlignments(boost::optional<MappingQuality> min_mapping_quality = boost::none);
+    NoUnplacedSupplementaryAlignments(std::string name, boost::optional<MappingQuality> min_mapping_quality = boost::none);
+    
+    bool passes(const AlignedRead& read) const noexcept override;
+
+private:
+    boost::optional<MappingQuality> min_mapping_quality_;
+};
+
+struct NoDecoySupplementaryAlignments : BasicReadFilter
+{
+    using MappingQuality = AlignedRead::MappingQuality;
+    
+    NoDecoySupplementaryAlignments(boost::optional<MappingQuality> min_mapping_quality = boost::none);
+    NoDecoySupplementaryAlignments(std::string name, boost::optional<MappingQuality> min_mapping_quality = boost::none);
+    
+    bool passes(const AlignedRead& read) const noexcept override;
+
+private:
+    boost::optional<MappingQuality> min_mapping_quality_;
 };
 
 // Context filters
@@ -257,49 +299,21 @@ private:
     virtual BidirIt do_partition(BidirIt first, BidirIt last) const = 0;
 };
 
-bool primary_segments_are_duplicates(const AlignedRead& lhs, const AlignedRead& rhs) noexcept;
-bool other_segments_are_duplicates(const AlignedRead& lhs, const AlignedRead& rhs) noexcept;
-
-struct IsDuplicate
-{
-    bool operator()(const AlignedRead& lhs, const AlignedRead& rhs) const noexcept;
-};
-
-template <typename Range>
-bool no_duplicates(const AlignedRead& read, const Range& reads) noexcept
-{
-    return std::none_of(std::cbegin(reads), std::cend(reads), [&read] (auto other_itr) { return IsDuplicate{}(read, *other_itr); });
-}
-
-template <typename ForwardIt>
+template <typename ForwardIt,
+          typename DuplicateDefinition>
 struct IsNotDuplicate : ContextReadFilter<ForwardIt>
 {
-    IsNotDuplicate() : ContextReadFilter<ForwardIt> {"IsNotOctopusDuplicate"} {}
-    IsNotDuplicate(std::string name)
-    : ContextReadFilter<ForwardIt> {std::move(name)} {}
+    IsNotDuplicate() :  IsNotDuplicate<ForwardIt, DuplicateDefinition> {"IsNotOctopusDuplicate", DuplicateDefinition {}} {}
+    IsNotDuplicate(DuplicateDefinition duplicate_definition)
+    : IsNotDuplicate<ForwardIt, DuplicateDefinition> {"IsNotOctopusDuplicate", std::move(duplicate_definition)} {}
+    IsNotDuplicate(std::string name, DuplicateDefinition duplicate_definition)
+    : ContextReadFilter<ForwardIt> {std::move(name)}
+    , duplicate_definition_ {std::move(duplicate_definition)}
+    {}
     
     ForwardIt do_remove(ForwardIt first, ForwardIt last) const override
     {
-        // Recall that reads come sorted w.r.t operator< and it is therefore not guaranteed that 'duplicate'
-        // reads (according to IsDuplicate) will be adjacent to one another. In particular, operator< only
-        // guarantees that the read segment described in the A
-        first = std::adjacent_find(first, last, [] (const auto& lhs, const auto& rhs) { return primary_segments_are_duplicates(lhs, rhs); });
-        if (first != last) {
-            std::vector<ForwardIt> buffer {first++};
-            buffer.reserve(100);
-            for (auto itr = first; itr != last; ++itr) {
-                if (primary_segments_are_duplicates(*itr, *buffer.front())) { // can check any read in buffer
-                    if (no_duplicates(*itr, buffer)) {
-                        if (itr != first) *first = std::move(*itr);
-                        buffer.emplace_back(first++);
-                    }
-                } else {
-                    if (itr != first) *first = std::move(*itr);
-                    buffer.assign({first++});
-                }
-            }
-        }
-        return first;
+        return remove_duplicate_reads(first, last, duplicate_definition_);
     }
     
     ForwardIt do_partition(ForwardIt first, ForwardIt last) const override
@@ -309,6 +323,9 @@ struct IsNotDuplicate : ContextReadFilter<ForwardIt>
         // http://stackoverflow.com/questions/36888033/implementing-partition-unique-and-stable-partition-unique-algorithms
         return last;
     }
+
+private:
+    DuplicateDefinition duplicate_definition_;
 };
 
 } // namespace readpipe

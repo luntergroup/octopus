@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "facet_factory.hpp"
@@ -15,11 +15,13 @@
 #include "overlapping_reads.hpp"
 #include "read_assignments.hpp"
 #include "reference_context.hpp"
+#include "repeat_context.hpp"
 #include "samples.hpp"
 #include "genotypes.hpp"
 #include "alleles.hpp"
 #include "ploidies.hpp"
 #include "pedigree.hpp"
+#include "reads_summary.hpp"
 
 namespace octopus { namespace csr {
 
@@ -35,19 +37,28 @@ FacetFactory::FacetFactory(VcfHeader input_header)
     setup_facet_makers();
 }
 
-FacetFactory::FacetFactory(VcfHeader input_header, const ReferenceGenome& reference, BufferedReadPipe read_pipe, PloidyMap ploidies)
+FacetFactory::FacetFactory(VcfHeader input_header,
+                           const ReferenceGenome& reference,
+                           BufferedReadPipe read_pipe,
+                           PloidyMap ploidies,
+                           HaplotypeLikelihoodModel likelihood_model)
 : input_header_ {std::move(input_header)}
 , samples_ {input_header_.samples()}
 , reference_ {reference}
 , read_pipe_ {std::move(read_pipe)}
 , ploidies_ {std::move(ploidies)}
 , pedigree_ {}
+, likelihood_model_ {std::move(likelihood_model)}
 , facet_makers_ {}
 {
     setup_facet_makers();
 }
 
-FacetFactory::FacetFactory(VcfHeader input_header, const ReferenceGenome& reference, BufferedReadPipe read_pipe, PloidyMap ploidies,
+FacetFactory::FacetFactory(VcfHeader input_header,
+                           const ReferenceGenome& reference,
+                           BufferedReadPipe read_pipe,
+                           PloidyMap ploidies,
+                           HaplotypeLikelihoodModel likelihood_model,
                            octopus::Pedigree pedigree)
 : input_header_ {std::move(input_header)}
 , samples_ {input_header_.samples()}
@@ -55,6 +66,7 @@ FacetFactory::FacetFactory(VcfHeader input_header, const ReferenceGenome& refere
 , read_pipe_ {std::move(read_pipe)}
 , ploidies_ {std::move(ploidies)}
 , pedigree_ {std::move(pedigree)}
+, likelihood_model_ {std::move(likelihood_model)}
 , facet_makers_ {}
 {
     setup_facet_makers();
@@ -67,6 +79,7 @@ FacetFactory::FacetFactory(FacetFactory&& other)
 , read_pipe_ {std::move(other.read_pipe_)}
 , ploidies_ {std::move(other.ploidies_)}
 , pedigree_ {std::move(other.pedigree_)}
+, likelihood_model_ {std::move(other.likelihood_model_)}
 , facet_makers_ {}
 {
     setup_facet_makers();
@@ -81,6 +94,7 @@ FacetFactory& FacetFactory::operator=(FacetFactory&& other)
     swap(read_pipe_, other.read_pipe_);
     swap(ploidies_, other.ploidies_);
     swap(pedigree_, other.pedigree_);
+    swap(likelihood_model_, other.likelihood_model_);
     setup_facet_makers();
     return *this;
 }
@@ -123,7 +137,7 @@ decltype(auto) name() noexcept
 
 bool requires_reference(const std::string& facet) noexcept
 {
-    const static std::array<std::string, 2> read_facets{name<ReferenceContext>(), name<ReadAssignments>()};
+    const static std::array<std::string, 3> read_facets{name<ReferenceContext>(), name<RepeatContext>(), name<ReadAssignments>()};
     return std::find(std::cbegin(read_facets), std::cend(read_facets), facet) != std::cend(read_facets);
 }
 
@@ -134,7 +148,7 @@ bool requires_reference(const std::vector<std::string>& facets) noexcept
 
 bool requires_reads(const std::string& facet) noexcept
 {
-    const static std::array<std::string, 2> read_facets{name<OverlappingReads>(), name<ReadAssignments>()};
+    const static std::array<std::string, 3> read_facets{name<OverlappingReads>(), name<ReadsSummary>(), name<ReadAssignments>()};
     return std::find(std::cbegin(read_facets), std::cend(read_facets), facet) != std::cend(read_facets);
 }
 
@@ -246,16 +260,34 @@ void FacetFactory::setup_facet_makers()
         assert(block.reads);
         return {std::make_unique<OverlappingReads>(*block.reads)};
     };
+    facet_makers_[name<ReadsSummary>()] = [] (const BlockData& block) -> FacetWrapper
+    {
+        assert(block.reads);
+        return {std::make_unique<ReadsSummary>(*block.reads)};
+    };
     facet_makers_[name<ReadAssignments>()] = [this] (const BlockData& block) -> FacetWrapper
     {
         assert(block.reads && block.genotypes);
-        return {std::make_unique<ReadAssignments>(*reference_, *block.genotypes, *block.reads)};
+        if (likelihood_model_) {
+            return {std::make_unique<ReadAssignments>(*reference_, *block.genotypes, *block.reads, *block.calls, *likelihood_model_)};
+        } else {
+            return {std::make_unique<ReadAssignments>(*reference_, *block.genotypes, *block.reads, *block.calls)};
+        }
     };
     facet_makers_[name<ReferenceContext>()] = [this] (const BlockData& block) -> FacetWrapper
     {
         if (block.region) {
             constexpr GenomicRegion::Size context_size {50};
             return {std::make_unique<ReferenceContext>(*reference_, expand(*block.region, context_size))};
+        } else {
+            return {nullptr};
+        }
+    };
+    facet_makers_[name<RepeatContext>()] = [this] (const BlockData& block) -> FacetWrapper
+    {
+        if (block.region) {
+            constexpr GenomicRegion::Size context_size {50};
+            return {std::make_unique<RepeatContext>(*reference_, expand(*block.region, context_size))};
         } else {
             return {nullptr};
         }
@@ -316,12 +348,31 @@ FacetWrapper FacetFactory::make(const std::string& name, const BlockData& block)
     }
 }
 
-FacetFactory::FacetBlock FacetFactory::make(const std::vector<std::string>& names, const BlockData& block) const
+FacetFactory::FacetBlock 
+FacetFactory::make(const std::vector<std::string>& names, const BlockData& block) const
 {
     FacetBlock result {};
     result.reserve(names.size());
     for (const auto& name : names) {
         result.push_back(make(name, block));
+    }
+    return result;
+}
+
+FacetFactory::FacetBlock
+FacetFactory::make(const std::vector<std::string>& names, const BlockData& block,
+                   ThreadPool& workers) const
+{
+    if (workers.empty() || names.size() < 2) return make(names, block);
+    std::vector<std::future<FacetWrapper>> futures {};
+    futures.reserve(names.size());
+    for (const auto& name : names) {
+        futures.push_back(workers.push([&] () mutable { return this->make(name, block); }));
+    }
+    FacetBlock result {};
+    result.reserve(names.size());
+    for (auto& fut : futures) {
+        result.push_back(fut.get());
     }
     return result;
 }

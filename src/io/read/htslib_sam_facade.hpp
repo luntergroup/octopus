@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef htslib_sam_facade_hpp
@@ -38,6 +38,8 @@ public:
     using IReadReaderImpl::ReadContainer;
     using IReadReaderImpl::SampleReadMap;
     using IReadReaderImpl::PositionList;
+    using IReadReaderImpl::AlignedReadReadVisitor;
+    using IReadReaderImpl::ContigRegionVisitor;
     
     using NucleotideSequence = AlignedRead::NucleotideSequence;
     
@@ -61,6 +63,24 @@ public:
     
     std::vector<SampleName> extract_samples() const override;
     std::vector<ReadGroupIdType> extract_read_groups(const SampleName& sample) const override;
+    
+    bool iterate(const GenomicRegion& region,
+                 AlignedReadReadVisitor visitor) const override;
+    bool iterate(const SampleName& sample,
+                 const GenomicRegion& region,
+                 AlignedReadReadVisitor visitor) const override;
+    bool iterate(const std::vector<SampleName>& samples,
+                 const GenomicRegion& region,
+                 AlignedReadReadVisitor visitor) const override;
+    
+    bool iterate(const GenomicRegion& region,
+                 ContigRegionVisitor visitor) const override;
+    bool iterate(const SampleName& sample,
+                 const GenomicRegion& region,
+                 ContigRegionVisitor visitor) const override;
+    bool iterate(const std::vector<SampleName>& samples,
+                 const GenomicRegion& region,
+                 ContigRegionVisitor visitor) const override;
     
     bool has_reads(const GenomicRegion& region) const override;
     bool has_reads(const SampleName& sample,
@@ -137,6 +157,7 @@ private:
         HtslibSamFacade::ReadGroupIdType read_group() const;
         
         bool is_good() const noexcept;
+        ContigRegion region() const;
         std::size_t begin() const noexcept;
     
     private:

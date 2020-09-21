@@ -7,15 +7,20 @@ include(CheckIPOSupported)
 project(octopus)
 
 set(octopus_VERSION_MAJOR 0)
-set(octopus_VERSION_MINOR 6)
-set(octopus_VERSION_PATCH 3)
-set(octopus_VERSION_RELEASE beta)
+set(octopus_VERSION_MINOR 7)
+set(octopus_VERSION_PATCH 0)
+set(octopus_VERSION_RELEASE "")
+
+# Generate list of compile commands.  This helps debugging and doesn't have a downside.
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+# Avoid warnings when using GMP_ROOT
+cmake_policy(SET CMP0074 NEW)
 
 # Get the current working branch
 execute_process(
     COMMAND git rev-parse --abbrev-ref HEAD
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-    OUTPUT_VARIABLE GIT_BRANCH
+    OUTPUT_VARIABLE GIT_BRANCH_
     OUTPUT_STRIP_TRAILING_WHITESPACE
 )
 
@@ -23,12 +28,12 @@ execute_process(
 execute_process(
     COMMAND git log -1 --format=%h
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-    OUTPUT_VARIABLE GIT_COMMIT_HASH
+    OUTPUT_VARIABLE GIT_COMMIT_HASH_
     OUTPUT_STRIP_TRAILING_WHITESPACE
 )
 
-add_definitions(-DGIT_COMMIT_HASH="${GIT_COMMIT_HASH}")
-add_definitions(-DGIT_BRANCH="${GIT_BRANCH}")
+set(GIT_BRANCH "${GIT_BRANCH_}")
+set(GIT_COMMIT_HASH "${GIT_COMMIT_HASH_}")
 
 configure_file (
     "${PROJECT_SOURCE_DIR}/src/config/version.h.in"
@@ -51,6 +56,10 @@ if(CMAKE_COMPILER_IS_GNUCXX)
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS "3.8")
         message(FATAL_ERROR "Clang version must be at least 3.8!")
+    endif()
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "Intel")
+    if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS "3.8")
+        message(FATAL_ERROR "Intel version must be at least 19.0!")
     endif()
 else()
     message(WARNING "You are using an unsupported compiler! Compilation has only been tested with Clang and GCC.")

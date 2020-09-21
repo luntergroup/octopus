@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "model_posterior.hpp"
@@ -15,10 +15,15 @@ std::unique_ptr<Measure> ModelPosterior::do_clone() const
     return std::make_unique<ModelPosterior>(*this);
 }
 
+Measure::ValueType ModelPosterior::get_value_type() const
+{
+    return double {};
+}
+
 Measure::ResultType ModelPosterior::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     namespace ovcf = octopus::vcf::spec;
-    boost::optional<double> result {};
+    Optional<ValueType> result {};
     if (!is_info_missing(ovcf::info::modelPosterior, call)) {
         result = std::stod(call.info_value(ovcf::info::modelPosterior).front());
     }

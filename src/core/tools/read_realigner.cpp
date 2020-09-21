@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "read_realigner.hpp"
@@ -42,12 +42,22 @@ auto safe_expand(const GenomicRegion& region, const GenomicRegion::Size n)
     }
 }
 
+HaplotypeLikelihoodModel make_default_haplotype_likelihood_model()
+{
+    HaplotypeLikelihoodModel::Config config {};
+    config.max_indel_error = 8;
+    config.use_flank_state = false;
+    config.use_mapping_quality = false;
+    return {config};
+}
+
 } // namespace
 
-Haplotype expand_for_realignment(const Haplotype& haplotype, const std::vector<AlignedRead>& reads)
+Haplotype expand_for_realignment(const Haplotype& haplotype, const std::vector<AlignedRead>& reads,
+                                 const HaplotypeLikelihoodModel& model)
 {
     const auto reads_region = encompassing_region(reads);
-    auto required_flank_pad = 2 * HaplotypeLikelihoodModel::pad_requirement();
+    auto required_flank_pad = 2 * model.pad_requirement();
     if (region_size(haplotype) > sequence_size(haplotype)) {
         required_flank_pad += region_size(haplotype) - sequence_size(haplotype);
     }
@@ -58,6 +68,11 @@ Haplotype expand_for_realignment(const Haplotype& haplotype, const std::vector<A
     } else {
         return remap(haplotype, encompassing_region(haplotype, required_haplotype_region));
     }
+}
+
+Haplotype expand_for_realignment(const Haplotype& haplotype, const std::vector<AlignedRead>& reads)
+{
+    return expand_for_realignment(haplotype, reads, make_default_haplotype_likelihood_model());
 }
 
 namespace {
@@ -85,14 +100,29 @@ void realign(AlignedRead& read, const Haplotype& haplotype, HaplotypeLikelihoodM
     realign(read, haplotype, alignment.mapping_position, std::move(alignment.cigar));
 }
 
-HaplotypeLikelihoodModel make_default_haplotype_likelihood_model()
-{
-    HaplotypeLikelihoodModel::Config config {};
-    config.use_mapping_quality = false;
-    return {nullptr, make_indel_error_model(), config};
-}
-
 } // namespace
+
+void realign(std::vector<AlignedRead>& reads, const Haplotype& haplotype,
+             HaplotypeLikelihoodModel model,
+             std::vector<HaplotypeLikelihoodModel::LogProbability>& log_likelihoods)
+{
+    if (!reads.empty()) {
+        log_likelihoods.resize(reads.size());
+        const auto read_hashes = compute_read_hashes(reads);
+        static constexpr unsigned char mapperKmerSize {6};
+        auto haplotype_hashes = init_kmer_hash_table<mapperKmerSize>();
+        populate_kmer_hash_table<mapperKmerSize>(haplotype.sequence(), haplotype_hashes);
+        auto haplotype_mapping_counts = init_mapping_counts(haplotype_hashes);
+        model.reset(haplotype);
+        for (std::size_t i {0}; i < reads.size(); ++i) {
+            auto mapping_positions = map_query_to_target(read_hashes[i], haplotype_hashes, haplotype_mapping_counts);
+            reset_mapping_counts(haplotype_mapping_counts);
+            auto alignment = model.align(reads[i], mapping_positions);
+            log_likelihoods[i] = alignment.likelihood;
+            realign(reads[i], haplotype, std::move(alignment));
+        }
+    }
+}
 
 void realign(std::vector<AlignedRead>& reads, const Haplotype& haplotype, HaplotypeLikelihoodModel model)
 {
@@ -129,10 +159,20 @@ std::vector<AlignedRead> realign(const std::vector<AlignedRead>& reads, const Ha
     return realign(reads, haplotype, make_default_haplotype_likelihood_model());
 }
 
+std::vector<AlignedRead>
+realign(const std::vector<AlignedRead>& reads, const Haplotype& haplotype,
+        HaplotypeLikelihoodModel model,
+        std::vector<HaplotypeLikelihoodModel::LogProbability>& log_likelihoods)
+{
+    auto result = reads;
+    realign(result, haplotype, model, log_likelihoods);
+    return result;
+}
+
 void safe_realign(std::vector<AlignedRead>& reads, const Haplotype& haplotype, HaplotypeLikelihoodModel model)
 {
     if (!reads.empty()) {
-        auto expanded_haplotype = expand_for_realignment(haplotype, reads);
+        auto expanded_haplotype = expand_for_realignment(haplotype, reads, model);
         try {
             realign(reads, expanded_haplotype, std::move(model));
         } catch (const HaplotypeLikelihoodModel::ShortHaplotypeError& e) {
@@ -181,7 +221,7 @@ CigarString minimise(const CigarString& cigar)
 
 auto get_match_type(const CigarOperation::Flag haplotype, const CigarOperation::Flag read) noexcept
 {
-    assert(is_match(haplotype) && is_match(read));
+    assert(is_match_or_substitution(haplotype) && is_match_or_substitution(read));
     using Flag = CigarOperation::Flag;
     if ((haplotype == Flag::substitution && read == Flag::sequenceMatch)
         || (haplotype == Flag::sequenceMatch && read == Flag::substitution)) {
@@ -204,10 +244,10 @@ CigarString rebase(const CigarString& read_to_haplotype, const CigarString& hapl
     result.reserve(haplotypes_ops.size());
     auto hap_flag_itr = std::cbegin(haplotypes_ops);
     for (const auto& read_op : read_to_haplotype) {
-        if (is_match(read_op)) {
+        if (is_match_or_substitution(read_op)) {
             for (unsigned n {0}; n < read_op.size();) {
                 assert(hap_flag_itr != std::cend(haplotypes_ops));
-                if (is_match(*hap_flag_itr)) {
+                if (is_match_or_substitution(*hap_flag_itr)) {
                     result.emplace_back(1, get_match_type(*hap_flag_itr, read_op.flag()));
                     ++n;
                 } else {
@@ -409,7 +449,7 @@ void rebase_not_overlapped(AlignedRead& read, const GenomicRegion& haplotype_reg
             assert(supported_insertion_size <= called_insertion_size);
             if (supported_insertion_size > 0) {
                 padded_haplotype_cigar.front().set_size(supported_insertion_size);
-                if (is_match(padded_haplotype_cigar.back())) {
+                if (is_match_or_substitution(padded_haplotype_cigar.back())) {
                     increment_size(padded_haplotype_cigar.back(), supported_insertion_size);
                 } else {
                     padded_haplotype_cigar.emplace_back(supported_insertion_size, CigarOperation::Flag::sequenceMatch);
@@ -420,7 +460,7 @@ void rebase_not_overlapped(AlignedRead& read, const GenomicRegion& haplotype_reg
         }
         if (reference_size(read.cigar()) > sequence_size(padded_haplotype_cigar)) {
             const auto pad = reference_size(read.cigar()) - sequence_size(padded_haplotype_cigar);
-            if (is_match(padded_haplotype_cigar.back())) {
+            if (is_match_or_substitution(padded_haplotype_cigar.back())) {
                 increment_size(padded_haplotype_cigar.back(), pad);
             } else {
                 padded_haplotype_cigar.emplace_back(pad, CigarOperation::Flag::sequenceMatch);

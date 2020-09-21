@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef double_variant_call_filter_hpp
@@ -32,8 +32,8 @@ public:
     
     DoublePassVariantCallFilter(const DoublePassVariantCallFilter&)            = delete;
     DoublePassVariantCallFilter& operator=(const DoublePassVariantCallFilter&) = delete;
-    DoublePassVariantCallFilter(DoublePassVariantCallFilter&&)                 = default;
-    DoublePassVariantCallFilter& operator=(DoublePassVariantCallFilter&&)      = default;
+    DoublePassVariantCallFilter(DoublePassVariantCallFilter&&)                 = delete;
+    DoublePassVariantCallFilter& operator=(DoublePassVariantCallFilter&&)      = delete;
     
     virtual ~DoublePassVariantCallFilter() override = default;
 
@@ -51,6 +51,7 @@ private:
     
     Path temp_directory_;
     
+    virtual bool requires_aggregated_allele_measures() const noexcept { return true; }
     virtual void log_registration_pass(Log& log) const;
     virtual void prepare_for_registration(const SampleList& samples) const {};
     virtual void record(std::size_t call_idx, std::size_t sample_idx, MeasureVector measures) const = 0;

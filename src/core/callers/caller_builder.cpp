@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "caller_builder.hpp"
@@ -23,9 +23,9 @@ CallerBuilder::CallerBuilder(const ReferenceGenome& reference, const ReadPipe& r
     params_.general.refcall_type = Caller::RefCallType::none;
     params_.general.refcall_block_merge_threshold = boost::none;
     params_.general.call_sites_only = false;
-    params_.general.allow_model_filtering = false;
-    params_.general.haplotype_extension_threshold = Phred<> {150.0};
-    params_.general.saturation_limit = Phred<> {10.0};
+    params_.general.model_posterior_policy = Caller::ModelPosteriorPolicy::special;
+    params_.general.haplotype_extension_threshold = 1e-10;
+    params_.general.saturation_limit = 0.9;
     params_.general.max_haplotypes = 200;
     factory_ = generate_factory();
 }
@@ -105,6 +105,12 @@ CallerBuilder& CallerBuilder::set_refcall_merge_block_threshold(Phred<double> th
     return *this;
 }
 
+CallerBuilder& CallerBuilder::set_max_refcall_posterior(Phred<double> posterior) noexcept
+{
+    params_.general.max_refcall_posterior = posterior;
+    return *this;
+}
+
 CallerBuilder& CallerBuilder::set_sites_only() noexcept
 {
     params_.general.call_sites_only = true;
@@ -129,6 +135,18 @@ CallerBuilder& CallerBuilder::set_execution_policy(ExecutionPolicy policy) noexc
     return *this;
 }
 
+CallerBuilder& CallerBuilder::set_read_linkage(ReadLinkageType linkage) noexcept
+{
+    params_.general.read_linkage = linkage;
+    return *this;
+}
+
+CallerBuilder& CallerBuilder::set_bad_region_detector(BadRegionDetector detector) noexcept
+{
+    components_.bad_region_detector = std::move(detector);
+    return *this;
+}
+
 CallerBuilder& CallerBuilder::set_min_variant_posterior(Phred<double> posterior) noexcept
 {
     params_.min_variant_posterior = posterior;
@@ -147,21 +165,27 @@ CallerBuilder& CallerBuilder::set_max_haplotypes(unsigned n) noexcept
     return *this;
 }
 
-CallerBuilder& CallerBuilder::set_haplotype_extension_threshold(Phred<double> p) noexcept
+CallerBuilder& CallerBuilder::set_haplotype_extension_threshold(double p) noexcept
 {
     params_.general.haplotype_extension_threshold = p;
     return *this;
 }
 
-CallerBuilder& CallerBuilder::set_model_filtering(bool b) noexcept
+CallerBuilder& CallerBuilder::set_model_posterior_policy(Caller::ModelPosteriorPolicy policy) noexcept
 {
-    params_.general.allow_model_filtering = b;
+    params_.general.model_posterior_policy = policy;
     return *this;
 }
 
 CallerBuilder& CallerBuilder::set_min_phase_score(Phred<double> score) noexcept
 {
     params_.min_phase_score = score;
+    return *this;
+}
+
+CallerBuilder& CallerBuilder::set_early_phase_detection_policy(bool use) noexcept
+{
+    params_.general.try_early_phase_detection = use;
     return *this;
 }
 
@@ -177,15 +201,15 @@ CallerBuilder& CallerBuilder::set_indel_heterozygosity(double heterozygosity) no
     return *this;
 }
 
-CallerBuilder& CallerBuilder::set_max_genotypes(unsigned max) noexcept
+CallerBuilder& CallerBuilder::set_max_genotypes(boost::optional<std::size_t> max) noexcept
 {
     params_.max_genotypes = max;
     return *this;
 }
 
-CallerBuilder& CallerBuilder::set_max_joint_genotypes(unsigned max) noexcept
+CallerBuilder& CallerBuilder::set_max_genotype_combinations(boost::optional<std::size_t> max) noexcept
 {
-    params_.max_joint_genotypes = max;
+    params_.max_genotype_combinations = max;
     return *this;
 }
 
@@ -215,9 +239,15 @@ CallerBuilder& CallerBuilder::set_max_vb_seeds(unsigned n) noexcept
 
 // cancer
 
+CallerBuilder& CallerBuilder::add_normal_sample(SampleName normal_sample)
+{
+    params_.normal_samples.push_back(std::move(normal_sample));
+    return *this;
+}
+
 CallerBuilder& CallerBuilder::set_normal_sample(SampleName normal_sample)
 {
-    params_.normal_sample = std::move(normal_sample);
+    params_.normal_samples = {std::move(normal_sample)};
     return *this;
 }
 
@@ -227,15 +257,15 @@ CallerBuilder& CallerBuilder::set_max_somatic_haplotypes(unsigned n) noexcept
     return *this;
 }
 
-CallerBuilder& CallerBuilder::set_somatic_snv_mutation_rate(double rate) noexcept
+CallerBuilder& CallerBuilder::set_somatic_snv_prior(double rate) noexcept
 {
-    params_.somatic_snv_mutation_rate = rate;
+    params_.somatic_snv_prior = rate;
     return *this;
 }
 
-CallerBuilder& CallerBuilder::set_somatic_indel_mutation_rate(double rate) noexcept
+CallerBuilder& CallerBuilder::set_somatic_indel_prior(double rate) noexcept
 {
-    params_.somatic_indel_mutation_rate = rate;
+    params_.somatic_indel_prior = rate;
     return *this;
 }
 
@@ -287,15 +317,15 @@ CallerBuilder& CallerBuilder::set_min_denovo_posterior(Phred<double> posterior) 
     return *this;
 }
 
-CallerBuilder& CallerBuilder::set_snv_denovo_mutation_rate(double rate) noexcept
+CallerBuilder& CallerBuilder::set_snv_denovo_prior(double prior) noexcept
 {
-    params_.snv_denovo_mutation_rate = rate;
+    params_.snv_denovo_prior = prior;
     return *this;
 }
 
-CallerBuilder& CallerBuilder::set_indel_denovo_mutation_rate(double rate) noexcept
+CallerBuilder& CallerBuilder::set_indel_denovo_prior(double prior) noexcept
 {
-    params_.indel_denovo_mutation_rate = rate;
+    params_.indel_denovo_prior = prior;
     return *this;
 }
 
@@ -305,9 +335,51 @@ CallerBuilder& CallerBuilder::set_max_clones(unsigned n) noexcept
     return *this;
 }
 
+CallerBuilder& CallerBuilder::set_clonality_prior(std::function<double(unsigned)> prior) noexcept
+{
+    params_.clonality_prior = std::move(prior);
+    return *this;
+}
+
+CallerBuilder& CallerBuilder::set_clone_concentration(double concentration) noexcept
+{
+    params_.clone_concentration = concentration;
+    return *this;
+}
+
 CallerBuilder& CallerBuilder::set_dropout_concentration(double concentration) noexcept
 {
     params_.dropout_concentration = concentration;
+    return *this;
+}
+
+CallerBuilder& CallerBuilder::set_dropout_concentration(const SampleName& sample, double concentration) noexcept
+{
+    params_.sample_dropout_concentrations[sample] = concentration;
+    return *this;
+}
+
+CallerBuilder& CallerBuilder::set_phylogeny_concentration(double concentration) noexcept
+{
+    params_.phylogeny_concentration = concentration;
+    return *this;
+}
+
+CallerBuilder& CallerBuilder::set_max_copy_losses(unsigned losses) noexcept
+{
+    params_.max_copy_loss = losses;
+    return *this;
+}
+
+CallerBuilder& CallerBuilder::set_max_copy_gains(unsigned gains) noexcept
+{
+    params_.max_copy_gain = gains;
+    return *this;
+}
+
+CallerBuilder& CallerBuilder::set_somatic_cnv_prior(double prior) noexcept
+{
+    params_.somatic_cnv_prior = prior;
     return *this;
 }
 
@@ -330,7 +402,8 @@ Caller::Components CallerBuilder::make_components() const
         components_.variant_generator_builder.build(components_.reference),
         components_.haplotype_generator_builder,
         components_.likelihood_model,
-        Phaser {params_.min_phase_score}
+        Phaser {Phaser::Config {Phaser::GenotypeMatchType::exact, params_.min_phase_score}},
+        components_.bad_region_detector
     };
 }
 
@@ -390,7 +463,8 @@ CallerBuilder::CallerFactoryMap CallerBuilder::generate_factory() const
                                                           make_individual_prior_model(params_.snp_heterozygosity, params_.indel_heterozygosity),
                                                           params_.min_variant_posterior,
                                                           params_.min_refcall_posterior,
-                                                          params_.deduplicate_haplotypes_with_caller_model
+                                                          params_.deduplicate_haplotypes_with_caller_model,
+                                                          params_.max_genotypes
                                                       });
         }},
         {"population", [this, &samples] () {
@@ -401,20 +475,24 @@ CallerBuilder::CallerFactoryMap CallerBuilder::generate_factory() const
                                                           params_.min_refcall_posterior,
                                                           get_ploidies(samples, *requested_contig_, params_.ploidies),
                                                           make_population_prior_model(params_.snp_heterozygosity, params_.indel_heterozygosity),
-                                                          params_.max_joint_genotypes,
+                                                          params_.max_genotype_combinations,
                                                           params_.use_independent_genotype_priors,
                                                           params_.deduplicate_haplotypes_with_caller_model
                                                       });
         }},
         {"cancer", [this, &samples] () {
+            boost::optional<SampleName> normal {};
+            if (!params_.normal_samples.empty()) {
+                normal = params_.normal_samples.front();
+            }
             CancerCaller::Parameters cancer_params {
                 params_.min_variant_posterior,
                 params_.min_somatic_posterior,
                 params_.min_refcall_posterior,
                 params_.ploidies.of(samples.front(), *requested_contig_),
-                params_.normal_sample,
+                std::move(normal),
                 make_cancer_prior_model(params_.snp_heterozygosity, params_.indel_heterozygosity),
-                {params_.somatic_snv_mutation_rate, params_.somatic_indel_mutation_rate},
+                {params_.somatic_snv_prior, params_.somatic_indel_prior},
                 params_.min_expected_somatic_frequency,
                 params_.credible_mass,
                 params_.min_credible_somatic_frequency,
@@ -436,11 +514,11 @@ CallerBuilder::CallerFactoryMap CallerBuilder::generate_factory() const
                                                     params_.ploidies.of(params_.trio->father(), *requested_contig_),
                                                     params_.ploidies.of(params_.trio->child(), *requested_contig_),
                                                     make_trio_prior_model(params_.snp_heterozygosity, params_.indel_heterozygosity),
-                                                    {*params_.snv_denovo_mutation_rate, *params_.indel_denovo_mutation_rate},
+                                                    {*params_.snv_denovo_prior, *params_.indel_denovo_prior},
                                                     params_.min_variant_posterior,
                                                     params_.min_denovo_posterior,
                                                     params_.min_refcall_posterior,
-                                                    params_.max_joint_genotypes,
+                                                    params_.max_genotype_combinations,
                                                     params_.deduplicate_haplotypes_with_caller_model
                                                 });
         }},
@@ -453,7 +531,10 @@ CallerBuilder::CallerFactoryMap CallerBuilder::generate_factory() const
                                                          params_.min_refcall_posterior,
                                                          params_.deduplicate_haplotypes_with_caller_model,
                                                          params_.max_clones,
-                                                         params_.max_genotypes
+                                                         params_.max_genotypes,
+                                                         params_.max_vb_seeds,
+                                                         params_.clonality_prior,
+                                                         params_.clone_concentration
                                                      });
         }},
         {"cell", [this, &samples] () {
@@ -466,11 +547,17 @@ CallerBuilder::CallerFactoryMap CallerBuilder::generate_factory() const
                                                     params_.min_refcall_posterior,
                                                     params_.deduplicate_haplotypes_with_caller_model,
                                                     params_.max_clones,
-                                                    params_.max_genotypes,
-                                                    params_.max_joint_genotypes,
+                                                    params_.max_copy_loss,
+                                                    params_.max_copy_gain,
+                                                    params_.max_genotype_combinations,
                                                     params_.dropout_concentration,
-                                                    {params_.somatic_snv_mutation_rate, params_.somatic_indel_mutation_rate},
-                                                    params_.max_vb_seeds});
+                                                    params_.sample_dropout_concentrations,
+                                                    params_.phylogeny_concentration,
+                                                    {params_.somatic_snv_prior, params_.somatic_indel_prior},
+                                                    params_.max_vb_seeds,
+                                                    params_.normal_samples,
+                                                    params_.somatic_cnv_prior
+                                                });
         }}
     };
 }

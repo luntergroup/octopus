@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "string_utils.hpp"
@@ -38,14 +38,14 @@ std::string join(const std::vector<std::string>& strings, const char delim)
     return join(strings, Delim.data());
 }
 
-bool is_prefix(const std::string& lhs, const std::string& rhs)
+bool is_prefix(const std::string& prefix, const std::string& text) noexcept
 {
-    return std::equal(std::cbegin(lhs), std::cend(lhs), std::cbegin(rhs));
+    return text.size() >= prefix.size() && std::equal(std::cbegin(prefix), std::cend(prefix), std::cbegin(text));
 }
 
-bool is_suffix(const std::string& lhs, const std::string& rhs)
+bool is_suffix(const std::string& suffix, const std::string& text) noexcept
 {
-    return std::equal(std::cbegin(lhs), std::cend(lhs), std::next(std::cbegin(rhs)));
+    return text.size() >= suffix.size() && std::equal(std::crbegin(suffix), std::crend(suffix), std::crbegin(text));
 }
 
 std::size_t length(const char* str)

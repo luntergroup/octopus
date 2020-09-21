@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "double_pass_variant_call_filter.hpp"
@@ -115,7 +115,7 @@ void DoublePassVariantCallFilter::record(const VcfRecord& call, const MeasureVec
                                          const VcfHeader& dest_header, const SampleList& samples, OptionalVcfWriter& annotated_vcf) const
 {
     for (std::size_t sample_idx {0}; sample_idx < samples.size(); ++sample_idx) {
-        this->record(record_idx, sample_idx, get_sample_values(measures, measures_, sample_idx));
+        this->record(record_idx, sample_idx, get_sample_values(measures, measures_, sample_idx, requires_aggregated_allele_measures()));
     }
     if (annotated_vcf) {
         VcfRecord::Builder annotation_builder {call};

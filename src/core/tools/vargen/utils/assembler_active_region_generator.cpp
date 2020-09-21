@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "assembler_active_region_generator.hpp"
@@ -16,6 +16,7 @@
 #include "utils/mappable_algorithms.hpp"
 #include "utils/maths.hpp"
 #include "utils/append.hpp"
+#include "utils/free_memory.hpp"
 
 #include <iostream>
 
@@ -47,9 +48,11 @@ AssemblerActiveRegionGenerator::AssemblerActiveRegionGenerator(const ReferenceGe
     snvs_interesting_ = contains(options.trigger_types, Options::TriggerType::snv);
     indels_interesting_ = contains(options.trigger_types, Options::TriggerType::indel);
     structual_interesting_ = contains(options.trigger_types, Options::TriggerType::structual);
+	clustered_interesting_ = contains(options.trigger_types, Options::TriggerType::clustered);
     trigger_quality_ = options.trigger_quality;
     trigger_clip_size_ = options.trigger_clip_size;
     min_expected_mutation_frequency_ = options.min_expected_mutation_frequency;
+    read_profile_ = options.read_profile;
 }
 
 void AssemblerActiveRegionGenerator::add(const SampleName& sample, const AlignedRead& read)
@@ -178,11 +181,12 @@ auto expand_each(const Container& regions, const GenomicRegion::Distance n)
     return result;
 }
 
-auto get_deletion_hotspots(const GenomicRegion& region, const CoverageTracker<GenomicRegion>& tracker)
+auto get_deletion_hotspots(const GenomicRegion& region, const CoverageTracker<GenomicRegion>& tracker,
+                           const boost::optional<const ReadSetProfile&>& read_profile = boost::none)
 {
     const auto coverages = tracker.get(region);
-    const auto mean_coverage = tracker.mean(region);
-    const auto stdev_coverage = tracker.stdev(region);
+    const auto mean_coverage = read_profile ? read_profile->depth_stats.combined.genome.all.mean : tracker.mean(region);
+    const auto stdev_coverage = read_profile ? read_profile->depth_stats.combined.genome.all.stdev : tracker.stdev(region);
     const auto deletion_base_probs = compute_base_deletion_probabilities(coverages, mean_coverage, stdev_coverage);
     std::vector<bool> deletion_bases(deletion_base_probs.size());
     std::transform(std::cbegin(deletion_base_probs), std::cend(deletion_base_probs), std::begin(deletion_bases),
@@ -277,7 +281,7 @@ std::vector<GenomicRegion> AssemblerActiveRegionGenerator::generate(const Genomi
     auto interesting_regions = get_interesting_hotspots(region, interesting_read_coverages_, coverage_tracker_, min_expected_mutation_frequency_);
     if (structual_interesting_) {
         for (const auto& p : clipped_coverage_tracker_) {
-            auto deletion_regions = get_deletion_hotspots(region, p.second);
+            auto deletion_regions = get_deletion_hotspots(region, p.second, read_profile_);
             merge(std::move(deletion_regions), interesting_regions);
         }
     }
@@ -286,9 +290,9 @@ std::vector<GenomicRegion> AssemblerActiveRegionGenerator::generate(const Genomi
 
 void AssemblerActiveRegionGenerator::clear() noexcept
 {
-    coverage_tracker_.clear();
-    interesting_read_coverages_.clear();
-    clipped_coverage_tracker_.clear();
+    free_memory(coverage_tracker_);
+    free_memory(interesting_read_coverages_);
+    free_memory(clipped_coverage_tracker_);
 }
 
 // private methods
@@ -297,23 +301,6 @@ namespace {
 
 using NucleotideSequenceIterator = AlignedRead::NucleotideSequence::const_iterator;
 using BaseQualityVectorIterator = AlignedRead::BaseQualityVector::const_iterator;
-
-bool has_snv_in_match_range(const NucleotideSequenceIterator first_ref, const NucleotideSequenceIterator last_ref,
-                            const NucleotideSequenceIterator first_base, const BaseQualityVectorIterator first_quality,
-                            const AlignedRead::BaseQuality trigger)
-{
-    using boost::make_zip_iterator;
-    using Tuple = boost::tuple<char, char, AlignedRead::BaseQuality>;
-    const auto num_bases = std::distance(first_ref, last_ref);
-    const auto last_base = std::next(first_base, num_bases);
-    const auto last_quality = std::next(first_quality, num_bases);
-    return std::any_of(make_zip_iterator(boost::make_tuple(first_ref, first_base, first_quality)),
-                       make_zip_iterator(boost::make_tuple(last_ref, last_base, last_quality)),
-                       [trigger] (const Tuple& t) {
-                           const char ref_base  {t.get<0>()}, read_base {t.get<1>()};
-                           return ref_base != read_base && ref_base != 'N' && read_base != 'N' && t.get<2>() >= trigger;
-                       });
-}
 
 bool is_good_clip(const NucleotideSequenceIterator first_base, const NucleotideSequenceIterator last_base,
                   const BaseQualityVectorIterator first_quality, const AlignedRead::BaseQuality good_base_trigger,
@@ -340,20 +327,27 @@ bool AssemblerActiveRegionGenerator::is_interesting(const AlignedRead& read) con
     auto base_quality_itr = cbegin(read.base_qualities());
     auto ref_index = mapped_begin(read);
     std::size_t read_index {0};
+	std::vector<std::size_t> error_indices {};
     for (const auto& cigar_operation : read.cigar()) {
         const auto op_size = cigar_operation.size();
         switch (cigar_operation.flag()) {
             case Flag::alignmentMatch:
             {
-                if (snvs_interesting_) {
-                    const GenomicRegion region{contig_name(read), ref_index, ref_index + op_size};
+                if (snvs_interesting_ || clustered_interesting_) {
+                    const GenomicRegion region {contig_name(read), ref_index, ref_index + op_size};
                     const auto ref_segment = reference_.get().fetch_sequence(region);
-                    if (has_snv_in_match_range(std::cbegin(ref_segment), std::cend(ref_segment),
-                                               next(sequence_itr, read_index),
-                                               next(base_quality_itr, read_index),
-                                               trigger_quality_)) {
-                        return true;
-                    }
+					for (std::size_t base_index {0}; base_index < op_size; ++base_index) {
+						const auto ref_base = ref_segment[base_index];
+						const auto read_base = read.sequence()[read_index + base_index];
+						const auto base_quality = read.base_qualities()[read_index + base_index];
+						if (ref_base != read_base && ref_base != 'N' && read_base != 'N' && base_quality >= trigger_quality_) {
+							if (snvs_interesting_) {
+								return true;
+							} else { // clustered_interesting_
+								error_indices.push_back(read_index + base_index);
+							}
+						}
+					}
                 }
                 read_index += op_size;
                 ref_index += op_size;
@@ -365,12 +359,17 @@ bool AssemblerActiveRegionGenerator::is_interesting(const AlignedRead& read) con
                 break;
             case Flag::substitution:
             {
-                if (snvs_interesting_) {
-                    GenomicRegion {contig_name(read), ref_index, ref_index + op_size};
-                    if (std::any_of(next(base_quality_itr, read_index), next(base_quality_itr, read_index + op_size),
-                                    [this] (const AlignedRead::BaseQuality quality) { return quality >= trigger_quality_; })) {
-                        return true;
-                    }
+                if (snvs_interesting_ || clustered_interesting_) {
+                	GenomicRegion {contig_name(read), ref_index, ref_index + op_size};
+					for (std::size_t base_index {0}; base_index < op_size; ++base_index) {
+						if (read.base_qualities()[read_index + base_index] >= trigger_quality_) {
+							if (snvs_interesting_) {
+								return true;
+							} else { // clustered_interesting_
+								error_indices.push_back(read_index + base_index);
+							}
+						}
+					}
                 }
                 read_index += op_size;
                 ref_index += op_size;
@@ -399,7 +398,11 @@ bool AssemblerActiveRegionGenerator::is_interesting(const AlignedRead& read) con
                 break;
         }
     }
-    return false;
+	if (error_indices.empty()) return false;
+	std::vector<unsigned> error_gaps(error_indices.size());
+	std::adjacent_difference(std::cbegin(error_indices), std::cend(error_indices), std::begin(error_gaps));
+	const auto is_small_gap = [] (auto gap) { return gap <= 10; };
+    return std::count_if(std::next(std::cbegin(error_gaps)), std::cend(error_gaps), is_small_gap) >= 3;
 }
     
 } // namespace coretools

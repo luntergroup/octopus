@@ -1,7 +1,9 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "missing_file_error.hpp"
+
+#include <boost/filesystem/operations.hpp>
 
 #include <utility>
 #include <sstream>
@@ -23,21 +25,18 @@ void MissingFileError::set_location_specified(std::string location) noexcept
 std::string MissingFileError::do_why() const
 {
     std::ostringstream ss {};
-    
     ss << "the ";
-    
     if (type_) {
         ss << *type_ << ' ';
     }
-    
-    ss << "file you specified " << file_ << ' ';
-    
+    ss << "file that you specified " << file_ << ' ';
+    if (boost::filesystem::is_symlink(file_)) {
+        ss << '(' << boost::filesystem::read_symlink(file_) << ") ";
+    }
     if (location_) {
         ss << "in " << *location_ << ' ';
     }
-    
     ss << "does not exist";
-    
     return ss.str();
 }
 

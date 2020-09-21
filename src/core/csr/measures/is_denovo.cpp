@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "is_denovo.hpp"
@@ -18,6 +18,11 @@ IsDenovo::IsDenovo(bool report_sample_status) : report_sample_status_ {report_sa
 std::unique_ptr<Measure> IsDenovo::do_clone() const
 {
     return std::make_unique<IsDenovo>(*this);
+}
+
+Measure::ValueType IsDenovo::get_value_type() const
+{
+    return bool {};
 }
 
 namespace {
@@ -45,21 +50,21 @@ Measure::ResultType IsDenovo::do_evaluate(const VcfRecord& call, const FacetMap&
 {
     if (report_sample_status_) {
         const auto& samples = get_value<Samples>(facets.at("Samples"));
-        std::vector<bool> result(samples.size(), false);
+        Array<ValueType> result(samples.size(), false);
         if (is_denovo(call)) {
             const auto& pedigree = get_value<Pedigree>(facets.at("Pedigree"));
             result[child_idx(samples, pedigree)] = true;
         }
         return result;
     } else {
-        return is_denovo(call);
+        return ValueType {is_denovo(call)};
     }
 }
 
 Measure::ResultCardinality IsDenovo::do_cardinality() const noexcept
 {
     if (report_sample_status_) {
-        return ResultCardinality::num_samples;
+        return ResultCardinality::samples;
     } else {
         return ResultCardinality::one;
     }

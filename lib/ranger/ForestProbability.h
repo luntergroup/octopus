@@ -31,8 +31,7 @@ public:
 
   virtual ~ForestProbability() override = default;
 
-  void loadForest(size_t dependent_varID, size_t num_trees,
-      std::vector<std::vector<std::vector<size_t>> >& forest_child_nodeIDs,
+  void loadForest(size_t num_trees, std::vector<std::vector<std::vector<size_t>> >& forest_child_nodeIDs,
       std::vector<std::vector<size_t>>& forest_split_varIDs, std::vector<std::vector<double>>& forest_split_values,
       std::vector<double>& class_values, std::vector<std::vector<std::vector<double>>>& forest_terminal_class_counts,
       std::vector<bool>& is_ordered_variable);
@@ -48,17 +47,6 @@ public:
   }
 
 protected:
-  void initInternal(std::string status_variable_name) override;
-  void growInternal() override;
-  void allocatePredictMemory() override;
-  void predictInternal(size_t sample_idx) override;
-  void computePredictionErrorInternal() override;
-  void writeOutputInternal() override;
-  void writeConfusionFile() override;
-  void writePredictionFile() override;
-  void saveToFileInternal(std::ofstream& outfile) override;
-  void loadFromFileInternal(std::ifstream& infile) override;
-
   // Classes of the dependent variable and classIDs for responses
   std::vector<double> class_values;
   std::vector<uint> response_classIDs;
@@ -66,8 +54,18 @@ protected:
 
   // Splitting weights
   std::vector<double> class_weights;
+  
+  void initInternal() override;
+  void growInternal() override;
+  void allocatePredictMemory() override;
+  void predictInternal(size_t sample_idx) override;
+  void computePredictionErrorInternal() override;
+  void writeOutputInternal() const override;
+  void writeConfusionFile() const override;
+  void writePredictionFile() const override;
+  void saveToFileInternal(std::ofstream& outfile) const override;
+  void loadFromFileInternal(std::ifstream& infile) override;
 
-private:
   const std::vector<double>& getTreePrediction(size_t tree_idx, size_t sample_idx) const;
   size_t getTreePredictionTerminalNodeID(size_t tree_idx, size_t sample_idx) const;
 };

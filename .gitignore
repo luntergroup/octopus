@@ -245,3 +245,13 @@ TSWLatexianTemp*
 .DS_Store
 .idea/
 cmake-build-debug/*
+
+# vccode
+.vscode/
+
+# Ninja
+build/rules.ninja
+build/.ninja_deps
+build/.ninja_log
+build/build.ninja
+build/compile_commands.json

@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef single_pass_variant_call_filter_hpp
@@ -27,8 +27,8 @@ public:
     
     SinglePassVariantCallFilter(const SinglePassVariantCallFilter&)            = delete;
     SinglePassVariantCallFilter& operator=(const SinglePassVariantCallFilter&) = delete;
-    SinglePassVariantCallFilter(SinglePassVariantCallFilter&&)                 = default;
-    SinglePassVariantCallFilter& operator=(SinglePassVariantCallFilter&&)      = default;
+    SinglePassVariantCallFilter(SinglePassVariantCallFilter&&)                 = delete;
+    SinglePassVariantCallFilter& operator=(SinglePassVariantCallFilter&&)      = delete;
     
     virtual ~SinglePassVariantCallFilter() override = default;
     

@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef indel_profiler_hpp
@@ -17,6 +17,7 @@
 #include "core/types/haplotype.hpp"
 #include "core/types/genotype.hpp"
 #include "core/types/allele.hpp"
+#include "core/models/haplotype_likelihood_model.hpp"
 #include "containers/mappable_flat_set.hpp"
 #include "containers/mappable_flat_multi_set.hpp"
 #include "io/reference/reference_genome.hpp"
@@ -35,10 +36,11 @@ public:
     
     struct ProfileConfig
     {
+        HaplotypeLikelihoodModel alignment_model = {};
         unsigned min_period = 1, max_period = 30;
         unsigned min_periods = 1, max_periods = 50;
         unsigned max_length = 200;
-        bool check_read_misalignments = true;
+        bool ignore_likely_misaligned_reads = true;
         Haplotype::NucleotideSequence complex_motif = "N";
     };
     
@@ -54,10 +56,10 @@ public:
     IndelProfiler(ProfileConfig config);
     IndelProfiler(ProfileConfig config, PerformanceConfig performance_config);
     
-    IndelProfiler(const IndelProfiler&)            = default;
-    IndelProfiler& operator=(const IndelProfiler&) = default;
-    IndelProfiler(IndelProfiler&&)                 = default;
-    IndelProfiler& operator=(IndelProfiler&&)      = default;
+    IndelProfiler(const IndelProfiler&)            = delete;
+    IndelProfiler& operator=(const IndelProfiler&) = delete;
+    IndelProfiler(IndelProfiler&&)                 = delete;
+    IndelProfiler& operator=(IndelProfiler&&)      = delete;
     
     ~IndelProfiler() = default;
     
@@ -102,7 +104,7 @@ struct IndelProfiler::IndelProfile
     struct RepeatState
     {
         Haplotype::NucleotideSequence motif;
-        GenomicRegion::Size span;
+        GenomicRegion::Size span, footprint;
         unsigned reference_count, read_count;
         std::vector<unsigned> polymorphism_counts, error_counts;
     };
@@ -113,9 +115,18 @@ struct IndelProfiler::IndelProfile
 IndelProfiler::IndelProfile
 profile_indels(const ReadPipe& reads, VcfReader::Path variants, const ReferenceGenome& reference);
 IndelProfiler::IndelProfile
+profile_indels(const ReadPipe& reads, VcfReader::Path variants, const ReferenceGenome& reference,
+               IndelProfiler::ProfileConfig config);
+IndelProfiler::IndelProfile
 profile_indels(const ReadPipe& reads, VcfReader::Path variants, const ReferenceGenome& reference, const InputRegionMap& regions);
 IndelProfiler::IndelProfile
+profile_indels(const ReadPipe& reads, VcfReader::Path variants, const ReferenceGenome& reference, const InputRegionMap& regions,
+               IndelProfiler::ProfileConfig config);
+IndelProfiler::IndelProfile
 profile_indels(const ReadPipe& reads, VcfReader::Path variants, const ReferenceGenome& reference, const GenomicRegion& region);
+IndelProfiler::IndelProfile
+profile_indels(const ReadPipe& reads, VcfReader::Path variants, const ReferenceGenome& reference, const GenomicRegion& region,
+               IndelProfiler::ProfileConfig config);
 
 std::ostream& operator<<(std::ostream& os, const IndelProfiler::IndelProfile& indel_profile);
 

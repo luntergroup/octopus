@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "median_base_quality.hpp"
@@ -13,10 +13,10 @@
 #include "core/types/allele.hpp"
 #include "io/variant/vcf_record.hpp"
 #include "io/variant/vcf_spec.hpp"
-#include "utils/genotype_reader.hpp"
 #include "utils/maths.hpp"
 #include "utils/append.hpp"
 #include "../facets/samples.hpp"
+#include "../facets/alleles.hpp"
 #include "../facets/read_assignments.hpp"
 
 namespace octopus { namespace csr {
@@ -28,12 +28,16 @@ std::unique_ptr<Measure> MedianBaseQuality::do_clone() const
     return std::make_unique<MedianBaseQuality>(*this);
 }
 
+Measure::ValueType MedianBaseQuality::get_value_type() const
+{
+    return int {};
+}
+
 namespace {
 
 bool is_canonical(const VcfRecord::NucleotideSequence& allele) noexcept
 {
-    const static VcfRecord::NucleotideSequence deleted_allele {vcfspec::deletedBase};
-    return !(allele == vcfspec::missingValue || allele == deleted_allele);
+    return !(allele == vcfspec::missingValue || allele == vcfspec::deleteMaskAllele);
 }
 
 bool has_called_alt_allele(const VcfRecord& call, const VcfRecord::SampleName& sample)
@@ -51,7 +55,7 @@ bool is_evaluable(const VcfRecord& call, const VcfRecord::SampleName& sample)
 
 auto median_base_quality(const ReadRefSupportSet& reads, const Allele& allele)
 {
-    boost::optional<AlignedRead::BaseQuality> result {};
+    Measure::Optional<Measure::ValueType> result {};
     if (!is_indel(allele)) {
         std::vector<AlignedRead::BaseQuality> base_qualities {};
         base_qualities.reserve(reads.size() * sequence_size(allele));
@@ -61,7 +65,7 @@ auto median_base_quality(const ReadRefSupportSet& reads, const Allele& allele)
             }
         }
         if (!base_qualities.empty()) {
-            result = maths::median(base_qualities);
+            result = static_cast<int>(maths::median(base_qualities));
         }
     }
     return result;
@@ -72,37 +76,30 @@ auto median_base_quality(const ReadRefSupportSet& reads, const Allele& allele)
 Measure::ResultType MedianBaseQuality::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     const auto& samples = get_value<Samples>(facets.at("Samples"));
-    const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments"));
-    std::vector<boost::optional<int>> result {};
-    result.reserve(call.num_alt());
-    for (const auto& sample : samples) {
-        boost::optional<int> sample_result {};
-        if (is_evaluable(call, sample)) {
-            std::vector<Allele> alleles; bool has_ref;
-            std::tie(alleles, has_ref) = get_called_alleles(call, sample);
-            if (has_ref) alleles.erase(std::cbegin(alleles));
-            if (!alleles.empty()) {
-                const auto sample_allele_support = compute_allele_support(alleles, assignments, sample);
-                for (const auto& p : sample_allele_support) {
-                    const auto median_bq = median_base_quality(p.second, p.first);
-                    if (median_bq) {
-                        if (sample_result) {
-                            sample_result = std::min(*sample_result, static_cast<int>(*median_bq));
-                        } else {
-                            sample_result = *median_bq;
-                        }
-                    }
+    const auto& alleles = get_value<Alleles>(facets.at("Alleles"));
+    const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments")).alleles;
+    const auto num_alleles = call.num_alt() + 1;
+    Array<Array<Optional<ValueType>>> result(samples.size(), Array<Optional<ValueType>>(num_alleles));
+    for (std::size_t s {0}; s < samples.size(); ++s) {
+        const auto& sample_alleles = get(alleles, call, samples[s]);
+        assert(sample_alleles.size() == num_alleles);
+        const auto& support = assignments.at(samples[s]);
+        for (std::size_t a {0}; a < num_alleles; ++a) {
+            if (sample_alleles[a]) {
+                const auto& allele = *sample_alleles[a];
+                const auto support_set_itr = support.find(allele);
+                if (support_set_itr != std::cend(support)) {
+                    result[s][a] = median_base_quality(support_set_itr->second, allele);
                 }
             }
         }
-        result.push_back(sample_result);
     }
     return result;
 }
 
 Measure::ResultCardinality MedianBaseQuality::do_cardinality() const noexcept
 {
-    return ResultCardinality::num_samples;
+    return ResultCardinality::samples_and_alleles;
 }
 
 const std::string& MedianBaseQuality::do_name() const
@@ -117,7 +114,12 @@ std::string MedianBaseQuality::do_describe() const
 
 std::vector<std::string> MedianBaseQuality::do_requirements() const
 {
-    return {"Samples", "ReadAssignments"};
+    return {"Samples", "Alleles", "ReadAssignments"};
+}
+
+boost::optional<Measure::Aggregator> MedianBaseQuality::do_aggregator() const noexcept
+{
+    return Measure::Aggregator::min_tail;
 }
 
 } // namespace csr

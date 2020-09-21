@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef cigar_string_hpp
@@ -69,6 +69,10 @@ bool advances_sequence(const CigarOperation& op) noexcept;
 
 bool is_match(CigarOperation::Flag flag) noexcept;
 bool is_match(const CigarOperation& op) noexcept;
+bool is_substitution(CigarOperation::Flag flag) noexcept;
+bool is_substitution(const CigarOperation& op) noexcept;
+bool is_match_or_substitution(CigarOperation::Flag flag) noexcept;
+bool is_match_or_substitution(const CigarOperation& op) noexcept;
 bool is_insertion(CigarOperation::Flag flag) noexcept;
 bool is_insertion(const CigarOperation& op) noexcept;
 bool is_deletion(CigarOperation::Flag flag) noexcept;
@@ -94,6 +98,9 @@ bool is_front_soft_clipped(const CigarString& cigar) noexcept;
 bool is_back_soft_clipped(const CigarString& cigar) noexcept;
 bool is_soft_clipped(const CigarString& cigar) noexcept;
 
+int sum_matches(const CigarString& cigar) noexcept;
+int sum_non_matches(const CigarString& cigar) noexcept;
+
 bool has_indel(const CigarString& cigar) noexcept;
 int sum_indel_sizes(const CigarString& cigar) noexcept;
 int max_indel_size(const CigarString& cigar) noexcept;
@@ -107,6 +114,15 @@ S clipped_begin(const CigarString& cigar, S unclipped_begin) noexcept
         unclipped_begin -= static_cast<S>(cigar.front().size());
     }
     return unclipped_begin;
+}
+
+template <typename S = CigarOperation::Size>
+S clipped_end(const CigarString& cigar, S unclipped_end) noexcept
+{
+    if (is_back_soft_clipped(cigar)) {
+        unclipped_end += static_cast<S>(cigar.back().size());
+    }
+    return unclipped_end;
 }
 
 template <typename S = CigarOperation::Size>

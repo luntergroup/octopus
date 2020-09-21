@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef append_hpp
@@ -8,6 +8,8 @@
 #include <deque>
 #include <iterator>
 #include <utility>
+
+#include "containers/mappable_block.hpp"
 
 namespace octopus { namespace utils {
 
@@ -122,6 +124,36 @@ auto append(std::vector<T>&& src, std::deque<T>& dest)
     src.clear();
     src.shrink_to_fit();
     
+    return result;
+}
+
+template <typename T>
+auto append(const MappableBlock<T>& src, MappableBlock<T>& dest)
+{
+    typename std::vector<T>::iterator result;
+    if (dest.empty()) {
+        dest   = src;
+        result = std::begin(dest);
+    } else {
+        result = dest.insert(std::cend(dest), std::cbegin(src), std::cend(src));
+    }
+    return result;
+}
+
+template <typename T>
+auto append(MappableBlock<T>&& src, MappableBlock<T>& dest)
+{
+    typename std::vector<T>::iterator result;
+    if (dest.empty()) {
+        dest   = std::move(src);
+        result = std::begin(dest);
+    } else {
+        result = dest.insert(std::cend(dest),
+                             std::make_move_iterator(std::begin(src)),
+                             std::make_move_iterator(std::end(src)));
+    }
+    src.clear();
+    src.shrink_to_fit();
     return result;
 }
 

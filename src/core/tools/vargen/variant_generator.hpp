@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef variant_generator_hpp
@@ -32,10 +32,11 @@ public:
     
     VariantGenerator(const VariantGenerator&);
     VariantGenerator& operator=(VariantGenerator);
-    VariantGenerator(VariantGenerator&&)            = default;
-    VariantGenerator& operator=(VariantGenerator&&) = default;
+    VariantGenerator(VariantGenerator&&);
     
     virtual ~VariantGenerator() = default;
+    
+    friend void swap(VariantGenerator& lhs, VariantGenerator& rhs) noexcept;
     
     void add(std::unique_ptr<VariantGenerator> generator);
     

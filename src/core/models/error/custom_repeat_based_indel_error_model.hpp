@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef custom_repeat_based_indel_error_model_hpp
@@ -48,7 +48,12 @@ private:
     PenaltyType get_extension_penalty(const Sequence& motif, unsigned length) const noexcept override;
 };
 
-boost::optional<CustomRepeatBasedIndelErrorModel::MotifPenaltyMap> make_penalty_map(std::string model);
+struct CustomRepeatMotifPenaltyMaps
+{
+    boost::optional<CustomRepeatBasedIndelErrorModel::MotifPenaltyMap> open, extend;
+};
+
+CustomRepeatMotifPenaltyMaps make_penalty_map(std::string model);
 
 } // namespace octopus
 

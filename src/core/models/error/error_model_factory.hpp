@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef error_model_factory_hpp
@@ -15,7 +15,7 @@
 namespace octopus {
 
 enum class LibraryPreparation { pcr, pcr_free, tenx };
-enum class Sequencer { hiseq_2000, hiseq_2500, hiseq_4000, xten, novaseq, bgiseq_500 };
+enum class Sequencer { hiseq_2000, hiseq_2500, hiseq_4000, xten, novaseq, bgiseq_500, pacbio, pacbio_ccs };
 
 struct ModelConfig
 {
@@ -37,7 +37,7 @@ std::unique_ptr<SnvErrorModel> make_snv_error_model(ModelConfig config = default
 std::unique_ptr<IndelErrorModel> make_indel_error_model(ModelConfig config = default_model_config);
 
 ErrorModel make_error_model(const std::string& label);
-ErrorModel make_error_model(const boost::filesystem::path& model_file_name);
+ErrorModel make_error_model(const boost::filesystem::path& model_filename);
 
 } // namespace octopus
 

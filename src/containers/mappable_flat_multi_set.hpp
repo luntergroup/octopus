@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef mappable_set_hpp
@@ -49,6 +49,10 @@ public:
     
     template <typename InputIterator>
     MappableFlatMultiSet(InputIterator first, InputIterator second);
+    template <typename InputIterator>
+    MappableFlatMultiSet(ForwardSortedTag, InputIterator first, InputIterator second);
+    template <typename InputIterator>
+    MappableFlatMultiSet(BidirectionallySortedTag, InputIterator first, InputIterator second);
     
     MappableFlatMultiSet(std::initializer_list<MappableType> mappables);
     
@@ -195,14 +199,30 @@ template <typename InputIterator>
 MappableFlatMultiSet<MappableType, Allocator>::MappableFlatMultiSet(InputIterator first, InputIterator second)
 : elements_ {first, second}
 , is_bidirectionally_sorted_ {is_bidirectionally_sorted(elements_)}
-, max_element_size_ {(elements_.empty()) ? 0 : region_size(*largest_mappable(elements_))}
+, max_element_size_ {elements_.empty() ? 0 : region_size(*largest_mappable(elements_))}
+{}
+
+template <typename MappableType, typename Allocator>
+template <typename InputIterator>
+MappableFlatMultiSet<MappableType, Allocator>::MappableFlatMultiSet(ForwardSortedTag, InputIterator first, InputIterator second)
+: elements_ {boost::container::ordered_range_t {}, first, second}
+, is_bidirectionally_sorted_ {is_bidirectionally_sorted(elements_)}
+, max_element_size_ {elements_.empty() ? 0 : region_size(*largest_mappable(elements_))}
+{}
+
+template <typename MappableType, typename Allocator>
+template <typename InputIterator>
+MappableFlatMultiSet<MappableType, Allocator>::MappableFlatMultiSet(BidirectionallySortedTag, InputIterator first, InputIterator second)
+: elements_ {boost::container::ordered_range_t {}, first, second}
+, is_bidirectionally_sorted_ {true}
+, max_element_size_ {elements_.empty() ? 0 : region_size(*largest_mappable(elements_))}
 {}
 
 template <typename MappableType, typename Allocator>
 MappableFlatMultiSet<MappableType, Allocator>::MappableFlatMultiSet(std::initializer_list<MappableType> mappables)
 : elements_ {mappables}
 , is_bidirectionally_sorted_ {is_bidirectionally_sorted(elements_)}
-, max_element_size_ {(elements_.empty()) ? 0 : region_size(*largest_mappable(elements_))}
+, max_element_size_ {elements_.empty() ? 0 : region_size(*largest_mappable(elements_))}
 {}
 
 template <typename MappableType, typename Allocator>

@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "denovo_threshold_filter.hpp"
@@ -28,9 +28,9 @@ DeNovoThresholdVariantCallFilter::DeNovoThresholdVariantCallFilter(FacetFactory 
     {make_wrapped_measure<IsRefcall>(true), make_wrapped_measure<IsDenovo>(false)},
     [] (const MeasureVector& measures) -> std::size_t {
         assert(measures.size() == 2);
-        if (boost::get<bool>(measures[0])) {
+        if (get_value_type<bool>(measures[0])) {
             return 2; // REFCALL sample
-        } else if (boost::get<bool>(measures[1])) {
+        } else if (get_value_type<bool>(measures[1])) {
             return 1; // DENOVO call
         } else {
             return 0; // germline variant sample
@@ -50,11 +50,11 @@ DeNovoThresholdVariantCallFilter::DeNovoThresholdVariantCallFilter(FacetFactory 
     {make_wrapped_measure<IsRefcall>(true), make_wrapped_measure<IsDenovo>(true), make_wrapped_measure<IsDenovo>(false)},
     [] (const MeasureVector& measures) -> std::size_t {
         assert(measures.size() == 3);
-        if (!boost::get<bool>(measures[2])) {
+        if (!get_value_type<bool>(measures[2])) {
             return 0; // Not DENOVO call
-        } else if (boost::get<bool>(measures[1])) {
+        } else if (get_value_type<bool>(measures[1])) {
             return 1; // DENOVO sample
-        } else if (boost::get<bool>(measures[0])) {
+        } else if (get_value_type<bool>(measures[0])) {
             return 2; // DENOVO call REFCALL parent
         } else {
             return 1; // DENOVO call non-REFCALL parent
@@ -63,9 +63,11 @@ DeNovoThresholdVariantCallFilter::DeNovoThresholdVariantCallFilter(FacetFactory 
 } {}
 
 bool DeNovoThresholdVariantCallFilter::is_soft_filtered(const ClassificationList& sample_classifications,
-                                                        const MeasureVector& measures) const
+                                                        const boost::optional<Phred<double>> joint_quality,
+                                                        const MeasureVector& measures,
+                                                        std::vector<std::string>& reasons) const
 {
-    if (boost::get<bool>(measures.back())) {
+    if (get_value_type<bool>(measures.back())) {
         return std::any_of(std::cbegin(sample_classifications), std::cend(sample_classifications),
                            [] (const auto& c) { return c.category != Classification::Category::unfiltered; });
     } else {

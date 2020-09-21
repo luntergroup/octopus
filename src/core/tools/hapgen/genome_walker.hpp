@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef genome_walker_hpp
@@ -38,11 +38,26 @@ public:
         noLimit
     };
     
+    enum class ReadTemplatePolicy
+    {
+        none,
+        indicators,
+        extension,
+        indicators_and_extension
+    };
+    
+    struct Config
+    {
+        unsigned max_alleles;
+        IndicatorPolicy indicator_policy = IndicatorPolicy::includeNone;
+        ExtensionPolicy extension_policy = ExtensionPolicy::includeIfAnySampleSharedWithFrontier;
+        ReadTemplatePolicy read_template_policy = ReadTemplatePolicy::indicators_and_extension;
+        boost::optional<GenomicRegion::Distance> max_extension = boost::none;
+    };
+    
     GenomeWalker() = delete;
     
-    GenomeWalker(unsigned max_included,
-                 IndicatorPolicy indicator_policy = IndicatorPolicy::includeNone,
-                 ExtensionPolicy extension_policy = ExtensionPolicy::includeIfAnySampleSharedWithFrontier);
+    GenomeWalker(Config config);
     
     GenomeWalker(const GenomeWalker&)            = default;
     GenomeWalker& operator=(const GenomeWalker&) = default;
@@ -51,17 +66,17 @@ public:
     
     ~GenomeWalker() = default;
     
-    GenomicRegion walk(const GenomicRegion::ContigName& contig,
-                       const ReadMap& reads,
-                       const AlleleSet& alleles) const;
-    GenomicRegion walk(const GenomicRegion& previous_region,
-                       const ReadMap& reads,
-                       const AlleleSet& alleles) const;
+    GenomicRegion
+    walk(const GenomicRegion& previous_region,
+         const ReadMap& reads,
+         const AlleleSet& alleles,
+         boost::optional<const TemplateMap&> read_templates = boost::none) const;
     
 private:
-    unsigned max_included_;
-    IndicatorPolicy indicator_policy_;
-    ExtensionPolicy extension_policy_;
+    Config config_;
+    
+    bool can_extend(const Allele& active, const Allele& novel,
+                    const ReadMap& reads, boost::optional<const TemplateMap&> read_templates) const;
 };
 
 } // namespace coretools

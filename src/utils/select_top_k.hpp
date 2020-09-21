@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef select_top_k_hpp
@@ -10,6 +10,7 @@
 #include <queue>
 #include <cstddef>
 #include <cmath>
+#include <utility>
 #include <cassert>
 
 namespace octopus {
@@ -17,6 +18,58 @@ namespace octopus {
 using Index = std::size_t;
 using IndexTuple = std::vector<Index>;
 using IndexTupleVector = std::vector<IndexTuple>;
+
+namespace detail {
+
+template <typename T>
+auto index_cref(const std::vector<T>& values)
+{
+    std::vector<std::pair<std::reference_wrapper<const T>, std::size_t>> result {};
+    result.reserve(values.size());
+    for (std::size_t idx {0}; idx < values.size(); ++idx) {
+        result.emplace_back(values[idx], idx);
+    }
+    return result;
+}
+
+template <typename _, typename T>
+auto copy_k_second(const std::vector<std::pair<_, T>>& pairs, std::size_t k)
+{
+    k = std::min(k, pairs.size());
+    std::vector<T> result(k);
+    const static auto get_second = [] (const auto& p) { return p.second; };
+    std::transform(std::cbegin(pairs), std::next(std::cbegin(pairs), k), std::begin(result), get_second);
+    return result;
+}
+
+} // namespace detail
+
+template <typename T, typename BinaryPredicate = std::greater<T>>
+std::vector<Index>
+select_top_k_indices(const std::vector<T>& values, const std::size_t k,
+                     const bool sorted = true,
+                     const BinaryPredicate comp = std::greater<T> {})
+{
+    if (!sorted && values.size() <= k) {
+        std::vector<Index> result(values.size());
+        std::iota(std::begin(result), std::end(result), 0);
+        return result;
+    } else {
+        auto indexed_values = detail::index_cref(values);
+        const auto ref_comp = [&comp] (const auto& lhs, const auto& rhs) { return comp(lhs.first.get(), rhs.first.get()); };
+        if (k < values.size()) {
+            const auto kth = std::next(std::begin(indexed_values), k);
+            if (sorted) {
+                std::partial_sort(std::begin(indexed_values), kth, std::end(indexed_values), ref_comp);
+            } else {
+                std::nth_element(std::begin(indexed_values), kth, std::end(indexed_values), ref_comp);
+            }
+        } else {
+            std::sort(std::begin(indexed_values), std::end(indexed_values), ref_comp);
+        }
+        return detail::copy_k_second(indexed_values, k);
+    }
+}
 
 namespace detail {
 
@@ -67,8 +120,10 @@ find_k_max_pairs(const std::vector<T>& lhs, const std::vector<T>& rhs, const std
     if (lhs.empty() || rhs.empty() || k == 0)
         return result;
     auto cmp = [&lhs, &rhs] (const IndexPair& a, const IndexPair& b) {
-        return lhs[a.first] + rhs[a.second] > lhs[b.first] + rhs[b.second]; };
-    std::priority_queue<IndexPair, std::vector<IndexPair>, decltype(cmp)> max_heap {cmp};
+        return lhs[a.first] + rhs[a.second] < lhs[b.first] + rhs[b.second]; };
+    std::vector<IndexPair> heap_storage {};
+    heap_storage.reserve(k);
+    std::priority_queue<IndexPair, decltype(heap_storage), decltype(cmp)> max_heap {cmp, std::move(heap_storage)};
     max_heap.emplace(0, 0);
     for (std::size_t i {0}; i < k && !max_heap.empty(); ++i) {
         const auto idx_pair = max_heap.top(); max_heap.pop();
@@ -138,6 +193,7 @@ select_top_k_tuples(const std::vector<std::vector<T>>& values, const std::size_t
     result.reserve(k);
     for (auto& p : joins) {
         result.push_back(std::move(p.indices));
+        p.indices = {};
     }
     return result;
 }

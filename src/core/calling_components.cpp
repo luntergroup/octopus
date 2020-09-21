@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "calling_components.hpp"
@@ -110,6 +110,16 @@ boost::optional<unsigned> GenomeCallingComponents::num_threads() const noexcept
     return components_.num_threads;
 }
 
+const HaplotypeLikelihoodModel& GenomeCallingComponents::haplotype_likelihood_model() const noexcept
+{
+    return components_.haplotype_likelihood_model;
+}
+
+HaplotypeLikelihoodModel GenomeCallingComponents::realignment_haplotype_likelihood_model() const
+{
+    return components_.realignment_haplotype_likelihood_model;
+}
+
 const CallerFactory& GenomeCallingComponents::caller_factory() const noexcept
 {
     return components_.caller_factory;
@@ -153,11 +163,6 @@ ProgressMeter& GenomeCallingComponents::progress_meter() noexcept
     return components_.progress_meter;
 }
 
-boost::optional<GenomeCallingComponents::Path> GenomeCallingComponents::legacy() const
-{
-    return components_.legacy;
-}
-
 boost::optional<GenomeCallingComponents::Path> GenomeCallingComponents::filter_request() const
 {
     return components_.filter_request;
@@ -173,9 +178,23 @@ BAMRealigner::Config GenomeCallingComponents::bamout_config() const noexcept
     return components_.bamout_config;
 }
 
+boost::optional<const ReadSetProfile&> GenomeCallingComponents::reads_profile() const noexcept
+{
+    if (components_.reads_profile) {
+        return *components_.reads_profile;
+    } else {
+        return boost::none;
+    }
+}
+
 boost::optional<GenomeCallingComponents::Path> GenomeCallingComponents::data_profile() const
 {
     return components_.data_profile;
+}
+
+IndelProfiler::ProfileConfig GenomeCallingComponents::profiler_config() const
+{
+    return components_.profiler_config;
 }
 
 bool GenomeCallingComponents::sites_only() const noexcept
@@ -262,7 +281,7 @@ auto get_sorter(const options::ContigOutputOrder order, const ReferenceGenome& r
                 return reference.contig_size(lhs) > reference.contig_size(rhs);
             };
             break;
-        case ContigOutputOrder::asInReferenceIndex: {
+        case ContigOutputOrder::referenceIndex: {
             auto reference_contigs = reference.contig_names();
             result = [reference_contigs = std::move(reference_contigs)]
             (const auto& lhs, const auto& rhs) -> bool {
@@ -270,7 +289,7 @@ auto get_sorter(const options::ContigOutputOrder order, const ReferenceGenome& r
             };
             break;
         }
-        case ContigOutputOrder::asInReferenceIndexReversed: {
+        case ContigOutputOrder::referenceIndexReversed: {
             auto reference_contigs = reference.contig_names();
             result = [reference_contigs = std::move(reference_contigs)]
             (const auto& lhs, const auto& rhs) -> bool {
@@ -385,18 +404,77 @@ boost::optional<fs::path> get_temp_directory(const options::OptionMap& options)
     }
 }
 
-auto estimate_read_size(const boost::optional<ReadSetProfile>& profile) noexcept
+namespace {
+
+bool includes(const std::vector<unsigned>& values, const unsigned value) noexcept
 {
-    double result;
-    if (profile) {
-        result = profile->mean_read_bytes + profile->read_bytes_stdev;
+    return std::find(std::cbegin(values), std::cend(values), value) != std::cend(values);
+}
+
+auto profile_reads_helper(const std::vector<SampleName>& samples,
+                          const ReferenceGenome& reference,
+                          const InputRegionMap& input_regions,
+                          const ReadManager& source,
+                          const PloidyMap& ploidies,
+                          const options::OptionMap& options)
+{
+    ReadSetProfileConfig config {};
+    config.fragment_size = options::max_read_length(options);
+    if (samples.size() == 1) {
+        auto result = profile_reads(samples, reference, input_regions, source, config);
+        if (result) result->depth_stats.sample.clear(); // no need to keep this duplicate info
+        return result;
+    } else if (options::use_same_read_profile_for_all_samples(options)) {
+        std::vector<SampleName> profile_samples {};
+        std::unordered_map<GenomicRegion::ContigName, std::vector<unsigned>> ploidies_covered {};
+        for (const auto& sample : samples) {
+            bool include_sample {false};
+            for (const auto& contig : extract_keys(input_regions)) {
+                const auto ploidy = ploidies.of(sample, contig);
+                if (ploidy > 0 && !includes(ploidies_covered[contig], ploidy)) {
+                    ploidies_covered[contig].push_back(ploidy);
+                    include_sample = true;
+                }
+            }
+            if (include_sample) profile_samples.push_back(sample);
+        }
+        auto result = profile_reads(profile_samples, reference, input_regions, source, config);
+        if (result) result->depth_stats.sample.clear();
+        return result;
     } else {
-        result = default_read_size_estimate();
-        logging::WarningLogger log{};
+        return profile_reads(samples, reference, input_regions, source, config);
+    }
+}
+
+static const AlignedRead typical_illumina_read {
+    "HISEQ1:9:H8962ADXX:2:1108:11915:94551",
+    GenomicRegion {"1", 63492953, 63493103},
+    "GGCCAGAGAGAGAGTAGGTGAATCTGATCTCAGAATGTAAGCTCCTGACCAGTACAGCAGCCTGCATGCCCCCAGGAGCTGGCAGAGGAGGAGGAGGAGGAGGAGGCGGCAGATGATTCACAGCCACAATAGCATTGGCAACACTGGG",
+    AlignedRead::BaseQualityVector {33,35,35,35,34,32,27,35,35,35,35,35,36,35,35,35,35,35,35,35,35,35,35,35,35,35,35,35,35,36,35,36,36,36,35,35,35,35,35,34,34,32,35,35,34,34,34,34,35,35,35,35,35,34,34,36,36,36,34,36,34,35,37,37,37,39,39,39,38,39,39,41,41,41,41,41,41,41,41,41,41,41,41,40,41,41,41,41,41,41,41,41,40,38,40,40,40,41,40,40,40,40,41,41,41,40,41,41,41,41,40,40,40,41,41,41,41,41,41,41,41,41,41,41,41,40,39,41,41,41,41,41,41,41,41,39,39,39,39,39,37,37,37,37,37,34,34,34},
+    parse_cigar("83M3D65M"),
+    60,
+    AlignedRead::Flags {},
+    "None",
+    ""
+};
+
+} // namespace
+
+auto estimate_read_memory_footprint(const boost::optional<ReadSetProfile>& profile) noexcept
+{
+    MemoryFootprint result;
+    if (profile) {
+        result = std::min(profile->memory_stats.mean + profile->memory_stats.stdev, profile->memory_stats.max);
+        if (profile->fragmented_memory_stats) {
+            result += profile->fragmented_memory_stats->median;
+        }
+    } else {
+        result = footprint(typical_illumina_read);
+        logging::WarningLogger log {};
         log << "Could not estimate read size from data, resorting to default";
     }
     auto debug_log = logging::get_debug_log();
-    if (debug_log) stream(*debug_log) << "Estimated read size is " << result << " bytes";
+    if (debug_log) stream(*debug_log) << "Estimated read memory footprint is " << result;
     return result;
 }
 
@@ -414,7 +492,8 @@ std::size_t calculate_max_num_reads(MemoryFootprint max_buffer_size, const boost
         }
         max_buffer_size = min_buffer_size;
     }
-    return max_buffer_size.bytes() / estimate_read_size(profile);
+    auto estimated_read_footprint = estimate_read_memory_footprint(profile);
+    return max_buffer_size.bytes() / estimated_read_footprint.bytes();
 }
 
 auto add_identifier(const fs::path& base, const std::string& identifier)
@@ -433,11 +512,6 @@ auto add_identifier(const fs::path& base, const std::string& identifier)
 auto get_unfiltered_path(const fs::path& native)
 {
     return add_identifier(native, "unfiltered");
-}
-
-auto get_legacy_path(const fs::path& native)
-{
-    return add_identifier(native, "legacy");
 }
 
 auto generate_temp_output_path(const fs::path& temp_directory)
@@ -479,7 +553,19 @@ class InputVCFError : public UserError
 
 public:
     InputVCFError(fs::path vcf_path) : vcf_path_ {std::move(vcf_path)} {}
+    
+    virtual ~InputVCFError() override = default;
 };
+
+template <typename T>
+boost::optional<const T&> optional_cref(const boost::optional<T>& v)
+{
+    if (v) {
+        return *v;
+    } else {
+        return boost::none;
+    }
+}
 
 } // namespace
 
@@ -490,9 +576,12 @@ GenomeCallingComponents::Components::Components(ReferenceGenome&& reference, Rea
 , samples {extract_samples(options, this->read_manager)}
 , regions {get_search_regions(options, this->reference, this->read_manager)}
 , contigs {get_contigs(this->regions, this->reference, options::get_contig_output_order(options))}
-, reads_profile {profile_reads(this->samples, this->regions, this->read_manager)}
+, ploidies {options::get_ploidy_map(options)}
+, reads_profile {profile_reads_helper(this->samples, this->reference, this->regions, this->read_manager, this->ploidies, options)}
 , read_pipe {options::make_read_pipe(this->read_manager, this->reference, this->samples, options)}
-, caller_factory {options::make_caller_factory(this->reference, this->read_pipe, this->regions, options, this->reads_profile)}
+, haplotype_likelihood_model {options::make_calling_haplotype_likelihood_model(options, optional_cref(this->reads_profile))}
+, realignment_haplotype_likelihood_model {options::make_realignment_haplotype_likelihood_model(haplotype_likelihood_model, optional_cref(this->reads_profile), options)}
+, caller_factory {options::make_caller_factory(this->reference, this->read_pipe, this->regions, options, optional_cref(this->reads_profile))}
 , filter_read_pipe {}
 , output {std::move(output)}
 , filtered_output {}
@@ -500,14 +589,13 @@ GenomeCallingComponents::Components::Components(ReferenceGenome&& reference, Rea
 , read_buffer_footprint {options::get_target_read_buffer_size(options)}
 , read_buffer_size {}
 , progress_meter {regions}
-, ploidies {options::get_ploidy_map(options)}
 , pedigree {options::get_pedigree(options, samples)}
 , sites_only {options::call_sites_only(options)}
-, legacy {}
 , filter_request {}
 , bamout {options::bamout_request(options)}
 , bamout_config {}
 , data_profile {options::data_profile_request(options)}
+, profiler_config {}
 {
     drop_unused_samples(this->samples, this->read_manager);
     setup_progress_meter(options);
@@ -525,9 +613,15 @@ GenomeCallingComponents::Components::Components(ReferenceGenome&& reference, Rea
         if (temp_directory) fs::remove_all(*temp_directory);
         throw;
     }
+    bamout_config.alignment_model = realignment_haplotype_likelihood_model;
     bamout_config.copy_hom_ref_reads = options::full_bamouts_requested(options);
     bamout_config.max_buffer = read_buffer_footprint;
     bamout_config.max_threads = num_threads;
+    bamout_config.read_linkage = options::get_read_linkage_type(options);
+    profiler_config.alignment_model = bamout_config.alignment_model;
+    if (reads_profile && reads_profile->length_stats.median > 1'000) {
+        profiler_config.ignore_likely_misaligned_reads = false;
+    }
 }
 
 void GenomeCallingComponents::Components::setup_progress_meter(const options::OptionMap& options)
@@ -567,11 +661,6 @@ void GenomeCallingComponents::Components::setup_writers(const options::OptionMap
             prefilter_path = generate_temp_output_path(*temp_directory);
         }
         output.open(std::move(prefilter_path));
-        if (options::is_legacy_vcf_requested(options) && final_output_path) {
-            legacy = get_legacy_path(*final_output_path);
-        }
-    } else if (options::is_legacy_vcf_requested(options) && output.path()) {
-        legacy = get_legacy_path(*output.path());
     }
 }
 

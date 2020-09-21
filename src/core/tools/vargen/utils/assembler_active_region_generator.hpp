@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef assembler_active_region_generator_hpp
@@ -8,9 +8,12 @@
 #include <unordered_map>
 #include <functional>
 
+#include <boost/optional.hpp>
+
 #include "config/common.hpp"
 #include "basics/aligned_read.hpp"
 #include "utils/coverage_tracker.hpp"
+#include "utils/input_reads_profiler.hpp"
 #include "io/reference/reference_genome.hpp"
 
 namespace octopus {
@@ -24,14 +27,16 @@ class AssemblerActiveRegionGenerator
 public:
     struct Options
     {
-        enum class TriggerType { snv, indel, structual };
+        enum class TriggerType { snv, indel, structual, clustered };
         // TriggerType::snv looks for reads containing SNVs
         // TriggerType::indel looks for reads containing indels and soft clipping
         // TriggerType::structual looks for deletion hotspots
-        std::vector<TriggerType> trigger_types = {TriggerType::indel};
+		// TriggerType::clustered looks for reads containing clustered variation (SNVs and indels)
+        std::vector<TriggerType> trigger_types = {TriggerType::indel, TriggerType::clustered};
         AlignedRead::BaseQuality trigger_quality = 10;
         AlignedRead::MappingDomain::Size trigger_clip_size = 2;
         double min_expected_mutation_frequency = 0.1;
+        boost::optional<const ReadSetProfile&> read_profile = boost::none;
     };
     
     AssemblerActiveRegionGenerator() = delete;
@@ -59,11 +64,12 @@ private:
     using CoverageTrackerMap = std::unordered_map<SampleName, CoverageTracker<GenomicRegion>>;
     
     std::reference_wrapper<const ReferenceGenome> reference_;
-    bool snvs_interesting_ = false, indels_interesting_ = true, structual_interesting_ = false;
+    bool snvs_interesting_ = false, indels_interesting_ = true, structual_interesting_ = false, clustered_interesting_ = true;
     AlignedRead::BaseQuality trigger_quality_ = 10;
     AlignedRead::MappingDomain::Size trigger_clip_size_ = 2;
     double min_expected_mutation_frequency_;
     CoverageTrackerMap coverage_tracker_, interesting_read_coverages_, clipped_coverage_tracker_;
+    boost::optional<const ReadSetProfile&> read_profile_;
     
     bool is_interesting(const AlignedRead& read) const;
 };

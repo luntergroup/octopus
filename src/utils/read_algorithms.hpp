@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef read_algorithms_hpp
@@ -50,38 +50,19 @@ get_max_coverages_in_read_regions(const T& reads, const GenomicRegion& region)
     return detail::coverages_in_read_regions(reads, region, std::max_element);
 }
 
-template <typename T>
+template <typename Range,
+          typename = std::enable_if_t<std::is_same<AlignedRead, typename Range::value_type>::value>>
 std::vector<GenomicRegion>
-find_high_coverage_regions(const T& reads, const GenomicRegion& region,
-                           const unsigned max_coverage)
+find_high_coverage_regions(const Range& reads, const GenomicRegion& region, const unsigned max_coverage)
 {
-    using Position = GenomicRegion::Position;
-    
-    auto positional_coverage = calculate_positional_coverage(reads, region);
-    using Iterator = typename decltype(positional_coverage)::const_iterator;
-    Iterator first {positional_coverage.cbegin()};
-    Iterator current {first};
-    Iterator last {positional_coverage.cend()};
-    Iterator high_range_first, high_range_last;
-    Position high_range_begin, high_range_end;
-    std::vector<GenomicRegion> result {};
-    
-    while (current != last) {
-        const auto is_high_coverage = [max_coverage] (const auto coverage) { return coverage > max_coverage; };
-        high_range_first = std::find_if(current, last, is_high_coverage);
-        if (high_range_first == last) break;
-        high_range_last  = std::find_if_not(high_range_first, last, is_high_coverage);
-        high_range_begin = mapped_begin(region) + static_cast<Position>(std::distance(first, high_range_first));
-        high_range_end   = high_range_begin + static_cast<Position>(std::distance(high_range_first, high_range_last));
-        result.emplace_back(contig_name(region), high_range_begin, high_range_end);
-        current = high_range_last;
-    }
-    return result;
+    auto depths = calculate_positional_coverage(reads, region);
+    return find_high_coverage_regions(depths, region, max_coverage);
 }
 
-template <typename T>
+template <typename Range,
+          typename = std::enable_if_t<std::is_same<AlignedRead, typename Range::value_type>::value>>
 std::vector<GenomicRegion>
-find_high_coverage_regions(const T& reads, const unsigned max_coverage)
+find_high_coverage_regions(const Range& reads, const unsigned max_coverage)
 {
     return find_high_coverage_regions(reads, encompassing_region(reads), max_coverage);
 }

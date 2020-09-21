@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef denovo_threshold_filter_hpp
@@ -40,13 +40,14 @@ public:
     
     DeNovoThresholdVariantCallFilter(const DeNovoThresholdVariantCallFilter&)            = delete;
     DeNovoThresholdVariantCallFilter& operator=(const DeNovoThresholdVariantCallFilter&) = delete;
-    DeNovoThresholdVariantCallFilter(DeNovoThresholdVariantCallFilter&&)                 = default;
-    DeNovoThresholdVariantCallFilter& operator=(DeNovoThresholdVariantCallFilter&&)      = default;
+    DeNovoThresholdVariantCallFilter(DeNovoThresholdVariantCallFilter&&)                 = delete;
+    DeNovoThresholdVariantCallFilter& operator=(DeNovoThresholdVariantCallFilter&&)      = delete;
     
     virtual ~DeNovoThresholdVariantCallFilter() override = default;
 
 private:
-    virtual bool is_soft_filtered(const ClassificationList& sample_classifications, const MeasureVector& measures) const override;
+    virtual bool is_soft_filtered(const ClassificationList& sample_classifications, boost::optional<Phred<double>> joint_quality,
+                                  const MeasureVector& measures, std::vector<std::string>& reasons) const override;
 };
 
 } // namespace csr

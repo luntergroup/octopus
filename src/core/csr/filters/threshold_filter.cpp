@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "threshold_filter.hpp"
@@ -78,6 +78,11 @@ ThresholdVariantCallFilter::ThresholdVariantCallFilter(FacetFactory facet_factor
 , vcf_filter_keys_ {extract_vcf_filter_keys(conditions.soft)}
 , all_unique_filter_keys_ {are_all_unique(vcf_filter_keys_)}
 {}
+
+std::string ThresholdVariantCallFilter::do_name() const
+{
+    return "threshold";
+}
 
 bool ThresholdVariantCallFilter::passes_all_filters(MeasureIterator first_measure, MeasureIterator last_measure,
                                                     ThresholdIterator first_threshold) const

@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef denovo_reference_reversion_call_hpp
@@ -15,6 +15,7 @@ class DenovoReferenceReversionCall : public DenovoCall
 public:
     using VariantCall::GenotypeCall;
     using VariantCall::PhaseCall;
+    using DenovoCall::parsimonise;
     
     DenovoReferenceReversionCall() = delete;
     

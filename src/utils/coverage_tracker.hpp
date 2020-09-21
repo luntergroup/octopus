@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef coverage_tracker_hpp
@@ -13,8 +13,10 @@
 #include <numeric>
 #include <stdexcept>
 #include <cassert>
+#include <limits>
 
 #include <boost/optional.hpp>
+#include <boost/iterator/filter_iterator.hpp>
 
 #include "concepts/mappable.hpp"
 #include "maths.hpp"
@@ -32,7 +34,7 @@ public:
     using RegionType = Region;
     using DepthType  = T;
     
-    CoverageTracker() = default;
+    CoverageTracker(bool check_overflow = false);
     
     CoverageTracker(const CoverageTracker&)            = default;
     CoverageTracker& operator=(const CoverageTracker&) = default;
@@ -78,6 +80,7 @@ private:
     std::deque<DepthType> coverage_ = {};
     Region encompassing_region_;
     std::size_t num_tracked_ = 0;
+    bool check_overflow_ = false;
     
     using Iterator     = typename decltype(coverage_)::const_iterator;
     using IteratorPair = std::pair<Iterator, Iterator>;
@@ -87,6 +90,32 @@ private:
 };
 
 // non-member methods
+
+template <typename InputIterator, typename T = unsigned>
+CoverageTracker<RegionType<typename std::iterator_traits<InputIterator>::value_type>, T>
+make_coverage_tracker(InputIterator first, InputIterator last)
+{
+    using MappableType = typename std::iterator_traits<InputIterator>::value_type;
+    using RegionTp = RegionType<MappableType>;
+    CoverageTracker<RegionTp, T> result {};
+    std::for_each(first, last, [&result] (const MappableType& mappable) { result.add(mappable); });
+    return result;
+}
+
+template <typename Range, typename T = unsigned>
+auto make_coverage_tracker(const Range& mappables)
+{
+    return make_coverage_tracker<typename Range::const_iterator, T>(std::cbegin(mappables), std::cend(mappables));
+}
+
+template <typename Range, typename UnaryPredicate, typename T = unsigned>
+auto make_coverage_tracker(const Range& mappables, const UnaryPredicate condition)
+{
+    using boost::make_filter_iterator;
+    const auto begin = make_filter_iterator<UnaryPredicate>(std::cbegin(mappables), std::cend(mappables));
+    const auto end = make_filter_iterator<UnaryPredicate>(std::cend(mappables), std::cend(mappables));
+    return make_coverage_tracker<decltype(begin), T>(begin, end);
+}
 
 template <typename Region>
 std::vector<Region> get_covered_regions(const CoverageTracker<Region>& tracker, const Region& region)
@@ -107,6 +136,11 @@ std::vector<Region> get_covered_regions(const CoverageTracker<Region>& tracker)
 }
 
 // public methods
+
+template <typename Region, typename T>
+CoverageTracker<Region, T>::CoverageTracker(bool check_overflow)
+: check_overflow_ {check_overflow}
+{}
 
 template <typename Region, typename T>
 template <typename MappableType>
@@ -226,7 +260,7 @@ template <typename Region, typename T>
 template <typename OutputIt>
 OutputIt CoverageTracker<Region, T>::get(const Region& region, OutputIt result) const
 {
-    if (coverage_.empty()) {
+    if (coverage_.empty() || !overlaps(region, encompassing_region_)) {
         return std::fill_n(result, size(region), 0);
     }
     const auto p = range(region);
@@ -322,7 +356,13 @@ void CoverageTracker<Region, T>::do_add(const Region& region)
         const auto first = std::next(std::begin(coverage_), begin_distance(encompassing_region_, region));
         assert(first < std::end(coverage_));
         assert(std::next(first, size(region)) <= std::end(coverage_));
-        std::transform(first, std::next(first, size(region)), first, [] (auto count) noexcept { return count + 1; });
+        const auto last = std::next(first, size(region));
+        if (check_overflow_) {
+            if (std::find(first, last, std::numeric_limits<DepthType>::max()) != last) {
+                throw std::runtime_error {"CoverageTracker::add failed due to depth overflow"};
+            }
+        }
+        std::transform(first, last, first, [] (auto count) noexcept { return count + 1; });
     }
     ++num_tracked_;
 }

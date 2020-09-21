@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "htslib_bcf_facade.hpp"
@@ -732,7 +732,7 @@ void extract_samples(const bcf_hdr_t* header, bcf1_t* record, VcfRecord::Builder
         bcf_get_genotypes(header, record, &gt, &ngt); // mallocs gt
         const auto max_ploidy = static_cast<unsigned>(record->d.fmt->n);
         for (unsigned sample {0}, i {0}; sample < num_samples; ++sample, i += max_ploidy) {
-            std::vector<VcfRecord::NucleotideSequence> alleles {};
+            std::vector<boost::optional<unsigned>> alleles {};
             alleles.reserve(max_ploidy);
             for (unsigned p {0}; p < max_ploidy; ++p) {
                 g = gt[i + p];
@@ -740,13 +740,13 @@ void extract_samples(const bcf_hdr_t* header, bcf1_t* record, VcfRecord::Builder
                     alleles.shrink_to_fit();
                     break;
                 } else if (bcf_gt_is_missing(g)) {
-                    alleles.push_back(bcf_missing_str);
+                    alleles.push_back(boost::none);
                 } else {
                     const auto idx = bcf_gt_allele(g);
                     if (idx < record->n_allele) {
-                        alleles.emplace_back(record->d.allele[idx]);
+                        alleles.emplace_back(idx);
                     } else {
-                        alleles.push_back(bcf_missing_str);
+                        alleles.push_back(boost::none);
                     }
                 }
             }
@@ -771,8 +771,13 @@ void extract_samples(const bcf_hdr_t* header, bcf1_t* record, VcfRecord::Builder
                     const auto num_values_per_sample = num_values_written / num_samples;
                     auto ptr = intformat;
                     for (unsigned sample {0}; sample < num_samples; ++sample, ptr += num_values_per_sample) {
-                        values[sample].reserve(num_values_per_sample);
-                        std::transform(ptr, ptr + num_values_per_sample, std::back_inserter(values[sample]),
+                        const static auto is_pad = [] (auto x) noexcept { return x == bcf_int32_vector_end; };
+                        const auto pad_ritr = std::find_if_not(std::make_reverse_iterator(ptr + num_values_per_sample), std::make_reverse_iterator(ptr), is_pad);
+                        const auto num_pad_values = std::distance(std::make_reverse_iterator(ptr + num_values_per_sample), pad_ritr);
+                        assert(num_pad_values <= num_values_per_sample);
+                        const auto num_sample_values = num_values_per_sample - num_pad_values;
+                        values[sample].reserve(num_sample_values);
+                        std::transform(ptr, ptr + num_sample_values, std::back_inserter(values[sample]),
                                        [] (auto v) {
                                            return v != bcf_int32_missing ? std::to_string(v) : bcf_missing_str;
                                        });
@@ -786,8 +791,13 @@ void extract_samples(const bcf_hdr_t* header, bcf1_t* record, VcfRecord::Builder
                     const auto num_values_per_sample = num_values_written / num_samples;
                     auto ptr = floatformat;
                     for (unsigned sample {0}; sample < num_samples; ++sample, ptr += num_values_per_sample) {
-                        values[sample].reserve(num_values_per_sample);
-                        std::transform(ptr, ptr + num_values_per_sample, std::back_inserter(values[sample]),
+                        const static auto is_pad = [] (auto x) noexcept { return bcf_float_is_vector_end(x); };
+                        const auto pad_ritr = std::find_if_not(std::make_reverse_iterator(ptr + num_values_per_sample), std::make_reverse_iterator(ptr), is_pad);
+                        const auto num_pad_values = std::distance(std::make_reverse_iterator(ptr + num_values_per_sample), pad_ritr);
+                        assert(num_pad_values <= num_values_per_sample);
+                        const auto num_sample_values = num_values_per_sample - num_pad_values;
+                        values[sample].reserve(num_sample_values);
+                        std::transform(ptr, ptr + num_sample_values, std::back_inserter(values[sample]),
                                        [] (auto v) {
                                            return v != bcf_float_missing ? std::to_string(v) : bcf_missing_str;
                                        });
@@ -820,15 +830,16 @@ void extract_samples(const bcf_hdr_t* header, bcf1_t* record, VcfRecord::Builder
     }
 }
 
-template <typename T, typename Container>
-auto genotype_number(const T& allele, const Container& alleles, const bool is_phased)
+auto to_bcf_gt_number(const VcfRecord::AlleleIndex index, const bool is_phased)
 {
-    if (is_missing(allele)) {
-        return (is_phased) ? bcf_gt_missing + 1 : bcf_gt_missing;
+    decltype(bcf_gt_missing) result;
+    if (index < 0) {
+        result = bcf_gt_missing;
+    } else {
+        result = 2 * index + 2;
     }
-    const auto it = std::find(std::cbegin(alleles), std::cend(alleles), allele);
-    const auto allele_num = 2 * static_cast<decltype(bcf_gt_missing)>(std::distance(std::cbegin(alleles), it)) + 2;
-    return (is_phased) ? allele_num + 1 : allele_num;
+    if (is_phased) ++result;
+    return result;
 }
 
 auto max_format_cardinality(const VcfRecord& record, const VcfRecord::KeyType& key, const std::vector<std::string>& samples)
@@ -856,30 +867,25 @@ void set_samples(const bcf_hdr_t* header, bcf1_t* dest, const VcfRecord& source,
     if (format.empty()) return;
     auto first_format = std::cbegin(format);
     if (*first_format == vcfspec::format::genotype) {
-        const auto& alt_alleles = source.alt();
-        bc::small_vector<VcfRecord::NucleotideSequence, 5> alleles {};
-        alleles.reserve(alt_alleles.size() + 1);
-        alleles.push_back(source.ref());
-        alleles.insert(std::end(alleles), std::cbegin(alt_alleles), std::cend(alt_alleles));
         unsigned max_ploidy {};
         for (const auto& sample : samples) {
             const auto p = source.ploidy(sample);
             if (p > max_ploidy) max_ploidy = p;
         }
         const auto ngt = num_samples * static_cast<int>(max_ploidy);
-        bc::small_vector<int, 1'000> genotype(ngt);
-        auto genotype_itr = std::begin(genotype);
+        bc::small_vector<int, 1'000> genotypes(ngt);
+        auto genotypes_itr = std::begin(genotypes);
         for (const auto& sample : samples) {
             const bool is_phased {source.is_sample_phased(sample)};
-            const auto& genotype = source.get_sample_value(sample, vcfspec::format::genotype);
+            const auto& genotype = source.genotype(sample);
             const auto ploidy = static_cast<unsigned>(genotype.size());
-            genotype_itr = std::transform(std::cbegin(genotype), std::cend(genotype), genotype_itr,
-                                          [is_phased, &alleles] (const auto& allele) {
-                                              return genotype_number(allele, alleles, is_phased);
-                                          });
-            genotype_itr = std::fill_n(genotype_itr, max_ploidy - ploidy, bcf_int32_vector_end);
+            genotypes_itr = std::transform(std::cbegin(genotype), std::cend(genotype), genotypes_itr,
+                                           [&] (const auto& allele_idx) {
+                                               return to_bcf_gt_number(allele_idx, is_phased);
+                                           });
+            genotypes_itr = std::fill_n(genotypes_itr, max_ploidy - ploidy, bcf_int32_vector_end);
         }
-        bcf_update_genotypes(header, dest, genotype.data(), ngt);
+        bcf_update_genotypes(header, dest, genotypes.data(), ngt);
         ++first_format;
     }
     std::vector<std::string> str_buffer {};

@@ -36,6 +36,7 @@ set(CONCEPTS_SOURCES
     concepts/comparable.hpp
     concepts/mappable.hpp
     concepts/mappable_range.hpp
+    concepts/indexed.hpp
 )
 
 set(BASICS_SOURCES
@@ -57,6 +58,8 @@ set(BASICS_SOURCES
     basics/read_pileup.cpp
     basics/tandem_repeat.hpp
     basics/tandem_repeat.cpp
+    basics/aligned_template.hpp
+    basics/aligned_template.cpp
 )
 
 set(CONTAINERS_SOURCES
@@ -65,6 +68,7 @@ set(CONTAINERS_SOURCES
     containers/mappable_map.hpp
     containers/matrix_map.hpp
     containers/probability_matrix.hpp
+    containers/mappable_block.hpp
 )
 
 set(LOGGING_SOURCES
@@ -190,6 +194,12 @@ set(UTILS_SOURCES
     utils/system_utils.cpp
     utils/k_medoids.hpp
     utils/random_select.hpp
+    utils/read_duplicates.hpp
+    utils/read_duplicates.cpp
+    utils/array_tricks.hpp
+    utils/reorder.hpp
+    utils/free_memory.hpp
+    utils/erase_if.hpp
 )
 
 set(CORE_SOURCES
@@ -229,8 +239,14 @@ set(CORE_SOURCES
     core/types/calls/denovo_reference_reversion_call.cpp
     core/types/calls/cell_variant_call.hpp
     core/types/calls/cell_variant_call.cpp
+    core/types/calls/polyclone_variant_call.hpp
+    core/types/calls/polyclone_variant_call.cpp
+    core/types/calls/cnv_call.hpp
+    core/types/calls/cnv_call.cpp
     core/types/calls/call_wrapper.hpp
     core/types/calls/call_wrapper.cpp
+    core/types/calls/call_utils.hpp
+    core/types/calls/call_utils.cpp
     core/tools/vcf_header_factory.hpp
     core/tools/vcf_header_factory.cpp
     core/tools/vcf_record_factory.hpp
@@ -254,6 +270,10 @@ set(CORE_SOURCES
     core/csr/facets/ploidies.cpp
     core/csr/facets/pedigree.hpp
     core/csr/facets/pedigree.cpp
+    core/csr/facets/repeat_context.hpp
+    core/csr/facets/repeat_context.cpp
+    core/csr/facets/reads_summary.hpp
+    core/csr/facets/reads_summary.cpp
     core/csr/facets/facet_factory.hpp
     core/csr/facets/facet_factory.cpp
 
@@ -287,8 +307,6 @@ set(CORE_SOURCES
     core/csr/filters/random_forest_filter.cpp
     core/csr/filters/random_forest_filter_factory.hpp
     core/csr/filters/random_forest_filter_factory.cpp
-    core/csr/filters/conditional_random_forest_filter.hpp
-    core/csr/filters/conditional_random_forest_filter.cpp
     core/csr/filters/somatic_random_forest_filter.hpp
     core/csr/filters/somatic_random_forest_filter.cpp
     core/csr/filters/denovo_random_forest_filter.hpp
@@ -318,6 +336,8 @@ set(CORE_SOURCES
     core/csr/measures/allele_depth.cpp
     core/csr/measures/allele_frequency.hpp
     core/csr/measures/allele_frequency.cpp
+    core/csr/measures/allele_frequency_bias.hpp
+    core/csr/measures/allele_frequency_bias.cpp
     core/csr/measures/strand_bias.hpp
     core/csr/measures/strand_bias.cpp
     core/csr/measures/mapping_quality_divergence.hpp
@@ -353,8 +373,6 @@ set(CORE_SOURCES
     core/csr/measures/read_side_bias.cpp
     core/csr/measures/alt_allele_count.hpp
     core/csr/measures/alt_allele_count.cpp
-    core/csr/measures/overlaps_tandem_repeat.hpp
-    core/csr/measures/overlaps_tandem_repeat.cpp
     core/csr/measures/str_length.hpp
     core/csr/measures/str_length.cpp
     core/csr/measures/str_period.hpp
@@ -385,9 +403,29 @@ set(CORE_SOURCES
     core/csr/measures/base_mismatch_count.cpp
     core/csr/measures/base_mismatch_fraction.hpp
     core/csr/measures/base_mismatch_fraction.cpp
+    core/csr/measures/base_mismatch_quality.hpp
+    core/csr/measures/base_mismatch_quality.cpp
     core/csr/measures/assigned_depth.hpp
     core/csr/measures/assigned_depth.cpp
-
+    core/csr/measures/duplicate_concordance.hpp
+    core/csr/measures/duplicate_concordance.cpp
+    core/csr/measures/duplicate_allele_depth.hpp
+    core/csr/measures/duplicate_allele_depth.cpp
+    core/csr/measures/duplicate_allele_fraction.hpp
+    core/csr/measures/duplicate_allele_fraction.cpp
+    core/csr/measures/error_rate.hpp
+    core/csr/measures/error_rate.cpp
+    core/csr/measures/error_rate_stdev.hpp
+    core/csr/measures/error_rate_stdev.cpp
+    core/csr/measures/is_transversion.hpp
+    core/csr/measures/is_transversion.cpp
+    core/csr/measures/phase_length.hpp
+    core/csr/measures/phase_length.cpp
+    core/csr/measures/max_read_length.hpp
+    core/csr/measures/max_read_length.cpp
+    core/csr/measures/allele_mapping_quality.hpp
+    core/csr/measures/allele_mapping_quality.cpp
+    
     core/models/haplotype_likelihood_array.hpp
     core/models/haplotype_likelihood_array.cpp
     core/models/haplotype_likelihood_model.hpp
@@ -427,9 +465,13 @@ set(CORE_SOURCES
     core/models/genotype/single_cell_model.cpp
 
     core/models/pairhmm/pair_hmm.hpp
-    core/models/pairhmm/pair_hmm.cpp
     core/models/pairhmm/simd_pair_hmm.hpp
-    core/models/pairhmm/simd_pair_hmm.cpp
+    core/models/pairhmm/rolling_initializer.hpp
+    core/models/pairhmm/sse2_pair_hmm_impl.hpp
+    core/models/pairhmm/avx2_pair_hmm_impl.hpp
+    core/models/pairhmm/avx512_pair_hmm_impl.hpp
+    core/models/pairhmm/simd_pair_hmm_factory.hpp
+    core/models/pairhmm/simd_pair_hmm_wrapper.hpp
 
     core/models/error/indel_error_model.hpp
     core/models/error/indel_error_model.cpp
@@ -469,6 +511,8 @@ set(CORE_SOURCES
     core/tools/bam_realigner.cpp
     core/tools/indel_profiler.hpp
     core/tools/indel_profiler.cpp
+    core/tools/bad_region_detector.hpp
+    core/tools/bad_region_detector.cpp
 
     core/tools/hapgen/genome_walker.hpp
     core/tools/hapgen/genome_walker.cpp
@@ -476,8 +520,6 @@ set(CORE_SOURCES
     core/tools/hapgen/haplotype_generator.cpp
     core/tools/hapgen/haplotype_tree.hpp
     core/tools/hapgen/haplotype_tree.cpp
-    core/tools/hapgen/dense_variation_detector.hpp
-    core/tools/hapgen/dense_variation_detector.cpp
     
     core/tools/phaser/phaser.hpp
     core/tools/phaser/phaser.cpp
@@ -522,6 +564,8 @@ set(CORE_SOURCES
     core/types/variant.cpp
     core/types/phylogeny.hpp
     core/types/phylogeny.cpp
+    core/types/indexed_haplotype.hpp
+    core/types/shared_haplotype.hpp
 
     core/calling_components.hpp
     core/calling_components.cpp
@@ -573,6 +617,7 @@ set(WarningIgnores
     -Wno-unused-parameter
     -Wno-unused-function
     -Wno-missing-braces
+    -Wno-deprecated-copy
 )
 
 set(GCCWarningIgnores
@@ -587,17 +632,39 @@ if(CMAKE_COMPILER_IS_GNUCXX)
     add_compile_options(${GCCWarningIgnores})
 endif()
 
+find_package(SSE)
+set(AVX512_FOUND false)
+if (AVX512F_FOUND AND AVX512BW_FOUND)
+    add_compile_options(-mavx512f -mavx512bw)
+	set(AVX512_FOUND true)
+elseif (AVX2_FOUND)
+    add_compile_options(-mavx2)
+elseif (SSE4_1_FOUND)
+    add_compile_options(-msse4.1)
+elseif (SSSE3_FOUND)
+    add_compile_options(-msse3)
+else ()
+    add_compile_options(-msse2)
+endif()
+
 set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
 set(THREADS_PREFER_PTHREAD_FLAG TRUE)
 
 if (NOT BUILD_SHARED_LIBS)
+    set(CMAKE_FIND_LIBRARY_SUFFIXES ".a" ${CMAKE_FIND_LIBRARY_SUFFIXES})
     set(HTSlib_USE_STATIC_LIBS ON)
+endif()
+
+set(CXX_OPTIMIZATION_FLAGS -ffast-math -march=native)
+if (CMAKE_COMPILER_IS_GNUCXX)
+    set(CXX_OPTIMIZATION_FLAGS ${CXX_OPTIMIZATION_FLAGS} -mfpmath=both)
 endif()
 
 if (BUILD_TESTING)
     # Make a library of all octopus non-main.cpp sources so can be used with tests
     add_library(Octopus ${OCTOPUS_SOURCES} ${INCLUDE_SOURCES})
     target_compile_features(Octopus PRIVATE cxx_thread_local)
+    target_compile_options(Octopus PRIVATE ${CXX_OPTIMIZATION_FLAGS})
     target_include_directories(Octopus PUBLIC ${octopus_SOURCE_DIR}/lib ${octopus_SOURCE_DIR}/src)
     target_link_libraries(Octopus tandem ranger)
     target_compile_definitions(Octopus PRIVATE -DBOOST_LOG_DYN_LINK) # Required for log
@@ -605,15 +672,28 @@ if (BUILD_TESTING)
     message(STATUS "Boost include dir: " ${Boost_INCLUDE_DIR})
     message(STATUS "Boost libraries: " ${Boost_LIBRARIES})
     find_package(GMP REQUIRED)
+    message(STATUS "GMP include dir: " ${GMP_INCLUDES})
+    message(STATUS "GMP libraries: " ${GMP_LIBRARIES})
     find_package (HTSlib 1.4 REQUIRED)
     find_package(Threads REQUIRED)
     target_include_directories (Octopus PUBLIC
         ${octopus_SOURCE_DIR}/lib
         ${octopus_SOURCE_DIR}/src
         ${Boost_INCLUDE_DIR}
-        ${GMP_INCLUDE_DIR}
+        ${GMP_INCLUDES}
         ${HTSlib_INCLUDE_DIRS})
     target_link_libraries (Octopus tandem ranger ${Boost_LIBRARIES} ${GMP_LIBRARIES} ${HTSlib_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
+    check_ipo_supported(RESULT ipo_supported OUTPUT output)
+    if(ipo_supported)
+        message(STATUS "IPO is supported!")
+        set_property(TARGET Octopus PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+    else()
+        message(WARNING "IPO is not supported: ${output}")
+    endif()
+    configure_file (
+        "${PROJECT_SOURCE_DIR}/src/config/system.h.in"
+        "${PROJECT_BINARY_DIR}/generated/system.hpp"
+    )
 elseif (CMAKE_BUILD_TYPE MATCHES Debug)
     add_executable(octopus-debug main.cpp ${OCTOPUS_SOURCES} ${INCLUDE_SOURCES})
     target_compile_features(octopus-debug PRIVATE cxx_thread_local)
@@ -626,17 +706,20 @@ elseif (CMAKE_BUILD_TYPE MATCHES Debug)
         message(STATUS "Linking against boost dynamic libraries")
         target_compile_definitions(octopus-debug PRIVATE -DBOOST_LOG_DYN_LINK) # Required for log
     endif()
+    set(Boost_NO_BOOST_CMAKE TRUE)
     find_package (Boost 1.65 REQUIRED COMPONENTS ${REQUIRED_BOOST_LIBRARIES} REQUIRED)
     message(STATUS "Boost include dir: " ${Boost_INCLUDE_DIR})
     message(STATUS "Boost libraries: " ${Boost_LIBRARIES})
     find_package(GMP REQUIRED)
+    message(STATUS "GMP include dir: " ${GMP_INCLUDES})
+    message(STATUS "GMP libraries: " ${GMP_LIBRARIES})
     find_package (HTSlib 1.4 REQUIRED)
     find_package(Threads REQUIRED)
     target_include_directories (octopus-debug PUBLIC
         ${octopus_SOURCE_DIR}/lib
         ${octopus_SOURCE_DIR}/src
         ${Boost_INCLUDE_DIR}
-        ${GMP_INCLUDE_DIR}
+        ${GMP_INCLUDES}
         ${HTSlib_INCLUDE_DIRS})
     target_link_libraries (octopus-debug tandem ranger ${Boost_LIBRARIES} ${GMP_LIBRARIES} ${HTSlib_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
     configure_file (
@@ -648,7 +731,7 @@ elseif (CMAKE_BUILD_TYPE MATCHES RelWithDebInfo)
     set(SanitizeFlags -fsanitize=address,undefined)
     add_executable(octopus-sanitize main.cpp ${OCTOPUS_SOURCES} ${INCLUDE_SOURCES})
     target_compile_features(octopus-sanitize PRIVATE cxx_thread_local)
-    target_compile_options(octopus-sanitize PRIVATE ${SanitizeFlags})
+    target_compile_options(octopus-sanitize PRIVATE ${SanitizeFlags} -fno-omit-frame-pointer)
     if (NOT BUILD_SHARED_LIBS)
         message(STATUS "Linking against boost static libraries")
         set(Boost_USE_STATIC_LIBS ON)
@@ -656,17 +739,20 @@ elseif (CMAKE_BUILD_TYPE MATCHES RelWithDebInfo)
         message(STATUS "Linking against boost dynamic libraries")
         target_compile_definitions(octopus-sanitize PRIVATE -DBOOST_LOG_DYN_LINK) # Required for log
     endif()
+    set(Boost_NO_BOOST_CMAKE TRUE)
     find_package (Boost 1.65 REQUIRED COMPONENTS ${REQUIRED_BOOST_LIBRARIES} REQUIRED)
     message(STATUS "Boost include dir: " ${Boost_INCLUDE_DIR})
     message(STATUS "Boost libraries: " ${Boost_LIBRARIES})
     find_package(GMP REQUIRED)
+    message(STATUS "GMP include dir: " ${GMP_INCLUDES})
+    message(STATUS "GMP libraries: " ${GMP_LIBRARIES})
     find_package (HTSlib 1.4 REQUIRED)
     find_package(Threads REQUIRED)
     target_include_directories (octopus-sanitize PUBLIC
         ${octopus_SOURCE_DIR}/lib
         ${octopus_SOURCE_DIR}/src
         ${Boost_INCLUDE_DIR}
-        ${GMP_INCLUDE_DIR}
+        ${GMP_INCLUDES}
         ${HTSlib_INCLUDE_DIRS})
     target_link_libraries (octopus-sanitize tandem ranger ${Boost_LIBRARIES} ${GMP_LIBRARIES} ${HTSlib_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${SanitizeFlags})
     configure_file (
@@ -677,31 +763,41 @@ elseif (CMAKE_BUILD_TYPE MATCHES RelWithDebInfo)
 else()
     add_executable(octopus main.cpp ${OCTOPUS_SOURCES} ${INCLUDE_SOURCES})
     target_compile_features(octopus PRIVATE cxx_thread_local)
-    target_compile_options(octopus PRIVATE -ffast-math -funroll-loops -march=native)
-    if (NOT BUILD_SHARED_LIBS)
-        message(STATUS "Linking against boost static libraries")
-        set(Boost_USE_STATIC_LIBS ON)
-    else()
+    target_compile_options(octopus PRIVATE ${CXX_OPTIMIZATION_FLAGS})
+    if (BUILD_SHARED_LIBS)
         message(STATUS "Linking against boost dynamic libraries")
         target_compile_definitions(octopus PRIVATE -DBOOST_LOG_DYN_LINK) # Required for log
+    else()
+        message(STATUS "Linking against boost static libraries")
+        set(Boost_USE_STATIC_LIBS ON)
     endif()
+    set(Boost_NO_BOOST_CMAKE TRUE)
     find_package (Boost 1.65 REQUIRED COMPONENTS ${REQUIRED_BOOST_LIBRARIES} REQUIRED)
     message(STATUS "Boost include dir: " ${Boost_INCLUDE_DIR})
     message(STATUS "Boost libraries: " ${Boost_LIBRARIES})
     find_package(GMP REQUIRED)
+    message(STATUS "GMP include dir: " ${GMP_INCLUDES})
+    message(STATUS "GMP libraries: " ${GMP_LIBRARIES})
     find_package (HTSlib 1.4 REQUIRED)
     find_package(Threads REQUIRED)
     target_include_directories (octopus PUBLIC
         ${octopus_SOURCE_DIR}/lib
         ${octopus_SOURCE_DIR}/src
         ${Boost_INCLUDE_DIR}
-        ${GMP_INCLUDE_DIR}
+        ${GMP_INCLUDES}
         ${HTSlib_INCLUDE_DIRS})
     target_link_libraries (octopus tandem ranger ${Boost_LIBRARIES} ${GMP_LIBRARIES} ${HTSlib_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
+    if (NOT BUILD_SHARED_LIBS)
+        if (CMAKE_COMPILER_IS_GNUCXX)
+            target_link_libraries(octopus m mvec -static -static-libgcc -static-libstdc++)
+        endif()
+    endif()
     check_ipo_supported(RESULT ipo_supported OUTPUT output)
     if(ipo_supported)
         message(STATUS "IPO is supported!")
         set_property(TARGET octopus PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+    elseif(CMAKE_CXX_COMPILER_ID MATCHES "Intel")
+        target_compile_options(octopus PRIVATE -ipo)
     else()
         message(WARNING "IPO is not supported: ${output}")
     endif()

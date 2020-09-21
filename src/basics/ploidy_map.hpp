@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef ploidy_map_hpp
@@ -35,7 +35,7 @@ private:
     
     unsigned organism_;
     ContigPloidyMap contigs_;
-    std::unordered_map<SampleName, ContigPloidyMap> allosomes_;
+    std::unordered_map<ContigName, std::unordered_map<SampleName, unsigned>> allosomes_;
 };
 
 std::vector<unsigned> get_ploidies(const std::vector<SampleName>& samples, const ContigName& contig, const PloidyMap& ploidies);

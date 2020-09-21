@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef assembler_hpp
@@ -36,6 +36,7 @@ class Assembler
 {
 public:
     using NucleotideSequence = std::string;
+    using BaseQualityVector = std::vector<std::uint8_t>;
     enum class Direction { forward, reverse };
     
     struct Variant;
@@ -68,7 +69,9 @@ public:
     void insert_reference(const NucleotideSequence& sequence);
     
     // Threads the given read sequence into the graph
-    void insert_read(const NucleotideSequence& sequence, Direction strand);
+    void insert_read(const NucleotideSequence& sequence,
+                     const BaseQualityVector& base_qualities,
+                     Direction strand);
     
     // Returns the current number of unique kmers in the graph
     std::size_t num_kmers() const noexcept;
@@ -142,6 +145,7 @@ private:
         using WeightType = unsigned;
         using ScoreType  = double;
         WeightType weight, forward_strand_weight;
+        int base_quality_sum = 0;
         bool is_reference = false, is_artificial = false;
         ScoreType transition_score = 0;
     };
@@ -172,6 +176,15 @@ private:
         std::size_t reference_offset;
     };
     
+    using PathWeightDistribution = std::vector<float>;
+    
+    struct PathWeightStats
+    {
+        PathWeightDistribution distribution;
+        unsigned total, total_forward, total_reverse, min, max;
+        double mean, median, stdev;
+    };
+    
     Parameters params_;
     
     std::deque<Kmer> reference_kmers_;
@@ -197,12 +210,14 @@ private:
     void remove_vertex(Vertex v);
     void clear_and_remove_vertex(Vertex v);
     void clear_and_remove_all(const std::unordered_set<Vertex>& vertices);
-    Edge add_edge(Vertex u, Vertex v, GraphEdge::WeightType weight, GraphEdge::WeightType forward_weight,
+    Edge add_edge(Vertex u, Vertex v,
+                  GraphEdge::WeightType weight, GraphEdge::WeightType forward_weight,
+                  int base_quality_sum,
                   bool is_reference = false, bool is_artificial = false);
     Edge add_reference_edge(Vertex u, Vertex v);
     void remove_edge(Vertex u, Vertex v);
     void remove_edge(Edge e);
-    void increment_weight(Edge e, bool is_forward);
+    void increment_weight(Edge e, bool is_forward, int base_quality);
     void set_vertex_reference(Vertex v);
     void set_vertex_reference(const Kmer& kmer);
     void set_edge_reference(Edge e);
@@ -247,10 +262,11 @@ private:
     bool connects_to_path(Edge e, const Path& path) const;
     bool is_dependent_on_path(Edge e, const Path& path) const;
     GraphEdge::WeightType weight(const Path& path) const;
-    std::pair<GraphEdge::WeightType, GraphEdge::WeightType> direction_weights(const Path& path) const;
+    GraphEdge::WeightType max_weight(const Path& path) const;
     unsigned count_low_weights(const Path& path, unsigned low_weight) const;
     bool has_low_weight_flanks(const Path& path, unsigned low_weight) const;
     unsigned count_low_weight_flanks(const Path& path, unsigned low_weight) const;
+    PathWeightStats compute_weight_stats(const Path& path) const;
     GraphEdge::WeightType sum_source_in_edge_weight(Edge e) const;
     GraphEdge::WeightType sum_target_out_edge_weight(Edge e) const;
     bool all_in_edges_low_weight(Vertex v, unsigned min_weight) const;
@@ -286,6 +302,9 @@ private:
     backtrack_until_nonreference(const PredecessorMap& predecessors, Vertex from) const;
     Path extract_nonreference_path(const PredecessorMap& predecessors, Vertex from) const;
     std::vector<EdgePath> extract_k_shortest_paths(Vertex src, Vertex dst, unsigned k) const;
+    Edge head_edge(const Path& path) const;
+    int head_mean_base_quality(const Path& path) const;
+    int tail_mean_base_quality(const Path& path) const;
     double bubble_score(const Path& path) const;
     std::deque<Variant> extract_bubble_paths(unsigned max_bubbles, double min_bubble_score);
     std::deque<SubGraph> find_independent_subgraphs() const;
@@ -299,7 +318,7 @@ private:
     void print_reference_path() const;
     void print(Edge e) const;
     void print(const Path& path) const;
-    void print_weighted(const Path& path) const;
+    void print_verbose(const Path& path) const;
     void print_dominator_tree() const;
     
     friend struct boost::property_map<KmerGraph, boost::vertex_index_t>;

@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef genotype_reader_hpp
@@ -28,9 +28,11 @@ using GenotypeMap = std::unordered_map<SampleName, MappableFlatSet<Genotype<Hapl
 
 enum class ReferencePadPolicy { leave, trim_alt_alleles, trim_all_alleles };
 
-std::pair<std::vector<Allele>, bool>
-get_called_alleles(const VcfRecord& call, const VcfRecord::SampleName& sample,
-                   ReferencePadPolicy ref_pad_policy = ReferencePadPolicy::trim_all_alleles);
+std::vector<boost::optional<Allele>>
+get_resolved_alleles(const std::vector<VcfRecord>& calls,
+                     std::size_t call_idx,
+                     const VcfRecord::SampleName& sample,
+                     ReferencePadPolicy ref_pad_policy = ReferencePadPolicy::trim_all_alleles);
 
 GenotypeMap
 extract_genotypes(const std::vector<VcfRecord>& calls,

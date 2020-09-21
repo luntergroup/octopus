@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "indel_profiler.hpp"
@@ -231,14 +231,16 @@ IndelProfiler::read_next_data_batch(VcfIterator& first, const VcfIterator& last,
             evaluate_support(sample_genotype, reads[sample], result.support);
             reads[sample].clear();
             reads[sample].shrink_to_fit();
-            for (const auto& record : records) {
-                std::vector<Allele> alleles; bool has_ref;
-                std::tie(alleles, has_ref) = get_called_alleles(record, sample);
-                if (has_ref) alleles.erase(std::cbegin(alleles));
-                alleles.erase(std::remove_if(std::begin(alleles), std::end(alleles),
-                                             [] (const auto& allele) { return !is_indel(allele); }),
-                              std::end(alleles));
-                result.indels.insert(std::begin(alleles), std::end(alleles));
+            for (std::size_t record_idx {0}; record_idx < records.size(); ++record_idx) {
+                auto alleles = get_resolved_alleles(records, record_idx, sample);
+                std::vector<Allele> alt_indels {};
+                alt_indels.reserve(alleles.size() - 1);
+                std::for_each(std::next(std::begin(alleles)), std::end(alleles), [&] (auto& allele) {
+                    if (allele && is_indel(*allele)) {
+                        alt_indels.push_back(std::move(*allele));
+                    }
+                });
+                result.indels.insert(std::begin(alt_indels), std::end(alt_indels));
             }
         }
     } else {
@@ -383,6 +385,7 @@ void IndelProfiler::evaluate_indel_profile(const DataBatch& data, IndelProfile& 
         }
         // Add errors
         for (const auto& p : data.support) {
+            state.footprint += count_base_pairs(p.second, region);
             for (const auto& read : overlap_range(p.second, region)) {
                 ++state.read_count;
                 const auto indel_error = find_indel_error(read, region);
@@ -409,26 +412,20 @@ double error_expectation(const AlignedRead& read)
     return error_expectation(read.base_qualities());
 }
 
-unsigned count_errors(const CigarString& cigar)
-{
-    return std::accumulate(std::cbegin(cigar), std::cend(cigar), 0u,
-                           [] (auto curr, auto op) { return curr + (is_match(op) ? 0u : op.size()); });
-}
-
 unsigned count_errors(const AlignedRead& read)
 {
-    return count_errors(read.cigar());
+    return sum_non_matches(read.cigar());
 }
 
-bool over_hmm_band_limit(const CigarString& cigar) noexcept
+bool over_hmm_band_limit(const CigarString& cigar, const HaplotypeLikelihoodModel& model) noexcept
 {
     auto gap_len = static_cast<unsigned>(std::max(std::abs(max_indel_size(cigar)), std::abs(sum_indel_sizes(cigar))));
-    return gap_len > HaplotypeLikelihoodModel::pad_requirement();
+    return gap_len > model.pad_requirement();
 }
 
-bool is_likely_misaligned(const AlignedRead& read)
+bool is_likely_misaligned(const AlignedRead& read, const HaplotypeLikelihoodModel& model)
 {
-    if (over_hmm_band_limit(read.cigar())) return true;
+    if (over_hmm_band_limit(read.cigar(), model)) return true;
     const auto expected_errors = static_cast<unsigned>(std::ceil(error_expectation(read)));
     const auto max_expected_errors = 5 * expected_errors;
     const auto observed_errors = count_errors(read);
@@ -446,17 +443,17 @@ void IndelProfiler::evaluate_support(const Genotype<Haplotype>& genotype, ReadCo
     HaplotypeSupportMap haplotype_support;
     if (genotype.ploidy() > 1) {
         const AssignmentConfig assigner_config {AssignmentConfig::AmbiguousAction::random};
-        haplotype_support = compute_haplotype_support(genotype, buffer, assigner_config);
+        haplotype_support = compute_haplotype_support(genotype, buffer, config_.alignment_model, assigner_config);
     } else {
         haplotype_support.emplace(genotype[0], std::move(buffer));
     }
     buffer.clear();
     buffer.shrink_to_fit();
     for (auto& p : haplotype_support) {
-        safe_realign(p.second, p.first);
-        if (config_.check_read_misalignments) {
+        safe_realign(p.second, p.first, config_.alignment_model);
+        if (config_.ignore_likely_misaligned_reads) {
             p.second.erase(std::remove_if(std::begin(p.second), std::end(p.second),
-                                          [] (const auto& read) { return is_likely_misaligned(read); }),
+                                          [this] (const auto& read) { return is_likely_misaligned(read, config_.alignment_model); }),
                            std::end(p.second));
             p.second.shrink_to_fit();
         }
@@ -543,10 +540,28 @@ profile_indels(const ReadPipe& reads, VcfReader::Path variants, const ReferenceG
 }
 
 IndelProfiler::IndelProfile
+profile_indels(const ReadPipe& reads, VcfReader::Path variants, const ReferenceGenome& reference,
+               IndelProfiler::ProfileConfig config)
+{
+    VcfReader vcf {std::move(variants)};
+    IndelProfiler profiler {std::move(config)};
+    return profiler.profile(reads, vcf, reference);
+}
+
+IndelProfiler::IndelProfile
 profile_indels(const ReadPipe& reads, VcfReader::Path variants, const ReferenceGenome& reference, const InputRegionMap& regions)
 {
     VcfReader vcf {std::move(variants)};
     IndelProfiler profiler {};
+    return profiler.profile(reads, vcf, reference, regions);
+}
+
+IndelProfiler::IndelProfile
+profile_indels(const ReadPipe& reads, VcfReader::Path variants, const ReferenceGenome& reference, const InputRegionMap& regions,
+               IndelProfiler::ProfileConfig config)
+{
+    VcfReader vcf {std::move(variants)};
+    IndelProfiler profiler {std::move(config)};
     return profiler.profile(reads, vcf, reference, regions);
 }
 
@@ -558,9 +573,18 @@ profile_indels(const ReadPipe& reads, VcfReader::Path variants, const ReferenceG
     return profiler.profile(reads, vcf, reference, region);
 }
 
+IndelProfiler::IndelProfile
+profile_indels(const ReadPipe& reads, VcfReader::Path variants, const ReferenceGenome& reference, const GenomicRegion& region,
+               IndelProfiler::ProfileConfig config)
+{
+    VcfReader vcf {std::move(variants)};
+    IndelProfiler profiler {std::move(config)};
+    return profiler.profile(reads, vcf, reference, region);
+}
+
 std::ostream& operator<<(std::ostream& os, const IndelProfiler::IndelProfile::RepeaStateArray& states)
 {
-    os << "period,periods,motif,reference_count,reference_span,indel_length,polymorphisms,errors,reads";
+    os << "period,periods,motif,reference_count,reference_span,reference_footprint,indel_length,polymorphisms,errors,reads";
     if (states.empty()) return os;
     const auto max_period = states.size() - 1;
     for (std::size_t period {0}; period <= max_period; ++period) {
@@ -573,7 +597,7 @@ std::ostream& operator<<(std::ostream& os, const IndelProfiler::IndelProfile::Re
                 const auto max_indel_length = std::max({state.polymorphism_counts.size(), state.error_counts.size(), std::size_t {2}}) - 1;
                 for (std::size_t indel_length {1}; indel_length <= max_indel_length; ++indel_length) {
                     os << '\n' << period << ',' << periods << ',' << state.motif << ','
-                       << state.reference_count << ',' << state.span << ',' << indel_length << ',';
+                       << state.reference_count << ',' << state.span << ',' << state.footprint << ',' << indel_length << ',';
                     if (indel_length < state.polymorphism_counts.size()) {
                         os << state.polymorphism_counts[indel_length];
                     } else {

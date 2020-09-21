@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "main_logging.hpp"
@@ -29,6 +29,15 @@ void log_program_startup()
     log << ss.str();
     log << config::CopyrightNotice;
     log << banner;
+}
+
+void log_command_line_options(const options::OptionMap& options)
+{
+    static auto debug_log = logging::get_debug_log();
+    if (debug_log) {
+        *debug_log << "Program options: ";
+        *debug_log << options::to_string(options);
+    }
 }
 
 } // namespace octopus

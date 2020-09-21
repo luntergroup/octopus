@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "misaligned_read_count.hpp"
@@ -25,6 +25,11 @@ std::unique_ptr<Measure> MisalignedReadCount::do_clone() const
     return std::make_unique<MisalignedReadCount>(*this);
 }
 
+Measure::ValueType MisalignedReadCount::get_value_type() const
+{
+    return int {};
+}
+
 double error_expectation(const AlignedRead::BaseQualityVector& qualities)
 {
     return std::accumulate(std::cbegin(qualities), std::cend(qualities), 0.0,
@@ -36,15 +41,9 @@ double error_expectation(const AlignedRead& read)
     return error_expectation(read.base_qualities());
 }
 
-unsigned count_errors(const CigarString& cigar)
-{
-    return std::accumulate(std::cbegin(cigar), std::cend(cigar), 0u,
-                           [] (auto curr, auto op) { return curr + (is_match(op) ? 0u : op.size()); });
-}
-
 unsigned count_errors(const AlignedRead& read)
 {
-    return count_errors(read.cigar());
+    return sum_non_matches(read.cigar());
 }
 
 bool is_likely_misaligned(const AlignedRead& read)
@@ -55,34 +54,33 @@ bool is_likely_misaligned(const AlignedRead& read)
     return observed_errors > max_expected_errors;
 }
 
-std::size_t count_likely_misaligned(const std::vector<AlignedRead>& reads)
+std::size_t count_likely_misaligned(const std::vector<AlignedRead>& reads, const GenomicRegion& region)
 {
-    return std::count_if(std::cbegin(reads), std::cend(reads), is_likely_misaligned);
+    const auto overlapped = overlap_range(reads, region);
+    return std::count_if(std::cbegin(overlapped), std::cend(overlapped), is_likely_misaligned);
 }
 
 Measure::ResultType MisalignedReadCount::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     const auto& samples = get_value<Samples>(facets.at("Samples"));
-    const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments"));
-    std::vector<int> result {};
+    const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments")).haplotypes;
+    Array<ValueType> result {};
     result.reserve(samples.size());
     for (const auto& sample : samples) {
         int sample_result {0};
-        if (assignments.support.count(sample) == 1) {
-            for (const auto& p : assignments.support.at(sample)) {
-                auto realigned_reads = copy_overlapped(p.second, call);
-                safe_realign(realigned_reads, p.first);
-                sample_result += count_likely_misaligned(realigned_reads);
+        if (assignments.count(sample) == 1) {
+            for (const auto& p : assignments.at(sample).assigned_wrt_haplotype) {
+                sample_result += count_likely_misaligned(p.second, mapped_region(call));
             }
         }
-        result.push_back(sample_result);
+        result.emplace_back(sample_result);
     }
     return result;
 }
 
 Measure::ResultCardinality MisalignedReadCount::do_cardinality() const noexcept
 {
-    return ResultCardinality::num_samples;
+    return ResultCardinality::samples;
 }
 
 const std::string& MisalignedReadCount::do_name() const

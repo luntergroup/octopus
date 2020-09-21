@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef vcf_parser_hpp
@@ -70,8 +70,8 @@ private:
     
     VcfHeader header_;
     
-    const std::vector<std::string> samples_;
-    const std::streampos first_record_pos_; // must go after header_!
+    std::vector<std::string> samples_;
+    std::streampos first_record_pos_; // must go after header_!
     
     void reset_vcf() const; // logically const
 };

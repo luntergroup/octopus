@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef uniform_population_prior_model_hpp
@@ -16,38 +16,31 @@ class UniformPopulationPriorModel : public PopulationPriorModel
 {
 public:
     using PopulationPriorModel::LogProbability;
+    using PopulationPriorModel::GenotypeVector;
     using PopulationPriorModel::GenotypeReference;
-    using PopulationPriorModel::GenotypeIndiceVectorReference;
+    using PopulationPriorModel::GenotypeReferenceVector;
     
     UniformPopulationPriorModel() = default;
     
-    UniformPopulationPriorModel(const UniformPopulationPriorModel&)            = default;
-    UniformPopulationPriorModel& operator=(const UniformPopulationPriorModel&) = default;
-    UniformPopulationPriorModel(UniformPopulationPriorModel&&)                 = default;
-    UniformPopulationPriorModel& operator=(UniformPopulationPriorModel&&)      = default;
+    UniformPopulationPriorModel(const UniformPopulationPriorModel&)            = delete;
+    UniformPopulationPriorModel& operator=(const UniformPopulationPriorModel&) = delete;
+    UniformPopulationPriorModel(UniformPopulationPriorModel&&)                 = delete;
+    UniformPopulationPriorModel& operator=(UniformPopulationPriorModel&&)      = delete;
     
     virtual ~UniformPopulationPriorModel() = default;
 
 private:
     bool is_primed_ = false;
     
-    LogProbability do_evaluate(const std::vector<Genotype<Haplotype>>& genotypes) const override
+    LogProbability do_evaluate(const GenotypeVector& genotypes) const override
     {
-        return 1.0;
+        return 1;
     }
-    LogProbability do_evaluate(const std::vector<GenotypeReference>& genotypes) const override
+    LogProbability do_evaluate(const GenotypeReferenceVector& genotypes) const override
     {
-        return 1.0;
+        return 1;
     }
-    LogProbability do_evaluate(const std::vector<GenotypeIndex>& genotypes) const override
-    {
-        return 1.0;
-    }
-    LogProbability do_evaluate(const std::vector<GenotypeIndiceVectorReference>& indices) const override
-    {
-        return 1.0;
-    }
-    void do_prime(const std::vector<Haplotype>& haplotypes) override
+    void do_prime(const HaplotypeBlock& haplotypes) override
     {
         is_primed_ = true;
     }

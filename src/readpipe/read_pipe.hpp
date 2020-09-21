@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef read_pipe_hpp
@@ -14,6 +14,7 @@
 #include "config/common.hpp"
 #include "basics/genomic_region.hpp"
 #include "io/read/read_manager.hpp"
+#include "utils/coverage_tracker.hpp"
 #include "logging/logging.hpp"
 #include "filtering/read_filterer.hpp"
 #include "transformers/read_transformer.hpp"
@@ -40,19 +41,34 @@ public:
     
     struct Report
     {
+        using DepthMap = std::unordered_map<SampleName, CoverageTracker<GenomicRegion>>;
+        DepthMap raw_depths, mapping_quality_zero_depths;
         readpipe::DownsamplerReportMap downsample_report;
     };
     
     ReadPipe() = delete;
     
-    ReadPipe(const ReadManager& source, std::vector<SampleName> samples);
-    
-    ReadPipe(const ReadManager& source, ReadTransformer transformer,
-             ReadFilterer filterer, boost::optional<Downsampler> downsampler,
+    ReadPipe(const ReadManager& source,
              std::vector<SampleName> samples);
     
-    ReadPipe(const ReadManager& manager, ReadTransformer prefilter_transformer,
-             ReadFilterer filterer, ReadTransformer postfilter_transformer,
+    ReadPipe(const ReadManager& source,
+             ReadTransformer transformer,
+             ReadFilterer filterer,
+             boost::optional<Downsampler> downsampler,
+             std::vector<SampleName> samples);
+    
+    ReadPipe(const ReadManager& manager,
+             ReadTransformer prefilter_transformer,
+             ReadFilterer filterer,
+             ReadTransformer postfilter_transformer,
+             boost::optional<Downsampler> downsampler,
+             std::vector<SampleName> samples);
+    
+    ReadPipe(const ReadManager& manager,
+             GenomicRegion::Size fragment_size,
+             ReadTransformer prefilter_transformer,
+             ReadFilterer filterer,
+             ReadTransformer postfilter_transformer,
              boost::optional<Downsampler> downsampler,
              std::vector<SampleName> samples);
     
@@ -81,6 +97,7 @@ private:
     boost::optional<ReadTransformer> postfilter_transformer_;
     boost::optional<Downsampler> downsampler_;
     std::vector<SampleName> samples_;
+    boost::optional<GenomicRegion::Size> fragment_size_;
     mutable boost::optional<logging::DebugLogger> debug_log_;
 };
 

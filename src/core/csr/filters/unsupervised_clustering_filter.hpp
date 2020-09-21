@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef unsupervised_clustering_filter_hpp
@@ -27,8 +27,8 @@ public:
     
     UnsupervisedClusteringFilter(const UnsupervisedClusteringFilter&)            = delete;
     UnsupervisedClusteringFilter& operator=(const UnsupervisedClusteringFilter&) = delete;
-    UnsupervisedClusteringFilter(UnsupervisedClusteringFilter&&)                 = default;
-    UnsupervisedClusteringFilter& operator=(UnsupervisedClusteringFilter&&)      = default;
+    UnsupervisedClusteringFilter(UnsupervisedClusteringFilter&&)                 = delete;
+    UnsupervisedClusteringFilter& operator=(UnsupervisedClusteringFilter&&)      = delete;
     
     virtual ~UnsupervisedClusteringFilter() override = default;
     
@@ -36,6 +36,7 @@ private:
     mutable std::deque<MeasureVector> data_;
     mutable std::vector<Classification> classifications_;
     
+    std::string do_name() const override;
     void annotate(VcfHeader::Builder& header) const override;
     void record(std::size_t call_idx, std::size_t sample_idx, MeasureVector measures) const override;
     void prepare_for_classification(boost::optional<Log>& log) const override;

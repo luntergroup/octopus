@@ -1,13 +1,16 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef phylogeny_hpp
 #define phylogeny_hpp
 
 #include <unordered_map>
+#include <vector>
 #include <memory>
 #include <cstddef>
 #include <stack>
+#include <type_traits>
+#include <iostream>
 
 #include <boost/optional.hpp>
 
@@ -17,10 +20,13 @@ template <typename Label, typename T = boost::optional<int>>
 class Phylogeny
 {
 public:
+    using LabelType = Label;
+    using ValueType = T;
+    
     struct Group
     {
         Label id;
-        T value = boost::none;
+        T value = T {};
     };
     
     Phylogeny() = default;
@@ -29,8 +35,14 @@ public:
     
     Phylogeny(const Phylogeny&);
     Phylogeny& operator=(Phylogeny);
-    Phylogeny(Phylogeny&&)                 = default;
-    Phylogeny& operator=(Phylogeny&&)      = default;
+    Phylogeny(Phylogeny&&);
+    
+    friend void swap(Phylogeny& lhs, Phylogeny& rhs) noexcept
+    {
+        using std::swap;
+        swap(lhs.tree_, rhs.tree_);
+        swap(lhs.nodes_, rhs.nodes_);
+    }
     
     ~Phylogeny() = default;
     
@@ -39,6 +51,8 @@ public:
     
     void clear() noexcept;
     void clear(const Label& id);
+    
+    std::vector<Group> groups() const;
     
     Group& set_founder(Group founder);
     Group& add_descendant(Group group, const Label& ancestor_id);
@@ -52,6 +66,16 @@ public:
     unsigned num_descendants(const Label& id) const noexcept;
     const Group& descendant1(const Label& id) const;
     const Group& descendant2(const Label& id) const;
+    
+    template <typename UnaryFunction>
+    Phylogeny<Label, std::result_of_t<UnaryFunction(T)>>
+    transform(UnaryFunction op) const;
+
+    bool is_isomorphism(const Phylogeny& other) const;
+    
+    template <typename GroupSerialiser>
+    void serialise(std::ostream& os, GroupSerialiser serialiser) const;
+    void serialise(std::ostream& os) const;
 
 private:
     struct TreeNode
@@ -63,6 +87,9 @@ private:
     
     std::unique_ptr<TreeNode> tree_;
     std::unordered_map<Label, TreeNode*> nodes_;
+    
+    template <typename GroupSerialiser>
+    void serialise(std::ostream& os, GroupSerialiser serialiser, TreeNode* node) const;
 };
 
 template <typename Label, typename T>
@@ -72,7 +99,7 @@ Phylogeny<Label, T>::Phylogeny(Group founder)
 }
 
 template <typename Label, typename T>
-Phylogeny<Label, T>::Phylogeny(const Phylogeny& other)
+Phylogeny<Label, T>::Phylogeny(const Phylogeny<Label, T>& other)
 {
     if (other.tree_) {
         std::stack<TreeNode*> to_visit {};
@@ -94,9 +121,15 @@ Phylogeny<Label, T>::Phylogeny(const Phylogeny& other)
 }
 
 template <typename Label, typename T>
-Phylogeny<Label, T>& Phylogeny<Label, T>::operator=(Phylogeny other)
+Phylogeny<Label, T>::Phylogeny(Phylogeny<Label, T>&& other) : Phylogeny {}
 {
-    std::swap(*this, other);
+    swap(*this, other);
+}
+
+template <typename Label, typename T>
+Phylogeny<Label, T>& Phylogeny<Label, T>::operator=(Phylogeny<Label, T> other)
+{
+    swap(*this, other);
     return *this;
 }
 
@@ -152,6 +185,17 @@ void Phylogeny<Label, T>::clear(const Label& id)
 }
 
 template <typename Label, typename T>
+std::vector<typename Phylogeny<Label, T>::Group> Phylogeny<Label, T>::groups() const
+{
+    std::vector<Group> result {};
+    result.reserve(size());
+    for (const auto& p : nodes_) {
+        result.push_back(p.second->group);
+    }
+    return result;
+}
+
+template <typename Label, typename T>
 typename Phylogeny<Label, T>::Group& Phylogeny<Label, T>::set_founder(Group founder)
 {
     if (!tree_) {
@@ -169,6 +213,9 @@ typename Phylogeny<Label, T>::Group& Phylogeny<Label, T>::add_descendant(Group g
 {
     TreeNode* ancestor {nodes_.at(ancestor_id)};
     if (ancestor->descendant1) {
+        if (ancestor->descendant2) {
+            throw std::runtime_error {"Cannot add descendant to node with two descendants"};
+        }
         TreeNode node {std::move(group), ancestor, nullptr, nullptr};
         ancestor->descendant2 = std::make_unique<TreeNode>(std::move(node));
         return nodes_.emplace(ancestor->descendant2->group.id, std::addressof(*ancestor->descendant2)).first->second->group;
@@ -226,6 +273,110 @@ template <typename Label, typename T>
 const typename Phylogeny<Label, T>::Group& Phylogeny<Label, T>::descendant2(const Label& id) const
 {
     return nodes_.at(id)->descendant2.group;
+}
+
+template <typename Label, typename T>
+template <typename UnaryFunction>
+Phylogeny<Label, std::result_of_t<UnaryFunction(T)>>
+Phylogeny<Label, T>::transform(UnaryFunction op) const
+{
+    using T2 = std::result_of_t<UnaryFunction(T)>;
+    Phylogeny<Label, T2> result {};
+    std::stack<TreeNode*> to_visit {};
+    to_visit.push(this->tree_->descendant2.get());
+    to_visit.push(this->tree_->descendant1.get());
+    const auto transformer = [&] (const Group& old) -> typename Phylogeny<Label, T2>::Group { return {old.id, op(old.value)}; };
+    result.set_founder(transformer(this->tree_->group));
+    while (!to_visit.empty()) {
+        if (to_visit.top() != nullptr) {
+            const TreeNode* visted {to_visit.top()};
+            to_visit.pop();
+            result.add_descendant(transformer(visted->group), visted->ancestor->group.id);
+            to_visit.push(visted->descendant2.get());
+            to_visit.push(visted->descendant1.get());
+        } else {
+            to_visit.pop();
+        }
+    }
+    return result;
+}
+
+template <typename Label, typename T>
+bool Phylogeny<Label, T>::is_isomorphism(const Phylogeny& other) const
+{
+    if (this->size() != other.size()) return false;
+    if (this->empty()) return true;
+    const auto group_equal = [] (const Group& lhs, const Group& rhs) {
+        return lhs.value == rhs.value;
+    };
+    if (!group_equal(this->tree_->group, other.tree_->group)) return false;
+    if (this->size() == 1) return true;
+    std::stack<std::pair<TreeNode*, TreeNode*>> visiting {};
+    visiting.push({this->tree_.get(), other.tree_.get()});
+    while (!visiting.empty()) {
+        TreeNode* this_v, *other_v;
+        std::tie(this_v, other_v) = visiting.top();
+        visiting.pop();
+        assert(this_v && other_v);
+        if (this_v->descendant1 && other_v->descendant1 && this_v->descendant2 && other_v->descendant2) {
+            // both nodes have two children
+            if (group_equal(this_v->descendant1->group, other_v->descendant1->group)
+             && group_equal(this_v->descendant2->group, other_v->descendant2->group)) {
+                visiting.push({this_v->descendant1.get(), other_v->descendant1.get()});
+                visiting.push({this_v->descendant2.get(), other_v->descendant2.get()});
+            } else if (group_equal(this_v->descendant1->group, other_v->descendant2->group)
+                    && group_equal(this_v->descendant2->group, other_v->descendant1->group)) {
+                visiting.push({this_v->descendant1.get(), other_v->descendant2.get()});
+                visiting.push({this_v->descendant2.get(), other_v->descendant1.get()});
+            } else {
+                return false;
+            }
+        } else if (this_v->descendant1 && other_v->descendant1) {
+            if (this_v->descendant2 || other_v->descendant2) return false;
+            // both nodes have one child
+            if (group_equal(this_v->descendant1->group, other_v->descendant1->group)) {
+                visiting.push({this_v->descendant1.get(), other_v->descendant1.get()});
+            } else {
+                return false;
+            }
+        } else if (this_v->descendant1 || other_v->descendant1) {
+            return false;
+        }
+    }
+    return true;
+}
+
+template <typename Label, typename T>
+template <typename GroupSerialiser>
+void Phylogeny<Label, T>::serialise(std::ostream& os, const GroupSerialiser serialiser) const
+{
+    serialise(os, serialiser, tree_.get());
+}
+
+template <typename Label, typename T>
+void Phylogeny<Label, T>::serialise(std::ostream& os) const
+{
+    serialise(os, [] (std::ostream& os, const Group& group) { os << group.id << ":" << group.value; });
+}
+
+template <typename Label, typename T>
+template <typename GroupSerialiser>
+void Phylogeny<Label, T>::serialise(std::ostream& os, const GroupSerialiser serialiser, TreeNode* node) const
+{
+    if (node != nullptr) {
+        os << '(';
+        serialiser(os, node->group);
+        serialise(os, serialiser, node->descendant1.get());
+        serialise(os, serialiser, node->descendant2.get());
+        os << ')';
+    }
+}
+
+template <typename Label, typename T>
+std::ostream& operator<<(std::ostream& os, const Phylogeny<Label, T>& phylogeny)
+{
+    phylogeny.serialise(os);
+    return os;
 }
 
 } // namespace octopus

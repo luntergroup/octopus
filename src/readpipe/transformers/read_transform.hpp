@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef read_transform_hpp
@@ -28,7 +28,7 @@ struct CapBaseQualities
     void operator()(AlignedRead& read) const noexcept;
     
 private:
-    const BaseQuality max_;
+    BaseQuality max_;
 };
 
 struct MaskOverlappedSegment
@@ -52,7 +52,7 @@ struct MaskTail
     void operator()(AlignedRead& read) const noexcept;
     
 private:
-    const Length num_bases_;
+    Length num_bases_;
 };
 
 struct MaskLowQualityTails
@@ -66,7 +66,7 @@ struct MaskLowQualityTails
     void operator()(AlignedRead& read) const noexcept;
 
 private:
-    const BaseQuality threshold_;
+    BaseQuality threshold_;
 };
 
 struct MaskSoftClipped
@@ -85,7 +85,7 @@ struct MaskSoftClippedBoundraryBases
     void operator()(AlignedRead& read) const noexcept;
     
 private:
-    const Length num_bases_;
+    Length num_bases_;
 };
 
 struct MaskLowQualitySoftClippedBases
@@ -99,7 +99,7 @@ struct MaskLowQualitySoftClippedBases
     void operator()(AlignedRead& read) const noexcept;
 
 private:
-    const BaseQuality max_;
+    BaseQuality max_;
 };
 
 struct MaskLowQualitySoftClippedBoundaryBases
@@ -114,8 +114,8 @@ struct MaskLowQualitySoftClippedBoundaryBases
     void operator()(AlignedRead& read) const noexcept;
 
 private:
-    const Length num_bases_;
-    const BaseQuality max_;
+    Length num_bases_;
+    BaseQuality max_;
 };
 
 struct MaskLowAverageQualitySoftClippedTails
@@ -130,8 +130,8 @@ struct MaskLowAverageQualitySoftClippedTails
     void operator()(AlignedRead& read) const noexcept;
 
 private:
-    const BaseQuality threshold_;
-    const Length min_tail_length_;
+    BaseQuality threshold_;
+    Length min_tail_length_;
 };
 
 struct MaskInvertedSoftClippedReadEnds

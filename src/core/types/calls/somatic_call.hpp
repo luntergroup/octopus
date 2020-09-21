@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef somatic_call_hpp
@@ -9,9 +9,11 @@
 #include <vector>
 
 #include <boost/optional.hpp>
+#include <boost/container/flat_map.hpp>
 
 #include "config/common.hpp"
 #include "core/types/allele.hpp"
+#include "core/types/variant.hpp"
 #include "core/types/cancer_genotype.hpp"
 #include "variant_call.hpp"
 
@@ -23,20 +25,27 @@ public:
     using VariantCall::GenotypeCall;
     using VariantCall::PhaseCall;
     
-    using CredibleRegion = std::pair<double, double>;
-    
-    struct GenotypeCredibleRegions
+    struct AlleleStats
     {
-        std::vector<CredibleRegion> germline;
-        boost::optional<CredibleRegion> somatic;
+        using CredibleRegion = std::pair<double, double>;
+        CredibleRegion vaf_credible_region;
+        double map_vaf, pseudo_count;
     };
+    
+    struct GenotypeAlleleStats
+    {
+        std::vector<AlleleStats> germline, somatic;
+    };
+    
+    using GenotypeStatsMap = std::unordered_map<SampleName, GenotypeAlleleStats>;
     
     SomaticCall() = delete;
     
-    template <typename V, typename C, typename M>
-    SomaticCall(V&& variant, const CancerGenotype<Allele>& genotype_call,
-                Phred<double> genotype_posterior, C&& credible_regions, M&& map_vafs,
-                Phred<double> quality, boost::optional<Phred<double>> posterior = boost::none);
+    SomaticCall(Variant variant,
+                const CancerGenotype<Allele>& genotype_call,
+                Phred<double> quality, Phred<double> genotype_posterior,
+                GenotypeStatsMap stats,
+                boost::optional<Phred<double>> classification_posterior = boost::none);
     
     SomaticCall(const SomaticCall&)            = default;
     SomaticCall& operator=(const SomaticCall&) = default;
@@ -48,39 +57,20 @@ public:
     virtual bool requires_model_evaluation() const noexcept override { return true; }
     
 protected:
-    std::unordered_map<SampleName, GenotypeCredibleRegions> credible_regions_;
-    std::unordered_map<SampleName, double> map_vafs_;
+    struct ExtendedAlleleStats
+    {
+        AlleleStats stats;
+        bool is_somatic_haplotype;
+    };
+
+    using SquashedGenotypeStatsMap = boost::container::flat_map<SampleName, std::vector<ExtendedAlleleStats>>;
+    
+    SquashedGenotypeStatsMap genotype_stats_;
+    
 private:
     virtual std::unique_ptr<Call> do_clone() const override;
+    virtual void reorder_genotype_fields(const SampleName& sample, const std::vector<unsigned>& order) override;
 };
-
-template <typename V, typename C, typename M>
-SomaticCall::SomaticCall(V&& variant,
-                         const CancerGenotype<Allele>& genotype_call,
-                         Phred<double> genotype_posterior,
-                         C&& credible_regions, M&& map_vafs,
-                         Phred<double> quality, boost::optional<Phred<double>> posterior)
-: VariantCall {std::forward<V>(variant), decltype(genotype_calls_) {}, quality, posterior}
-, credible_regions_ {std::forward<C>(credible_regions)}
-, map_vafs_ {std::forward<M>(map_vafs)}
-{
-    if (variant_.ref_allele() == variant_.alt_allele()) {
-        Allele::NucleotideSequence missing_sequence(ref_sequence_size(variant_), 'N');
-        using octopus::mapped_region;
-        variant_ = Variant {
-            Allele {mapped_region(variant_), std::move(missing_sequence)},
-            variant_.alt_allele()
-        };
-    }
-    genotype_calls_.reserve(credible_regions_.size()); // num samples
-    for (const auto& p : credible_regions_) {
-        if (p.second.somatic) {
-            genotype_calls_.emplace(p.first, GenotypeCall {demote(genotype_call), genotype_posterior});
-        } else {
-            genotype_calls_.emplace(p.first, GenotypeCall {genotype_call.germline(), genotype_posterior});
-        }
-    }
-}
 
 } // namespace octopus
 

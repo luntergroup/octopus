@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "read_filter.hpp"
@@ -10,9 +10,14 @@ HasWellFormedCigar::HasWellFormedCigar() : BasicReadFilter {"HasWellFormedCigar"
 
 HasWellFormedCigar::HasWellFormedCigar(std::string name) : BasicReadFilter {std::move(name)} {}
 
+bool is_all_clipped(const CigarString& cigar) noexcept
+{
+    return cigar.size() == 1 && is_clipping(cigar.front());
+}
+
 bool HasWellFormedCigar::passes(const AlignedRead& read) const noexcept
 {
-    return is_valid(read.cigar()) && is_minimal(read.cigar());
+    return is_valid(read.cigar()) && is_minimal(read.cigar()) && !is_all_clipped(read.cigar());
 }
 
 HasValidBaseQualities::HasValidBaseQualities() : BasicReadFilter {"HasValidBaseQualities"} {}
@@ -200,34 +205,58 @@ bool IsLocalTemplate::passes(const AlignedRead& read) const noexcept
     return !read.has_other_segment() || read.next_segment().contig_name() == contig_name(read);
 }
 
-bool primary_segments_are_duplicates(const AlignedRead& lhs, const AlignedRead& rhs) noexcept
-{
-    return lhs.mapped_region() == rhs.mapped_region()
-           && lhs.direction() == rhs.direction()
-           && lhs.mapping_quality() == rhs.mapping_quality()
-           && lhs.cigar() == rhs.cigar();
-}
+NoUnlocalizedSupplementaryAlignments::NoUnlocalizedSupplementaryAlignments(boost::optional<MappingQuality> min_mapping_quality)
+: NoUnlocalizedSupplementaryAlignments {"NoUnlocalizedSupplementaryAlignments", min_mapping_quality} {}
+NoUnlocalizedSupplementaryAlignments::NoUnlocalizedSupplementaryAlignments(std::string name, boost::optional<MappingQuality> min_mapping_quality)
+:  BasicReadFilter {std::move(name)}
+, min_mapping_quality_ {min_mapping_quality}
+{}
 
-bool are_duplicates(const AlignedRead::Segment& lhs, const AlignedRead::Segment& rhs) noexcept
+bool NoUnlocalizedSupplementaryAlignments::passes(const AlignedRead& read) const noexcept
 {
-    return lhs.contig_name() == rhs.contig_name()
-           && lhs.is_marked_unmapped() == rhs.is_marked_unmapped()
-           && lhs.is_marked_reverse_mapped() == rhs.is_marked_reverse_mapped()
-           && lhs.inferred_template_length() == rhs.inferred_template_length();
-}
-
-bool other_segments_are_duplicates(const AlignedRead& lhs, const AlignedRead& rhs) noexcept
-{
-    if (lhs.has_other_segment()) {
-        return rhs.has_other_segment() && are_duplicates(lhs.next_segment(), rhs.next_segment());
+    if (min_mapping_quality_) {
+        const auto is_good_unlocalized = [mq = *min_mapping_quality_] (const auto& alignment) noexcept {
+            return alignment.mapping_quality() >= mq && is_unlocalized(alignment);};
+        return std::none_of(std::cbegin(read.supplementary_alignments()), std::cend(read.supplementary_alignments()), is_good_unlocalized);
     } else {
-        return !rhs.has_other_segment();
+        return std::none_of(std::cbegin(read.supplementary_alignments()), std::cend(read.supplementary_alignments()), is_unlocalized);
     }
 }
 
-bool IsDuplicate::operator()(const AlignedRead& lhs, const AlignedRead& rhs) const noexcept
+NoUnplacedSupplementaryAlignments::NoUnplacedSupplementaryAlignments(boost::optional<MappingQuality> min_mapping_quality)
+: NoUnplacedSupplementaryAlignments {"NoUnplacedSupplementaryAlignments", min_mapping_quality} {}
+NoUnplacedSupplementaryAlignments::NoUnplacedSupplementaryAlignments(std::string name, boost::optional<MappingQuality> min_mapping_quality)
+:  BasicReadFilter {std::move(name)}
+, min_mapping_quality_ {min_mapping_quality}
+{}
+
+bool NoUnplacedSupplementaryAlignments::passes(const AlignedRead& read) const noexcept
 {
-    return primary_segments_are_duplicates(lhs, rhs) && other_segments_are_duplicates(lhs, rhs);
+    if (min_mapping_quality_) {
+        const auto is_good_unplaced = [mq = *min_mapping_quality_] (const auto& alignment) noexcept {
+            return alignment.mapping_quality() >= mq && is_unplaced(alignment);};
+        return std::none_of(std::cbegin(read.supplementary_alignments()), std::cend(read.supplementary_alignments()), is_good_unplaced);
+    } else {
+        return std::none_of(std::cbegin(read.supplementary_alignments()), std::cend(read.supplementary_alignments()), is_unplaced);
+    }
+}
+
+NoDecoySupplementaryAlignments::NoDecoySupplementaryAlignments(boost::optional<MappingQuality> min_mapping_quality)
+: NoDecoySupplementaryAlignments {"NoDecoySupplementaryAlignments", min_mapping_quality} {}
+NoDecoySupplementaryAlignments::NoDecoySupplementaryAlignments(std::string name, boost::optional<MappingQuality> min_mapping_quality)
+:  BasicReadFilter {std::move(name)}
+, min_mapping_quality_ {min_mapping_quality}
+{}
+
+bool NoDecoySupplementaryAlignments::passes(const AlignedRead& read) const noexcept
+{
+    if (min_mapping_quality_) {
+        const auto is_good_decoy = [mq = *min_mapping_quality_] (const auto& alignment) noexcept {
+            return alignment.mapping_quality() >= mq && is_decoy(alignment);};
+        return std::none_of(std::cbegin(read.supplementary_alignments()), std::cend(read.supplementary_alignments()), is_good_decoy);
+    } else {
+        return std::none_of(std::cbegin(read.supplementary_alignments()), std::cend(read.supplementary_alignments()), is_decoy);
+    }
 }
 
 } // namespace readpipe
