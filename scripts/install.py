@@ -245,7 +245,7 @@ def unzip_gz(in_filename, out_filename=None):
 def download_forests(forest_dir, version):
     if not forest_dir.exists():
         print("No forest directory found, making one")
-        os.makedirs(forest_dir)
+        forest_dir.mkdir(parents=True)
     for forest in forests:
         gzipped_forest_name = forest + '.v' + to_short_version_str(version) + '.forest.gz'
         gzipped_forest_url = forest_url_base + '/' + gzipped_forest_name
