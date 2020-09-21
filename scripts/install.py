@@ -99,7 +99,7 @@ def is_centos(version=None):
         return False
 
 def download_file(url, file_name):
-    urllib.request.urlretrieve(url, file_name)
+    urllib.request.urlretrieve(url, str(file_name))
 
 def git_clone(project):
     call(['git', 'clone', project])
