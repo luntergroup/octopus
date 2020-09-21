@@ -8,16 +8,16 @@
 
 Octopus is a mapping-based variant caller that implements several calling models within a unified haplotype-aware framework. Octopus takes inspiration from particle filtering by constructing a tree of haplotypes and dynamically pruning and extending the tree based on haplotype posterior probabilities in a sequential manner. This allows octopus to implicitly consider all possible haplotypes at a given loci in reasonable time.
 
-There are currently five calling models implemented:
+There are currently six calling models implemented:
 
-- **individual**: call germline variants in a single healthy individual.
-- **population**: jointly call germline variants in small cohorts.
-- **cancer**: call germline and somatic mutations tumour samples.
-- **trio**: call germline and _de novo_ mutations in a parent-offspring trio.
-- **polyclone**: call variants in samples with an unknown mixture of haploid clones, such a bacteria or viral samples.
-- **cell**: call variants in a set of single cell samples from the same individual.
+- [individual](https://github.com/luntergroup/octopus/wiki/Calling-models:-Individual): call germline variants in a single healthy individual.
+- [population](https://github.com/luntergroup/octopus/wiki/Calling-models:-Population): jointly call germline variants in small cohorts.
+- [trio](https://github.com/luntergroup/octopus/wiki/Calling-models:-Trio): call germline and _de novo_ mutations in a parent-offspring trio.
+- [cancer](https://github.com/luntergroup/octopus/wiki/Calling-models:-Cancer): call germline and somatic mutations tumour samples.
+- [polyclone](https://github.com/luntergroup/octopus/wiki/Calling-models:-Polyclone): call variants in samples with an unknown mixture of haploid clones, such a bacteria or viral samples.
+- [cell](https://github.com/luntergroup/octopus/wiki/Calling-models:-Cell): call variants in a set of single cell samples from the same individual.
 
-Octopus is currently able to call SNVs, small-medium sized indels, small complex rearrangements, and micro-inversions.
+Octopus is able to call SNVs, small-medium sized indels, and small complex rearrangements.
 
 ## Quick start
 
@@ -25,7 +25,7 @@ Install Octopus (dependencies will be installed into `octopus/build`):
 
 ```shell
 $ git clone -b develop https://github.com/luntergroup/octopus.git
-$ octopus/scripts/install.py --install-dependencies --download-forests
+$ octopus/scripts/install.py --dependencies --forests
 $ echo 'export PATH='$(pwd)'/octopus/bin:$PATH' >> ~/.bash_profile
 $ source ~/.bash_profile
 ```
@@ -33,7 +33,7 @@ $ source ~/.bash_profile
 Call some variants:
 
 ```shell
-$ FOREST="$(pwd)/octopus/resources/forests/germline.v0.5.2-beta.forest"
+$ FOREST="$(pwd)/octopus/resources/forests/0.7.0/germline.v0.7.0.forest"
 $ octopus -R hs37d5.fa -I NA12878.bam -T 1 to MT -o NA12878.octopus.vcf.gz --forest $FOREST --threads 8
 ```
 
@@ -85,7 +85,7 @@ The other packages will need to be installed manually:
 
 - CMake installation instructions are given [here](https://askubuntu.com/a/865294).
 - Htslib installation instructions are given [here](https://github.com/samtools/htslib). Note you may need to install `autoconf` (`sudo apt-get install autoconf`).
-- Instructions on installing Boost are given [here](https://stackoverflow.com/a/24086375/2970186).
+- Instructions on installing Boost are given [here](https://stackoverflow.com/a/24086375/2970186). Note: You will need version 1.65.0 or later.
 
 These instructions are replicated in the [user documentation](https://github.com/luntergroup/octopus/blob/develop/doc/manuals/user/octopus-user-manual.pdf) (Appendix).
 
@@ -182,13 +182,13 @@ $ test/install.py
 
 ## Examples
 
-Here are some common use-cases to get started. These examples are by no means exhaustive, please consult the documentation for explanations of all options, algorithms, and further examples. For more in depth examples, refer to the [case studies](https://github.com/luntergroup/octopus/wiki/Case-studies).
+Here are some common use-cases to get started. These examples are by no means exhaustive, please consult the [documentation](https://github.com/luntergroup/octopus/wiki) for explanations of all options, algorithms, and further examples. For more in depth examples, refer to the [case studies](https://github.com/luntergroup/octopus/wiki/Case-studies).
 
 Note by default octopus will output all calls in VCF format to standard output, in order to write calls to a file (`.vcf`, `.vcf.gz`, and `.bcf` are supported), use the command line option `--output` (`-o`).
 
 #### Calling germline variants in an individual
 
-This is the simplest case, if the file `NA12878.bam` contains a single sample, octopus will default to its individual calling model:
+This is the simplest case, if the file `NA12878.bam` contains a single sample, octopus will default to its [individual calling model](https://github.com/luntergroup/octopus/wiki/Calling-models:-Individual):
 
 ```shell
 $ octopus --reference hs37d5.fa --reads NA12878.bam
@@ -222,6 +222,16 @@ $ octopus -R hs37d5.fa -I NA12878.bam -K 1 2:30,000,000- 3:10,000,000-20,000,000
 $ octopus -R hs37d5.fa -I NA12878.bam -k skip-regions.bed
 ```
 
+#### Joint variant calling
+
+Multiple samples from the same population, without pedigree information, can be called jointly:
+
+```shell
+$ octopus -R hs37d5.fa -I NA12878.bam NA12891.bam NA12892.bam
+```
+
+Joint calling samples may increase calling power, especially for low coverage sequencing. The [population calling model](https://github.com/luntergroup/octopus/wiki/Calling-models:-Population) is invoked by default when multiple samples are present in the input data.
+
 #### Calling de novo mutations in a trio
 
 To call germline and de novo mutations in a trio, either specify both maternal (`--maternal-sample`; `-M`) and paternal (`--paternal-sample`; `-F`) samples:
@@ -230,11 +240,13 @@ To call germline and de novo mutations in a trio, either specify both maternal (
 $ octopus -R hs37d5.fa -I NA12878.bam NA12891.bam NA12892.bam -M NA12892 -F NA12891
 ```
 
-or provide a PED file which defines the trio:
+or provide a PED file that defines the trio:
 
 ```shell
 $ octopus -R hs37d5.fa -I NA12878.bam NA12891.bam NA12892.bam --pedigree ceu_trio.ped
 ```
+
+Either way will invoke the [trio calling model](https://github.com/luntergroup/octopus/wiki/Calling-models:-Trio).
 
 #### Calling somatic mutations in tumours
 
@@ -250,30 +262,20 @@ It is also possible to genotype multiple tumours from the same individual jointl
 $ octopus -R hs37d5.fa -I normal.bam tumourA.bam tumourB.bam --normal-sample NORMAL
 ```
 
-If a normal sample is not present the cancer calling model must be invoked explicitly:
+If a normal sample is not present the [cancer calling model](https://github.com/luntergroup/octopus/wiki/Calling-models:-Cancer) must be invoked explicitly:
 
 ```shell
-$ octopus -R hs37d5.fa -I tumour1.bam tumour2.bam -C cancer
+$ octopus -C cancer -R hs37d5.fa -I tumour1.bam tumour2.bam
 ```
 
 Be aware that without a normal sample, somatic mutation classification power is significantly reduced.
 
-#### Joint variant calling (experimental)
+#### Calling variants in mixed haploid samples
 
-Multiple samples from the same population, without pedigree information, can be called jointly:
-
-```shell
-$ octopus -R hs37d5.fa -I NA12878.bam NA12891.bam NA12892.bam
-```
-
-Joint calling samples may increase calling power, especially for low coverage sequencing.
-
-#### Calling variants in mixed haploid samples (experimental)
-
-If your sample contains an unknown mix of haploid clones (e.g. some bacteria or viral samples), use the `polyclone` calling model:
+If your sample contains an unknown mix of haploid clones (e.g. some bacteria or viral samples), use the [polyclone calling model](https://github.com/luntergroup/octopus/wiki/Calling-models:-Polyclone):
 
 ```shell
-$ octopus -R H37Rv.fa -I mycobacterium_tuberculosis.bam -C polyclone
+$ octopus -C polyclone -R H37Rv.fa -I mycobacterium_tuberculosis.bam
 ```
 
 This model will automatically detect the number of subclones in your sample (up to the maximum given by `--max-clones`).
@@ -283,7 +285,19 @@ This model will automatically detect the number of subclones in your sample (up 
 Single cell samples can be called with the `cell` calling model. Allelic dropout and cell phylogeny are considered by the model to improve variant calls. 
 
 ```shell
-$ octopus -R H37Rv.fa -I cellA.bam cellB.bam cellC.bam -C cell
+$ octopus -C cell -R H37Rv.fa -I cellA.bam cellB.bam cellC.bam
+```
+
+Control samples are specified using the `--normal-samples` option:
+
+```shell
+$ octopus -C cell -R H37Rv.fa -I cellA.bam cellB.bam cellC.bam --normal-samples NORMAL1 NORMAL2
+```
+
+Samples derived from cell bataches can be given high dropout concentrations:
+
+```shell
+$ octopus -C cell -R H37Rv.fa -I cellA.bam cellB.bam cellC.bam --normal-sample NORMAL --sample-dropout NORMAL=100
 ```
 
 #### HLA genotyping
@@ -302,7 +316,7 @@ Octopus has built in multithreading capabilities, just add the `--threads` comma
 $ octopus -R hs37d5.fa -I NA12878.bam --threads
 ```
 
-This will let octopus automatically decide how many threads to use, and is the recommended approach as octopus can dynamically juggle thread usage at an algorithm level. However, a strict upper limit on the number of threads can also be used:
+This will let octopus automatically decide how many threads to use. A strict upper limit on the number of threads can also be specified:
 
 ```shell
 $ octopus -R hs37d5.fa -I NA12878.bam --threads 4
@@ -310,38 +324,38 @@ $ octopus -R hs37d5.fa -I NA12878.bam --threads 4
 
 #### Fast calling
 
-By default, octopus is geared towards more accurate variant calling which requires the use of complex (slow) algorithms. However, to achieve faster runtimes (at the cost of decreased calling accuracy) many of these features can be disabled. There are two helper commands that setup octopus for faster variant calling, `--fast` and `--very-fast`, e.g.:
+By default, octopus is geared towards more accurate variant calling at the expense of runtime and memory use. However, to achieve faster runtimes - at the cost of decreased calling accuracy - many of these features can be disabled. There are two helper commands that setup octopus for faster variant calling, `--fast` and `--very-fast`, e.g.:
 
 ```shell
 $ octopus -R hs37d5.fa -I NA12878.bam --fast
 ```
 
-Note this does not turn on multithreading or increase buffer sizes.
+Note this does not enable multithreading or adjust memory buffer sizes.
 
 #### Making evidence BAMs
 
-Octopus can generate 'evidence' BAMs for single sample calling. To generate a single BAM file containing realigned reads supporting called variants use the `--bamout` option:
+Octopus can generate realigned and annotated 'evidence' BAMs in all modes. To request evidence BAMs, use the `--bamout` option:
 
 ```shell
-$ octopus -R hs37d5.fa -I NA12878.bam -o octopus.vcf --bamout octopus.bam
+$ octopus -R hs37d5.fa -I NA12878.bam -o octopus.vcf --bamout realigned.bam
 ```
 
-To generate split BAM files (one for each called haplotype) use the `--bamout` option, but specify only the file prefix:
+When multiple samples are being called the arguement to `--bamout` is a directory to write the evidence BAMs (one for each sample):
 
 ```shell
-$ octopus -R hs37d5.fa -I NA12878.bam -o octopus.vcf --bamout octopus
+$ octopus -R hs37d5.fa -I NA12878.bam NA24385.bam -o octopus.vcf --bamout realigned
 ```
 
-Octopus will generate BAM files (`octopus1.bam`, `octopus2.bam`, ...) for the number of haplotypes in the sample. Note that although each split BAM is haploid, the variants in each are only phased according to the phase sets called in the output VCF.
+Octopus will generate BAM files `realigned/NA12878.bam` and `realigned/NA24385.bam`. See the [full documentation](https://github.com/luntergroup/octopus/wiki/How-to:-Make-evidence-BAMs) for more information on evidence BAMs.
 
 ## Output format
 
-Octopus outputs variants using a simple but rich VCF format (see [user documentation](https://github.com/luntergroup/octopus/blob/develop/doc/manuals/user/octopus-user-manual.pdf) for full details). For example, two overlapping deletions are represented like:
+Octopus outputs variants in the [VCF 4.3 format](https://github.com/samtools/hts-specs/blob/master/VCFv4.3.pdf). To represent complex multi-allelic loci, Octopus prefers a decompose alleles into multiple records and use the `*` allele to resoolve conflicts, for example:
 
 ```
 #CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	NA12878
 1	102738191	.	ATTATTTAT	A,*	.	.	.	GT	1|2
-1	102738191	.	ATTATTTATTTAT	A	.	.	.	GT	.|1
+1	102738191	.	ATTATTTATTTAT	A,*	.	.	.	GT	2|1
 ```
 
 in contrast to how such a site would usually be represented, either:
@@ -360,10 +374,6 @@ which is inconsistent as the reference is deduced in each record, or:
 ```
 
 which is at least consistent, but rapidly becomes unmanageable as the length and number of overlapping variants increases.
-
-Octopus's representation is both succinct and consistent. The `*` allele denotes an upstream deletion, while the `.` in the genotype of the second record indicates the allele is missing due to a previous event. As the records are phased, the called haplotypes can be unambiguously reconstructed when the VCF file is read sequentially.
-
-However, some existing tools will not recognise this format. For example, RTG Tools does not fully support this representation. Therefore, octopus has an option to also produce calls using a more typical VCF format (like the first of the two examples). To request this, use the `--legacy` command line option. This option is only available when outputting calls to a file (i.e. not `stdout`).   
 
 ## Documentation
 

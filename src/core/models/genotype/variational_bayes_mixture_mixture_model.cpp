@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "variational_bayes_mixture_mixture_model.hpp"
@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <numeric>
 #include <iostream>
+#include <limits>
 
 #include <boost/math/special_functions/digamma.hpp>
 
@@ -23,25 +24,86 @@ VariationalBayesMixtureMixtureModel::VariationalBayesMixtureMixtureModel(Options
 VariationalBayesMixtureMixtureModel::Inferences
 VariationalBayesMixtureMixtureModel::evaluate(const LogProbabilityVector& genotype_log_priors,
                                               const HaplotypeLikelihoodMatrix& log_likelihoods,
+                                              const GroupOptionalPriorArray& group_priors,
                                               const GroupConcentrationVector& group_concentrations,
                                               const MixtureConcentrationArray& mixture_concentrations,
                                               std::vector<LogProbabilityVector> seeds) const
 {
-    Inferences result {};
-    result.approx_log_evidence = std::numeric_limits<double>::lowest();
-    for (auto& seed : seeds) {
-        auto inferences = evaluate(genotype_log_priors, log_likelihoods, group_concentrations, mixture_concentrations, seed);
-        if (inferences.approx_log_evidence > result.approx_log_evidence) {
-            result = std::move(inferences);
-        }
+    const auto group_log_priors = to_logs(group_priors);
+    const auto evaluate_seed = [&] (auto&& seed) {
+        return this->evaluate(genotype_log_priors, log_likelihoods, group_log_priors, group_concentrations, mixture_concentrations, std::move(seed)); };
+    std::vector<PointInferences> seed_inferences(seeds.size());
+    if (options_.parallel_execution) {
+        parallel_transform(std::make_move_iterator(std::begin(seeds)), std::make_move_iterator(std::end(seeds)), std::begin(seed_inferences), evaluate_seed);
+    } else {
+        std::transform(std::make_move_iterator(std::begin(seeds)), std::make_move_iterator(std::end(seeds)), std::begin(seed_inferences), evaluate_seed);
     }
+    Inferences result {};
+    compute_evidence_weighted_latents(result.weighted_genotype_posteriors, result.weighted_group_responsibilities, seed_inferences);
+    const static auto evidence_less = [] (const auto& lhs, const auto& rhs) { return lhs.approx_log_evidence < rhs.approx_log_evidence; };
+    result.map = *std::max_element(std::begin(seed_inferences), std::end(seed_inferences), evidence_less);
     return result;
 }
 
 VariationalBayesMixtureMixtureModel::Inferences
 VariationalBayesMixtureMixtureModel::evaluate(const LogProbabilityVector& genotype_log_priors,
                                               const HaplotypeLikelihoodMatrix& log_likelihoods,
-                                              const double group_concentration, const double mixture_concentration,
+                                              const GroupConcentrationVector& group_concentrations,
+                                              const MixtureConcentrationArray& mixture_concentrations,
+                                              std::vector<LogProbabilityVector> seeds) const
+{
+    const auto num_samples = log_likelihoods.size();
+    const GroupOptionalPriorArray no_priors(num_samples);
+    return evaluate(genotype_log_priors, log_likelihoods, no_priors, group_concentrations, mixture_concentrations, std::move(seeds));
+}
+
+VariationalBayesMixtureMixtureModel::Inferences
+VariationalBayesMixtureMixtureModel::evaluate(const LogProbabilityVector& genotype_log_priors,
+                                              const HaplotypeLikelihoodMatrix& log_likelihoods,
+                                              const GroupOptionalPriorArray& group_priors,
+                                              const double group_concentration,
+                                              const std::vector<double>& mixture_concentrations,
+                                              std::vector<LogProbabilityVector> seeds) const
+{
+    const auto num_samples = log_likelihoods.size();
+    assert(mixture_concentrations.size() == num_samples);
+    const auto num_groups = log_likelihoods.front().front().size();
+    std::vector<unsigned> group_mixture_sizes {};
+    group_mixture_sizes.reserve(num_groups);
+    for (const auto& genotype : log_likelihoods.front().front()) {
+        group_mixture_sizes.push_back(genotype.size());
+    }
+    const GroupConcentrationVector group_concentrations(num_groups, group_concentration);
+    MixtureConcentrationArray group_mixture_concentrations {};
+    group_mixture_concentrations.reserve(num_samples);
+    for (auto sample_concentration : mixture_concentrations) {
+        group_mixture_concentrations.emplace_back(num_groups, ComponentConcentrationVector(sample_concentration));
+        unsigned t {0};
+        for (auto& sample_group_sample_concentrations : group_mixture_concentrations.back()) {
+            sample_group_sample_concentrations.assign(group_mixture_sizes[t++], sample_concentration);
+        }
+    }
+    return evaluate(genotype_log_priors, log_likelihoods, group_priors, group_concentrations, group_mixture_concentrations, std::move(seeds));
+}
+
+VariationalBayesMixtureMixtureModel::Inferences
+VariationalBayesMixtureMixtureModel::evaluate(const LogProbabilityVector& genotype_log_priors,
+                                              const HaplotypeLikelihoodMatrix& log_likelihoods,
+                                              const double group_concentration,
+                                              const std::vector<double>& mixture_concentrations,
+                                              std::vector<LogProbabilityVector> seeds) const
+{
+    const auto num_samples = log_likelihoods.size();
+    const GroupOptionalPriorArray no_priors(num_samples);
+    return evaluate(genotype_log_priors, log_likelihoods, no_priors, group_concentration, mixture_concentrations, std::move(seeds));
+}
+
+VariationalBayesMixtureMixtureModel::Inferences
+VariationalBayesMixtureMixtureModel::evaluate(const LogProbabilityVector& genotype_log_priors,
+                                              const HaplotypeLikelihoodMatrix& log_likelihoods,
+                                              const GroupOptionalPriorArray& group_priors,
+                                              const double group_concentration,
+                                              const double mixture_concentration,
                                               std::vector<LogProbabilityVector> seeds) const
 {
     const auto num_samples = log_likelihoods.size();
@@ -59,10 +121,47 @@ VariationalBayesMixtureMixtureModel::evaluate(const LogProbabilityVector& genoty
             sample_group_sample_concentrations.assign(group_mixture_sizes[t++], mixture_concentration);
         }
     }
-    return evaluate(genotype_log_priors, log_likelihoods, group_concentrations, mixture_concentrations, std::move(seeds));
+    return evaluate(genotype_log_priors, log_likelihoods, group_priors, group_concentrations, mixture_concentrations, std::move(seeds));
+}
+
+VariationalBayesMixtureMixtureModel::Inferences
+VariationalBayesMixtureMixtureModel::evaluate(const LogProbabilityVector& genotype_log_priors,
+                                              const HaplotypeLikelihoodMatrix& log_likelihoods,
+                                              const double group_concentration,
+                                              const double mixture_concentration,
+                                              std::vector<LogProbabilityVector> seeds) const
+{
+    const auto num_samples = log_likelihoods.size();
+    const GroupOptionalPriorArray no_priors(num_samples);
+    return evaluate(genotype_log_priors, log_likelihoods, no_priors, group_concentration, mixture_concentration, std::move(seeds));
 }
 
 // Private methods
+
+VariationalBayesMixtureMixtureModel::GroupOptionalLogPriorVector
+VariationalBayesMixtureMixtureModel::to_logs(const GroupOptionalPriorVector& prior) const
+{
+    GroupOptionalLogPriorVector result {};
+    if (prior) {
+        result = LogProbabilityVector(prior->size());
+        const static auto to_log = [] (auto p) noexcept {
+            const static auto min_log_prior = std::log(std::numeric_limits<LogProbability>::min());
+            return p > 0 ? std::log(p) : min_log_prior;
+        };
+        std::transform(std::cbegin(*prior), std::cend(*prior), std::begin(*result), to_log);
+    }
+    return result;
+}
+
+VariationalBayesMixtureMixtureModel::GroupOptionalLogPriorArray
+VariationalBayesMixtureMixtureModel::to_logs(const GroupOptionalPriorArray& priors) const
+{
+    GroupOptionalLogPriorArray result {};
+    result.reserve(priors.size());
+    std::transform(std::cbegin(priors), std::cend(priors), std::back_inserter(result),
+                   [this] (const auto& sample_priors) { return to_logs(sample_priors); });
+    return result;
+}
 
 namespace {
 
@@ -111,9 +210,11 @@ template <typename T>
 auto dirichlet_expectation_log(const std::vector<T>& concentrations)
 {
     std::vector<T> result(concentrations.size());
-    const auto alpha_0= sum(concentrations);
-    std::transform(std::cbegin(concentrations), std::cend(concentrations), std::begin(result),
-                   [=] (auto alpha) { return digamma_diff(alpha, alpha_0); });
+    if (concentrations.size() > 1) {
+        const auto alpha_0 = sum(concentrations);
+        std::transform(std::cbegin(concentrations), std::cend(concentrations), std::begin(result),
+                       [=] (auto alpha) { return digamma_diff(alpha, alpha_0); });
+    }
     return result;
 }
 
@@ -123,35 +224,44 @@ T log_sum_exp(const std::vector<T>& logs)
     return maths::log_sum_exp(logs);
 }
 
+bool all_equal_sizes(const VariationalBayesMixtureMixtureModel::MixtureConcentrationVector& concentrations) noexcept
+{
+    const auto size_unequal = [] (const auto& lhs, const auto& rhs) { return lhs.size() != rhs.size(); };
+    return std::adjacent_find(std::cbegin(concentrations), std::end(concentrations), size_unequal) == std::cend(concentrations);
+}
+
 } // namespace
 
-VariationalBayesMixtureMixtureModel::Inferences
+VariationalBayesMixtureMixtureModel::PointInferences
 VariationalBayesMixtureMixtureModel::evaluate(const LogProbabilityVector& genotype_log_priors,
                                               const HaplotypeLikelihoodMatrix& log_likelihoods,
+                                              const GroupOptionalLogPriorArray& group_log_priors,
                                               const GroupConcentrationVector& prior_group_concentrations,
                                               const MixtureConcentrationArray& prior_mixture_concentrations,
-                                              LogProbabilityVector& genotype_log_posteriors) const
+                                              LogProbabilityVector genotype_log_posteriors) const
 {
-    auto genotype_posteriors = exp(genotype_log_posteriors);
-    auto posterior_group_concentrations = prior_group_concentrations;
-    auto posterior_mixture_concentrations = prior_mixture_concentrations;
-    auto group_responsibilities = init_responsibilities(prior_group_concentrations, prior_mixture_concentrations,
-                                                        genotype_posteriors, log_likelihoods);
-    auto component_responsibilities = init_responsibilities(prior_group_concentrations, prior_mixture_concentrations,
-                                                            genotype_posteriors, group_responsibilities, log_likelihoods);
+    Latents latents {};
+    latents.genotype_log_posteriors = std::move(genotype_log_posteriors);
+    latents.genotype_posteriors = exp(latents.genotype_log_posteriors);
+    latents.group_concentrations = prior_group_concentrations;
+    latents.mixture_concentrations = prior_mixture_concentrations;
+    latents.group_responsibilities = init_responsibilities(group_log_priors, prior_group_concentrations, prior_mixture_concentrations,
+                                                           latents.genotype_posteriors, log_likelihoods);
+    latents.component_responsibilities = init_responsibilities(prior_group_concentrations, prior_mixture_concentrations,
+                                                               latents.genotype_posteriors, latents.group_responsibilities, log_likelihoods);
     auto prev_evidence = std::numeric_limits<double>::lowest();
     for (unsigned i {0}; i < options_.max_iterations; ++i) {
-        update_genotype_log_posteriors(genotype_log_posteriors, genotype_log_priors,
-                                       group_responsibilities, component_responsibilities,
+        update_genotype_log_posteriors(latents.genotype_log_posteriors, genotype_log_priors,
+                                       latents.group_responsibilities, latents.component_responsibilities,
                                        log_likelihoods);
-        exp(genotype_log_posteriors, genotype_posteriors);
-        update_group_concentrations(posterior_group_concentrations, prior_group_concentrations, group_responsibilities);
-        update_mixture_concentrations(posterior_mixture_concentrations, prior_mixture_concentrations,
-                                      group_responsibilities, component_responsibilities);
-        auto curr_evidence = calculate_evidence(prior_group_concentrations, posterior_group_concentrations,
-                                                prior_mixture_concentrations, posterior_mixture_concentrations,
-                                                genotype_log_priors, genotype_log_posteriors, genotype_posteriors,
-                                                group_responsibilities, component_responsibilities,
+        exp(latents.genotype_log_posteriors, latents.genotype_posteriors);
+        update_group_concentrations(latents.group_concentrations, prior_group_concentrations, latents.group_responsibilities);
+        update_mixture_concentrations(latents.mixture_concentrations, prior_mixture_concentrations,
+                                      latents.group_responsibilities, latents.component_responsibilities);
+        auto curr_evidence = calculate_evidence(prior_group_concentrations, latents.group_concentrations,
+                                                prior_mixture_concentrations, latents.mixture_concentrations,
+                                                genotype_log_priors, latents.genotype_log_posteriors, latents.genotype_posteriors,
+                                                latents.group_responsibilities, latents.component_responsibilities,
                                                 log_likelihoods);
 //        assert(curr_evidence + options_.epsilon >= prev_evidence);
         if (curr_evidence <= prev_evidence || (curr_evidence - prev_evidence) < options_.epsilon) {
@@ -159,23 +269,34 @@ VariationalBayesMixtureMixtureModel::evaluate(const LogProbabilityVector& genoty
             break;
         }
         prev_evidence = curr_evidence;
-        update_responsibilities(group_responsibilities, posterior_group_concentrations, posterior_mixture_concentrations,
-                                genotype_posteriors, component_responsibilities, log_likelihoods);
-        update_responsibilities(component_responsibilities, posterior_group_concentrations, posterior_mixture_concentrations,
-                                genotype_posteriors, group_responsibilities, log_likelihoods);
+        update_responsibilities(latents.group_responsibilities, group_log_priors,latents.group_concentrations,
+                                latents.mixture_concentrations, latents.genotype_posteriors,
+                                latents.component_responsibilities, log_likelihoods);
+        update_responsibilities(latents.component_responsibilities, latents.group_concentrations, latents.mixture_concentrations,
+                                latents.genotype_posteriors, latents.group_responsibilities, log_likelihoods);
     }
-    Inferences result {};
-    result.genotype_log_posteriors = std::move(genotype_log_posteriors);
-    result.genotype_posteriors = std::move(genotype_posteriors);
-    result.group_concentrations = std::move(posterior_group_concentrations);
-    result.mixture_concentrations = std::move(posterior_mixture_concentrations);
-    result.group_responsibilities = std::move(group_responsibilities);
-    result.approx_log_evidence = prev_evidence;
-    return result;
+    return {std::move(latents), prev_evidence};
 }
 
+namespace {
+
+template <typename ForwardIterator>
+std::size_t max_element_index(ForwardIterator first, ForwardIterator last)
+{
+    return std::distance(first, std::max_element(first, last));
+}
+
+template <typename Range>
+std::size_t max_element_index(const Range& values)
+{
+    return max_element_index(std::cbegin(values), std::cend(values));
+}
+
+} // namespace
+
 VariationalBayesMixtureMixtureModel::GroupResponsibilityVector
-VariationalBayesMixtureMixtureModel::init_responsibilities(const GroupConcentrationVector& group_concentrations,
+VariationalBayesMixtureMixtureModel::init_responsibilities(const GroupOptionalLogPriorArray& group_log_priors,
+                                                           const GroupConcentrationVector& group_concentrations,
                                                            const MixtureConcentrationArray& mixture_concentrations,
                                                            const ProbabilityVector& genotype_priors,
                                                            const HaplotypeLikelihoodMatrix& log_likelihoods) const
@@ -191,18 +312,30 @@ VariationalBayesMixtureMixtureModel::init_responsibilities(const GroupConcentrat
             max_K = std::max(max_K, mixture_concentrations[s][t].size());
         }
     }
+    const auto max_genotype_prior_idx = max_element_index(genotype_priors);
+    ComponentResponsibilityVector approx_taus(max_K);
     for (std::size_t s {0}; s < S; ++s) {
-        const auto N = log_likelihoods[s][0][0][0].size();
-        const auto tau = 1.0 / max_K;
-        const auto tau_sum = N * tau;
+        const auto N = log_likelihoods[s][0][0][0].size(); // num reads
+        for (auto& tau : approx_taus) tau.resize(N);
         for (std::size_t t {0}; t < T; ++t) {
             result[s][t] = ln_ex_psi[t];
+            if (group_log_priors[s]) result[s][t] += (*group_log_priors[s])[t];
             const auto ln_ex_pi = dirichlet_expectation_log(mixture_concentrations[s][t]);
             const auto K = mixture_concentrations[s][t].size();
+            // Approximate tau assuming p(t) = 1
+            Tau approx_tau(K);
+            for (std::size_t n {0}; n < N; ++n) {
+                for (std::size_t k {0}; k < K; ++k) {
+                    approx_tau[k] = ln_ex_pi[k] + log_likelihoods[s][max_genotype_prior_idx][t][k][n];
+                }
+                maths::normalise_exp(approx_tau);
+                for (std::size_t k {0}; k < K; ++k) {
+                    approx_taus[k][n] = approx_tau[k];
+                }
+            }
             for (std::size_t k {0}; k < K; ++k) {
-                result[s][t] += ln_ex_pi[k] * tau_sum;
                 for (std::size_t g {0}; g < G; ++g) {
-                    result[s][t] += genotype_priors[g] * tau * sum(log_likelihoods[s][g][t][k]);
+                    result[s][t] += genotype_priors[g] * inner_product(approx_taus[k], log_likelihoods[s][g][t][k]);
                 }
             }
         }
@@ -213,6 +346,7 @@ VariationalBayesMixtureMixtureModel::init_responsibilities(const GroupConcentrat
 
 void
 VariationalBayesMixtureMixtureModel::update_responsibilities(GroupResponsibilityVector& result,
+                                                             const GroupOptionalLogPriorArray& group_log_priors,
                                                              const GroupConcentrationVector& group_concentrations,
                                                              const MixtureConcentrationArray& mixture_concentrations,
                                                              const ProbabilityVector& genotype_posteriors,
@@ -224,17 +358,19 @@ VariationalBayesMixtureMixtureModel::update_responsibilities(GroupResponsibility
     const auto G = genotype_posteriors.size();
     const auto ln_ex_psi = dirichlet_expectation_log(group_concentrations);
     for (std::size_t s {0}; s < S; ++s) {
-        std::vector<double> component_responsibility_sums(component_responsibilities[s].size());
-        std::transform(std::cbegin(component_responsibilities[s]), std::cend(component_responsibilities[s]),
-                       std::begin(component_responsibility_sums), [] (const auto& taus) { return sum(taus); });
         for (std::size_t t {0}; t < T; ++t) {
+            const auto max_K = component_responsibilities[s][t].size();
             result[s][t] = ln_ex_psi[t];
+            if (group_log_priors[s]) result[s][t] += (*group_log_priors[s])[t];
             const auto ln_ex_pi = dirichlet_expectation_log(mixture_concentrations[s][t]);
             const auto K = ln_ex_pi.size();
-            for (std::size_t k {0}; k < K; ++k) {
-                result[s][t] += ln_ex_pi[k] * component_responsibility_sums[k];
+            for (std::size_t k {0}; k < max_K; ++k) {
                 for (std::size_t g {0}; g < G; ++g) {
-                    result[s][t] += genotype_posteriors[g] * inner_product(component_responsibilities[s][k], log_likelihoods[s][g][t][k]);
+                    if (k < K) {
+                        result[s][t] += genotype_posteriors[g] * inner_product(component_responsibilities[s][t][k], log_likelihoods[s][g][t][k]);
+                    } else {
+                        result[s][t] += genotype_posteriors[g] * inner_product(component_responsibilities[s][t][k], log_likelihoods[s][g][t][0]);
+                    }
                 }
             }
         }
@@ -257,11 +393,13 @@ VariationalBayesMixtureMixtureModel::init_responsibilities(const GroupConcentrat
             K = std::max(K, mixture_concentrations[s][t].size());
         }
     }
-    ComponentResponsibilityMatrix result(S, ComponentResponsibilityVector(K));
+    ComponentResponsibilityMatrix result(S, ComponentResponsibilityVectorArray(T, ComponentResponsibilityVector(K)));
     for (std::size_t s {0}; s < S; ++s) {
-        const auto N = log_likelihoods[s][0][0][0].size();
-        for (std::size_t k {0}; k < K; ++k) {
-            result[s][k].resize(N);
+        for (std::size_t t {0}; t < T; ++t) {
+            const auto N = log_likelihoods[s][0][0][0].size();
+            for (std::size_t k {0}; k < K; ++k) {
+                result[s][t][k].resize(N);
+            }
         }
     }
     update_responsibilities(result, group_concentrations, mixture_concentrations,
@@ -295,27 +433,28 @@ VariationalBayesMixtureMixtureModel::update_responsibilities(ComponentResponsibi
 {
     const auto T = group_concentrations.size();
     const auto S = log_likelihoods.size();
-    const auto max_K = result[0].size();
+    const auto max_K = result[0][0].size();
     for (std::size_t s {0}; s < S; ++s) {
         const auto N = log_likelihoods[s][0][0][0].size();
         for (std::size_t t {0}; t < T; ++t) {
             const auto ln_exp_pi = dirichlet_expectation_log(mixture_concentrations[s][t]);
             const auto K = ln_exp_pi.size();
-            for (std::size_t k {0}; k < K; ++k) {
+            for (std::size_t k {0}; k < max_K; ++k) {
                 for (std::size_t n {0}; n < N; ++n) {
-                    if (t == 0) result[s][k][n] = 0;
-                    result[s][k][n] += group_responsibilities[s][t] * (ln_exp_pi[k] + inner_product(genotype_posteriors, log_likelihoods[s], t, k, n));
+                    if (t == 0) result[s][t][k][n] = 0;
+                    auto w = k < K ? ln_exp_pi[k] + inner_product(genotype_posteriors, log_likelihoods[s], t, k, n) : options_.null_log_probability;
+                    result[s][t][k][n] += group_responsibilities[s][t] * w;
                 }
             }
-        }
-        std::vector<double> ln_rho(max_K);
-        for (std::size_t n {0}; n < N; ++n) {
-            for (std::size_t k {0}; k < max_K; ++k) {
-                ln_rho[k] = result[s][k][n];
-            }
-            const auto ln_rho_norm = log_sum_exp(ln_rho);
-            for (std::size_t k {0}; k < max_K; ++k) {
-                result[s][k][n] = std::exp(ln_rho[k] - ln_rho_norm);
+            std::vector<double> ln_rho(max_K);
+            for (std::size_t n {0}; n < N; ++n) {
+                for (std::size_t k {0}; k < max_K; ++k) {
+                    ln_rho[k] = result[s][t][k][n];
+                }
+                const auto ln_rho_norm = log_sum_exp(ln_rho);
+                for (std::size_t k {0}; k < max_K; ++k) {
+                    result[s][t][k][n] = std::exp(ln_rho[k] - ln_rho_norm);
+                }
             }
         }
     }
@@ -345,7 +484,7 @@ VariationalBayesMixtureMixtureModel::marginalise(const GroupResponsibilityVector
     LogProbability result {0};
     for (std::size_t s {0}; s < S; ++s) {
         for (std::size_t t {0}; t < T; ++t) {
-            result += group_responsibilities[s][t] * marginalise(component_responsibilities[s], log_likelihoods[s][g][t]);
+            result += group_responsibilities[s][t] * marginalise(component_responsibilities[s][t], log_likelihoods[s][g][t]);
         }
     }
     return result;
@@ -356,9 +495,15 @@ VariationalBayesMixtureMixtureModel::marginalise(const ComponentResponsibilityVe
                                                  const HaplotypeLikelihoodVector& log_likelihoods) const noexcept
 {
     const auto K = log_likelihoods.size();
+    const auto max_K = responsibilities.size();
+    assert(K <= max_K);
     LogProbability result {0};
-    for (std::size_t k {0}; k < K; ++k) {
-        result += inner_product(responsibilities[k], log_likelihoods[k]);
+    for (std::size_t k {0}; k < max_K; ++k) {
+        if (k < K) {
+            result += inner_product(responsibilities[k], log_likelihoods[k]);
+        } else {
+            result += inner_product(responsibilities[k], log_likelihoods[0]);
+        }
     }
     return result;
 }
@@ -391,22 +536,13 @@ VariationalBayesMixtureMixtureModel::update_mixture_concentrations(MixtureConcen
         for (std::size_t t {0}; t < T; ++t) {
             const auto K = prior_mixture_concentrations[s][t].size();
             for (std::size_t k {0}; k < K; ++k) {
-                result[s][t][k] = prior_mixture_concentrations[s][t][k] + group_responsibilities[s][t] * sum(component_responsibilities[s][k]);
+                result[s][t][k] = prior_mixture_concentrations[s][t][k] + group_responsibilities[s][t] * sum(component_responsibilities[s][t][k]);
             }
         }
     }
 }
 
 namespace {
-
-template <typename Range1, typename Range2>
-auto inner_inner_product(const Range1& lhs, const Range2& rhs) noexcept
-{
-    using T = decltype(inner_product(lhs[0], rhs[0]));
-    const auto k = std::min(lhs.size(), rhs.size());
-    return std::inner_product(std::cbegin(lhs), std::next(std::cbegin(lhs), k), std::cbegin(rhs), T {}, std::plus<> {},
-                              [] (const auto& a, const auto& b) { return inner_product(a, b); });
-}
 
 template <typename T>
 auto shannon_entropy(const std::vector<T>& probabilities) noexcept
@@ -443,21 +579,83 @@ VariationalBayesMixtureMixtureModel::calculate_evidence(const GroupConcentration
     for (std::size_t g {0}; g < G; ++g) {
         auto w = genotype_log_priors[g] - genotype_log_posteriors[g];
         for (std::size_t s {0}; s < S; ++s) {
+            double ss {0};
             for (std::size_t t {0}; t < T; ++t) {
-                w += group_responsibilities[s][t] * inner_inner_product(component_responsibilities[s], log_likelihoods[s][g][t]);
+                ss += group_responsibilities[s][t] * marginalise(component_responsibilities[s][t], log_likelihoods[s][g][t]);
             }
+            w += ss;
         }
         result += genotype_posteriors[g] * w;
-    }
+    }    
     for (std::size_t s {0}; s < S; ++s) {
         result += shannon_entropy(group_responsibilities[s]);
-        result += shannon_entropy(component_responsibilities[s]);
         for (std::size_t t {0}; t < T; ++t) {
+            result += group_responsibilities[s][t] * shannon_entropy(component_responsibilities[s][t]);
             result += maths::log_beta(posterior_mixture_concentrations[s][t]) - maths::log_beta(prior_mixture_concentrations[s][t]);
         }
-    }
-    result += maths::log_beta(posterior_group_concentrations) - maths::log_beta(prior_group_concentrations);
+    }    
+    result += maths::log_beta(posterior_group_concentrations) - maths::log_beta(prior_group_concentrations);    
     return result;
+}
+
+namespace {
+
+template <typename Range>
+void check_normalisation(Range& probabilities) noexcept
+{
+    const auto mass = std::accumulate(std::cbegin(probabilities), std::cend(probabilities), 0.0);
+    if (mass > 1.0) for (auto& p : probabilities) p /= mass;
+}
+
+} // namespace
+
+void
+VariationalBayesMixtureMixtureModel::compute_evidence_weighted_latents(ProbabilityVector& genotype_posteriors,
+                                                                       GroupResponsibilityVector& group_responsibilities,
+                                                                       const std::vector<PointInferences>& latents) const
+{
+    assert(!latents.empty());
+    const auto num_genotypes = latents.front().latents.genotype_posteriors.size();
+    std::vector<std::size_t> map_genotypes(num_genotypes, latents.size());
+    for (std::size_t i {0}; i < latents.size(); ++i) {
+        const auto map_genotype_idx = max_element_index(latents[i].latents.genotype_posteriors);
+        if (map_genotypes[map_genotype_idx] == latents.size()
+         || latents[i].approx_log_evidence > latents[map_genotypes[map_genotype_idx]].approx_log_evidence) {
+            map_genotypes[map_genotype_idx] = i;
+        }
+    }
+    std::vector<std::size_t> modes {};
+    modes.reserve(latents.size());
+    for (std::size_t g {0}; g < num_genotypes; ++g) {
+        if (map_genotypes[g] < latents.size()) {
+            modes.push_back(map_genotypes[g]);
+        }
+    }
+    std::vector<double> mode_weights(modes.size());
+    std::transform(std::cbegin(modes), std::cend(modes), std::begin(mode_weights),
+                   [&] (auto mode) { return latents[mode].approx_log_evidence; });
+    maths::normalise_exp(mode_weights);
+    genotype_posteriors.resize(num_genotypes);
+    const auto num_samples = latents.front().latents.group_responsibilities.size();
+    const auto num_groups = latents.front().latents.group_responsibilities.front().size();
+    group_responsibilities.resize(num_samples, Sigma(num_groups));
+    for (std::size_t i {0}; i < modes.size(); ++i) {
+        const auto mode_weight = mode_weights[i];
+        const auto& mode_genotype_posteriors = latents[modes[i]].latents.genotype_posteriors;
+        std::transform(std::cbegin(mode_genotype_posteriors), std::cend(mode_genotype_posteriors),
+                       std::cbegin(genotype_posteriors), std::begin(genotype_posteriors),
+                       [mode_weight] (auto seed_posterior, auto curr_posterior) {
+                           return curr_posterior + mode_weight * seed_posterior;
+                       });
+        const auto& mode_group_responsabilities = latents[modes[i]].latents.group_responsibilities;
+        for (std::size_t s {0}; s < num_samples; ++s) {
+            for (std::size_t t {0}; t < num_groups; ++t) {
+                group_responsibilities[s][t] += mode_weight * mode_group_responsabilities[s][t];
+            }
+        }
+    }
+    check_normalisation(genotype_posteriors);
+    for (auto& responsibilities : group_responsibilities)  check_normalisation(responsibilities);
 }
 
 void VariationalBayesMixtureMixtureModel::print_concentrations(const GroupConcentrationVector& concentrations) const
@@ -497,9 +695,11 @@ void VariationalBayesMixtureMixtureModel::print(const GroupResponsibilityVector&
 void VariationalBayesMixtureMixtureModel::print(const ComponentResponsibilityMatrix& responsibilities) const
 {
     for (std::size_t s {0}; s < responsibilities.size(); ++s) {
-        for (std::size_t k {0}; k < responsibilities[s].size(); ++k) {
-            for (std::size_t n {0}; n < responsibilities[s][k].size(); ++n) {
-                std::cout << "s: " << s <<  " k: " << k << " n: " << n << " = " << responsibilities[s][k][n] << std::endl;
+        for (std::size_t t {0}; t < responsibilities[s].size(); ++t) {
+            for (std::size_t k {0}; k < responsibilities[s].size(); ++k) {
+                for (std::size_t n {0}; n < responsibilities[s][k].size(); ++n) {
+                    std::cout << "s: " << s << " t: " << t <<  " k: " << k << " n: " << n << " = " << responsibilities[s][t][k][n] << std::endl;
+                }
             }
         }
     }

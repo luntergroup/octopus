@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef individual_model_hpp
@@ -54,12 +54,7 @@ public:
     bool is_primed() const noexcept;
     
     InferredLatents
-    evaluate(const MappableBlock<Genotype<Haplotype>>& genotypes,
-             const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
-    
-    InferredLatents
-    evaluate(const MappableBlock<Genotype<Haplotype>>& genotypes,
-             const std::vector<GenotypeIndex>& genotype_indices,
+    evaluate(const MappableBlock<Genotype<IndexedHaplotype<>>>& genotypes,
              const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
     
 private:

@@ -1,5 +1,7 @@
 FROM ubuntu:latest
 
+ENV DEBIAN_FRONTEND=noninteractive
+
 # Get all apt dependencies
 RUN apt-get -y update
 RUN apt-get -y install software-properties-common
@@ -8,24 +10,14 @@ RUN add-apt-repository -y ppa:ubuntu-toolchain-r/test
 RUN apt-get -y install \
     gcc g++ \
     build-essential \
-    make \
-    wget \
-    autotools-dev \
-    libicu-dev \
     git \
     curl \
-    libcurl4-openssl-dev \
-    pkg-config \
-    autoconf \
-    libbz2-dev \
-    liblzma-dev \
-    zlib1g-dev \
-    openssl \
-    libssl-dev \
-    libcrypto++-dev
+    python3-pip
+
+RUN pip3 install distro
 
 # Install Octopus
-RUN git clone -b develop https://github.com/luntergroup/octopus.git
-RUN octopus/scripts/install.py --install-dependencies --download-forests --threads 4
+COPY . /home/octopus
+RUN /home/octopus/scripts/install.py --dependencies --forests --threads 4
 
-ENTRYPOINT ["octopus/bin/octopus"]
+ENTRYPOINT ["/home/octopus/bin/octopus"]

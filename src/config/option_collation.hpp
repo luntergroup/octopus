@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef option_collation_hpp
@@ -63,11 +63,16 @@ PloidyMap get_ploidy_map(const OptionMap& options);
 
 boost::optional<Pedigree> get_pedigree(const OptionMap& options, const std::vector<SampleName>& samples);
 
-HaplotypeLikelihoodModel make_haplotype_likelihood_model(const OptionMap& options, const boost::optional<ReadSetProfile>& read_profile);
+HaplotypeLikelihoodModel 
+make_calling_haplotype_likelihood_model(const OptionMap& options, boost::optional<const ReadSetProfile&> read_profile);
+HaplotypeLikelihoodModel 
+make_realignment_haplotype_likelihood_model(const HaplotypeLikelihoodModel& calling_model,
+                                            const boost::optional<const ReadSetProfile&> read_profile,
+                                            const options::OptionMap& options);
 
 CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& read_pipe,
                                   const InputRegionMap& regions, const OptionMap& options,
-                                  boost::optional<ReadSetProfile> input_reads_profile = boost::none);
+                                  boost::optional<const ReadSetProfile&> input_reads_profile = boost::none);
 
 bool is_call_filtering_requested(const OptionMap& options) noexcept;
 

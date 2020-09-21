@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "single_cell_prior_model.hpp"
@@ -39,7 +39,7 @@ const DeNovoModel& SingleCellPriorModel::denovo_model() const noexcept
 }
 
 SingleCellPriorModel::LogProbability
-SingleCellPriorModel::evaluate(const std::vector<Genotype<Haplotype>>& genotypes) const
+SingleCellPriorModel::evaluate(const std::vector<Genotype<IndexedHaplotype<>>>& genotypes) const
 {
     LogProbability result {0};
     for (std::size_t id {0}; id < genotypes.size(); ++id) {
@@ -67,23 +67,27 @@ SingleCellPriorModel::evaluate(const std::vector<GenotypeReference>& genotypes) 
 }
 
 SingleCellPriorModel::LogProbability
-SingleCellPriorModel::evaluate(const std::vector<GenotypeIndex>& genotypes) const
+SingleCellPriorModel::compute_cnv_log_prior(const Genotype<IndexedHaplotype<>>& ancestor) const
 {
-    return 0;
+    // This is the prior probability that an entire haplotype is gained or lost from the ancestor genotype
+    // We assume that the length distribution is such that any copy number event will affect the whole haplotype.
+    // Maybe for very large haplotypes we'll need to look at another model
+    return std::log(parameters_.copy_number_prior);
 }
 
 SingleCellPriorModel::LogProbability
-SingleCellPriorModel::log_probability(const Genotype<Haplotype>& ancestor, const Genotype<Haplotype>& descendant) const
+SingleCellPriorModel::log_probability(const Genotype<IndexedHaplotype<>>& ancestor, const Genotype<IndexedHaplotype<>>& descendant) const
 {
+    const auto cnv_log_prior = compute_cnv_log_prior(ancestor);
     LogProbability result {0};
     std::vector<unsigned> ancestor_haplotype_indices(ancestor.ploidy());
     std::iota(std::begin(ancestor_haplotype_indices), std::end(ancestor_haplotype_indices), 0u);
     if (ancestor.ploidy() != descendant.ploidy()) {
         const auto p = std::minmax({ancestor.ploidy(), descendant.ploidy()});
         const auto copy_change = p.second - p.first;
-        result += parameters_.copy_number_log_probability * copy_change;
-        if (ancestor.ploidy() > descendant.ploidy()) {
-            // Copy loss
+        result += cnv_log_prior * copy_change;
+        if (ancestor.ploidy() < descendant.ploidy()) {
+            // Copy gain
             for (unsigned i {0}; i < ancestor.ploidy(); ++i) {
                 ancestor_haplotype_indices.insert(std::cend(ancestor_haplotype_indices), copy_change, i);
             }

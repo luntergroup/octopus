@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef phred_hpp
@@ -32,8 +32,12 @@ public:
     
     Phred() = default;
     
-    explicit Phred(const Q score) : score_ {score} // to convert -0.0 to +0.0
+    explicit Phred(const Q score) : score_ {score}
     {
+        if (score_ == 0.0 && std::signbit(score_)) {
+            // to convert -0.0 to +0.0
+            score_ = 0.0;
+        }
         if (score_ < Q {0}) {
             throw std::domain_error {"Phred: negative score " + std::to_string(score)};
         }

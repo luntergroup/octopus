@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef octopus_vcf_hpp
@@ -15,7 +15,7 @@ namespace spec {
 
 namespace allele {
 
-VCF_SPEC_CONSTANT nonref {"<*>"};
+
 
 } // namespace info
 
@@ -37,7 +37,8 @@ VCF_SPEC_CONSTANT lowQuality {"LQ"};
 VCF_SPEC_CONSTANT lowPosteriorProbability {"LPP"};
 VCF_SPEC_CONSTANT lowDepth {"DP"};
 VCF_SPEC_CONSTANT highMappingQualityDivergence {"MQD"};
-VCF_SPEC_CONSTANT alleleBias {"AFB"};
+VCF_SPEC_CONSTANT alleleFrequencyBias {"AFB"};
+VCF_SPEC_CONSTANT lowAlleleFrequency {"AF"};
 VCF_SPEC_CONSTANT alleleDepth {"AD"};
 VCF_SPEC_CONSTANT lowModelPosterior {"MP"};
 VCF_SPEC_CONSTANT lowMappingQuality {"MQ"};

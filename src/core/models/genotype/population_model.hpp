@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef population_model_hpp
@@ -25,7 +25,7 @@ class PopulationModel
 public:
     struct Options
     {
-        std::size_t max_joint_genotypes = 1'000'000;
+        boost::optional<std::size_t> max_genotype_combinations = boost::none;
         unsigned max_em_iterations = 100;
         double em_epsilon = 0.001;
     };
@@ -40,9 +40,8 @@ public:
         double log_evidence;
     };
     
-    using SampleVector            = std::vector<SampleName>;
-    using GenotypeVector          = MappableBlock<Genotype<Haplotype>>;
-    using GenotypeVectorReference = std::reference_wrapper<const GenotypeVector>;
+    using SampleVector   = std::vector<SampleName>;
+    using GenotypeVector = MappableBlock<Genotype<IndexedHaplotype<>>>;
     
     PopulationModel() = delete;
     
@@ -64,19 +63,14 @@ public:
     // All samples have same ploidy
     InferredLatents
     evaluate(const SampleVector& samples,
+             const MappableBlock<Haplotype>& haplotypes,
              const GenotypeVector& genotypes,
-             const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
-    // All samples have same ploidy
-    InferredLatents
-    evaluate(const SampleVector& samples,
-             const GenotypeVector& genotypes,
-             const std::vector<GenotypeIndex>& genotype_indices,
-             const std::vector<Haplotype>& haplotypes,
              const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
     // Samples have different ploidy
     InferredLatents
     evaluate(const SampleVector& samples,
              const std::vector<unsigned>& sample_ploidies,
+             const MappableBlock<Haplotype>& haplotypes,
              const GenotypeVector& genotypes,
              const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
     

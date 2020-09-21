@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef variable_mixture_genotype_likelihood_model_hpp
@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "core/types/haplotype.hpp"
+#include "core/types/indexed_haplotype.hpp"
 #include "core/types/genotype.hpp"
 #include "core/types/cancer_genotype.hpp"
 #include "core/models/haplotype_likelihood_array.hpp"
@@ -22,11 +23,7 @@ public:
     VariableMixtureGenotypeLikelihoodModel() = delete;
     
     VariableMixtureGenotypeLikelihoodModel(const HaplotypeLikelihoodArray& likelihoods);
-    VariableMixtureGenotypeLikelihoodModel(const HaplotypeLikelihoodArray& likelihoods,
-                                           const std::vector<Haplotype>& haplotypes);
     VariableMixtureGenotypeLikelihoodModel(const HaplotypeLikelihoodArray& likelihoods, MixtureVector mixtures);
-    VariableMixtureGenotypeLikelihoodModel(const HaplotypeLikelihoodArray& likelihoods, MixtureVector mixtures,
-                                           const std::vector<Haplotype>& haplotypes);
     
     VariableMixtureGenotypeLikelihoodModel(const VariableMixtureGenotypeLikelihoodModel&)            = default;
     VariableMixtureGenotypeLikelihoodModel& operator=(const VariableMixtureGenotypeLikelihoodModel&) = delete;
@@ -38,21 +35,16 @@ public:
     const HaplotypeLikelihoodArray& cache() const noexcept;
     const MixtureVector& mixtures() const noexcept;
     
-    void prime(const std::vector<Haplotype>& haplotypes);
-    void unprime() noexcept;
-    bool is_primed() const noexcept;
-    
     void set_mixtures(MixtureVector mixtures);
     
     LogProbability evaluate(const Genotype<Haplotype>& genotype) const;
-    LogProbability evaluate(const GenotypeIndex& genotype) const;
+    LogProbability evaluate(const Genotype<IndexedHaplotype<>>& genotype) const;
     LogProbability evaluate(const CancerGenotype<Haplotype>& genotype) const;
-    LogProbability evaluate(const CancerGenotypeIndex& genotype) const;
+    LogProbability evaluate(const CancerGenotype<IndexedHaplotype<>>& genotype) const;
 
 private:
     const HaplotypeLikelihoodArray& likelihoods_;
     MixtureVector mixtures_, log_mixtures_;
-    std::vector<HaplotypeLikelihoodArray::LikelihoodVectorRef> indexed_likelihoods_;
     mutable std::vector<HaplotypeLikelihoodArray::LikelihoodVectorRef> likelihood_refs_;
     mutable std::vector<HaplotypeLikelihoodArray::LogProbability> buffer_;
 };

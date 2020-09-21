@@ -23,8 +23,8 @@ except ImportError as plot_import_exception:
 script_dir = Path(__file__).parent.parent.absolute()
 default_octopus_bin = script_dir / 'bin/octopus'
 
-default_germline_measures = "AC AD ADP AF ARF BQ CC CRF DAD DAF DC DENOVO DP DPC ER ERS FRF GC GQ GQD ITV MC MF MP MRC MQ MQ0 MQD PP PPD QD QUAL REFCALL REB RSB RTB SB SD SF STRL STRP VL".split()
-default_somatic_measures = "AC AD ADP AF ARF BQ CC CRF DAD DAF DP DPC ER ERS FRF GC GQ GQD ITV NC MC MF MP MRC MQ MQ0 MQD PP PPD QD QUAL REB RSB RTB SB SD SF SHC SMQ SOMATIC STRL STRP VL".split()
+default_germline_measures = "AC AD ADP AF AFB ARF BMQ BQ CC CRF DAD DAF DC DENOVO DP DPC ER ERS FRF GC GQ GQD ITV MC MF MP MRC MQ MQ0 MQD PLN PP PPD QD QUAL REB RSB RTB SB SD SF STRL STRP VL".split()
+default_somatic_measures = "AC AD ADP AF ARF BMQ BQ CC CRF DAD DAF DP DPC ER ERS FRF GC GQ GQD ITV NC MC MF MP MRC MQ MQ0 MQD PLN PP PPD QD QUAL REB RSB RTB SB SD SF SHC SMQ SOMATIC STRL STRP VL".split()
 
 known_truth_set_urls = {
     "GIAB": {
@@ -100,10 +100,10 @@ def get_octopus_version(octopus_bin):
     return version_line[2], version_line[-1][:-1] if len(version_line) > 3 else None
 
 def check_exists(paths):
-    for path in paths: assert path.exists()
+    for path in paths: assert path.exists(), str(path) + " does not exist"
 
 def check_exists_or_none(paths):
-    for path in paths: assert path is None or path.exists()
+    for path in paths: assert path is None or path.exists(), str(path) + " does not exist"
 
 class TrainingData:
     def __init__(self, data):
@@ -219,7 +219,8 @@ def get_octopus_output_filename(reference_filename, bam_filenames, kind="germlin
     return get_bam_id(bam_filenames) + "." + get_reference_id(reference_filename) + ".Octopus." + kind + ".vcf.gz"
 
 def run_octopus(octopus, reference, reads, regions, threads, output,
-                config=None, octopus_vcf=None, kind="germline", annotations="all"):
+                config=None, octopus_vcf=None, kind="germline", annotations="all",
+                keep_raw=False):
     octopus_cmd = [str(octopus), '-R', str(reference), '-I'] + \
                   [str(r) for r in reads] + \
                   ['-t', str(regions), \
@@ -235,16 +236,110 @@ def run_octopus(octopus, reference, reads, regions, threads, output,
         octopus_cmd += ['--config', str(config)]
     if octopus_vcf is not None:
         octopus_cmd += ['--filter-vcf', str(octopus_vcf)]
+    elif keep_raw:
+         octopus_cmd += ['--keep-unfiltered-calls']
     if kind == "somatic":
         octopus_cmd += ['--caller', 'cancer', '--somatics-only']
     sp.call(octopus_cmd)
 
-def get_vcf_samples(vcf_filename):
+def read_vcf_samples(vcf_filename):
     vcf = ps.VariantFile(str(vcf_filename))
     return vcf.header.samples
 
-def run_rtg(rtg, rtg_ref_path, truth_vcf_path, confident_bed_path, octopus_vcf_path, out_dir,
-            bed_regions=None, sample=None, kind="germline"):
+def is_homref(vcf_rec, sample):
+    return all(allele == vcf_rec.ref for allele in vcf_rec.samples[sample].alleles)
+
+def has_homref_calls(vcf_filename, sample=None):
+    vcf = ps.VariantFile(str(vcf_filename))
+    if sample is None:
+        assert len(vcf.header.samples) == 1
+        sample = vcf.header.samples[0]
+    for rec in vcf:
+        if is_homref(rec, sample): return True
+    return False
+
+def subset_samples(vcf_in_filename, samples, vcf_out_filename=None, drop_uncalled=False, drop_homref=False):
+    inplace = False
+    if vcf_out_filename is None:
+        vcf_out_filename = vcf_in_filename.with_suffix('.gz.tmp')
+        inplace = True
+    subset_cmd = ['bcftools', 'view', '-s', ','.join(samples), '-Oz', '-o', str(vcf_out_filename)]
+    if drop_uncalled:
+        subset_cmd.append('-U')
+    if drop_homref:
+        subset_cmd.append('-c1')
+    subset_cmd.append(str(vcf_in_filename))
+    sp.call(subset_cmd)
+    if inplace:
+        shutil.move(str(vcf_out_filename), str(vcf_in_filename))
+        index_vcf(vcf_in_filename)
+    else:
+        index_vcf(vcf_out_filename)
+
+def complement_vcf(src_vcf_filename, tagret_vcf_filenames, dst_vcf_filename):
+    sp.call(['bcftools', 'isec', '-C', str(src_vcf_filename)] + [str(f) for f in tagret_vcf_filenames]
+            + ['-w1', '-Oz', '-o', str(dst_vcf_filename)])
+    index_vcf(dst_vcf_filename)
+
+def intersect_vcfs(src_vcf_filenames, dst_vcf_filename):
+    sp.call(['bcftools', 'isec'] + [str(f) for f in src_vcf_filenames]
+            + ['-n', str(len(src_vcf_filenames)), '-w1', '-Oz', '-o', str(dst_vcf_filename)])
+    index_vcf(dst_vcf_filename)
+
+def concat_vcfs(vcfs, out, remove_duplicates=True):
+    assert len(vcfs) > 1
+    cmd = ['bcftools', 'concat', '-a', '-Oz', '-o', str(out)]
+    if remove_duplicates:
+        cmd.append('-D')
+    cmd += [str(vcf) for vcf in vcfs]
+    sp.call(cmd)
+    index_vcf(out)
+
+def remove_vcf_index(vcf_filename):
+    vcf_index_filename = vcf_filename.with_suffix(vcf_filename.suffix + '.tbi')
+    if vcf_index_filename.exists(): vcf_index_filename.unlink()
+
+def remove_vcf(vcf_filename, remove_index=True):
+    vcf_filename.unlink()
+    if remove_index: remove_vcf_index(vcf_filename)
+
+def add_vcfeval_missing_homrefs(vcfeval_dir, octopus_vcf, sample=None):
+    subsetted = False
+    if sample is not None:
+        sample_octopus_vcf = vcfeval_dir / (octopus_vcf.stem + '.' + sample + '.vcf.gz')
+        subset_samples(octopus_vcf, [sample], sample_octopus_vcf)
+        octopus_vcf = sample_octopus_vcf
+        subsetted = True
+
+    # Missing TP homref calls should be any calls not in the vcfeval TP or FP sets, but in the source VCF
+    vcfeval_tp_vcf_filename, vcfeval_fp_vcf_filename = vcfeval_dir / "tp.vcf.gz", vcfeval_dir / "fp.vcf.gz"
+    tp_homref_vcf_filename = vcfeval_dir / 'tp.homref.vcf.gz'
+    complement_vcf(octopus_vcf, [vcfeval_tp_vcf_filename, vcfeval_fp_vcf_filename], tp_homref_vcf_filename)
+    new_tp_vcf_filename = vcfeval_dir / "tp.with_hom_ref.vcf.gz"
+    concat_vcfs([vcfeval_tp_vcf_filename, tp_homref_vcf_filename], new_tp_vcf_filename)
+    shutil.move(str(new_tp_vcf_filename), str(vcfeval_tp_vcf_filename))
+    remove_vcf_index(new_tp_vcf_filename)
+    index_vcf(vcfeval_tp_vcf_filename)
+    remove_vcf(tp_homref_vcf_filename)
+
+    # Missing TF homref calls should be any calls in the vcfeval FN and the source set, but not already in the FP set
+    fp_homref_vcf_filename = vcfeval_dir / "fp.homref.vcf.gz"
+    intersect_vcfs([octopus_vcf, vcfeval_dir / "fn.vcf.gz"], fp_homref_vcf_filename)
+    new_fp_vcf_filename = vcfeval_dir / "fp.with_hom_ref.vcf.gz"
+    concat_vcfs([vcfeval_fp_vcf_filename, fp_homref_vcf_filename], new_fp_vcf_filename) # removes duplicates already in FP set
+    shutil.move(str(new_fp_vcf_filename), str(vcfeval_fp_vcf_filename))
+    remove_vcf_index(new_fp_vcf_filename)
+    index_vcf(vcfeval_fp_vcf_filename)
+    remove_vcf(fp_homref_vcf_filename)
+
+    if subsetted: remove_vcf(octopus_vcf)
+
+def run_vcfeval(rtg, rtg_ref_path, truth_vcf_path, confident_bed_path, octopus_vcf_path, out_dir,
+                bed_regions=None, sample=None, 
+                ref_overlap=True,
+                kind="germline", 
+                include_homref=True,
+                ploidy=None):
     cmd = [str(rtg), 'vcfeval', \
            '-t', str(rtg_ref_path), \
            '-b', str(truth_vcf_path), \
@@ -256,35 +351,43 @@ def run_rtg(rtg, rtg_ref_path, truth_vcf_path, confident_bed_path, octopus_vcf_p
     if kind == "somatic":
         cmd += ['--squash-ploidy', '--sample', 'ALT']
     elif sample is not None:
-        truth_samples = get_vcf_samples(truth_vcf_path)
+        truth_samples = read_vcf_samples(truth_vcf_path)
         if len(truth_samples) > 1:
             raise Exception("More than one sample in truth " + str(truth_vcf_path))
         if sample == truth_samples[0]:
             cmd += ['--sample', sample]
         else:
             cmd += ['--sample', truth_samples[0] + "," + sample]
+    if ref_overlap:
+        cmd.append('--ref-overlap')
+    if ploidy is not None and ploidy > 2:
+        cmd += ['--Xdefault-ploidy', str(ploidy)]
     sp.call(cmd)
-
-def read_vcf_samples(vcf_filename):
-    vcf = ps.VariantFile(str(vcf_filename))
-    return vcf.header.samples
+    if sample is not None:
+        subset_vcfeval_result_samples(out_dir, sample)
+    if include_homref and has_homref_calls(octopus_vcf_path, sample):
+        add_vcfeval_missing_homrefs(out_dir, octopus_vcf_path, sample)
 
 def get_annotation(field, rec, sample=None):
     if field == 'QUAL':
         return rec.qual
     elif field in rec.format:
         if sample is None:
+            assert len(rec.samples) == 1
             res = rec.samples[list(rec.samples)[0]][field]
         else:
             res = rec.samples[sample][field]
         if type(res) == tuple:
-            res = res[0]
+            res = np.mean(res)
         return res
-    else:
+    elif field in rec.info:
         res = rec.info[field]
         if type(res) == tuple:
-            res = res[0]
+            res = np.mean(res)
         return res
+    else:
+        # Field must be a flag and not present
+        return 0
 
 def is_somatic_sample(rec, sample):
     return bool(int(get_annotation('SOMATIC', rec, sample)))
@@ -320,10 +423,16 @@ def read_octopus_header_info(vcf_filename):
             return dict(record)
     return None
 
+def startswith_index(options, pattern):
+    for i, option in enumerate(options):
+        if option.startswith(pattern):
+            return i
+    return -1
+
 def read_normal_samples(vcf_filename):
     options = read_octopus_header_info(vcf_filename)['options'].split(' ')
     result = []
-    for token in options[options.index('--normal-sample') + 1:]:
+    for token in options[startswith_index(options, "--normal-sample") + 1:]:
         if token.startswith('--'):
             break
         else:
@@ -332,6 +441,10 @@ def read_normal_samples(vcf_filename):
 
 def is_normal_sample(sample, vcf_filename):
     return sample in read_normal_samples(vcf_filename)
+
+def subset_vcfeval_result_samples(vcfeval_dir, sample):
+    subset_samples(vcfeval_dir / 'tp.vcf.gz', [sample])
+    subset_samples(vcfeval_dir / 'fp.vcf.gz', [sample])
 
 def read_pedigree(vcf_filename):
     options = read_octopus_header_info(vcf_filename)['options'].split(' ')
@@ -346,13 +459,29 @@ def read_pedigree(vcf_filename):
         return Path(options[options.index('--pedigree') + 1])
     return None
 
-def eval_octopus(octopus, rtg, example, out_dir, threads, kind="germline", measures=None, overwrite=False):
+def read_organism_ploidy(vcf_filename):
+    options = read_octopus_header_info(vcf_filename)['options'].split(' ')
+    if '--organism-ploidy' in options:
+        return int(options[options.index('--organism-ploidy') + 1])
+    else:
+        return None
+
+def eval_octopus(octopus, rtg, example, out_dir, threads,
+                 kind="germline", measures=None,
+                 overwrite=False,
+                 keep_raw_calls=False, use_raw_calls=False):
     if example.reads is not None:
         octopus_vcf = out_dir / get_octopus_output_filename(example.reference, example.reads, kind=kind)
         if overwrite or not octopus_vcf.exists():
+            octopus_raw_vcf = example.octopus_vcf
+            if use_raw_calls and octopus_raw_vcf is None:
+                octopus_raw_vcf = Path(str(octopus_vcf).replace(".vcf", ".unfiltered.vcf"))
+                if not octopus_raw_vcf.exists():
+                    octopus_raw_vcf = None
             run_octopus(octopus, example.reference, example.reads, example.regions, threads, octopus_vcf,
-                        config=example.config, octopus_vcf=example.octopus_vcf, kind=kind,
-                        annotations="all" if measures is None else measures)
+                        config=example.config, octopus_vcf=octopus_raw_vcf, kind=kind,
+                        annotations="all" if measures is None else measures,
+                        keep_raw=keep_raw_calls)
     else:
         assert example.octopus_vcf is not None
         octopus_vcf = example.octopus_vcf
@@ -365,23 +494,23 @@ def eval_octopus(octopus, rtg, example, out_dir, threads, kind="germline", measu
         vcfeval_dir = out_dir / (octopus_vcf.stem + '.eval')
         if not vcfeval_dir.exists() or overwrite:
             if vcfeval_dir.exists(): shutil.rmtree(vcfeval_dir)
-            run_rtg(rtg, example.sdf, example.truth, example.confident, octopus_vcf, vcfeval_dir, bed_regions=example.regions, kind=kind)
+            ploidy = None
+            if kind == "germline":
+                ploidy = read_organism_ploidy(octopus_vcf)
+            run_vcfeval(rtg, example.sdf, example.truth, example.confident, octopus_vcf, vcfeval_dir,
+                        bed_regions=example.regions, kind=kind, ploidy=ploidy)
         result.append(vcfeval_dir)
-    elif kind == "somatic":
-        for sample in samples:
-            if not is_normal_sample(sample, octopus_vcf):
-                vcfeval_dir = out_dir / (octopus_vcf.stem + '.' + sample + '.eval')
-                if not vcfeval_dir.exists() or overwrite:
-                    if vcfeval_dir.exists(): shutil.rmtree(vcfeval_dir)
-                    run_rtg(rtg, example.sdf, example.truth[sample], example.confident[sample], octopus_vcf, vcfeval_dir, bed_regions=example.regions, sample=sample, kind=kind)
-                result.append(vcfeval_dir)
     else:
         for sample in samples:
             if sample in example.truth:
                 vcfeval_dir = out_dir / (octopus_vcf.stem + '.' + sample + '.eval')
                 if not vcfeval_dir.exists() or overwrite:
                     if vcfeval_dir.exists(): shutil.rmtree(vcfeval_dir)
-                    run_rtg(rtg, example.sdf, example.truth[sample], example.confident[sample], octopus_vcf, vcfeval_dir, bed_regions=example.regions, sample=sample, kind=kind)
+                    sample_kind = kind
+                    if kind == "somatic" and is_normal_sample(sample, octopus_vcf):
+                        sample_kind = "germline"
+                    run_vcfeval(rtg, example.sdf, example.truth[sample], example.confident[sample], octopus_vcf, vcfeval_dir,
+                                bed_regions=example.regions, sample=sample, kind=sample_kind)
                 result.append(vcfeval_dir)
     return result
 
@@ -389,10 +518,13 @@ def subset(vcf_in_path, vcf_out_path, bed_regions):
     sp.call(['bcftools', 'view', '-R', str(bed_regions), '-O', 'z', '-o', str(vcf_out_path), str(vcf_in_path)])
 
 def is_missing(x):
-    return x == '.' or np.isnan(float(x))
+    return x is None or x == '.' or np.isnan(float(x))
+
+def to_str(x):
+    return str(x) if type(x) != bool else str(int(x))
 
 def annotation_to_string(x, missing_value):
-    return str(missing_value) if is_missing(x) else str(x)
+    return to_str(missing_value) if is_missing(x) else to_str(x)
 
 def make_ranger_data(octopus_vcf_filename, out_path, classifcation, measures, missing_value=-1, fraction=1):
     vcf = ps.VariantFile(str(octopus_vcf_filename))
@@ -404,23 +536,14 @@ def make_ranger_data(octopus_vcf_filename, out_path, classifcation, measures, mi
                 row.append(str(int(classifcation)))
                 datawriter.writerow(row)
 
-def concat(filenames, outpath):
-    with outpath.open(mode='w') as outfile:
-        for fname in filenames:
-            with fname.open() as infile:
-                for line in infile:
-                    outfile.write(line)
-
-def shuffle(fname):
-    lines = fname.open().readlines()
+def make_ranger_master_data_file(in_filenames, out_filename, header):
+    lines = []
+    for file in in_filenames:
+        lines += file.open().readlines()
     random.shuffle(lines)
-    fname.open(mode='w').writelines(lines)
-
-def add_header(fname, header):
-    lines = fname.open().readlines()
-    with fname.open(mode='w') as f:
-        f.write(header + '\n')
-        f.writelines(lines)
+    with out_filename.open(mode='w') as file:
+        file.write(header + '\n')
+        file.writelines(lines)
 
 def partition_data(data_fname, validation_fraction, training_fname, validation_fname):
     with data_fname.open() as data_file:
@@ -500,31 +623,38 @@ def main(options):
     options.out.mkdir(parents=True, exist_ok=True)
     data_files, tmp_files = [], []
     default_measures = default_germline_measures if options.kind == "germline" else default_somatic_measures
+    if options.measures is not None:
+        measures = options.measures
+        if options.kind == "somatic" and "SOMATIC" not in measures:
+            print('"SOMATIC" must be ones of the measures for somatic forests')
+            exit(0)
+    else:
+        measures = default_measures
     for example in examples:
-        vcfeval_dirs = eval_octopus(options.octopus, options.rtg, example, options.out, options.threads, kind=options.kind, measures=default_measures, overwrite=options.overwrite)
+        vcfeval_dirs = eval_octopus(options.octopus, options.rtg, example, options.out, options.threads,
+                                    kind=options.kind, measures=measures, overwrite=options.overwrite,
+                                    keep_raw_calls=options.keep_raw_calls, use_raw_calls=options.use_raw_calls)
         for vcfeval_dir in vcfeval_dirs:
             tp_vcf_path = vcfeval_dir / "tp.vcf.gz"
             tp_train_vcf_path = Path(str(tp_vcf_path).replace("tp.vcf", "tp.train.vcf"))
             if not tp_train_vcf_path.exists(): subset(tp_vcf_path, tp_train_vcf_path, example.regions)
             tp_data_path = Path(str(tp_train_vcf_path).replace(".vcf.gz", ".dat"))
 
-            if not tp_data_path.exists(): make_ranger_data(tp_train_vcf_path, tp_data_path, True, default_measures, options.missing_value, fraction=example.tp)
+            if not tp_data_path.exists(): make_ranger_data(tp_train_vcf_path, tp_data_path, True, measures, options.missing_value, fraction=example.tp)
             data_files.append(tp_data_path)
             fp_vcf_path = vcfeval_dir / "fp.vcf.gz"
             fp_train_vcf_path = Path(str(fp_vcf_path).replace("fp.vcf", "fp.train.vcf"))
             if not fp_train_vcf_path.exists(): subset(fp_vcf_path, fp_train_vcf_path, example.regions)
             fp_data_path = Path(str(fp_train_vcf_path).replace(".vcf.gz", ".dat"))
-            if not fp_data_path.exists(): make_ranger_data(fp_train_vcf_path, fp_data_path, False, default_measures, options.missing_value, fraction=example.fp)
+            if not fp_data_path.exists(): make_ranger_data(fp_train_vcf_path, fp_data_path, False, measures, options.missing_value, fraction=example.fp)
             data_files.append(fp_data_path)
             tmp_files += [tp_train_vcf_path, fp_train_vcf_path]
     master_data_file = options.out / (str(options.prefix) + ".dat")
-    concat(data_files, master_data_file)
+    ranger_header = ' '.join(measures + ['TP'])
+    make_ranger_master_data_file(data_files, master_data_file, ranger_header)
     if not options.keep_example_data_files:
         for file in tmp_files + data_files:
-            file.unlink()
-    shuffle(master_data_file)
-    ranger_header = ' '.join(default_measures + ['TP'])
-    add_header(master_data_file, ranger_header)
+            if file.exists(): file.unlink()
     ranger_out_prefix = options.out / options.prefix
     hyperparameters = select_training_hypterparameters(master_data_file, training_params, options)
     run_ranger_training(options.ranger, master_data_file, hyperparameters, options.threads, ranger_out_prefix)
@@ -587,10 +717,23 @@ if __name__ == '__main__':
                         default=False,
                         help='Overwrite existing calls and evaluation files',
                         action='store_true')
+    parser.add_argument('--keep-raw-calls',
+                        default=False,
+                        help='Keep raw unannotated Octopus calls',
+                        action='store_true')
+    parser.add_argument('--use-raw-calls',
+                        default=False,
+                        help='Use raw unannotated Octopus calls if available',
+                        action='store_true')
     parser.add_argument('--keep-example-data-files',
                         default=False,
                         help='Do not delete generated training data files for each example',
                         action='store_true')
+    parser.add_argument('--measures',
+                        default=None,
+                        nargs='+',
+                        type=str,
+                        help='List of measures to use')
     parsed, unparsed = parser.parse_known_args()
     if len(unparsed) == 0:
         main(parsed)

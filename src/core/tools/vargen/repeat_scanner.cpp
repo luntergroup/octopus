@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "repeat_scanner.hpp"
@@ -18,6 +18,7 @@
 #include "concepts/mappable_range.hpp"
 #include "utils/mappable_algorithms.hpp"
 #include "utils/repeat_finder.hpp"
+#include "utils/free_memory.hpp"
 #include "logging/logging.hpp"
 
 namespace octopus { namespace coretools {
@@ -41,17 +42,19 @@ bool RepeatScanner::do_requires_reads() const noexcept
 
 void RepeatScanner::do_add_read(const SampleName& sample, const AlignedRead& read)
 {
-    add_read(read);
+    add_read(read, get_sample_index(sample));
 }
 
 void RepeatScanner::do_add_reads(const SampleName& sample, ReadVectorIterator first, ReadVectorIterator last)
 {
-    std::for_each(first, last, [&] (const AlignedRead& read) { add_read(read); });
+    const auto sample_index = get_sample_index(sample);
+    std::for_each(first, last, [&] (const AlignedRead& read) { add_read(read, sample_index); });
 }
 
 void RepeatScanner::do_add_reads(const SampleName& sample, ReadFlatSetIterator first, ReadFlatSetIterator last)
 {
-    std::for_each(first, last, [&] (const AlignedRead& read) { add_read(read); });
+    const auto sample_index = get_sample_index(sample);
+    std::for_each(first, last, [&] (const AlignedRead& read) { add_read(read, sample_index); });
 }
 
 std::vector<Variant> RepeatScanner::do_generate(const RegionSet& regions) const
@@ -68,10 +71,9 @@ std::vector<Variant> RepeatScanner::do_generate(const RegionSet& regions) const
 
 void RepeatScanner::do_clear() noexcept
 {
-    snv_buffer_.clear();
-    snv_buffer_.shrink_to_fit();
-    candidates_.clear();
-    candidates_.shrink_to_fit();
+    free_memory(snv_buffer_);
+    free_memory(candidates_);
+    free_memory(read_coverage_tracker_);
 }
 
 std::string RepeatScanner::name() const
@@ -81,7 +83,18 @@ std::string RepeatScanner::name() const
 
 // private methods
 
-void RepeatScanner::add_read(const AlignedRead& read)
+unsigned RepeatScanner::get_sample_index(const SampleName& sample)
+{
+    const auto itr = std::find(std::cbegin(samples_), std::cend(samples_), sample);
+    if (itr != std::cend(samples_)) {
+        return std::distance(std::cbegin(samples_), itr);
+    } else {
+        samples_.push_back(sample);
+        return samples_.size() - 1;
+    }
+}
+
+void RepeatScanner::add_read(const AlignedRead& read, const unsigned sample_index)
 {
     assert(snv_buffer_.empty());
     auto ref_index = mapped_begin(read);
@@ -91,7 +104,7 @@ void RepeatScanner::add_read(const AlignedRead& read)
         using Flag = CigarOperation::Flag;
         switch (cigar_operation.flag()) {
             case Flag::alignmentMatch:
-                add_match_range(GenomicRegion {contig_name(read), ref_index, ref_index + op_size}, read, read_index);
+                add_match_range(GenomicRegion {contig_name(read), ref_index, ref_index + op_size}, read, read_index, sample_index);
                 read_index += op_size;
                 ref_index  += op_size;
                 break;
@@ -103,10 +116,10 @@ void RepeatScanner::add_read(const AlignedRead& read)
             {
                 if (op_size == 1) {
                     if (read.base_qualities()[read_index] >= options_.min_base_quality) {
-                        add_to_buffer(SNV {ref_index, read.sequence()[read_index]}, contig_name(read));
+                        add_to_buffer(SNV {ref_index, read.sequence()[read_index]}, contig_name(read), sample_index);
                     }
                 } else {
-                    reset_buffer(contig_name(read));
+                    reset_buffer(contig_name(read), sample_index);
                 }
                 read_index += op_size;
                 ref_index  += op_size;
@@ -114,42 +127,43 @@ void RepeatScanner::add_read(const AlignedRead& read)
             }
             case Flag::insertion:
             {
-                reset_buffer(contig_name(read));
+                reset_buffer(contig_name(read), sample_index);
                 read_index += op_size;
                 break;
             }
             case Flag::deletion:
             {
-                reset_buffer(contig_name(read));
+                reset_buffer(contig_name(read), sample_index);
                 ref_index += op_size;
                 break;
             }
             case Flag::softClipped:
             {
-                reset_buffer(contig_name(read));
+                reset_buffer(contig_name(read), sample_index);
                 read_index += op_size;
                 ref_index  += op_size;
                 break;
             }
             case Flag::hardClipped:
             {
-                reset_buffer(contig_name(read));
+                reset_buffer(contig_name(read), sample_index);
                 break;
             }
             case Flag::padding:
-                reset_buffer(contig_name(read));
+                reset_buffer(contig_name(read), sample_index);
                 ref_index += op_size;
                 break;
             case Flag::skipped:
-                reset_buffer(contig_name(read));
+                reset_buffer(contig_name(read), sample_index);
                 ref_index += op_size;
                 break;
         }
     }
-    reset_buffer(contig_name(read));
+    reset_buffer(contig_name(read), sample_index);
+    read_coverage_tracker_[samples_[sample_index]].add(read);
 }
 
-void RepeatScanner::add_match_range(const GenomicRegion& region, const AlignedRead& read, std::size_t read_index) const
+void RepeatScanner::add_match_range(const GenomicRegion& region, const AlignedRead& read, std::size_t read_index, const unsigned sample_index) const
 {
     const auto ref_segment = reference_.get().fetch_sequence(region);
     for (std::size_t ref_index {0}; ref_index < ref_segment.size(); ++ref_index, ++read_index) {
@@ -158,39 +172,39 @@ void RepeatScanner::add_match_range(const GenomicRegion& region, const AlignedRe
             if (ref_base != 'N' && read_base != 'N') {
                 if (read.base_qualities()[read_index] >= options_.min_base_quality) {
                     const auto pos = region.begin() + static_cast<GenomicRegion::Position>(ref_index);
-                    add_to_buffer(SNV {pos, read_base}, region.contig_name());
+                    add_to_buffer(SNV {pos, read_base}, region.contig_name(), sample_index);
                 }
             } else {
-                reset_buffer(region.contig_name());
+                reset_buffer(region.contig_name(), sample_index);
             }
         }
     }
 }
 
-void RepeatScanner::add_to_buffer(SNV snv, const ContigName& contig) const
+void RepeatScanner::add_to_buffer(SNV snv, const ContigName& contig, const unsigned sample_index) const
 {
     if (!snv_buffer_.empty()) {
         if (snv_buffer_.front().base != snv.base) {
-            reset_buffer(contig);
+            reset_buffer(contig, sample_index);
         } else if (snv_buffer_.size() > 1) {
             const auto buffered_snv_gap = begin_distance(snv_buffer_[0], snv_buffer_[1]);
             const auto new_snv_gap = begin_distance(snv_buffer_.back(), snv);
             if (buffered_snv_gap != new_snv_gap) {
                 auto tail_snv = snv_buffer_.back();
-                reset_buffer(contig);
+                reset_buffer(contig, sample_index);
                 snv_buffer_.push_back(std::move(tail_snv)); // keep tail snv in case it starts a new run
             }
         } else {
             const auto snv_gap = begin_distance(snv_buffer_.back(), snv);
             if (snv_gap > options_.max_period) {
-                reset_buffer(contig);
+                reset_buffer(contig, sample_index);
             }
         }
     }
     snv_buffer_.push_back(std::move(snv));
 }
 
-void RepeatScanner::reset_buffer(const ContigName& contig) const
+void RepeatScanner::reset_buffer(const ContigName& contig, const unsigned sample_index) const
 {
     if (snv_buffer_.size() >= options_.min_snvs) {
         assert(!snv_buffer_.empty());
@@ -205,7 +219,7 @@ void RepeatScanner::reset_buffer(const ContigName& contig) const
                 alt_sequence[i * period] = alt_base;
             }
         }
-        candidates_.emplace_back(std::move(region), std::move(ref_sequence), std::move(alt_sequence));
+        candidates_.emplace_back(Variant {std::move(region), std::move(ref_sequence), std::move(alt_sequence)}, sample_index);
     }
     snv_buffer_.clear();
 }
@@ -354,12 +368,25 @@ std::vector<Variant> RepeatScanner::get_candidate_mnvs(const GenomicRegion& regi
     result.reserve(size(viable_candidates, BidirectionallySortedTag {})); // maximum possible
     const auto last_viable_candidate_itr = std::cend(viable_candidates);
     while (!viable_candidates.empty()) {
-        const auto& candidate = viable_candidates.front();
+        const Candidate& candidate {viable_candidates.front()};
         const auto next_candidate_itr = std::find_if_not(std::next(std::cbegin(viable_candidates)), last_viable_candidate_itr,
                                                          [&candidate] (const auto& v) { return v == candidate; });
         const auto num_observations = static_cast<unsigned>(std::distance(std::cbegin(viable_candidates), next_candidate_itr));
         if (num_observations >= options_.min_observations) {
-            result.push_back(candidate);
+            std::vector<unsigned> sample_observations(samples_.size());
+            std::for_each(std::cbegin(viable_candidates), next_candidate_itr, [&] (const auto& v) { ++sample_observations[v.sample_index]; });
+            std::vector<unsigned> sample_depths(samples_.size());
+            const auto get_depth = [&] (const SampleName& sample) -> unsigned { return read_coverage_tracker_.count(sample) == 1 ? read_coverage_tracker_.at(sample).mean(candidate.mapped_region()) : 0; };
+            std::transform(std::cbegin(samples_), std::cend(samples_), std::begin(sample_depths), get_depth);
+            std::vector<double> sample_vafs(samples_.size());
+            const auto get_vaf = [] (auto count, auto depth) { return static_cast<double>(count) / depth;};
+            std::transform(std::cbegin(sample_observations), std::cend(sample_observations), std::cbegin(sample_depths), std::begin(sample_vafs), get_vaf);
+            const auto sufficient_sample_observations = [this] (auto obs) { return obs >= options_.min_sample_observations; };
+            const auto sufficient_sample_vaf = [this] (auto vaf) { return !options_.min_vaf || vaf >= *options_.min_vaf; };
+            if (std::any_of(std::cbegin(sample_observations), std::cend(sample_observations), sufficient_sample_observations)
+                && std::any_of(std::cbegin(sample_vafs), std::cend(sample_vafs), sufficient_sample_vaf)) {
+                result.push_back(candidate.variant);
+            }
         }
         viable_candidates.advance_begin(num_observations);
     }

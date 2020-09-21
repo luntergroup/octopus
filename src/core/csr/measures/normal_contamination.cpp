@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "normal_contamination.hpp"
@@ -19,6 +19,7 @@
 #include "utils/append.hpp"
 #include "is_somatic.hpp"
 #include "../facets/samples.hpp"
+#include "../facets/alleles.hpp"
 #include "../facets/genotypes.hpp"
 #include "../facets/read_assignments.hpp"
 
@@ -31,12 +32,12 @@ std::unique_ptr<Measure> NormalContamination::do_clone() const
     return std::make_unique<NormalContamination>(*this);
 }
 
-namespace {
-
-auto extract_called_alleles(const VcfRecord& call, const VcfRecord::SampleName& sample)
+Measure::ValueType NormalContamination::get_value_type() const
 {
-    return get_called_alleles(call, sample, ReferencePadPolicy::trim_alt_alleles).first;
+    return double {};
 }
+
+namespace {
 
 template <typename Container>
 void sort_unique(Container& values)
@@ -46,14 +47,15 @@ void sort_unique(Container& values)
 }
 
 auto get_somatic_alleles(const VcfRecord& somatic, const std::vector<SampleName>& somatic_samples,
-                         const std::vector<SampleName>& normal_samples)
+                         const std::vector<SampleName>& normal_samples,
+                         const Facet::AlleleMap& alleles)
 {
     std::vector<Allele> somatic_sample_alleles {}, normal_sample_alleles {};
     for (const auto& sample : somatic_samples) {
-        utils::append(extract_called_alleles(somatic, sample), somatic_sample_alleles);
+        utils::append(get_called(alleles, somatic, sample), somatic_sample_alleles);
     }
     for (const auto& sample : normal_samples) {
-        utils::append(extract_called_alleles(somatic, sample), normal_sample_alleles);
+        utils::append(get_called(alleles, somatic, sample), normal_sample_alleles);
     }
     sort_unique(somatic_sample_alleles); sort_unique(normal_sample_alleles);
     std::vector<Allele> result {};
@@ -86,10 +88,13 @@ auto get_somatic_haplotypes(const Facet::GenotypeMap& genotypes, const std::vect
     return result;
 }
 
-auto get_somatic_haplotypes(const VcfRecord& somatic, const Facet::GenotypeMap& genotypes,
-                            const std::vector<SampleName>& somatic_samples, const std::vector<SampleName>& normal_samples)
+auto get_somatic_haplotypes(const VcfRecord& somatic, 
+                            const Facet::GenotypeMap& genotypes,
+                            const std::vector<SampleName>& somatic_samples, 
+                            const std::vector<SampleName>& normal_samples,
+                            const Facet::AlleleMap& alleles)
 {
-    const auto somatic_alleles = get_somatic_alleles(somatic, somatic_samples, normal_samples);
+    const auto somatic_alleles = get_somatic_alleles(somatic, somatic_samples, normal_samples, alleles);
     return get_somatic_haplotypes(genotypes, somatic_alleles);
 }
 
@@ -108,23 +113,25 @@ auto copy_overlapped_to_vector(const AmbiguousReadList& reads, const MappableTyp
 
 Measure::ResultType NormalContamination::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
-    boost::optional<int> result {};
+    Optional<ValueType> result {};
     if (is_somatic(call)) {
-        result = 0;
+        std::size_t contamination {0}, total_overlapped {0};
         const auto& samples = get_value<Samples>(facets.at("Samples"));
-        const auto somatic_status = boost::get<std::vector<bool>>(IsSomatic(true).evaluate(call, facets));
+        const auto& alleles = get_value<Alleles>(facets.at("Alleles"));
+        const auto somatic_status = boost::get<Array<ValueType>>(IsSomatic(true).evaluate(call, facets));
         std::vector<SampleName> somatic_samples {}, normal_samples {};
         somatic_samples.reserve(samples.size()); normal_samples.reserve(samples.size());
         for (auto tup : boost::combine(samples, somatic_status)) {
-            if (tup.get<1>()) {
+            if (boost::get<bool>(tup.get<1>())) {
                 somatic_samples.push_back(tup.get<0>());
             } else {
                 normal_samples.push_back(tup.get<0>());
             }
         }
+        if (normal_samples.empty()) return result;
         const auto& genotypes = get_value<Genotypes>(facets.at("Genotypes"));
-        const auto somatic_haplotypes = get_somatic_haplotypes(call, genotypes, somatic_samples, normal_samples);
-        const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments"));
+        const auto somatic_haplotypes = get_somatic_haplotypes(call, genotypes, somatic_samples, normal_samples, alleles);
+        const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments")).haplotypes;
         Genotype<Haplotype> somatic_genotype {static_cast<unsigned>(somatic_haplotypes.size() + 1)};
         for (const auto& haplotype : somatic_haplotypes) {
             somatic_genotype.emplace(haplotype);
@@ -135,11 +142,11 @@ Measure::ResultType NormalContamination::do_evaluate(const VcfRecord& call, cons
             for (const auto& haplotype : somatic_haplotypes) {
                 haplotype_priors[haplotype] = -1;
             }
-            for (const auto& p : assignments.support.at(sample)) {
+            for (const auto& p : assignments.at(sample).assigned_wrt_reference) {
                 const auto overlapped_reads = copy_overlapped(p.second, call);
                 if (!overlapped_reads.empty()) {
                     const Haplotype& assigned_haplotype {p.first};
-                    if (!somatic_genotype.contains(assigned_haplotype)) {
+                    if (!contains(somatic_genotype, assigned_haplotype)) {
                         auto dummy = somatic_genotype;
                         dummy.emplace(assigned_haplotype);
                         haplotype_priors[assigned_haplotype] = 0;
@@ -147,17 +154,18 @@ Measure::ResultType NormalContamination::do_evaluate(const VcfRecord& call, cons
                         haplotype_priors.erase(assigned_haplotype);
                         for (const auto& somatic : somatic_haplotypes) {
                             if (support.count(somatic) == 1) {
-                                *result += support.at(somatic).size();
+                                contamination += support.at(somatic).size();
                             }
                         }
                     } else {
                         // This could happen if we don't call all 'somatic' alleles on the called somatic haplotype.
-                        *result += overlapped_reads.size();
+                        contamination += overlapped_reads.size();
                     }
+                    total_overlapped += overlapped_reads.size();
                 }
             }
-            if (assignments.ambiguous.count(sample) == 1 && !assignments.ambiguous.at(sample).empty()) {
-                const auto ambiguous_reads = copy_overlapped_to_vector(assignments.ambiguous.at(sample), call);
+            if (!assignments.at(sample).ambiguous_wrt_reference.empty()) {
+                const auto ambiguous_reads = copy_overlapped_to_vector(assignments.at(sample).ambiguous_wrt_reference, call);
                 if (!ambiguous_reads.empty()) {
                     const auto overlapped_genotypes = overlap_range(genotypes.at(sample), call);
                     if (size(overlapped_genotypes) == 1) {
@@ -172,13 +180,15 @@ Measure::ResultType NormalContamination::do_evaluate(const VcfRecord& call, cons
                         const auto support = compute_haplotype_support(dummy, ambiguous_reads, haplotype_priors);
                         for (const auto& somatic : somatic_haplotypes) {
                             if (support.count(somatic) == 1) {
-                                *result += support.at(somatic).size();
+                                contamination += support.at(somatic).size();
                             }
                         }
                     }
+                    total_overlapped += ambiguous_reads.size();
                 }
             }
         }
+        result = total_overlapped > 0 ? static_cast<double>(contamination) / total_overlapped : 0.0;
     }
     return result;
 }
@@ -195,12 +205,12 @@ const std::string& NormalContamination::do_name() const
 
 std::string NormalContamination::do_describe() const
 {
-    return "Number of reads supporting a somatic haplotype in the normal";
+    return "Fraction of overlapping reads supporting a somatic haplotype in the normal";
 }
 
 std::vector<std::string> NormalContamination::do_requirements() const
 {
-    std::vector<std::string> result {"Samples", "Genotypes", "ReadAssignments"};
+    std::vector<std::string> result {"Samples", "Alleles", "Genotypes", "ReadAssignments"};
     utils::append(IsSomatic(true).requirements(), result);
     sort_unique(result);
     return result;

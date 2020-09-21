@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "threshold_filter_factory.hpp"
@@ -64,7 +64,8 @@ using MeasureToFilterKeyMap = std::unordered_map<std::string, std::string>;
 void init(MeasureToFilterKeyMap& filter_names)
 {
     using namespace octopus::vcf::spec::filter;
-    filter_names[name<AlleleFrequency>()]             = alleleBias;
+    filter_names[name<AlleleFrequency>()]             = lowAlleleFrequency;
+    filter_names[name<AlleleFrequencyBias>()]         = alleleFrequencyBias;
     filter_names[name<Depth>()]                       = lowDepth;
     filter_names[name<MappingQualityDivergence>()]    = highMappingQualityDivergence;
     filter_names[name<MappingQualityZeroCount>()]     = highMappingQualityZeroCount;

@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef local_reassembler_hpp
@@ -36,6 +36,7 @@ public:
     
     struct Options
     {
+        enum class CyclicGraphTolerance { high, low, none };
         ExecutionPolicy execution_policy              = ExecutionPolicy::seq;
         std::vector<unsigned> kmer_sizes              = {10, 25, 35};
         unsigned num_fallbacks                        = 6;
@@ -47,6 +48,7 @@ public:
         unsigned max_bubbles                          = 10;
         BubbleScoreSetter min_bubble_score            = [] (const GenomicRegion&, const ReadBaseCountMap&) { return 2.0; };
         Variant::MappingDomain::Size max_variant_size = 5000;
+        CyclicGraphTolerance cycle_tolerance          = CyclicGraphTolerance::high;
     };
     
     LocalReassembler() = delete;
@@ -123,6 +125,7 @@ private:
     unsigned max_bubbles_;
     BubbleScoreSetter min_bubble_score_;
     Variant::MappingDomain::Size max_variant_size_;
+    Options::CyclicGraphTolerance cycle_tolerance_;
     
     void prepare_bins(const GenomicRegion& active_region, BinList& bins) const;
     bool should_assemble_bin(const Bin& bin) const;

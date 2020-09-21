@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "bam_realigner.hpp"
@@ -282,7 +282,7 @@ auto assign_and_realign(const std::vector<AlignedRead>& reads,
     std::vector<AnnotatedAlignedRead> result {};
     if (!reads.empty()) {
         result.reserve(reads.size());
-        if (genotype.is_homozygous()) {
+        if (is_homozygous(genotype)) {
             std::vector<int> amiguous_haplotypes_ids(genotype.ploidy());
             std::iota(std::begin(amiguous_haplotypes_ids), std::end(amiguous_haplotypes_ids), 0);
             utils::append(realign_and_annotate(reads, genotype[0], reference, alignment_model, amiguous_haplotypes_ids), result);

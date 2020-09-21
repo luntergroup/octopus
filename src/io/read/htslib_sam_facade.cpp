@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "htslib_sam_facade.hpp"
@@ -303,7 +303,7 @@ std::vector<HtslibSamFacade::SampleName> HtslibSamFacade::extract_samples() cons
 std::vector<std::string> HtslibSamFacade::extract_read_groups(const SampleName& sample) const
 {
     std::vector<std::string> result {};
-    for (const auto pair : sample_names_) {
+    for (const auto& pair : sample_names_) {
         if (pair.second == sample) result.emplace_back(pair.first);
     }
     result.shrink_to_fit();
@@ -1035,19 +1035,21 @@ AlignedRead HtslibSamFacade::HtslibIterator::operator*() const
 {
     using std::begin; using std::end; using std::next; using std::move;
     auto qualities = extract_qualities(hts_bam1_.get());
-    if (qualities.empty()) {
-        throw InvalidBamRecord {hts_facade_.file_path_, extract_read_name(hts_bam1_.get()), "corrupt sequence data"};
-    }
     auto cigar = extract_cigar_string(hts_bam1_.get());
     const auto& info = hts_bam1_->core;
     auto read_begin_tmp = clipped_begin(cigar, info.pos);
     auto sequence = extract_sequence(hts_bam1_.get());
+    if (sequence.size() != qualities.size()) {
+        throw InvalidBamRecord {hts_facade_.file_path_, extract_read_name(hts_bam1_.get()), "corrupt sequence data"};
+    }
     if (read_begin_tmp < 0) {
         // Then the read hangs off the left of the contig, and we must remove bases, base_qualities, and
         // adjust the cigar string as we cannot have a negative begin position
         const auto overhang_size = static_cast<unsigned>(std::abs(read_begin_tmp));
-        sequence.erase(begin(sequence), next(begin(sequence), overhang_size));
-        qualities.erase(begin(qualities), next(begin(qualities), overhang_size));
+        if (!qualities.empty() && qualities.size() == sequence.size()) {
+            sequence.erase(begin(sequence), next(begin(sequence), overhang_size));
+            qualities.erase(begin(qualities), next(begin(qualities), overhang_size));
+        }
         auto soft_clip_size = cigar.front().size();
         if (overhang_size == soft_clip_size) {
             cigar.erase(begin(cigar));

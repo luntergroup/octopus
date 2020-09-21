@@ -47,16 +47,6 @@ def main(options):
                 variant_out_bams[haplotype_ids] = ps.AlignmentFile(filename, 'wb', template=in_bam)
             variant_out_bams[haplotype_ids].write(read)
     
-    if ref_out_bam is not None and options.merge_reference:
-        ref_out_bam.close()
-        merged_bam_fname = options.output + '.merged.tmp.bam'
-        variant_out_bams[-1].close()
-        unassigned_variant_bam_fname = variant_out_bams[-1].filename.decode("utf-8")
-        ps.merge(merged_bam_fname, ref_out_bam.filename, unassigned_variant_bam_fname)
-        rename(merged_bam_fname, unassigned_variant_bam_fname)
-        remove(ref_out_bam.filename)
-        ref_out_bam = None
-        
     for bam in [ref_out_bam] + [bam for _, bam in variant_out_bams.items()]:
         if bam is not None:
             bam.close()
@@ -76,10 +66,6 @@ if __name__ == '__main__':
                         default=False,
                         action='store_true',
                         help='Do not output unassigned reads')
-    parser.add_argument('-M', '--merge_reference',
-                        default=False,
-                        action='store_true',
-                        help='Merge reference reads into unassigned variant reads')
     parser.add_argument('-S', '--sort',
                         default=False,
                         action='store_true',

@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef coalescent_genotype_prior_model_hpp
@@ -34,7 +34,7 @@ private:
     {
         return model_.evaluate(genotype);
     }
-    LogProbability do_evaluate(const GenotypeIndex& genotype) const override
+    virtual LogProbability do_evaluate(const Genotype<IndexedHaplotype<>>& genotype) const override
     {
         return model_.evaluate(genotype);
     }

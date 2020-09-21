@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef coalescent_model_hpp
@@ -14,10 +14,12 @@
 #include <cstddef>
 #include <tuple>
 #include <cassert>
+#include <type_traits>
 
 #include <boost/functional/hash.hpp>
 #include <boost/optional.hpp>
 
+#include "concepts/indexed.hpp"
 #include "core/types/haplotype.hpp"
 #include "core/types/variant.hpp"
 #include "containers/mappable_block.hpp"
@@ -95,8 +97,9 @@ private:
     LogProbability evaluate(unsigned k_snp, unsigned k_indel, unsigned n) const;
     
     void fill_site_buffer(const Haplotype& haplotype) const;
-    template <typename Container> void fill_site_buffer(const Container& haplotypes) const;
-    void fill_site_buffer(const std::vector<unsigned>& haplotype_indices) const;
+    template <typename Range> void fill_site_buffer(const Range& haplotypes) const;
+    template <typename Range> void fill_site_buffer(const Range& haplotypes, std::false_type) const;
+    template <typename Range> void fill_site_buffer(const Range& haplotypes, std::true_type) const;
     void fill_site_buffer_uncached(const Haplotype& haplotype) const;
     void fill_site_buffer_from_value_cache(const Haplotype& haplotype) const;
     void fill_site_buffer_from_address_cache(const Haplotype& haplotype) const;
@@ -116,8 +119,22 @@ CoalescentModel::LogProbability CoalescentModel::evaluate(const Container& haplo
 
 // private methods
 
-template <typename Container>
-void CoalescentModel::fill_site_buffer(const Container& haplotypes) const
+namespace detail {
+
+template <typename T, typename = void> struct is_indexed_or_index : std::false_type {};
+template <typename T>
+struct is_indexed_or_index<T, std::enable_if_t<is_indexed_v<T> || std::is_integral<T>::value>> : std::true_type {};
+
+} // namespace detail
+
+template <typename Range>
+void CoalescentModel::fill_site_buffer(const Range& haplotypes) const
+{
+    fill_site_buffer(haplotypes, detail::is_indexed_or_index<typename Range::value_type> {});
+}
+
+template <typename Range>
+void CoalescentModel::fill_site_buffer(const Range& haplotypes, std::false_type) const
 {
     assert(site_buffer2_.empty());
     site_buffer1_.clear();
@@ -129,6 +146,42 @@ void CoalescentModel::fill_site_buffer(const Container& haplotypes) const
         }
         site_buffer1_ = std::move(site_buffer2_);
         site_buffer2_.clear();
+    }
+}
+
+template <typename T>
+inline std::enable_if_t<std::is_integral<T>::value, T> index_of(T i) noexcept { return i; }
+
+template <typename Range>
+void CoalescentModel::fill_site_buffer(const Range& haplotypes, std::true_type) const
+{
+    site_buffer1_.clear();
+    std::fill(std::begin(index_flag_buffer_), std::end(index_flag_buffer_), false);
+    unsigned num_unique_nonempty_indices {0};
+    auto middle = std::begin(site_buffer1_);
+    for (auto indexed : haplotypes) {
+        const auto index = index_of(indexed);
+        if (!index_flag_buffer_[index]) {
+            auto& variants = index_cache_[index];
+            if (!variants) {
+                variants = haplotypes_[index].difference(reference_);
+            }
+            if (!variants->empty()) {
+                middle = site_buffer1_.insert(std::cend(site_buffer1_), std::cbegin(*variants), std::cend(*variants));
+                ++num_unique_nonempty_indices;
+            }
+            index_flag_buffer_[index] = true;
+        }
+    }
+    if (num_unique_nonempty_indices == 2) {
+        assert(site_buffer2_.empty());
+        std::merge(std::begin(site_buffer1_), middle, middle, std::end(site_buffer1_), std::back_inserter(site_buffer2_));
+        site_buffer2_.erase(std::unique(std::begin(site_buffer2_), std::end(site_buffer2_)), std::end(site_buffer2_));
+        site_buffer1_ = std::move(site_buffer2_);
+        site_buffer2_.clear();
+    } else if (num_unique_nonempty_indices > 2) {
+        std::sort(std::begin(site_buffer1_), std::end(site_buffer1_));
+        site_buffer1_.erase(std::unique(std::begin(site_buffer1_), std::end(site_buffer1_)), std::end(site_buffer1_));
     }
 }
 

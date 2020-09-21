@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef option_parser_hpp
@@ -32,9 +32,9 @@ struct ContigPloidy
 };
 
 enum class RefCallType { positional, blocked };
-enum class ExtensionLevel { minimal, conservative, normal, aggressive, unlimited };
-enum class LaggingLevel { none, normal, aggressive };
-enum class BacktrackLevel { none, normal, aggressive };
+enum class ExtensionLevel { minimal, conservative, moderate, aggressive, unlimited };
+enum class LaggingLevel { none, conservative, moderate, optimistic, aggressive };
+enum class BacktrackLevel { none, moderate, aggressive };
 enum class NormalContaminationRisk { low, high };
 enum class BadRegionTolerance { low, normal, high, unlimited };
 enum class ReadLinkage { none, paired, linked };
@@ -42,6 +42,12 @@ enum class CandidateVariantDiscoveryProtocol { illumina, pacbio };
 enum class RealignedBAMType { full, mini };
 enum class ReadDeduplicationDetectionPolicy { relaxed, aggressive };
 enum class ModelPosteriorPolicy { all, off, special };
+
+struct SampleDropoutConcentrationPair
+{
+    std::string sample;
+    float concentration;
+};
 
 std::istream& operator>>(std::istream& in, ContigOutputOrder& order);
 std::ostream& operator<<(std::ostream& os, const ContigOutputOrder& order);
@@ -69,6 +75,8 @@ std::istream& operator>>(std::istream& in, ReadDeduplicationDetectionPolicy& typ
 std::ostream& operator<<(std::ostream& os, const ReadDeduplicationDetectionPolicy& type);
 std::istream& operator>>(std::istream& in, ModelPosteriorPolicy& policy);
 std::ostream& operator<<(std::ostream& os, const ModelPosteriorPolicy& policy);
+std::istream& operator>>(std::istream& in, SampleDropoutConcentrationPair& concentration);
+std::ostream& operator<<(std::ostream& os, const SampleDropoutConcentrationPair& concentration);
 
 std::ostream& operator<<(std::ostream& os, const OptionMap& options);
 std::string to_string(const OptionMap& options, bool one_line = false, bool mark_modified = true);

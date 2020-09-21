@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "training_filter_factory.hpp"
@@ -61,6 +61,7 @@ std::unique_ptr<VariantCallFilter> TrainingFilterFactory::do_make(FacetFactory f
     for (const auto& measure : measures_) output_config.annotations.insert(measure.name());
     output_config.clear_info = true;
     output_config.clear_existing_filters = true;
+    output_config.aggregate_allele_annotations = true;
     return std::make_unique<PassingVariantCallFilter>(std::move(facet_factory), std::move(measures_),
                                                       output_config, threading, progress);
 }

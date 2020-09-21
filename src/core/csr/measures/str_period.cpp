@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "str_period.hpp"
@@ -11,8 +11,7 @@
 
 #include "basics/tandem_repeat.hpp"
 #include "io/variant/vcf_record.hpp"
-#include "utils/repeat_finder.hpp"
-#include "../facets/reference_context.hpp"
+#include "../facets/repeat_context.hpp"
 #include "../facets/samples.hpp"
 #include "../facets/alleles.hpp"
 
@@ -23,6 +22,11 @@ const std::string STRPeriod::name_ = "STRP";
 std::unique_ptr<Measure> STRPeriod::do_clone() const
 {
     return std::make_unique<STRPeriod>(*this);
+}
+
+Measure::ValueType STRPeriod::get_value_type() const
+{
+    return int {};
 }
 
 namespace {
@@ -55,9 +59,9 @@ bool could_contain(const TandemRepeat& repeat, const VcfRecord& call)
     return contains(expand(mapped_region(repeat), 1), call);
 }
 
-boost::optional<TandemRepeat> find_repeat_context(const VcfRecord& call, const std::vector<Allele>& alleles, const Haplotype& reference)
+boost::optional<TandemRepeat> 
+find_repeat_context(const std::vector<TandemRepeat>& repeats, const VcfRecord& call, const std::vector<Allele>& alleles)
 {
-    const auto repeats = find_exact_tandem_repeats(reference.sequence(), reference.mapped_region(), 1, 20);
     const auto overlapping_repeats = overlap_range(repeats, expand(mapped_region(call), 1));
     boost::optional<TandemRepeat> result {};
     if (!empty(overlapping_repeats)) {
@@ -71,10 +75,12 @@ boost::optional<TandemRepeat> find_repeat_context(const VcfRecord& call, const s
             }
         }
         if (!result) {
-            result = *max_overlapped(repeats, call);
-            if (!has_overlapped(alleles, *result)) {
+            const auto result_itr = max_overlapped(repeats, call);
+            if (result_itr == std::cend(repeats) || !has_overlapped(alleles, *result_itr)) {
                 result = boost::none;
-            }
+            } else {
+	            result = *result_itr;
+	        }
         }
     }
     return result;
@@ -85,12 +91,12 @@ boost::optional<TandemRepeat> find_repeat_context(const VcfRecord& call, const s
 Measure::ResultType STRPeriod::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     int result {0};
-    const auto& reference = get_value<ReferenceContext>(facets.at("ReferenceContext"));
+    const auto& repeats = get_value<RepeatContext>(facets.at("RepeatContext"));
     const auto& samples = get_value<Samples>(facets.at("Samples"));
-    const auto alleles = copy_unique_overlapped(get_value<Alleles>(facets.at("Alleles")), call, samples);
-    const auto repeat_context = find_repeat_context(call, alleles, reference);
+    const auto alleles = get_unique_called(get_value<Alleles>(facets.at("Alleles")), call, samples);
+    const auto repeat_context = find_repeat_context(repeats, call, alleles);
     if (repeat_context) result = repeat_context->period();
-    return result;
+    return ValueType {result};
 }
 
 Measure::ResultCardinality STRPeriod::do_cardinality() const noexcept
@@ -110,7 +116,7 @@ std::string STRPeriod::do_describe() const
 
 std::vector<std::string> STRPeriod::do_requirements() const
 {
-    return {"ReferenceContext", "Samples", "Alleles"};
+    return {"RepeatContext", "Samples", "Alleles"};
 }
 
 } // namespace csr

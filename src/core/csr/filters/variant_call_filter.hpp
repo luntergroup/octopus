@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef variant_call_filter_hpp
@@ -44,6 +44,7 @@ public:
         bool clear_info = false;
         bool annotate_all_active_measures = false;
         std::unordered_set<std::string> annotations = {};
+        bool aggregate_allele_annotations = false;
     };
     
     struct ConcurrencyPolicy
@@ -103,7 +104,7 @@ protected:
                VcfWriter& dest) const;
     bool measure_annotations_requested() const noexcept;
     void annotate(VcfRecord::Builder& call, const MeasureVector& measures, const VcfHeader& header) const;
-    Phred<double> compute_joint_probability(const std::vector<Phred<double>>& qualities) const;
+    Phred<double> compute_joint_quality(const std::vector<Phred<double>>& qualities) const;
     std::vector<std::string> compute_reason_union(const ClassificationList& sample_classifications) const;
     
 private:

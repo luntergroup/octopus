@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "read_end_bias.hpp"
@@ -16,8 +16,8 @@
 #include "basics/aligned_read.hpp"
 #include "core/types/allele.hpp"
 #include "utils/maths.hpp"
-#include "utils/genotype_reader.hpp"
 #include "../facets/samples.hpp"
+#include "../facets/alleles.hpp"
 #include "../facets/read_assignments.hpp"
 
 namespace octopus { namespace csr {
@@ -27,6 +27,11 @@ const std::string ReadEndBias::name_ = "REB";
 std::unique_ptr<Measure> ReadEndBias::do_clone() const
 {
     return std::make_unique<ReadEndBias>(*this);
+}
+
+Measure::ValueType ReadEndBias::get_value_type() const
+{
+    return double {};
 }
 
 void ReadEndBias::do_set_parameters(std::vector<std::string> params)
@@ -115,12 +120,15 @@ double calculate_tail_bias(const Allele& allele, const ReadRefSupportSet& suppor
     return calculate_tail_bias(counts, std::min(3 * end_def.end_fraction, 0.5));
 }
 
-double calculate_max_tail_bias(const AlleleSupportMap& support, const EndDefinition end_def = EndDefinition {})
+double calculate_max_tail_bias(const std::vector<Allele>& alleles, const AlleleSupportMap& support, const EndDefinition end_def = EndDefinition {})
 {
     double result {0};
-    for (const auto& p : support) {
-        auto bias = calculate_tail_bias(p.first, p.second, end_def);
-        result = std::max(result, bias);
+    for (const auto& allele : alleles) {
+        const auto support_set_itr = support.find(allele);
+        if (support_set_itr != std::cend(support)) {
+            auto bias = calculate_tail_bias(allele, support_set_itr->second, end_def);
+            result = std::max(result, bias);
+        }
     }
     return result;
 }
@@ -130,26 +138,20 @@ double calculate_max_tail_bias(const AlleleSupportMap& support, const EndDefinit
 Measure::ResultType ReadEndBias::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     const auto& samples = get_value<Samples>(facets.at("Samples"));
-    const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments"));
-    std::vector<double> result {};
+    const auto& alleles = get_value<Alleles>(facets.at("Alleles"));
+    const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments")).alleles;
+    Array<ValueType> result {};
     result.reserve(samples.size());
     const EndDefinition end_def {end_fraction_};
     for (const auto& sample : samples) {
-        std::vector<Allele> alleles; bool has_ref;
-        std::tie(alleles, has_ref) = get_called_alleles(call, sample);
-        if (!alleles.empty()) {
-            const auto allele_support = compute_allele_support(alleles, assignments, sample);
-            result.push_back(calculate_max_tail_bias(allele_support, end_def));
-        } else {
-            result.push_back(0);
-        }
+        result.emplace_back(calculate_max_tail_bias(get_called(alleles, call, sample), assignments.at(sample), end_def));
     }
     return result;
 }
 
 Measure::ResultCardinality ReadEndBias::do_cardinality() const noexcept
 {
-    return ResultCardinality::num_samples;
+    return ResultCardinality::samples;
 }
 
 const std::string& ReadEndBias::do_name() const
@@ -164,7 +166,7 @@ std::string ReadEndBias::do_describe() const
 
 std::vector<std::string> ReadEndBias::do_requirements() const
 {
-    return {"Samples", "ReadAssignments"};
+    return {"Samples", "Alleles", "ReadAssignments"};
 }
 
 bool ReadEndBias::is_equal(const Measure& other) const noexcept

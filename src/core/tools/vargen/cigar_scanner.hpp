@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef cigar_scanner_hpp
@@ -64,6 +64,7 @@ public:
         bool use_clipped_coverage_tracking = false;
         Variant::MappingDomain::Size max_variant_size = 2000;
         boost::optional<MisalignmentParameters> misalignment_parameters = MisalignmentParameters {};
+        bool split_mnvs = true;
     };
     
     CigarScanner() = delete;

@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "assembler.hpp"
@@ -1110,26 +1110,16 @@ Assembler::GraphEdge::WeightType Assembler::weight(const Path& path) const
                               });
 }
 
-std::pair<Assembler::GraphEdge::WeightType, Assembler::GraphEdge::WeightType>
-Assembler::direction_weights(const Path& path) const
+Assembler::GraphEdge::WeightType Assembler::max_weight(const Path& path) const
 {
-    if (path.size() < 2) return {0, 0};
-    using WeightPair = std::pair<GraphEdge::WeightType, GraphEdge::WeightType>;
-    return std::inner_product(std::cbegin(path), std::prev(std::cend(path)),
-                              std::next(std::cbegin(path)), WeightPair {0, 0},
-                              [] (const auto& lhs, const auto& rhs) { return std::make_pair(lhs.first + rhs.first, lhs.second + rhs.second); },
-                              [this] (const auto& u, const auto& v) -> WeightPair {
-                                  Edge e; bool good;
-                                  std::tie(e, good) = boost::edge(u, v, graph_);
-                                  assert(good);
-                                  if (!is_artificial(e)) {
-                                      auto total_weight = graph_[e].weight;
-                                      auto forward_weight = graph_[e].forward_strand_weight;
-                                      return {forward_weight, total_weight - forward_weight};
-                                  } else {
-                                      return {0, 0};
-                                  }
-                              });
+    GraphEdge::WeightType result {0};
+    for (std::size_t u {0}, v {1}; v < path.size(); ++u, ++v) {
+        Edge e; bool good;
+        std::tie(e, good) = boost::edge(path[u], path[v], graph_);
+        assert(good);
+        result = std::max(result, graph_[e].weight);
+    }
+    return result;
 }
 
 unsigned Assembler::count_low_weights(const Path& path, const unsigned low_weight) const
@@ -1173,6 +1163,37 @@ unsigned Assembler::count_low_weight_flanks(const Path& path, unsigned low_weigh
     const auto num_head_low_weight = std::distance(std::cbegin(path), first_head_high_weight);
     const auto num_tail_low_weight = std::distance(std::crbegin(path), first_tail_high_weight);
     return static_cast<unsigned>(num_head_low_weight + num_tail_low_weight);
+}
+
+Assembler::PathWeightStats Assembler::compute_weight_stats(const Path& path) const
+{
+    PathWeightStats result {};
+    if (path.size() > 1) {
+        result.max = max_weight(path);
+        result.min = result.max;
+        result.distribution.resize(result.max + 1);
+        std::vector<GraphEdge::WeightType> weights(path.size() - 1);
+        for (std::size_t u {0}, v {1}; v < path.size(); ++u, ++v) {
+            Edge e; bool good;
+            std::tie(e, good) = boost::edge(path[u], path[v], graph_);
+            assert(good);
+            const auto weight = graph_[e].weight;
+            ++result.distribution[weight];
+            result.total += weight;
+            result.min = std::min(result.min, weight);
+            if (!is_artificial(e)) {
+                const auto forward_weight = graph_[e].forward_strand_weight;
+                result.total_forward += forward_weight;
+                result.total_reverse += weight - forward_weight;
+            }
+            weights[u] = weight;
+        }
+        for (auto& w : result.distribution) w /= weights.size();
+        result.mean = static_cast<double>(result.total) / weights.size();
+        result.median = maths::median(weights);
+        result.stdev = maths::stdev(weights);
+    }
+    return result;
 }
 
 Assembler::GraphEdge::WeightType Assembler::sum_source_in_edge_weight(const Edge e) const
@@ -1718,24 +1739,18 @@ double base_quality_probability(const int base_quality)
 
 double Assembler::bubble_score(const Path& path) const
 {
-    const auto path_weight = weight(path);
-    const auto num_low_weights = count_low_weights(path, 1);
-    const auto num_low_weight_flanks = count_low_weight_flanks(path, 1);
-    auto result = static_cast<double>(path_weight) / path.size();
-    result /= std::max((num_low_weights - num_low_weight_flanks) + 2 * num_low_weight_flanks, 1u);
+    if (path.size() < 2) return 0;
+    const auto weight_stats = compute_weight_stats(path);
+    auto result = weight_stats.stdev > weight_stats.mean ? std::min(weight_stats.mean, weight_stats.median) : std::max(weight_stats.mean, weight_stats.median);
     if (params_.strand_tail_mass) {
-        GraphEdge::WeightType forward_weight, reverse_weight;
-        std::tie(forward_weight, reverse_weight) = direction_weights(path);
-        const auto tail_mass = maths::beta_tail_probability(static_cast<double>(forward_weight + 1),
-                                                            static_cast<double>(reverse_weight + 1),
+        const auto tail_mass = maths::beta_tail_probability(static_cast<double>(weight_stats.total_forward + 1),
+                                                            static_cast<double>(weight_stats.total_reverse + 1),
                                                             *params_.strand_tail_mass);
         result *= (1.0 - tail_mass);
     }
-    if (path.size() > 1) {
-        result *= base_quality_probability(head_mean_base_quality(path));
-        if (path.size() > 2) {
-            result *= base_quality_probability(tail_mean_base_quality(path));
-        }
+    result *= base_quality_probability(head_mean_base_quality(path));
+    if (path.size() > 2) {
+        result *= base_quality_probability(tail_mean_base_quality(path));
     }
     return result;
 }

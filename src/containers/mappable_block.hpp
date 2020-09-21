@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef mappable_block_hpp
@@ -188,6 +188,10 @@ public:
     void pop_back() { base_.pop_back(); }
     void resize(size_type n) { base_.resize(n); }
     void resize(size_type n, const MappableType& value) { base_.resize(n, value); }
+    void assign(size_type n, const MappableType& value) { base_.assign(n, value); };
+    void assign(std::initializer_list<MappableType> values) { base_.assign(values); };
+    template <typename InputIterator>
+    void assign(InputIterator first, InputIterator last) { base_.assign(first, last); };
     
     void swap(MappableBlock& other) noexcept
     {

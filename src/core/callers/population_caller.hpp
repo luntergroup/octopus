@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef population_caller_hpp
@@ -38,7 +38,7 @@ public:
         Phred<double> min_variant_posterior, min_refcall_posterior;
         std::vector<unsigned> ploidies;
         boost::optional<CoalescentModel::Parameters> prior_model_params;
-        std::size_t max_joint_genotypes;
+        boost::optional<std::size_t> max_genotype_combinations;
         bool use_independent_genotype_priors = false;
         bool deduplicate_haplotypes_with_germline_model = true;
     };
@@ -60,6 +60,7 @@ private:
     class Latents;
     
     Parameters parameters_;
+    std::vector<unsigned> unique_ploidies_;
     
     std::string do_name() const override;
     CallTypeSet do_call_types() const override;
@@ -104,31 +105,31 @@ public:
     
     friend PopulationCaller;
     
-    Latents(const std::vector<SampleName>& samples,
-            const HaplotypeBlock&,
-            MappableBlock<Genotype<Haplotype>>&& genotypes,
-            IndependenceModelInferences&&);
+    using IndexedHaplotypeBlock = MappableBlock<IndexedHaplotype<>>;
+    using GenotypeBlock = MappableBlock<Genotype<IndexedHaplotype<>>>;
     
     Latents(const std::vector<SampleName>& samples,
-            const HaplotypeBlock&,
-            std::map<unsigned, MappableBlock<Genotype<Haplotype>>>&& genotypes,
+            const IndexedHaplotypeBlock&,
+            GenotypeBlock genotypes,
             IndependenceModelInferences&&);
-    
     Latents(const std::vector<SampleName>& samples,
-            const HaplotypeBlock&,
-            MappableBlock<Genotype<Haplotype>>&& genotypes,
+            const IndexedHaplotypeBlock&,
+            std::map<unsigned, GenotypeBlock> genotypes,
+            IndependenceModelInferences&&);
+    Latents(const std::vector<SampleName>& samples,
+            const IndexedHaplotypeBlock&,
+            GenotypeBlock,
             ModelInferences&&);
-    
     Latents(const std::vector<SampleName>& samples,
-            const HaplotypeBlock&,
-            std::map<unsigned, MappableBlock<Genotype<Haplotype>>>&& genotypes,
+            const IndexedHaplotypeBlock&,
+            std::map<unsigned, GenotypeBlock>,
             ModelInferences&&);
     
     std::shared_ptr<HaplotypeProbabilityMap> haplotype_posteriors() const noexcept override;
     std::shared_ptr<GenotypeProbabilityMap> genotype_posteriors() const noexcept override;
 
 private:
-    std::map<unsigned, MappableBlock<Genotype<Haplotype>>> genotypes_;
+    std::map<unsigned, GenotypeBlock> genotypes_;
     ModelInferences model_latents_;
     std::shared_ptr<GenotypeProbabilityMap> genotype_posteriors_;
     std::shared_ptr<HaplotypeProbabilityMap> haplotype_posteriors_;

@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef polyclone_caller_hpp
@@ -40,8 +40,11 @@ public:
         boost::optional<CoalescentModel::Parameters> prior_model_params;
         Phred<double> min_variant_posterior, min_refcall_posterior;
         bool deduplicate_haplotypes_with_germline_model = false;
-        unsigned max_clones = 3, max_genotypes = 10'000;
-        std::function<double(unsigned)> clonality_prior = [] (unsigned clonality) { return maths::geometric_pdf(clonality, 0.5); };
+        unsigned max_clones = 3;
+        boost::optional<std::size_t> max_genotypes = 10'000;
+        boost::optional<unsigned> max_vb_seeds = boost::none; // Use default if none
+        std::function<double(unsigned)> clonality_prior = [] (unsigned clonality) { return maths::geometric_pdf(clonality, 0.99); };
+        double clone_mixture_prior_concentration = 1;
     };
     
     PolycloneCaller() = delete;
@@ -67,6 +70,9 @@ private:
     {
         double clonal, subclonal;
     };
+    
+    using IndexedHaplotypeBlock = MappableBlock<IndexedHaplotype<>>;
+    using GenotypeBlock = MappableBlock<Genotype<IndexedHaplotype<>>>;
     
     std::string do_name() const override;
     CallTypeSet do_call_types() const override;
@@ -104,6 +110,13 @@ private:
                    const ReadPileupMap& pileup) const;
     
     const SampleName& sample() const noexcept;
+    void fit_sublone_model(const HaplotypeBlock& haplotypes,
+                           const IndexedHaplotypeBlock& indexed_haplotypes,
+                           const HaplotypeLikelihoodArray& haplotype_likelihoods,
+                           GenotypePriorModel& genotype_prior_model,
+                           const model::IndividualModel::InferredLatents& haploid_latents,
+                           GenotypeBlock& prev_genotypes,
+                           model::SubcloneModel::InferredLatents& sublonal_inferences) const;
     
     std::unique_ptr<GenotypePriorModel> make_prior_model(const HaplotypeBlock& haplotypes) const;
     
@@ -114,6 +127,8 @@ private:
 class PolycloneCaller::Latents : public Caller::Latents
 {
 public:
+    using GenotypeBlock = MappableBlock<Genotype<IndexedHaplotype<>>>;
+    
     using HaploidModelInferences = model::IndividualModel::InferredLatents;
     using SubloneModelInferences = model::SubcloneModel::InferredLatents;
     
@@ -122,15 +137,18 @@ public:
     
     Latents() = delete;
     
-    Latents(std::vector<Genotype<Haplotype>> haploid_genotypes, std::vector<Genotype<Haplotype>> polyploid_genotypes,
-            HaploidModelInferences haploid_model_inferences, SubloneModelInferences subclone_model_inferences,
-            const SampleName& sample, const std::function<double(unsigned)>& clonality_prior);
+    Latents(GenotypeBlock haploid_genotypes,
+            GenotypeBlock polyploid_genotypes,
+            HaploidModelInferences haploid_model_inferences,
+            SubloneModelInferences subclone_model_inferences,
+            const SampleName& sample,
+            const std::function<double(unsigned)>& clonality_prior);
     
     std::shared_ptr<HaplotypeProbabilityMap> haplotype_posteriors() const noexcept override;
     std::shared_ptr<GenotypeProbabilityMap> genotype_posteriors() const noexcept override;
 
 private:
-    std::vector<Genotype<Haplotype>> haploid_genotypes_, polyploid_genotypes_;
+    GenotypeBlock haploid_genotypes_, polyploid_genotypes_;
     HaploidModelInferences haploid_model_inferences_;
     SubloneModelInferences subclone_model_inferences_;
     PolycloneCaller::ModelProbabilities model_log_posteriors_;

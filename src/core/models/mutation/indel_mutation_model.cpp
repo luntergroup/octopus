@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "indel_mutation_model.hpp"
@@ -14,17 +14,17 @@ namespace octopus {
 
 namespace {
 
-double calculate_gap_open_rate(const double base_rate, unsigned period, unsigned num_periods) noexcept
+double calculate_gap_open_prior(const double base_prior, unsigned period, unsigned num_periods) noexcept
 {
-    if (period == 0 || num_periods == 0) return base_rate;
+    if (period == 0 || num_periods == 0) return base_prior;
     static const auto max_period = static_cast<unsigned>(enrichment_model.size() - 1);
     static const auto max_periods = static_cast<unsigned>(enrichment_model.front().size() - 1);
     period = std::min(period, max_period);
     num_periods = std::min(num_periods, max_periods);
-    return std::min(base_rate * enrichment_model[period][num_periods], 1.0);
+    return std::min(base_prior * enrichment_model[period][num_periods], 1.0);
 }
 
-double calculate_gap_extend_rate(unsigned period, unsigned num_periods, unsigned current_gap, const double gap_open_rate) noexcept
+double calculate_gap_extend_prior(unsigned period, unsigned num_periods, unsigned current_gap, const double gap_open_prior) noexcept
 {
     static const auto max_period = static_cast<unsigned>(extension_model.size() - 1);
     static const auto max_periods = static_cast<unsigned>(extension_model.front().size() - 1);
@@ -32,7 +32,7 @@ double calculate_gap_extend_rate(unsigned period, unsigned num_periods, unsigned
     period = std::min(period, max_period);
     num_periods = std::min(num_periods, max_periods);
     current_gap = std::min(current_gap, max_gap);
-    return std::max(gap_open_rate, extension_model[period][num_periods][current_gap]);
+    return std::max(gap_open_prior, extension_model[period][num_periods][current_gap]);
 }
 
 } // namespace
@@ -43,12 +43,12 @@ IndelMutationModel::IndelMutationModel(Parameters params)
 {
     for (unsigned period {0}; period <= params_.max_period; ++period) {
         for (unsigned periods {0}; periods <= params_.max_periodicity; ++periods) {
-            const auto open_rate = calculate_gap_open_rate(params.indel_mutation_rate, period, periods);
-            indel_repeat_model_[period][periods].open = std::min(open_rate, params_.max_open_probability);
+            const auto open_prior = calculate_gap_open_prior(params.indel_mutation_prior, period, periods);
+            indel_repeat_model_[period][periods].open = std::min(open_prior, params_.max_open_probability);
             indel_repeat_model_[period][periods].extend.resize(params_.max_indel_length);
             for (unsigned gap {0}; gap < params_.max_indel_length; ++gap) {
-                const auto extend_rate = calculate_gap_extend_rate(period, periods, gap, open_rate);
-                indel_repeat_model_[period][periods].extend[gap] = std::min(extend_rate, params_.max_extend_probability);
+                const auto extend_prior = calculate_gap_extend_prior(period, periods, gap, open_prior);
+                indel_repeat_model_[period][periods].extend[gap] = std::min(extend_prior, params_.max_extend_probability);
             }
         }
     }
@@ -81,7 +81,7 @@ IndelMutationModel::ContextIndelModel IndelMutationModel::evaluate(const Haploty
         const auto& repeat_state = indel_repeat_model_[repeat.period()][std::min(num_repeats, params_.max_periodicity)];
         assert(repeat_offset + repeat_len <= result.gap_open.size());
         assert(repeat_offset + repeat_len <= result.gap_extend.size());
-        for (auto pos = repeat_offset; pos < (repeat_offset + repeat_len); ++pos) {
+        for (auto pos = repeat_offset; pos < (repeat_offset + repeat.period()); ++pos) {
             if (result.gap_open[pos] < repeat_state.open) {
                 result.gap_open[pos] = repeat_state.open;
                 result.gap_extend[pos] = repeat_state.extend;

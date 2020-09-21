@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "buffered_read_pipe.hpp"
@@ -23,8 +23,10 @@ BufferedReadPipe::BufferedReadPipe(const ReadPipe& source, Config config, std::v
 , buffer_ {}
 , buffered_region_ {}
 , hints_ {}
+, debug_log_ {}
 {
     hint(std::move(hints));
+    if (DEBUG_MODE) debug_log_ = logging::DebugLogger {};
 }
 
 const ReadPipe& BufferedReadPipe::source() const noexcept
@@ -71,7 +73,9 @@ bool BufferedReadPipe::is_cached(const GenomicRegion& region) const noexcept
 void BufferedReadPipe::setup_buffer(const GenomicRegion& request) const
 {
     if (!is_cached(request)) {
+        if (debug_log_) stream(*debug_log_) << "Request " << request << " is not cached";
         auto max_region = get_max_fetch_region(request);
+        if (debug_log_) stream(*debug_log_) << "Max fetch region for request " << request << " is " << max_region;
         bool unchecked_fetch {false};
         if (can_make_unchecked_fetch()) {
             buffered_region_ = std::move(max_region);
@@ -79,6 +83,7 @@ void BufferedReadPipe::setup_buffer(const GenomicRegion& request) const
         } else {
             buffered_region_ = source_.get().read_manager().find_covered_subregion(max_region, config_.max_buffer_size);
         }
+        if (debug_log_) stream(*debug_log_) << "Buffer region for request " << request << " is " << *buffered_region_;
         buffer_ = source_.get().fetch_reads(expand(*buffered_region_, config_.fetch_expansion));
         if (unchecked_fetch) {
             const auto fetch_size = count_reads(buffer_);
@@ -102,6 +107,8 @@ void BufferedReadPipe::setup_buffer(const GenomicRegion& request) const
                 min_checked_fetch_size_ = size(*buffered_region_);
             }
         }
+    } else if (debug_log_) {
+        stream(*debug_log_) << "Request " << request << " is already cached";
     }
 }
 

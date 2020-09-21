@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef coverage_tracker_hpp
@@ -13,6 +13,7 @@
 #include <numeric>
 #include <stdexcept>
 #include <cassert>
+#include <limits>
 
 #include <boost/optional.hpp>
 #include <boost/iterator/filter_iterator.hpp>
@@ -33,7 +34,7 @@ public:
     using RegionType = Region;
     using DepthType  = T;
     
-    CoverageTracker() = default;
+    CoverageTracker(bool check_overflow = false);
     
     CoverageTracker(const CoverageTracker&)            = default;
     CoverageTracker& operator=(const CoverageTracker&) = default;
@@ -79,6 +80,7 @@ private:
     std::deque<DepthType> coverage_ = {};
     Region encompassing_region_;
     std::size_t num_tracked_ = 0;
+    bool check_overflow_ = false;
     
     using Iterator     = typename decltype(coverage_)::const_iterator;
     using IteratorPair = std::pair<Iterator, Iterator>;
@@ -134,6 +136,11 @@ std::vector<Region> get_covered_regions(const CoverageTracker<Region>& tracker)
 }
 
 // public methods
+
+template <typename Region, typename T>
+CoverageTracker<Region, T>::CoverageTracker(bool check_overflow)
+: check_overflow_ {check_overflow}
+{}
 
 template <typename Region, typename T>
 template <typename MappableType>
@@ -349,7 +356,13 @@ void CoverageTracker<Region, T>::do_add(const Region& region)
         const auto first = std::next(std::begin(coverage_), begin_distance(encompassing_region_, region));
         assert(first < std::end(coverage_));
         assert(std::next(first, size(region)) <= std::end(coverage_));
-        std::transform(first, std::next(first, size(region)), first, [] (auto count) noexcept { return count + 1; });
+        const auto last = std::next(first, size(region));
+        if (check_overflow_) {
+            if (std::find(first, last, std::numeric_limits<DepthType>::max()) != last) {
+                throw std::runtime_error {"CoverageTracker::add failed due to depth overflow"};
+            }
+        }
+        std::transform(first, last, first, [] (auto count) noexcept { return count + 1; });
     }
     ++num_tracked_;
 }

@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "quality.hpp"
@@ -14,9 +14,14 @@ std::unique_ptr<Measure> Quality::do_clone() const
     return std::make_unique<Quality>(*this);
 }
 
+Measure::ValueType Quality::get_value_type() const
+{
+    return double {};
+}
+
 Measure::ResultType Quality::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
-    boost::optional<double> result {};
+    Optional<ValueType> result {};
     if (call.qual()) {
         result = static_cast<double>(*call.qual());
     }

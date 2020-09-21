@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef repeat_scanner_hpp
@@ -35,6 +35,8 @@ public:
         unsigned min_snvs = 2;
         unsigned max_period = 6;
         unsigned min_observations = 2;
+        unsigned min_sample_observations = 2;
+        boost::optional<double> min_vaf = boost::none;
         AlignedRead::BaseQuality min_base_quality = 10;
     };
     
@@ -69,16 +71,27 @@ private:
         const ContigRegion& mapped_region() const noexcept { return region; }
     };
     
+    struct Candidate : public Comparable<Candidate>, public Mappable<Candidate>
+    {
+        Candidate(Variant variant, unsigned sample_index) : variant {std::move(variant)}, sample_index {sample_index} {}
+        Variant variant;
+        unsigned sample_index;
+        const GenomicRegion& mapped_region() const noexcept { return variant.mapped_region(); }
+    };
+    
     std::reference_wrapper<const ReferenceGenome> reference_;
     Options options_;
+    std::vector<SampleName> samples_;
+    std::unordered_map<SampleName, CoverageTracker<GenomicRegion>> read_coverage_tracker_;
     
     mutable std::vector<SNV> snv_buffer_;
-    mutable std::deque<Variant> candidates_;
+    mutable std::deque<Candidate> candidates_;
     
-    void add_read(const AlignedRead& read);
-    void add_match_range(const GenomicRegion& region, const AlignedRead& read, std::size_t read_index) const;
-    void add_to_buffer(SNV snv, const ContigName& contig) const;
-    void reset_buffer(const ContigName& contig) const;
+    unsigned get_sample_index(const SampleName& sample);
+    void add_read(const AlignedRead& read, unsigned sample_index);
+    void add_match_range(const GenomicRegion& region, const AlignedRead& read, std::size_t read_index, unsigned sample_index) const;
+    void add_to_buffer(SNV snv, const ContigName& contig, unsigned sample_index) const;
+    void reset_buffer(const ContigName& contig, unsigned sample_index) const;
     void generate(const GenomicRegion& region, std::vector<Variant>& result) const;
     std::vector<Variant> get_candidate_mnvs(const GenomicRegion& region) const;
 };

@@ -99,11 +99,16 @@ find_path(HTSlib_INCLUDE_DIR
 
 if (HTSlib_USE_STATIC_LIBS)
     # Dependencies
+    set(ZLIB_ROOT ${HTSLIB_ROOT})
     libfind_package(HTSlib ZLIB)
+    set(BZip2_ROOT ${HTSLIB_ROOT})
     libfind_package(HTSlib BZip2)
+    set(LibLZMA_ROOT ${HTSLIB_ROOT})
     libfind_package(HTSlib LibLZMA)
+    set(CURL_ROOT ${HTSLIB_ROOT})
     libfind_package(HTSlib CURL)
     if (NOT APPLE)
+        set(OpenSSL_ROOT ${HTSLIB_ROOT})
         libfind_package(HTSlib OpenSSL)
     endif()
     set(HTSlib_LIBRARY_names libhts.a)

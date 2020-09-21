@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "random_forest_filter.hpp"
@@ -168,8 +168,8 @@ boost::optional<std::string> RandomForestFilter::call_quality_name() const
 
 void RandomForestFilter::annotate(VcfHeader::Builder& header) const
 {
-    header.add_info(call_quality_name_, "1", "Float", "Combined quality score for call using product of sample RFQQ");
-    header.add_format(genotype_quality_name_, "1", "Float", "Empirical quality score from random forest classifier");
+    header.add_info(call_quality_name_, "1", "Float", "Empirical quality score (phred scaled) for the call - the geometric mean of all sample RFGQ probabilities");
+    header.add_format(genotype_quality_name_, "1", "Float", "Empirical quality score (phred scaled) of the sample genotype from random forest classifier");
     header.add_filter("RF", "Random Forest filtered");
 }
 
@@ -198,14 +198,16 @@ static void write_line(const std::vector<T>& data, std::ostream& out)
 
 void RandomForestFilter::prepare_for_registration(const SampleList& samples) const
 {
-    std::vector<std::string> data_header {};
-    data_header.reserve(measures_.size() - num_chooser_measures_);
-    std::transform(std::cbegin(measures_), std::prev(std::cend(measures_), num_chooser_measures_), std::back_inserter(data_header),
-                   [] (const auto& measure) { return measure.name(); });
-    data_header.push_back("TP");
     const auto num_forests = forest_paths_.size();
     data_.resize(num_forests);
     for (std::size_t forest_idx {0}; forest_idx < num_forests; ++forest_idx) {
+        const auto& info = forest_measure_info_[forest_idx];
+        std::vector<std::string> data_header {};
+        const auto first_measure = std::next(std::cbegin(measures_), info.start_index);
+        data_header.reserve(info.number + 1);
+        std::transform(first_measure, std::next(first_measure, info.number),
+                       std::back_inserter(data_header), [] (const auto& measure) { return measure.name(); });
+        data_header.push_back("TP");
         data_[forest_idx].reserve(samples.size());
         for (const auto& sample : samples) {
             auto data_path = temp_directory();
@@ -223,51 +225,47 @@ void RandomForestFilter::prepare_for_registration(const SampleList& samples) con
 namespace {
 
 template <typename T>
-bool is_subnormal(const T x) noexcept
-{
-    return std::fpclassify(x) == FP_SUBNORMAL;
-}
-
-template <typename T>
 double lexical_cast_to_double(const T& value)
 {
     auto result = boost::lexical_cast<double>(value);
-    if (is_subnormal(result)) {
+    if (maths::is_subnormal(result)) {
         result = 0;
     }
     return result;
 }
 
-struct MeasureDoubleVisitor : boost::static_visitor<>
+bool is_bool(const Measure::ValueType& value) noexcept
 {
-    double result;
-    template <typename T> void operator()(const T& value)
+    return value.which() == 0;
+}
+
+struct MeasureDoubleVisitor : boost::static_visitor<double>
+{
+    static constexpr double default_missing_values = -1.0;
+    template <typename T> auto operator()(const T& value) const
     {
-        result = lexical_cast_to_double(value);
+        return lexical_cast_to_double(value);
     }
-    template <typename T> void operator()(const boost::optional<T>& value)
+    auto operator()(const Measure::ValueType& value) const
     {
-        if (value) {
-            (*this)(*value);
-        } else {
-            result = -1;
-        }
+        return boost::apply_visitor(*this, value);
     }
-    template <typename T> void operator()(const std::vector<T>& values)
+    template <typename T> auto operator()(const Measure::Optional<T>& value) const
     {
-        throw std::runtime_error {"Vector cast not supported"};
+        return value ? (*this)(*value) : default_missing_values;
     }
-    void operator()(boost::any value)
+    template <typename T> auto operator()(const Measure::Array<T>& values) const
     {
-        throw std::runtime_error {"Any cast not supported"};
+        assert(false); // this should never happen
+        throw std::runtime_error {"Bad measure value"};
+        return default_missing_values;
     }
 };
 
-auto cast_to_double(const Measure::ResultType& value)
+auto cast_to_double(const Measure::ResultType& value, const MeasureWrapper& measure)
 {
     MeasureDoubleVisitor vis {};
-    boost::apply_visitor(vis, value);
-    return vis.result;
+    return boost::apply_visitor(vis, value);
 }
 
 class NanMeasure : public ProgramError
@@ -288,7 +286,7 @@ void skip_lines(std::istream& in, int n = 1)
 {
     for (; n > 0; --n) in.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 }
-    
+
 } // namespace
 
 void RandomForestFilter::record(const std::size_t call_idx, std::size_t sample_idx, MeasureVector measures) const
@@ -302,6 +300,7 @@ void RandomForestFilter::record(const std::size_t call_idx, std::size_t sample_i
         const auto first_measure = std::next(std::cbegin(measures), info.start_index);
         buffer.reserve(info.number);
         std::transform(first_measure, std::next(first_measure, info.number),
+                       std::next(std::cbegin(this->measures_), info.start_index),
                        std::back_inserter(buffer), cast_to_double);
         buffer.push_back(0); // dummy TP value
         check_nan(buffer);

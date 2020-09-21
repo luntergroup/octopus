@@ -1,10 +1,11 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "duplicate_concordance.hpp"
 
 #include <algorithm>
 #include <iterator>
+#include <unordered_set>
 #include <cassert>
 
 #include <boost/variant.hpp>
@@ -14,12 +15,12 @@
 #include "core/types/allele.hpp"
 #include "io/variant/vcf_record.hpp"
 #include "io/variant/vcf_spec.hpp"
-#include "utils/genotype_reader.hpp"
 #include "utils/mappable_algorithms.hpp"
-#include "utils/read_duplicates.hpp"
 #include "utils/maths.hpp"
+#include "utils/erase_if.hpp"
 #include "../facets/samples.hpp"
-#include "../facets/overlapping_reads.hpp"
+#include "../facets/reads_summary.hpp"
+#include "../facets/alleles.hpp"
 #include "../facets/read_assignments.hpp"
 
 namespace octopus { namespace csr {
@@ -31,12 +32,16 @@ std::unique_ptr<Measure> DuplicateConcordance::do_clone() const
     return std::make_unique<DuplicateConcordance>(*this);
 }
 
+Measure::ValueType DuplicateConcordance::get_value_type() const
+{
+    return double {};
+}
+
 namespace {
 
 bool is_canonical(const VcfRecord::NucleotideSequence& allele) noexcept
 {
-    const static VcfRecord::NucleotideSequence deleted_allele {vcfspec::deletedBase};
-    return !(allele == vcfspec::missingValue || allele == deleted_allele);
+    return !(allele == vcfspec::missingValue || allele == vcfspec::deleteMaskAllele);
 }
 
 bool has_called_alt_allele(const VcfRecord& call, const VcfRecord::SampleName& sample)
@@ -45,21 +50,6 @@ bool has_called_alt_allele(const VcfRecord& call, const VcfRecord::SampleName& s
     const auto& genotype = get_genotype(call, sample);
     return std::any_of(std::cbegin(genotype), std::cend(genotype),
                        [&] (const auto& allele) { return allele != call.ref() && is_canonical(allele); });
-}
-
-auto find_duplicate_overlapped_reads(const ReadContainer& reads, const GenomicRegion& region)
-{
-    const auto overlapped_reads = overlap_range(reads, region);
-    const auto duplicate_itrs = find_duplicate_reads(std::cbegin(overlapped_reads), std::cend(overlapped_reads));
-    std::vector<std::vector<AlignedRead>> result {};
-    result.reserve(duplicate_itrs.size());
-    for (const auto& itrs : duplicate_itrs) {
-        std::vector<AlignedRead> dups {};
-        dups.reserve(itrs.size());
-        std::transform(std::cbegin(itrs), std::cend(itrs), std::back_inserter(dups), [] (auto itr) { return *itr; });
-        result.push_back(std::move(dups));
-    }
-    return result;
 }
 
 bool other_segments_equal(const AlignedRead& lhs, const AlignedRead& rhs) noexcept
@@ -89,27 +79,39 @@ bool is_duplicate(const AlignedRead& realigned_read, const std::vector<AlignedRe
     return std::find_if(std::cbegin(duplicate_reads), std::cend(duplicate_reads), is_duplicate) != std::cend(duplicate_reads);
 }
 
-double calculate_support_concordance(const std::vector<AlignedRead>& duplicate_reads, const AlleleSupportMap& allele_support)
+using AlleleSupportNameSets = std::vector<std::unordered_set<std::string>>;
+
+double calculate_support_concordance(const std::vector<AlignedRead>& duplicate_reads, AlleleSupportNameSets& support_names)
 {
     assert(duplicate_reads.size() > 1);
-    std::vector<unsigned> support_counts {};
+    std::vector<unsigned> duplicate_allele_support_counts {};
+    duplicate_allele_support_counts.reserve(support_names.size());
     unsigned total_duplicate_support {0};
-    support_counts.reserve(allele_support.size());
-    for (const auto& p : allele_support) {
-        const auto is_duplicate_helper = [&] (const auto& read) { return is_duplicate(read, duplicate_reads); };
-        const auto duplicate_support = std::count_if(std::cbegin(p.second), std::cend(p.second), is_duplicate_helper);
-        if (duplicate_support > 0) {
-            support_counts.push_back(duplicate_support);
-            total_duplicate_support += duplicate_support;
+    for (auto& allele_support_names : support_names) {
+        unsigned allele_duplicate_support {0};
+        for (const auto& read : duplicate_reads) {
+            const auto support_itr = allele_support_names.find(read.name());
+            if (support_itr != std::cend(allele_support_names)) {
+                ++allele_duplicate_support;
+                allele_support_names.erase(support_itr);
+            }
+        }
+        if (allele_duplicate_support > 0) {
+            duplicate_allele_support_counts.push_back(allele_duplicate_support);
+            total_duplicate_support += allele_duplicate_support;
         }
     }
-    if (support_counts.size() < 2) {
+    if (total_duplicate_support > 0) {
+        erase_if(support_names, [] (const auto& names) { return names.empty(); });
+    }
+    if (duplicate_allele_support_counts.size() < 2) {
         return 1;
     } else {
-        std::vector<double> support_proportions(support_counts.size());
-        std::transform(std::cbegin(support_counts), std::cend(support_counts), std::begin(support_proportions),
+        std::vector<double> support_proportions(duplicate_allele_support_counts.size());
+        std::transform(std::cbegin(duplicate_allele_support_counts), std::cend(duplicate_allele_support_counts),
+                       std::begin(support_proportions),
                        [=] (auto count) { return static_cast<double>(count) / total_duplicate_support; });
-        return maths::entropy2(support_proportions);
+        return 1 - std::min(maths::entropy2(support_proportions), 1.0);
     }
 }
 
@@ -118,22 +120,32 @@ double calculate_support_concordance(const std::vector<AlignedRead>& duplicate_r
 Measure::ResultType DuplicateConcordance::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     const auto& samples = get_value<Samples>(facets.at("Samples"));
-    const auto& reads = get_value<OverlappingReads>(facets.at("OverlappingReads"));
-    const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments"));
-    std::vector<boost::optional<double>> result {};
+    const auto& reads = get_value<ReadsSummary>(facets.at("ReadsSummary"));
+    const auto& alleles = get_value<Alleles>(facets.at("Alleles"));
+    const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments")).alleles;
+    Array<Optional<ValueType>> result {};
     result.reserve(samples.size());
     for (const auto& sample : samples) {
-        boost::optional<double> sample_result {};
+        Optional<ValueType> sample_result {};
         if (has_called_alt_allele(call, sample)) {
-            const auto duplicate_reads = find_duplicate_overlapped_reads(reads.at(sample), mapped_region(call));
-            if (!duplicate_reads.empty()) {
-                const auto allele_support = compute_allele_support(get_called_alleles(call, sample).first, assignments, sample);
-                for (const auto& duplicates : duplicate_reads) {
-                    const auto concordance = calculate_support_concordance(duplicates, allele_support);
-                    if (!sample_result || concordance < *sample_result) {
-                        sample_result = concordance;
-                    }
+            const auto sample_alleles = get_called(alleles, call, sample);
+            const auto& allele_support = assignments.at(sample);
+            AlleleSupportNameSets supporting_read_name {};
+            supporting_read_name.reserve(allele_support.size());
+            for (const auto& p : allele_support) {
+                std::unordered_set<std::string> names {};
+                names.reserve(p.second.size());
+                for (const auto& read : p.second) {
+                    names.insert(read.get().name());
                 }
+            }
+            for (const auto& duplicates : overlap_range(reads.at(sample).duplicates, call)) {
+                const auto concordance = calculate_support_concordance(duplicates.reads, supporting_read_name);
+                if (!sample_result || concordance < boost::get<double>(*sample_result)) {
+                    sample_result = concordance;
+                }
+                if (supporting_read_name.size() < 2) break;
+                if (concordance < 1e-3) break;
             }
         }
         result.push_back(sample_result);
@@ -143,7 +155,7 @@ Measure::ResultType DuplicateConcordance::do_evaluate(const VcfRecord& call, con
 
 Measure::ResultCardinality DuplicateConcordance::do_cardinality() const noexcept
 {
-    return ResultCardinality::num_samples;
+    return ResultCardinality::samples;
 }
 
 const std::string& DuplicateConcordance::do_name() const
@@ -159,7 +171,7 @@ std::string DuplicateConcordance::do_describe() const
 std::vector<std::string> DuplicateConcordance::do_requirements() const
 {
     
-    return {"Samples", "OverlappingReads", "ReadAssignments"};
+    return {"Samples", "ReadsSummary", "Alleles", "ReadAssignments"};
 }
 
 } // namespace csr

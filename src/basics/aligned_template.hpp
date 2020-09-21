@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef aligned_template_hpp
@@ -8,6 +8,8 @@
 #include <unordered_map>
 #include <iterator>
 #include <initializer_list>
+
+#include <boost/optional.hpp>
 
 #include "concepts/comparable.hpp"
 #include "concepts/equitable.hpp"
@@ -97,11 +99,17 @@ enum class ReadLinkageType { none, paired, barcode_only, paired_and_barcode };
 
 namespace detail {
 
+inline auto insert_size(const AlignedRead& pair1, const AlignedRead& pair2)
+{
+    return static_cast<GenomicRegion::Size>(std::abs(inner_distance(pair1, pair2)));
+}
+
 template <typename ForwardIterator, typename OutputIterator>
 OutputIterator
 make_paired_read_templates(ForwardIterator first_read_itr, ForwardIterator last_read_itr,
                            OutputIterator result_itr,
-                           const bool pairs_only = false)
+                           const bool pairs_only = false,
+                           const boost::optional<GenomicRegion::Size> max_insert_size = boost::none)
 {
     std::unordered_map<std::string, MappableReferenceWrapper<const AlignedRead>> buffer {};
     buffer.reserve(std::distance(first_read_itr, last_read_itr) / 2);
@@ -115,10 +123,21 @@ make_paired_read_templates(ForwardIterator first_read_itr, ForwardIterator last_
             if (template_itr == std::cend(buffer)) {
                 buffer.emplace(template_id, read);
             } else {
-                if (template_itr->second.get() < read) {
-                    *result_itr++ = {{template_itr->second, read}};
+                const auto& mate = template_itr->second.get();
+                if (!max_insert_size || insert_size(read, mate) < *max_insert_size) {
+                    if (mate < read) {
+                        *result_itr++ = {{mate, read}};
+                    } else {
+                        *result_itr++ = {{read, mate}};
+                    }
                 } else {
-                    *result_itr++ = {{read, template_itr->second}};
+                    if (read < mate) {
+                        *result_itr++ = {{read}};
+                        *result_itr++ = {{mate}};
+                    } else {
+                        *result_itr++ = {{mate}};
+                        *result_itr++ = {{read}};
+                    }
                 }
                 buffer.erase(template_itr);
             }

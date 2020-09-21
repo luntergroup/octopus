@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef vcf_extractor_hpp
@@ -33,9 +33,9 @@ public:
     
     VcfExtractor() = delete;
     
-    VcfExtractor(std::unique_ptr<const VcfReader> reader);
-    VcfExtractor(std::unique_ptr<const VcfReader> reader, Options options);
-        
+    VcfExtractor(std::unique_ptr<VcfReader> reader);
+    VcfExtractor(std::unique_ptr<VcfReader> reader, Options options);
+    
     VcfExtractor(const VcfExtractor&)            = default;
     VcfExtractor& operator=(const VcfExtractor&) = default;
     VcfExtractor(VcfExtractor&&)                 = default;
@@ -48,7 +48,7 @@ private:
     std::vector<Variant> do_generate(const RegionSet& regions) const override;
     std::string name() const override;
     
-    std::shared_ptr<const VcfReader> reader_;
+    mutable std::shared_ptr<VcfReader> reader_;
     Options options_;
     
     std::vector<Variant> fetch_variants(const GenomicRegion& region) const;

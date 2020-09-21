@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2019 Daniel Cooke
+// Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "haplotype_generator.hpp"
@@ -65,9 +65,9 @@ auto get_walker_policy(const HaplotypeGenerator::Policies::Extension policy) noe
         case HGP::minimal:
             return GWP::includeIfWithinReadLengthOfFirstIncluded;
         case HGP::conservative:
-            // fall through
-        case HGP::normal:
             return GWP::includeIfAllSamplesSharedWithFrontier;
+        case HGP::moderate:
+            // fall through
         case HGP::aggressive:
             return GWP::includeIfAnySampleSharedWithFrontier;
         case HGP::unlimited:
@@ -86,12 +86,59 @@ auto get_walker_policy(const HaplotypeGenerator::Policies::Lagging policy) noexc
             return GWP::includeNone;
         case HGP::conservative:
         case HGP::moderate:
-        case HGP::normal:
+        case HGP::optimistic:
             return GWP::includeIfSharedWithNovelRegion;
         case HGP::aggressive:
             return GWP::includeIfLinkableToNovelRegion;
         default:
             return GWP::includeIfSharedWithNovelRegion; // prevents compiler warning
+    }
+}
+
+auto get_walker_read_template_policy(const HaplotypeGenerator::Policies& policies) noexcept
+{
+    using LaggingPolicy = HaplotypeGenerator::Policies::Lagging;
+    bool use_for_lagging {};
+    switch (policies.lagging) {
+        case LaggingPolicy::none:
+            // fall through
+        case LaggingPolicy::conservative:
+            // fall through
+        case LaggingPolicy::moderate:
+            use_for_lagging = false;
+            break;
+        case LaggingPolicy::optimistic:
+            // fall through
+        case LaggingPolicy::aggressive:
+            // fall through
+        default:
+            use_for_lagging = true;
+    }
+    using ExtensionPolicy = HaplotypeGenerator::Policies::Extension;
+    bool use_for_extension {};
+    switch (policies.extension) {
+        case ExtensionPolicy::minimal:
+            // fall through
+        case ExtensionPolicy::conservative:
+            use_for_extension = false;
+            break;
+        case ExtensionPolicy::moderate:
+            // fall through
+        case ExtensionPolicy::aggressive:
+            // fall through
+        case ExtensionPolicy::unlimited:
+            // fall through
+        default:
+            use_for_extension = true;
+    }
+    if (use_for_lagging && use_for_extension) {
+        return GenomeWalker::ReadTemplatePolicy::indicators_and_extension;
+    } else if (use_for_lagging) {
+        return GenomeWalker::ReadTemplatePolicy::indicators;
+    } else if (use_for_extension) {
+        return GenomeWalker::ReadTemplatePolicy::extension;
+    } else {
+        return GenomeWalker::ReadTemplatePolicy::none;
     }
 }
 
@@ -120,19 +167,21 @@ auto decompose(const MappableFlatSet<Variant>& variants)
         alleles.push_back(variant.ref_allele());
         alleles.push_back(variant.alt_allele());
     }
-    return MappableFlatSet<Allele>{
-    std::make_move_iterator(std::begin(alleles)),
-    std::make_move_iterator(std::end(alleles))
+    return MappableFlatSet<Allele> {
+        std::make_move_iterator(std::begin(alleles)),
+        std::make_move_iterator(std::end(alleles))
     };
 }
 
 auto make_lagged_walker(const HaplotypeGenerator::Policies& policies)
 {
-    return GenomeWalker{
-    max_included(policies.haplotype_limits.target),
-    get_walker_policy(policies.lagging),
-    get_walker_policy(policies.extension)
-    };
+    return GenomeWalker {{
+        max_included(policies.haplotype_limits.target),
+        get_walker_policy(policies.lagging),
+        get_walker_policy(policies.extension),
+        get_walker_read_template_policy(policies),
+        policies.max_allele_distance
+    }};
 }
 
 } // namespace
@@ -146,16 +195,20 @@ HaplotypeGenerator::HaplotypeGenerator(const ReferenceGenome& reference,
                                        Policies policies)
 : policies_ {std::move(policies)}
 , tree_ {get_contig_name(candidates, reads, reference), reference}
-, default_walker_ {
+, default_walker_ {{
     max_included(policies_.haplotype_limits.target),
     GenomeWalker::IndicatorPolicy::includeNone,
-    get_walker_policy(policies.extension)
-}
-, holdout_walker_{
+    get_walker_policy(policies.extension),
+    get_walker_read_template_policy(policies),
+    policies.max_allele_distance
+}}
+, holdout_walker_{{
 	max_included(policies_.haplotype_limits.target),
 	GenomeWalker::IndicatorPolicy::includeAll,
-	get_walker_policy(policies.extension)
-}
+	get_walker_policy(policies.extension),
+    get_walker_read_template_policy(policies),
+    policies.max_allele_distance
+}}
 , lagged_walker_{}
 , alleles_{decompose(candidates)}
 , reads_{reads}
@@ -285,7 +338,7 @@ bool HaplotypeGenerator::removal_has_impact() const
 	if (done()) return false;
     if (in_holdout_mode() || is_backtracking_enabled()) return true;
     if (!is_lagging_enabled(active_region_) || contains(active_region_, rightmost_allele_)) return false;
-    const auto max_lagged_region = lagged_walker_->walk(active_region_, reads_, alleles_);
+    const auto max_lagged_region = walk_from_active_region(*lagged_walker_);
     return overlaps(max_lagged_region, active_region_);
 }
 
@@ -294,7 +347,7 @@ unsigned HaplotypeGenerator::max_removal_impact() const
 	if (done()) return 0;
     if (in_holdout_mode() || is_backtracking_enabled()) return tree_.num_haplotypes();
     if (!is_lagging_enabled(active_region_) || contains(active_region_, rightmost_allele_)) return 0;
-    const auto max_lagged_region = lagged_walker_->walk(active_region_, reads_, alleles_);
+    const auto max_lagged_region = walk_from_active_region(*lagged_walker_);
     if (!overlaps(max_lagged_region, active_region_)) return 0;
     const auto novel_region = right_overhang_region(max_lagged_region, active_region_);
     const auto num_novel_alleles = count_overlapped(alleles_, novel_region);
@@ -424,11 +477,7 @@ void pop_front(std::vector<T>& v) {
 
 GenomicRegion HaplotypeGenerator::walk_from_active_region(const GenomeWalker& walker) const
 {
-    if (policies_.extension == Policies::Extension::minimal || policies_.extension == Policies::Extension::conservative) {
-        return walker.walk(active_region_, reads_, alleles_);
-    } else {
-        return walker.walk(active_region_, reads_, alleles_, read_templates_);
-    }
+    return walker.walk(active_region_, reads_, alleles_, read_templates_);
 }
 
 GenomicRegion HaplotypeGenerator::find_max_lagged_region() const
@@ -626,7 +675,7 @@ auto extract_indicator_alleles(std::vector<GenomicRegion> indicator_blocks, cons
     }
 }
 
-double get_required_novel_fraction(HaplotypeGenerator::Policies::Lagging policy) noexcept
+double get_required_novel_fraction_denom(HaplotypeGenerator::Policies::Lagging policy) noexcept
 {
     using HGP = HaplotypeGenerator::Policies::Lagging;
     switch (policy) {
@@ -635,10 +684,10 @@ double get_required_novel_fraction(HaplotypeGenerator::Policies::Lagging policy)
             return 1.5;
         case HGP::moderate:
             return 2;
-        case HGP::normal:
-            return 4;
+        case HGP::optimistic:
+            return 2;
         case HGP::aggressive:
-            return 6;
+            return 4;
         default:
             return 1; // prevents compiler warning
     }
@@ -677,7 +726,7 @@ unsigned lagging_level(const HaplotypeGenerator::Policies::Lagging& policy) noex
         case HGP::none: return 0;
         case HGP::conservative: return 1;
         case HGP::moderate: return 2;
-        case HGP::normal: return 3;
+        case HGP::optimistic: return 3;
         case HGP::aggressive: return 4;
         default:
             return 0; // prevents compiler warning
@@ -699,8 +748,8 @@ std::size_t get_target_tree_size(const HaplotypeTree& curr_tree,
     if (effective_log_space >= novel_factors.back()) {
         return curr_tree_size;
     } else {
-        const auto novel_fraction = get_required_novel_fraction(policies.lagging);
-        const auto num_novels_required = static_cast<std::size_t>(novel_factors.size() / novel_fraction);
+        const auto novel_fraction_denom = get_required_novel_fraction_denom(policies.lagging);
+        const auto num_novels_required = static_cast<std::size_t>(novel_factors.size() / novel_fraction_denom);
         auto required_novel_factor = novel_factors[num_novels_required > 0 ? num_novels_required - 1 : 0];
         if (novel_blocks.size() == 1 && lagging_level(policies.lagging) > 1) {
             target_tree_size = policies.haplotype_limits.holdout;
@@ -976,7 +1025,7 @@ void HaplotypeGenerator::populate_tree()
 {
     if (in_holdout_mode() && can_reintroduce_holdouts()) {
         populate_tree_with_holdouts();
-        if (next_active_region_) {
+        if (next_active_region_ && ends_before(active_region_, *next_active_region_)) {
             populate_tree_with_novel_alleles();
         }
     } else {
@@ -1616,6 +1665,12 @@ HaplotypeGenerator::Builder& HaplotypeGenerator::Builder::set_min_flank_pad(cons
 HaplotypeGenerator::Builder& HaplotypeGenerator::Builder::set_max_indicator_join_distance(Haplotype::NucleotideSequence::size_type n) noexcept
 {
     policies_.max_indicator_join_distance = n;
+    return *this;
+}
+
+HaplotypeGenerator::Builder& HaplotypeGenerator::Builder::set_max_allele_distance(GenomicRegion::Distance gap) noexcept
+{
+    policies_.max_allele_distance = gap;
     return *this;
 }
 
