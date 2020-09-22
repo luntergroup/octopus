@@ -502,7 +502,7 @@ OptionMap parse_options(const int argc, const char** argv)
      " (sample:contig=ploidy) ploidies, one per line")
     
     ("min-variant-posterior",
-     po::value<Phred<double>>()->default_value(Phred<double> {1.0}),
+     po::value<Phred<double>>()->default_value(Phred<double> {0.1}),
      "Report variant alleles with posterior probability (phred scale) greater than this")
     
     ("refcall",
