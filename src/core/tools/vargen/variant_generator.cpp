@@ -126,6 +126,13 @@ void VariantGenerator::add_read(const SampleName& sample, const AlignedRead& rea
     for (auto& generator : variant_generators_) generator->do_add_read(sample, read);
 }
 
+void VariantGenerator::do_add_read(const SampleName& sample, const AlignedTemplate& reads)
+{
+    for (const AlignedRead& read : reads) {
+        add_read(sample, read);
+    }
+}
+
 void VariantGenerator::clear() noexcept
 {
     if (active_region_generator_) active_region_generator_->clear();

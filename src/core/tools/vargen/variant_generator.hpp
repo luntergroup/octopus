@@ -18,8 +18,10 @@
 #include "logging/logging.hpp"
 #include "basics/genomic_region.hpp"
 #include "basics/aligned_read.hpp"
+#include "basics/aligned_template.hpp"
 #include "core/types/variant.hpp"
 #include "containers/mappable_flat_multi_set.hpp"
+#include "utils/type_tricks.hpp"
 #include "active_region_generator.hpp"
 
 namespace octopus { namespace coretools {
@@ -49,6 +51,7 @@ public:
     bool requires_reads() const noexcept;
     
     void add_read(const SampleName& sample, const AlignedRead& read);
+    void add_read(const SampleName& sample, const AlignedTemplate& reads);
     template <typename InputIt>
     void add_reads(const SampleName& sample, InputIt first, InputIt last);
     
@@ -57,6 +60,8 @@ public:
 protected:
     using ReadVectorIterator  = std::vector<AlignedRead>::const_iterator;
     using ReadFlatSetIterator = MappableFlatMultiSet<AlignedRead>::const_iterator;
+    using TemplateVectorIterator = std::vector<AlignedTemplate>::const_iterator;
+    using TemplatelatSetIterator = MappableFlatMultiSet<AlignedTemplate>::const_iterator;
     
     using RegionSet = std::vector<GenomicRegion>;
     
@@ -71,6 +76,7 @@ private:
     virtual std::vector<Variant> do_generate(const RegionSet& regions) const { return {}; };
     virtual bool do_requires_reads() const noexcept { return false; };
     virtual void do_add_read(const SampleName& sample, const AlignedRead& read) {};
+    virtual void do_add_read(const SampleName& sample, const AlignedTemplate& reads);
     // add_reads is not strictly necessary as the effect of calling add_reads must be the same as
     // calling add_read for each read. However, there may be performance benefits
     // to having an add_reads method to avoid many virtual dispatches.
@@ -79,6 +85,8 @@ private:
     // for common container iterators, more can easily be added if needed.
     virtual void do_add_reads(const SampleName& sample, ReadVectorIterator first, ReadVectorIterator last) {};
     virtual void do_add_reads(const SampleName& sample, ReadFlatSetIterator first, ReadFlatSetIterator last) {};
+    virtual void do_add_reads(const SampleName& sample, TemplateVectorIterator first, TemplateVectorIterator last) {};
+    virtual void do_add_reads(const SampleName& sample, TemplatelatSetIterator first, TemplatelatSetIterator last) {};
     virtual void do_clear() noexcept {};
     
     virtual std::string name() const { return "VariantGenerator"; }
@@ -100,16 +108,15 @@ namespace detail {
 template <typename Container, typename G>
 void add_reads(const Container& reads, G& generator, std::true_type)
 {
-    generator.add_reads("octopus", std::cbegin(reads), std::cend(reads));
+    for (const auto& p : reads) {
+        generator.add_reads(p.first, std::cbegin(p.second), std::cend(p.second));
+    }
 }
 
 template <typename ReadMap, typename G>
 void add_reads(const ReadMap& reads, G& generator, std::false_type)
 {
-    
-    for (const auto& p : reads) {
-        generator.add_reads(p.first, std::cbegin(p.second), std::cend(p.second));
-    }
+    generator.add_reads("octopus", std::cbegin(reads), std::cend(reads));
 }
 
 } // namespace detail
@@ -118,7 +125,7 @@ template <typename Container, typename G,
           typename = std::enable_if_t<std::is_base_of<VariantGenerator, G>::value>>
 void add_reads(const Container& reads, G& generator)
 {
-    detail::add_reads(reads, generator, std::is_same<typename Container::value_type, AlignedRead> {});
+    detail::add_reads(reads, generator, IsMap<Container> {});
 }
 
 } // namespace coretools
