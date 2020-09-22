@@ -69,6 +69,23 @@ compute_allele_support(const std::vector<Allele>& alleles,
     return compute_allele_support(alleles, support.assigned_wrt_reference, support.ambiguous_wrt_reference, overlap_aware_includes);
 }
 
+template <typename T1, typename T2,
+          typename BinaryPredicate = std::less<std::pair<T1, T2>>>
+void sort_together(std::vector<T1>& first, std::vector<T2>& second,
+                   BinaryPredicate pred = std::less<std::pair<T1, T2>> {})
+{
+    assert(first.size() == second.size());
+    std::vector<std::pair<T1, T2>> zipped(first.size());
+    for (std::size_t i {0}; i < first.size(); ++i) {
+        zipped[i] = std::make_pair(std::move(first[i]), std::move(second[i]));
+    }
+    std::sort(std::begin(zipped), std::end(zipped), pred);
+    for (std::size_t i {0}; i < first.size(); ++i) {
+        first[i]  = std::move(zipped[i].first);
+        second[i] = std::move(zipped[i].second);
+    }
+}
+
 } // namespace
 
 ReadAssignments::ReadAssignments(const ReferenceGenome& reference,
@@ -91,12 +108,15 @@ ReadAssignments::ReadAssignments(const ReferenceGenome& reference,
         const auto& sample = p.first;
         const auto& sample_genotypes = p.second;
         result_.haplotypes[sample].assigned_wrt_reference.reserve(sample_genotypes.size());
+        result_.haplotypes[sample].assigned_wrt_haplotype.reserve(sample_genotypes.size());
         result_.alleles[sample] = {}; // make sure sample is present
         for (const auto& genotype : sample_genotypes) {
             auto local_reads = copy_overlapped_to_vector(reads.at(sample), genotype);
             for (const auto& haplotype : genotype) {
                 // So every called haplotype appears in support map, even if no read support
                 result_.haplotypes[sample].assigned_wrt_reference[haplotype] = {};
+                result_.haplotypes[sample].assigned_wrt_haplotype[haplotype] = {};
+                result_.haplotypes[sample].assigned_likelihoods[haplotype] = {};
             }
             if (!local_reads.empty()) {
                 // Try to assign each read to a haplotype
@@ -118,8 +138,9 @@ ReadAssignments::ReadAssignments(const ReferenceGenome& reference,
                 for (auto& s : genotype_support) {
                     const Haplotype& haplotype {s.first};
                     auto& assigned_reads = s.second;
-                    safe_realign(assigned_reads, haplotype, likelihood_model_);
-                    std::sort(std::begin(assigned_reads), std::end(assigned_reads));
+                    auto& likelihoods = result_.haplotypes[sample].assigned_likelihoods[haplotype];
+                    safe_realign(assigned_reads, haplotype, likelihood_model_, likelihoods);
+                    sort_together(assigned_reads, likelihoods);
                     result_.haplotypes[sample].assigned_wrt_haplotype[haplotype] = assigned_reads;
                     rebase(assigned_reads, haplotype);
                     std::sort(std::begin(assigned_reads), std::end(assigned_reads));
@@ -139,7 +160,8 @@ ReadAssignments::ReadAssignments(const ReferenceGenome& reference,
                     std::vector<AlignedRead> realigned {};
                     realigned.reserve(s.second.size());
                     for (auto idx : s.second) realigned.push_back(std::move(ambiguous_reads[idx].read));
-                    safe_realign(realigned, s.first, likelihood_model_);
+                    auto& likelihoods = result_.haplotypes[sample].ambiguous_max_likelihoods;
+                    safe_realign(realigned, s.first, likelihood_model_, likelihoods);
                     for (std::size_t j {0}; j < s.second.size(); ++j) {
                         result_.haplotypes[sample].ambiguous_wrt_haplotype[s.second[j]].read = realigned[j];
                     }
