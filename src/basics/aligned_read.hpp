@@ -115,6 +115,7 @@ public:
     BaseQualityVector& base_qualities() noexcept;
     MappingQuality mapping_quality() const noexcept;
     const CigarString& cigar() const noexcept;
+    CigarString& cigar() noexcept;
     Direction direction() const noexcept;
     bool has_other_segment() const noexcept;
     const Segment& next_segment() const;

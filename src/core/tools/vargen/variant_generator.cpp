@@ -126,11 +126,34 @@ void VariantGenerator::add_read(const SampleName& sample, const AlignedRead& rea
     for (auto& generator : variant_generators_) generator->do_add_read(sample, read);
 }
 
-void VariantGenerator::do_add_read(const SampleName& sample, const AlignedTemplate& reads)
+void VariantGenerator::add_template(const SampleName& sample, const AlignedTemplate& reads)
+{
+    if (active_region_generator_) active_region_generator_->add_template(sample, reads);
+    for (auto& generator : variant_generators_) generator->do_add_template(sample, reads);
+}
+
+void VariantGenerator::do_add_template(const SampleName& sample, const AlignedTemplate& reads)
 {
     for (const AlignedRead& read : reads) {
-        add_read(sample, read);
+        do_add_read(sample, read);
     }
+}
+
+void VariantGenerator::do_add_reads(const SampleName& sample, ReadVectorIterator first, ReadVectorIterator last)
+{
+    std::for_each(first, last, [&] (const auto& read) { do_add_read(sample, read); });
+}
+void VariantGenerator::do_add_reads(const SampleName& sample, ReadFlatSetIterator first, ReadFlatSetIterator last)
+{
+    std::for_each(first, last, [&] (const auto& read) { do_add_read(sample, read); });
+}
+void VariantGenerator::do_add_reads(const SampleName& sample, TemplateVectorIterator first, TemplateVectorIterator last)
+{
+    std::for_each(first, last, [&] (const auto& reads) { do_add_template(sample, reads); });
+}
+void VariantGenerator::do_add_reads(const SampleName& sample, TemplateFlatSetIterator first, TemplateFlatSetIterator last)
+{
+    std::for_each(first, last, [&] (const auto& reads) { do_add_template(sample, reads); });
 }
 
 void VariantGenerator::clear() noexcept

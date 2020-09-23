@@ -53,7 +53,7 @@ public:
     ~AssemblerActiveRegionGenerator() = default;
     
     void add(const SampleName& sample, const AlignedRead& read);
-    
+    void add(const SampleName& sample, const AlignedTemplate& reads);
     template <typename ForwardIterator>
     void add(const SampleName& sample, ForwardIterator first_read, ForwardIterator last_read);
     

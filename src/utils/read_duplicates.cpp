@@ -9,6 +9,13 @@ namespace octopus {
 
 namespace {
 
+bool both_empty_insertions(const AlignedRead& lhs, const AlignedRead& rhs) noexcept
+{
+    return is_empty_region(lhs) && is_empty_region(rhs) 
+        && lhs.cigar().size() == 1 && rhs.cigar().size() == 1
+        && is_insertion(lhs.cigar().front()) && is_insertion(rhs.cigar().front());
+}
+
 bool are_duplicates(const AlignedRead::Segment& lhs, const AlignedRead::Segment& rhs) noexcept
 {
     return lhs.contig_name() == rhs.contig_name()
@@ -32,7 +39,8 @@ bool FivePrimeDuplicateDefinition::unpaired_equal(const AlignedRead& lhs, const 
 {
     return are_same_strand(lhs, rhs)
         && is_same_contig(lhs, rhs)
-		&& five_prime_mapping_position(lhs) == five_prime_mapping_position(rhs);
+		&& five_prime_mapping_position(lhs) == five_prime_mapping_position(rhs)
+        && !both_empty_insertions(lhs, rhs);
 }
 
 bool FivePrimeDuplicateDefinition::paired_equal(const AlignedRead& lhs, const AlignedRead& rhs) const noexcept
@@ -44,7 +52,8 @@ bool FivePrimeAndCigarDuplicateDefinition::unpaired_equal(const AlignedRead& lhs
 {
     return are_same_strand(lhs, rhs)
         && is_same_region(lhs, rhs)
-        && lhs.cigar() == rhs.cigar();
+        && lhs.cigar() == rhs.cigar()
+        && !both_empty_insertions(lhs, rhs);
 }
 
 bool FivePrimeAndCigarDuplicateDefinition::paired_equal(const AlignedRead& lhs, const AlignedRead& rhs) const noexcept

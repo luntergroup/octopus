@@ -43,6 +43,7 @@ public:
     void add_generator(const std::string& name);
     
     void add_read(const SampleName& sample, const AlignedRead& read);
+    void add_template(const SampleName& sample, const AlignedTemplate& reads);
     template <typename ForwardIterator>
     void add_reads(const SampleName& sample, ForwardIterator first, ForwardIterator last);
     

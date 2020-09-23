@@ -51,7 +51,7 @@ public:
     bool requires_reads() const noexcept;
     
     void add_read(const SampleName& sample, const AlignedRead& read);
-    void add_read(const SampleName& sample, const AlignedTemplate& reads);
+    void add_template(const SampleName& sample, const AlignedTemplate& reads);
     template <typename InputIt>
     void add_reads(const SampleName& sample, InputIt first, InputIt last);
     
@@ -61,7 +61,7 @@ protected:
     using ReadVectorIterator  = std::vector<AlignedRead>::const_iterator;
     using ReadFlatSetIterator = MappableFlatMultiSet<AlignedRead>::const_iterator;
     using TemplateVectorIterator = std::vector<AlignedTemplate>::const_iterator;
-    using TemplatelatSetIterator = MappableFlatMultiSet<AlignedTemplate>::const_iterator;
+    using TemplateFlatSetIterator = MappableFlatMultiSet<AlignedTemplate>::const_iterator;
     
     using RegionSet = std::vector<GenomicRegion>;
     
@@ -76,17 +76,17 @@ private:
     virtual std::vector<Variant> do_generate(const RegionSet& regions) const { return {}; };
     virtual bool do_requires_reads() const noexcept { return false; };
     virtual void do_add_read(const SampleName& sample, const AlignedRead& read) {};
-    virtual void do_add_read(const SampleName& sample, const AlignedTemplate& reads);
+    virtual void do_add_template(const SampleName& sample, const AlignedTemplate& reads);
     // add_reads is not strictly necessary as the effect of calling add_reads must be the same as
     // calling add_read for each read. However, there may be performance benefits
     // to having an add_reads method to avoid many virtual dispatches.
     // Ideally add_reads would be a template to accept any InputIterator, but it is not possible
     // to have template virtual methods. The best solution is therefore to just overload add_reads
     // for common container iterators, more can easily be added if needed.
-    virtual void do_add_reads(const SampleName& sample, ReadVectorIterator first, ReadVectorIterator last) {};
-    virtual void do_add_reads(const SampleName& sample, ReadFlatSetIterator first, ReadFlatSetIterator last) {};
-    virtual void do_add_reads(const SampleName& sample, TemplateVectorIterator first, TemplateVectorIterator last) {};
-    virtual void do_add_reads(const SampleName& sample, TemplatelatSetIterator first, TemplatelatSetIterator last) {};
+    virtual void do_add_reads(const SampleName& sample, ReadVectorIterator first, ReadVectorIterator last);
+    virtual void do_add_reads(const SampleName& sample, ReadFlatSetIterator first, ReadFlatSetIterator last);
+    virtual void do_add_reads(const SampleName& sample, TemplateVectorIterator first, TemplateVectorIterator last);
+    virtual void do_add_reads(const SampleName& sample, TemplateFlatSetIterator first, TemplateFlatSetIterator last);
     virtual void do_clear() noexcept {};
     
     virtual std::string name() const { return "VariantGenerator"; }
