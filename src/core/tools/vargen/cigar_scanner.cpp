@@ -197,12 +197,6 @@ void CigarScanner::add_read(const SampleName& sample, const AlignedRead& read,
     }
 }
 
-template <typename ForwardIterator>
-AlignedRead concat_reads(ForwardIterator first_read, ForwardIterator last_read)
-{
-
-}
-
 bool have_split_insertion(const AlignedRead& lhs, const AlignedRead& rhs)
 {
     return are_adjacent(lhs, rhs) && is_insertion(lhs.cigar().back()) && is_insertion(rhs.cigar().front());
