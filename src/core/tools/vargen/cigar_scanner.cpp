@@ -41,6 +41,7 @@ CigarScanner::CigarScanner(const ReferenceGenome& reference, Options options)
 , misaligned_read_coverage_tracker_ {}
 , sample_read_coverage_tracker_ {}
 , sample_forward_strand_coverage_tracker_ {}
+, artificial_read_buffer_ {}
 {
     buffer_.reserve(100);
 }
@@ -79,6 +80,10 @@ double ln_probability_read_correctly_aligned(const double misalign_penalty, cons
 void CigarScanner::do_add_read(const SampleName& sample, const AlignedRead& read)
 {
     add_read(sample, read, sample_read_coverage_tracker_[sample], sample_forward_strand_coverage_tracker_[sample]);
+}
+void CigarScanner::do_add_template(const SampleName& sample, const AlignedTemplate& reads)
+{
+    add_template(sample, reads, sample_read_coverage_tracker_[sample], sample_forward_strand_coverage_tracker_[sample]);
 }
 
 void CigarScanner::add_read(const SampleName& sample, const AlignedRead& read,
@@ -192,18 +197,79 @@ void CigarScanner::add_read(const SampleName& sample, const AlignedRead& read,
     }
 }
 
+template <typename ForwardIterator>
+AlignedRead concat_reads(ForwardIterator first_read, ForwardIterator last_read)
+{
+
+}
+
+bool have_split_insertion(const AlignedRead& lhs, const AlignedRead& rhs)
+{
+    return are_adjacent(lhs, rhs) && is_insertion(lhs.cigar().back()) && is_insertion(rhs.cigar().front());
+}
+
+void CigarScanner::add_template(const SampleName& sample, const AlignedTemplate& reads,
+                                CoverageTracker<GenomicRegion>& coverage_tracker,
+                                CoverageTracker<GenomicRegion>& forward_strand_coverage_tracker)
+{
+    for (auto read_itr = std::cbegin(reads); read_itr != std::cend(reads);) {
+        auto next_read_itr = std::next(read_itr);
+        while (next_read_itr != std::cend(reads) && have_split_insertion(*std::prev(next_read_itr), *next_read_itr)) {
+            ++next_read_itr;
+        }
+        if (std::next(read_itr) != next_read_itr) {
+            AlignedRead extended_read {*read_itr};
+            std::for_each(std::next(read_itr), std::prev(next_read_itr), [&] (const auto& read) {
+                assert(read.cigar().size() == 1);
+                utils::append(read.sequence(), extended_read.sequence());
+                utils::append(read.base_qualities(), extended_read.base_qualities());
+                extended_read.cigar().back().set_size(extended_read.cigar().back().size() + read.cigar().front().size());
+            });
+            AlignedRead chopped_read {*std::prev(next_read_itr)};
+            const auto chop_length = chopped_read.cigar().front().size();
+            extended_read.cigar().back().set_size(extended_read.cigar().back().size() + chop_length);
+            chopped_read.cigar().erase(std::cbegin(chopped_read.cigar()));
+            extended_read.sequence().insert(std::cend(extended_read.sequence()), std::cbegin(chopped_read.sequence()), std::next(std::cbegin(chopped_read.sequence()), chop_length));
+            chopped_read.sequence().erase(std::cbegin(chopped_read.sequence()), std::next(std::cbegin(chopped_read.sequence()), chop_length));
+            extended_read.base_qualities().insert(std::cend(extended_read.base_qualities()), std::cbegin(chopped_read.base_qualities()), std::next(std::cbegin(chopped_read.base_qualities()), chop_length));
+            chopped_read.base_qualities().erase(std::cbegin(chopped_read.base_qualities()), std::next(std::cbegin(chopped_read.base_qualities()), chop_length));
+            artificial_read_buffer_.push_back(std::move(extended_read));
+            add_read(sample, artificial_read_buffer_.back(), coverage_tracker, forward_strand_coverage_tracker);
+            artificial_read_buffer_.push_back(std::move(chopped_read));
+            add_read(sample, artificial_read_buffer_.back(), coverage_tracker, forward_strand_coverage_tracker);
+        } else {
+            add_read(sample, *read_itr, coverage_tracker, forward_strand_coverage_tracker);
+        }
+        read_itr = next_read_itr;
+    }
+    for (const auto& read : reads) {
+        add_read(sample, read, coverage_tracker, forward_strand_coverage_tracker);
+    }
+}
+
 void CigarScanner::do_add_reads(const SampleName& sample, ReadVectorIterator first, ReadVectorIterator last)
 {
     auto& coverage_tracker = sample_read_coverage_tracker_[sample];
     auto& forward_strand_coverage_tracker = sample_forward_strand_coverage_tracker_[sample];
-    std::for_each(first, last, [&] (const AlignedRead& read) { add_read(sample, read, coverage_tracker, forward_strand_coverage_tracker); });
+    std::for_each(first, last, [&] (const auto& read) { add_read(sample, read, coverage_tracker, forward_strand_coverage_tracker); });
 }
-
 void CigarScanner::do_add_reads(const SampleName& sample, ReadFlatSetIterator first, ReadFlatSetIterator last)
 {
     auto& coverage_tracker = sample_read_coverage_tracker_[sample];
     auto& forward_strand_coverage_tracker = sample_forward_strand_coverage_tracker_[sample];
-    std::for_each(first, last, [&] (const AlignedRead& read) { add_read(sample, read, coverage_tracker, forward_strand_coverage_tracker); });
+    std::for_each(first, last, [&] (const auto& read) { add_read(sample, read, coverage_tracker, forward_strand_coverage_tracker); });
+}
+void CigarScanner::do_add_reads(const SampleName& sample, TemplateVectorIterator first, TemplateVectorIterator last)
+{
+    auto& coverage_tracker = sample_read_coverage_tracker_[sample];
+    auto& forward_strand_coverage_tracker = sample_forward_strand_coverage_tracker_[sample];
+    std::for_each(first, last, [&] (const auto& reads) { add_template(sample, reads, coverage_tracker, forward_strand_coverage_tracker); });
+}
+void CigarScanner::do_add_reads(const SampleName& sample, TemplateFlatSetIterator first, TemplateFlatSetIterator last)
+{
+    auto& coverage_tracker = sample_read_coverage_tracker_[sample];
+    auto& forward_strand_coverage_tracker = sample_forward_strand_coverage_tracker_[sample];
+    std::for_each(first, last, [&] (const auto& reads) { add_template(sample, reads, coverage_tracker, forward_strand_coverage_tracker); });
 }
 
 unsigned get_min_depth(const Variant& v, const CoverageTracker<GenomicRegion>& tracker)
@@ -281,6 +347,7 @@ void CigarScanner::do_clear() noexcept
     free_memory(misaligned_read_coverage_tracker_);
     free_memory(sample_read_coverage_tracker_);
     free_memory(sample_forward_strand_coverage_tracker_);
+    free_memory(artificial_read_buffer_);
     max_seen_candidate_size_ = 0;
 }
 
@@ -666,8 +733,12 @@ bool is_good_pacbio(const Variant& variant, const unsigned depth, const unsigned
     if (is_snv(variant)) {
         return support > 1 && vaf > 0.1;
     } else if (is_insertion(variant)) {
-        if (alt_sequence_size(variant) > 20) {
+        if (alt_sequence_size(variant) > 500) {
+            return true;
+        } else if (alt_sequence_size(variant) > 100) {
             return vaf > 0.05;
+        } else if (alt_sequence_size(variant) > 50) {
+            return vaf > 0.1;
         }
         if (support < 2) return false;
         if (alt_sequence_size(variant) <= 2) {

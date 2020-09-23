@@ -149,9 +149,15 @@ std::deque<VcfRecord> Caller::call(const GenomicRegion& call_region, ProgressMet
 {
     ReadPipe::Report reads_report {};
     ReadMap reads;
+    boost::optional<TemplateMap> read_templates {};
     if (candidate_generator_.requires_reads()) {
         reads = read_pipe_.get().fetch_reads(expand(call_region, 100), reads_report);
-        add_reads(reads, candidate_generator_);
+        read_templates = make_read_templates(reads);
+        if (read_templates) {
+            add_reads(*read_templates, candidate_generator_);
+        } else {
+            add_reads(reads, candidate_generator_);
+        }
         if (!refcalls_requested() && all_empty(reads)) {
             if (debug_log_) stream(*debug_log_) << "Stopping early as no reads found in call region " << call_region;
             return {};
@@ -168,6 +174,7 @@ std::deque<VcfRecord> Caller::call(const GenomicRegion& call_region, ProgressMet
     if (!candidate_generator_.requires_reads()) {
         // as we didn't fetch them earlier
         reads = read_pipe_.get().fetch_reads(call_region, reads_report);
+        read_templates = make_read_templates(reads);
     }
     std::vector<GenomicRegion> likely_difficult_regions {};
     if (bad_region_detector_ && has_coverage(reads)) {
@@ -185,7 +192,6 @@ std::deque<VcfRecord> Caller::call(const GenomicRegion& call_region, ProgressMet
         }
         likely_difficult_regions.shrink_to_fit();
     }
-    const auto read_templates = make_read_templates(reads);
     auto haplotype_generator = make_haplotype_generator(candidates, reads, read_templates);
     for (auto& region : likely_difficult_regions) haplotype_generator.add_lagging_exclusion_zone(region);
     auto calls = call_variants(call_region, candidates, reads, read_templates, haplotype_generator, progress_meter);

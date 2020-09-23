@@ -118,7 +118,7 @@ private:
     ExecutionPolicy execution_policy_;
     std::reference_wrapper<const ReferenceGenome> reference_;
     std::vector<unsigned> default_kmer_sizes_, fallback_kmer_sizes_;
-    ReadBufferMap read_buffer_;
+    mutable ReadBufferMap read_buffer_;
     GenomicRegion::Size max_bin_size_, max_bin_overlap_;
     AlignedRead::BaseQuality mask_threshold_;
     unsigned min_kmer_observations_;

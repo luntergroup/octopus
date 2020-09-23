@@ -326,6 +326,9 @@ std::vector<Variant> LocalReassembler::do_generate(const RegionSet& regions) con
 {
     BinList bins {};
     SequenceBuffer masked_sequence_buffer {};
+    for (auto& p : read_buffer_) {
+        std::sort(std::begin(p.second), std::end(p.second));
+    }
     for (const auto& region : regions) {
         prepare_bins(region, bins);
         for (const auto& p : read_buffer_) {

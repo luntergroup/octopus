@@ -92,6 +92,11 @@ const CigarString& AlignedRead::cigar() const noexcept
     return cigar_;
 }
 
+CigarString& AlignedRead::cigar() noexcept
+{
+    return cigar_;
+}
+
 AlignedRead::Direction AlignedRead::direction() const noexcept
 {
     return is_marked_reverse_mapped() ? Direction::reverse : Direction::forward;
@@ -521,7 +526,7 @@ std::vector<AlignedRead> split(const AlignedRead& read, const GenomicRegion::Siz
         // Edge deletions appear at tail and head of adjacent chunks
         if (is_deletion(chunk_cigar.back())) chunk_cigar.pop_back();
         const auto chunk_reference_length = reference_size(chunk_cigar);
-        if (chunk_reference_length == 0) continue;
+        //if (chunk_reference_length == 0) continue;
         auto chunk_sequence = copy_subsequence(read.sequence(), sequence_offset, chunk_length);
         auto chunk_base_quals = copy_subsequence(read.base_qualities(), sequence_offset, chunk_length);
         auto chunk_name = read.name();

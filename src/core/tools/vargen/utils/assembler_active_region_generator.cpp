@@ -70,6 +70,11 @@ void AssemblerActiveRegionGenerator::add(const SampleName& sample, const Aligned
     }
 }
 
+void AssemblerActiveRegionGenerator::add(const SampleName& sample, const AlignedTemplate& reads)
+{
+    for (const auto& read : reads) add(sample, read);
+}
+
 template <typename Container>
 void log_each(Container& values)
 {
