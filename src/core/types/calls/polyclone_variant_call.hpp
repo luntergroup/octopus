@@ -48,6 +48,7 @@ private:
     boost::optional<HaplotypeFrequencyStatsVector> haplotype_frequency_stats_;
 
     virtual std::unique_ptr<Call> do_clone() const override;
+    virtual void reorder_genotype_fields(const SampleName& sample, const std::vector<unsigned>& order) override;
 };
 
 template <typename V, typename T>
