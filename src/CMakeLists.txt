@@ -365,10 +365,8 @@ set(CORE_SOURCES
     core/csr/measures/mismatch_fraction.cpp
     core/csr/measures/is_refcall.hpp
     core/csr/measures/is_refcall.cpp
-    core/csr/measures/normal_contamination.hpp
-    core/csr/measures/normal_contamination.cpp
-    core/csr/measures/denovo_contamination.hpp
-    core/csr/measures/denovo_contamination.cpp
+    core/csr/measures/contamination.hpp
+    core/csr/measures/contamination.cpp
     core/csr/measures/read_side_bias.hpp
     core/csr/measures/read_side_bias.cpp
     core/csr/measures/alt_allele_count.hpp
