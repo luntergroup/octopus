@@ -16,14 +16,12 @@
 #include "core/types/genotype.hpp"
 #include "core/tools/read_assigner.hpp"
 #include "io/variant/vcf_record.hpp"
-#include "utils/genotype_reader.hpp"
 #include "utils/append.hpp"
 #include "is_somatic.hpp"
 #include "../facets/samples.hpp"
 #include "../facets/alleles.hpp"
 #include "../facets/genotypes.hpp"
 #include "../facets/overlapping_reads.hpp"
-#include "../facets/pedigree.hpp"
 
 namespace octopus { namespace csr {
 
