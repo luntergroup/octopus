@@ -748,6 +748,10 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<std::vector<std::string>>()->multitoken()->implicit_value(std::vector<std::string> {"active"}, "active")->composing(),
      "Annotations to write to final VCF")
     
+     ("aggregate-annotations",
+     po::bool_switch()->default_value(false),
+     "Aggregate all multi-value annotations into a single value")
+    
     ("filter-vcf",
      po::value<fs::path>(),
      "Filter the given Octopus VCF without calling")

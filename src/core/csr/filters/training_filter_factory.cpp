@@ -59,9 +59,7 @@ std::unique_ptr<VariantCallFilter> TrainingFilterFactory::do_make(FacetFactory f
     output_config.annotations.clear();
     output_config.annotations.reserve(measures_.size());
     for (const auto& measure : measures_) output_config.annotations.insert(measure.name());
-    output_config.clear_info = true;
     output_config.clear_existing_filters = true;
-    output_config.aggregate_allele_annotations = true;
     return std::make_unique<PassingVariantCallFilter>(std::move(facet_factory), std::move(measures_),
                                                       output_config, threading, progress);
 }
