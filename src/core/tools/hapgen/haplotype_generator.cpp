@@ -672,12 +672,14 @@ auto extract_indicator_alleles(std::vector<GenomicRegion> indicator_blocks, cons
         return indicator_blocks;
     } else {
         auto proposed = merge(std::move(indicator_blocks), std::move(exclusion_zones));
+        assert(!proposed.empty());
         if (!ends_before(indicator_blocks.back(), proposed.back())) {
             return proposed;
         }
         // Check the proposed 'exclusion zone' does not split a downstream mutually exclusive allele block.
         const auto unchecked_region = right_overhang_region(proposed.back(), indicator_blocks.back());
         const auto unchecked_alleles = overlap_range(alleles, unchecked_region);
+        if (empty(unchecked_alleles)) return proposed;
         const auto unchecked_allele_blocks = extract_mutually_exclusive_regions(unchecked_alleles);
         if (ends_before(proposed.back(), unchecked_allele_blocks.back())) {
             return indicator_blocks;
