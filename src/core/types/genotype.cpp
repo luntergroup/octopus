@@ -21,7 +21,7 @@ Genotype<Haplotype> remap(const Genotype<Haplotype>& genotype, const GenomicRegi
 
 std::size_t num_genotypes(const unsigned num_elements, const unsigned ploidy)
 {
-    return boost::math::binomial_coefficient<double>(num_elements + ploidy - 1, num_elements - 1);
+    return boost::math::binomial_coefficient<double>(num_elements + ploidy - 1, ploidy);
 }
 
 boost::optional<std::size_t> num_genotypes_noexcept(const unsigned num_elements, const unsigned ploidy) noexcept
