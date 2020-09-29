@@ -43,7 +43,7 @@ Consult the [command line reference](https://github.com/luntergroup/octopus/wiki
 * A C++14 compiler with SSE2 support
 * A C++14 standard library implementation
 * Git 2.5 or greater
-* Boost 1.65 or greater
+* Boost 1.74 or greater
 * htslib 1.4 or greater
 * GMP 5.1.0 or greater
 * CMake 3.9 or greater
