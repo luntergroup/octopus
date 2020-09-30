@@ -199,7 +199,7 @@ void CigarScanner::add_read(const SampleName& sample, const AlignedRead& read,
 
 bool have_split_insertion(const AlignedRead& lhs, const AlignedRead& rhs)
 {
-    return are_adjacent(lhs, rhs) && is_insertion(lhs.cigar().back()) && is_insertion(rhs.cigar().front());
+    return are_adjacent(lhs, rhs) && is_insertion(lhs.cigar().back()) && is_insertion(rhs.cigar().front()) && rhs.cigar().size() == 1;
 }
 
 void CigarScanner::add_template(const SampleName& sample, const AlignedTemplate& reads,
@@ -207,37 +207,44 @@ void CigarScanner::add_template(const SampleName& sample, const AlignedTemplate&
                                 CoverageTracker<GenomicRegion>& forward_strand_coverage_tracker)
 {
     for (auto read_itr = std::cbegin(reads); read_itr != std::cend(reads);) {
-        auto next_read_itr = std::next(read_itr);
-        while (next_read_itr != std::cend(reads) && have_split_insertion(*std::prev(next_read_itr), *next_read_itr)) {
-            ++next_read_itr;
-        }
-        if (std::next(read_itr) != next_read_itr) {
-            AlignedRead extended_read {*read_itr};
-            std::for_each(std::next(read_itr), std::prev(next_read_itr), [&] (const auto& read) {
+        const static auto has_tail_insertion = [] (const AlignedRead& read) { return is_insertion(read.cigar().back()); };
+        const static auto is_all_insertion = [] (const AlignedRead& read) { return read.cigar().size() == 1 && is_insertion(read.cigar().front()); };
+        const static auto has_head_insertion = [] (const AlignedRead& read) { return is_insertion(read.cigar().front()); };
+        const auto split_insertion_begin_itr = std::find_if(read_itr, std::cend(reads), has_tail_insertion);
+        std::for_each(read_itr, split_insertion_begin_itr, [&] (const auto& read) {
+            add_read(sample, read, coverage_tracker, forward_strand_coverage_tracker);
+        });
+        if (split_insertion_begin_itr != std::cend(reads)) {
+            auto split_insertion_end_itr = std::find_if_not(std::next(split_insertion_begin_itr), std::cend(reads), is_all_insertion);   
+            AlignedRead extended_read {*split_insertion_begin_itr};
+            std::for_each(std::next(split_insertion_begin_itr), split_insertion_end_itr, [&] (const auto& read) {
                 assert(read.cigar().size() == 1);
                 utils::append(read.sequence(), extended_read.sequence());
                 utils::append(read.base_qualities(), extended_read.base_qualities());
                 extended_read.cigar().back().set_size(extended_read.cigar().back().size() + read.cigar().front().size());
             });
-            AlignedRead chopped_read {*std::prev(next_read_itr)};
-            const auto chop_length = chopped_read.cigar().front().size();
-            extended_read.cigar().back().set_size(extended_read.cigar().back().size() + chop_length);
-            chopped_read.cigar().erase(std::cbegin(chopped_read.cigar()));
-            extended_read.sequence().insert(std::cend(extended_read.sequence()), std::cbegin(chopped_read.sequence()), std::next(std::cbegin(chopped_read.sequence()), chop_length));
-            chopped_read.sequence().erase(std::cbegin(chopped_read.sequence()), std::next(std::cbegin(chopped_read.sequence()), chop_length));
-            extended_read.base_qualities().insert(std::cend(extended_read.base_qualities()), std::cbegin(chopped_read.base_qualities()), std::next(std::cbegin(chopped_read.base_qualities()), chop_length));
-            chopped_read.base_qualities().erase(std::cbegin(chopped_read.base_qualities()), std::next(std::cbegin(chopped_read.base_qualities()), chop_length));
-            artificial_read_buffer_.push_back(std::move(extended_read));
-            add_read(sample, artificial_read_buffer_.back(), coverage_tracker, forward_strand_coverage_tracker);
-            artificial_read_buffer_.push_back(std::move(chopped_read));
-            add_read(sample, artificial_read_buffer_.back(), coverage_tracker, forward_strand_coverage_tracker);
+            if (split_insertion_end_itr != std::cend(reads) && has_head_insertion(*split_insertion_end_itr)) {
+                AlignedRead chopped_read {*split_insertion_end_itr};
+                ++split_insertion_end_itr;
+                const auto chop_length = chopped_read.cigar().front().size();
+                extended_read.cigar().back().set_size(extended_read.cigar().back().size() + chop_length);
+                chopped_read.cigar().erase(std::cbegin(chopped_read.cigar()));
+                extended_read.sequence().insert(std::cend(extended_read.sequence()), std::cbegin(chopped_read.sequence()), std::next(std::cbegin(chopped_read.sequence()), chop_length));
+                chopped_read.sequence().erase(std::cbegin(chopped_read.sequence()), std::next(std::cbegin(chopped_read.sequence()), chop_length));
+                extended_read.base_qualities().insert(std::cend(extended_read.base_qualities()), std::cbegin(chopped_read.base_qualities()), std::next(std::cbegin(chopped_read.base_qualities()), chop_length));
+                chopped_read.base_qualities().erase(std::cbegin(chopped_read.base_qualities()), std::next(std::cbegin(chopped_read.base_qualities()), chop_length));
+                artificial_read_buffer_.push_back(std::move(extended_read));
+                add_read(sample, artificial_read_buffer_.back(), coverage_tracker, forward_strand_coverage_tracker);
+                artificial_read_buffer_.push_back(std::move(chopped_read));
+                add_read(sample, artificial_read_buffer_.back(), coverage_tracker, forward_strand_coverage_tracker);
+            } else {
+                artificial_read_buffer_.push_back(std::move(extended_read));
+                add_read(sample, artificial_read_buffer_.back(), coverage_tracker, forward_strand_coverage_tracker);
+            }
+            read_itr = split_insertion_end_itr;
         } else {
-            add_read(sample, *read_itr, coverage_tracker, forward_strand_coverage_tracker);
+            break;
         }
-        read_itr = next_read_itr;
-    }
-    for (const auto& read : reads) {
-        add_read(sample, read, coverage_tracker, forward_strand_coverage_tracker);
     }
 }
 
