@@ -263,8 +263,8 @@ int max_indel_size(const CigarString& cigar) noexcept
 std::pair<CigarOperation::Size, CigarOperation::Size>
 get_soft_clipped_sizes(const CigarString& cigar) noexcept
 {
-    return std::make_pair((is_front_soft_clipped(cigar)) ? cigar.front().size() : 0,
-                          (is_back_soft_clipped(cigar)) ? cigar.back().size() : 0);
+    return std::make_pair(is_front_soft_clipped(cigar) ? cigar.front().size() : 0,
+                          cigar.size() > 1 && is_back_soft_clipped(cigar) ? cigar.back().size() : 0);
 }
 
 // non-member functions
