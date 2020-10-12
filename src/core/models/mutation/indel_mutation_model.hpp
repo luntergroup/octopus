@@ -7,6 +7,7 @@
 #include <vector>
 #include <cstdint>
 
+#include "basics/tandem_repeat.hpp"
 #include "core/types/haplotype.hpp"
 #include "core/types/variant.hpp"
 
@@ -43,6 +44,7 @@ public:
     ~IndelMutationModel() = default;
     
     ContextIndelModel evaluate(const Haplotype& haplotype) const;
+    ContextIndelModel evaluate(const Haplotype& haplotype, std::vector<TandemRepeat>& repeats) const;
     
 private:
     struct ModelCell
@@ -57,6 +59,7 @@ private:
 };
 
 IndelMutationModel::ContextIndelModel make_indel_model(const Haplotype& context, IndelMutationModel::Parameters params);
+IndelMutationModel::ContextIndelModel make_indel_model(const Haplotype& context, IndelMutationModel::Parameters params, std::vector<TandemRepeat>& repeats);
 
 IndelMutationModel::Probability
 calculate_indel_probability(const IndelMutationModel::ContextIndelModel& model, std::size_t pos, std::size_t length) noexcept;

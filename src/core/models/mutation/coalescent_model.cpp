@@ -12,13 +12,15 @@
 #include <boost/math/special_functions/binomial.hpp>
 
 #include "utils/maths.hpp"
+#include "utils/mappable_algorithms.hpp"
 
 namespace octopus {
 
 CoalescentModel::CoalescentModel(Haplotype reference, Parameters params,
                                  std::size_t num_haplotyes_hint, CachingStrategy caching)
 : reference_ {std::move(reference)}
-, indel_heterozygosity_model_ {make_indel_model(reference_, {params.indel_heterozygosity})}
+, reference_repeats_ {}
+, indel_heterozygosity_model_ {make_indel_model(reference_, {params.indel_heterozygosity}, reference_repeats_)}
 , params_ {params}
 , haplotypes_ {}
 , caching_ {caching}
@@ -172,10 +174,7 @@ auto coalescent(const unsigned n,
     for (std::size_t i {0}; i < N; ++i) {
         result += k[i] * std::log(theta[i] / theta_tot);
     }
-    std::array<RealType, N + 1> ks {};
-    std::copy(std::cbegin(k), std::end(k), std::begin(ks));
-    ks.back() = n - k_tot;
-    result += maths::log_multinomial_coefficient(k_tot, ks);
+    result += maths::log_multinomial_coefficient<RealType>(k);
     return result;
 }
 
@@ -183,16 +182,20 @@ auto coalescent(const unsigned n,
 
 CoalescentModel::LogProbability CoalescentModel::evaluate(const SegregatingSiteCounts& counts) const
 {
-    if (counts.indels == 0) {
+    if (counts.repeat_indels + counts.complex_indels == 0) {
         return evaluate_no_indels(counts.snps, counts.haplotypes);
     } else {
-        const auto indel_heterozygosity = calculate_buffered_indel_heterozygosity();
-        SegregatingSiteCountsWithIndelHeterozygosities sites {counts, maths::round_sf(indel_heterozygosity, 6)};
+        const auto indel_heterozygosities = calculate_buffered_indel_heterozygosities();
+        const auto repeat_indel_heterozygosity = maths::round_sf(indel_heterozygosities.second, 6);
+        const auto complex_indel_heterozygosity = maths::round_sf(indel_heterozygosities.first, 6);
+        SegregatingSiteCountsWithIndelHeterozygosities sites {counts, repeat_indel_heterozygosity, complex_indel_heterozygosity};
         auto itr = k_indel_pos_result_cache_.find(sites);
         if (itr != std::cend(k_indel_pos_result_cache_)) {
             return itr->second;
         }
-        const auto result = coalescent(counts.haplotypes, counts.snps, counts.indels, params_.snp_heterozygosity, indel_heterozygosity);
+        const std::array<unsigned, 3> site_counts {counts.snps, counts.repeat_indels, counts.complex_indels};
+        const std::array<double, 3> site_heterozygosities {params_.snp_heterozygosity, repeat_indel_heterozygosity, complex_indel_heterozygosity};
+        const auto result = coalescent(counts.haplotypes, site_counts, site_heterozygosities);
         k_indel_pos_result_cache_.emplace(sites, result);
         return result;
     }
@@ -277,18 +280,32 @@ CoalescentModel::SegregatingSiteCounts CoalescentModel::count_segregating_sites(
 
 CoalescentModel::SegregatingSiteCounts CoalescentModel::count_segregating_sites_in_buffer(const unsigned num_haplotypes) const
 {
-    const static auto is_indel_helper = [] (const auto& v) noexcept { return is_indel(v); };
-    const auto num_indels = static_cast<unsigned>(std::count_if(std::cbegin(site_buffer1_), std::cend(site_buffer1_), is_indel_helper));
+    unsigned repeat_indels {0}, complex_indels {0};
+    for (const auto& site : site_buffer1_) {
+        if (is_indel(site)) {
+            if (has_overlapped(reference_repeats_, site.get())) {
+                ++repeat_indels;
+            } else {
+                ++complex_indels;
+            }
+        }
+    }
+    const auto num_indels = repeat_indels + complex_indels;
     const auto num_snps = static_cast<unsigned>(site_buffer1_.size()) - num_indels;
-    return {num_haplotypes + 1, num_snps, num_indels};
+    return {num_haplotypes + 1, num_snps, repeat_indels, complex_indels};
 }
 
-double CoalescentModel::calculate_buffered_indel_heterozygosity() const
+std::pair<double, double> CoalescentModel::calculate_buffered_indel_heterozygosities() const
 {
-    boost::optional<double> max_heterozygosity {};
+    boost::optional<double> min_heterozygosity {}, max_heterozygosity {};
     for (const auto& site : site_buffer1_) {
         if (is_indel(site)) {
             auto site_heterozygosity = calculate_heterozygosity(site);
+            if (min_heterozygosity) {
+                min_heterozygosity = std::min(*min_heterozygosity, site_heterozygosity);
+            } else {
+                min_heterozygosity = site_heterozygosity;
+            }
             if (max_heterozygosity) {
                 max_heterozygosity = std::max(*max_heterozygosity, site_heterozygosity);
             } else {
@@ -296,7 +313,9 @@ double CoalescentModel::calculate_buffered_indel_heterozygosity() const
             }
         }
     }
-    return max_heterozygosity ? *max_heterozygosity : params_.indel_heterozygosity;
+    if (!min_heterozygosity) min_heterozygosity = params_.indel_heterozygosity;
+    if (!max_heterozygosity) max_heterozygosity = params_.indel_heterozygosity;
+    return std::make_pair(*min_heterozygosity, *max_heterozygosity);
 }
 
 double CoalescentModel::calculate_heterozygosity(const Variant& indel) const
@@ -335,12 +354,12 @@ bool CoalescentProbabilityGreater::operator()(const Haplotype& lhs, const Haplot
 
 bool operator==(const CoalescentModel::SegregatingSiteCounts& lhs, const CoalescentModel::SegregatingSiteCounts& rhs) noexcept
 {
-    return lhs.haplotypes == rhs.haplotypes && lhs.snps == rhs.snps && lhs.indels == rhs.indels;
+    return lhs.haplotypes == rhs.haplotypes && lhs.snps == rhs.snps && lhs.repeat_indels == rhs.repeat_indels && lhs.complex_indels == rhs.complex_indels;
 }
 
 std::size_t CoalescentModel::SegregatingSiteCountsHash::operator()(const SegregatingSiteCounts& counts) const noexcept
 {
-    return boost::hash_value(std::make_tuple(counts.haplotypes, counts.snps, counts.indels));
+    return boost::hash_value(std::make_tuple(counts.haplotypes, counts.snps, counts.repeat_indels, counts.complex_indels));
 }
 
 std::size_t CoalescentModel::SegregatingSiteCountsWithIndelHeterozygositiesHash::operator()(const SegregatingSiteCountsWithIndelHeterozygosities& sites) const noexcept
@@ -348,13 +367,14 @@ std::size_t CoalescentModel::SegregatingSiteCountsWithIndelHeterozygositiesHash:
     using boost::hash_combine;
     std::size_t result {};
     hash_combine(result, SegregatingSiteCountsHash{}(sites.counts));
-    hash_combine(result, std::hash<decltype(sites.heterozygosity)>()(sites.heterozygosity));
+    hash_combine(result, std::hash<decltype(sites.repeat_heterozygosity)>()(sites.repeat_heterozygosity));
+    hash_combine(result, std::hash<decltype(sites.complex_heterozygosity)>()(sites.complex_heterozygosity));
     return result;
 }
 
 bool CoalescentModel::SegregatingSiteCountsWithIndelHeterozygositiesEqual::operator()(const SegregatingSiteCountsWithIndelHeterozygosities& lhs, const SegregatingSiteCountsWithIndelHeterozygosities& rhs) const noexcept
 {
-    return lhs.counts == rhs.counts && lhs.heterozygosity == rhs.heterozygosity;
+    return lhs.counts == rhs.counts && lhs.repeat_heterozygosity == rhs.repeat_heterozygosity && lhs.complex_heterozygosity == rhs.complex_heterozygosity;
 }
 
 } // namespace octopus

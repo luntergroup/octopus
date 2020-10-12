@@ -20,6 +20,7 @@
 #include <boost/optional.hpp>
 
 #include "concepts/indexed.hpp"
+#include "basics/tandem_repeat.hpp"
 #include "core/types/haplotype.hpp"
 #include "core/types/variant.hpp"
 #include "containers/mappable_block.hpp"
@@ -72,12 +73,12 @@ private:
     {
         unsigned haplotypes;
         unsigned snps;
-        unsigned indels;
+        unsigned repeat_indels, complex_indels;
     };
     struct SegregatingSiteCountsWithIndelHeterozygosities
     {
         SegregatingSiteCounts counts;
-        double heterozygosity;
+        double repeat_heterozygosity, complex_heterozygosity;
     };
     struct SegregatingSiteCountsHash
     {
@@ -101,8 +102,8 @@ private:
     
     friend bool operator==(const SegregatingSiteCounts& lhs, const SegregatingSiteCounts& rhs) noexcept;
 
-    
     Haplotype reference_;
+    std::vector<TandemRepeat> reference_repeats_;
     IndelMutationModel::ContextIndelModel indel_heterozygosity_model_;
     Parameters params_;
     MappableBlock<Haplotype> haplotypes_;
@@ -130,7 +131,7 @@ private:
     SegregatingSiteCounts count_segregating_sites(const Haplotype& haplotype) const;
     template <typename Container> SegregatingSiteCounts count_segregating_sites(const Container& haplotypes) const;
     SegregatingSiteCounts count_segregating_sites_in_buffer(unsigned num_haplotypes) const;
-    double calculate_buffered_indel_heterozygosity() const;
+    std::pair<double, double> calculate_buffered_indel_heterozygosities() const;
     double calculate_heterozygosity(const Variant& indel) const;
 };
 

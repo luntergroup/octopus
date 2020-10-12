@@ -494,15 +494,6 @@ RealType log_binomial_coefficient(const IntegerType n, const IntegerType k)
     return log_factorial<RealType>(n) - (log_factorial<RealType>(k) + log_factorial<RealType>(n - k));
 }
 
-template <typename RealType, typename IntegerType, std::size_t N,
-          typename = std::enable_if_t<std::is_integral<IntegerType>::value>,
-          typename = std::enable_if_t<std::is_floating_point<RealType>::value>>
-RealType log_multinomial_coefficient(const std::array<IntegerType, N>& n, const std::array<IntegerType, N>& k)
-{
-    return log_factorial<RealType>(n) 
-        - std::accumulate(std::cbegin(k), std::cend(k), RealType {0}, [] (auto total, auto k) { return total + log_factorial<RealType>(k); });
-}
-
 template <typename IntegerType, typename RealType = double,
           typename = std::enable_if_t<std::is_integral<IntegerType>::value>,
           typename = std::enable_if_t<std::is_floating_point<RealType>::value>>
@@ -686,24 +677,19 @@ auto dirichlet_entropy(const Range& values)
     return dirichlet_entropy(std::cbegin(values), std::cend(values));
 }
 
-template <typename RealType, typename IntegerType>
-inline RealType log_multinomial_coefficient(std::initializer_list<IntegerType> il)
-{
-    using std::begin; using std::end; using std::cbegin; using std::cend; using std::accumulate;
-    std::vector<RealType> denoms(il.size());
-    std::transform(cbegin(il), cend(il), begin(denoms), log_factorial<RealType, IntegerType>);
-    return log_factorial<RealType>(accumulate(cbegin(il), cend(il), 0))
-            - accumulate(cbegin(denoms), cend(denoms), RealType {0});
-}
-
 template <typename RealType, typename Iterator>
 inline RealType log_multinomial_coefficient(Iterator first, Iterator last)
 {
-    using IntegerType = typename Iterator::value_type;
-    std::vector<RealType> denoms(std::distance(first, last));
-    std::transform(first, last, std::begin(denoms), log_factorial<RealType, IntegerType>);
-    return log_factorial<RealType, IntegerType>(std::accumulate(first, last, IntegerType {0}))
-            - std::accumulate(std::cbegin(denoms), std::cend(denoms), RealType {0});
+    using IntegerType = typename std::iterator_traits<Iterator>::value_type;
+    return log_factorial<RealType>(std::accumulate(first, last, IntegerType {0}))
+        - std::accumulate(first, last, RealType {0}, [] (auto total, IntegerType x) { 
+            return total + log_factorial<RealType>(x); });
+}
+
+template <typename RealType, typename IntegerType>
+inline RealType log_multinomial_coefficient(std::initializer_list<IntegerType> il)
+{
+    return log_multinomial_coefficient(std::cbegin(il), std::cend(il));
 }
 
 template <typename RealType, typename Container>
