@@ -481,9 +481,26 @@ auto entropy10(const Range& values)
 template <typename RealType, typename IntegerType,
           typename = std::enable_if_t<std::is_integral<IntegerType>::value>,
           typename = std::enable_if_t<std::is_floating_point<RealType>::value>>
+RealType binomial_coefficient(const IntegerType n, const IntegerType k)
+{
+    return boost::math::binomial_coefficient<RealType>(n, k);
+}
+
+template <typename RealType, typename IntegerType,
+          typename = std::enable_if_t<std::is_integral<IntegerType>::value>,
+          typename = std::enable_if_t<std::is_floating_point<RealType>::value>>
 RealType log_binomial_coefficient(const IntegerType n, const IntegerType k)
 {
     return log_factorial<RealType>(n) - (log_factorial<RealType>(k) + log_factorial<RealType>(n - k));
+}
+
+template <typename RealType, typename IntegerType, std::size_t N,
+          typename = std::enable_if_t<std::is_integral<IntegerType>::value>,
+          typename = std::enable_if_t<std::is_floating_point<RealType>::value>>
+RealType log_multinomial_coefficient(const std::array<IntegerType, N>& n, const std::array<IntegerType, N>& k)
+{
+    return log_factorial<RealType>(n) 
+        - std::accumulate(std::cbegin(k), std::cend(k), RealType {0}, [] (auto total, auto k) { return total + log_factorial<RealType>(k); });
 }
 
 template <typename IntegerType, typename RealType = double,
