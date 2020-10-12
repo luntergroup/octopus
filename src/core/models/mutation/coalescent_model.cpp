@@ -94,24 +94,12 @@ auto powm1(const unsigned i) noexcept // std::pow(-1, i)
     return (i % 2 == 0) ? 1 : -1;
 }
 
-auto binom(const unsigned n, const unsigned k)
+template <typename RealType>
+auto coalescent_real_space(const unsigned n, const unsigned k, const RealType theta)
 {
-    return boost::math::binomial_coefficient<CoalescentModel::LogProbability>(n, k);
-}
-
-auto log_binom(const unsigned n, const unsigned k)
-{
-    using T = CoalescentModel::LogProbability;
-    using maths::log_factorial;
-    return log_factorial<T>(n) - (log_factorial<T>(k) + log_factorial<T>(n - k));
-}
-
-template <typename T>
-auto coalescent_real_space(const unsigned n, const unsigned k, const T theta)
-{
-    T result {0};
+    RealType result {0};
     for (unsigned i {2}; i <= n; ++i) {
-        result += powm1(i) * binom(n - 1, i - 1) * ((i - 1) / (theta + i - 1)) * std::pow(theta / (theta + i - 1), k);
+        result += powm1(i) * maths::binomial_coefficient<RealType>(n - 1, i - 1) * ((i - 1) / (theta + i - 1)) * std::pow(theta / (theta + i - 1), k);
     }
     return std::log(result);
 }
@@ -132,22 +120,22 @@ auto complex_log_sum_exp(const Container& logs)
     return complex_log_sum_exp(std::cbegin(logs), std::cend(logs));
 }
 
-template <typename T>
-auto coalescent_log_space(const unsigned n, const unsigned k, const T theta)
+template <typename RealType>
+auto coalescent_log_space(const unsigned n, const unsigned k, const RealType theta)
 {
-    std::vector<std::complex<T>> tmp(n - 1, std::log(std::complex<T> {-1}));
+    std::vector<std::complex<RealType>> tmp(n - 1, std::log(std::complex<RealType> {-1}));
     for (unsigned i {2}; i <= n; ++i) {
         auto& cur = tmp[i - 2];
         cur *= i;
-        cur += log_binom(n - 1, i - 1);
+        cur += maths::log_binomial_coefficient<RealType>(n - 1, i - 1);
         cur += std::log((i - 1) / (theta + i - 1));
         cur += k * std::log(theta / (theta + i - 1));
     }
     return complex_log_sum_exp(tmp).real();
 }
 
-template <typename T>
-auto coalescent(const unsigned n, const unsigned k, const T theta)
+template <typename RealType>
+auto coalescent(const unsigned n, const unsigned k, const RealType theta)
 {
     if (n < 30 && k <= 80) {
         auto result = coalescent_real_space(n, k, theta);
@@ -160,16 +148,34 @@ auto coalescent(const unsigned n, const unsigned k, const T theta)
     }
 }
 
-template <typename T>
+template <typename RealType>
 auto coalescent(const unsigned n, const unsigned k_snp, const unsigned k_indel,
-                const T theta_snp, const T theta_indel)
+                const RealType theta_snp, const RealType theta_indel)
 {
     const auto theta = theta_snp + theta_indel;
     const auto k_tot = k_snp + k_indel;
     auto result = coalescent(n, k_tot, theta);
     result += k_snp * std::log(theta_snp / theta);
     result += k_indel * std::log(theta_indel / theta);
-    result += log_binom(k_tot, k_snp);
+    result += maths::log_binomial_coefficient<RealType>(k_tot, k_snp);
+    return result;
+}
+
+template <typename RealType, std::size_t N>
+auto coalescent(const unsigned n, 
+                const std::array<unsigned, N>& k,
+                const std::array<RealType, N>& theta)
+{
+    const auto theta_tot = std::accumulate(std::cbegin(theta), std::cend(theta), RealType {0});
+    const auto k_tot = std::accumulate(std::cbegin(k), std::cend(k), 0u);
+    auto result = coalescent(n, k_tot, theta_tot);
+    for (std::size_t i {0}; i < N; ++i) {
+        result += k[i] * std::log(theta[i] / theta_tot);
+    }
+    std::array<RealType, N + 1> ks {};
+    std::copy(std::cbegin(k), std::end(k), std::begin(ks));
+    ks.back() = n - k_tot;
+    result += maths::log_multinomial_coefficient(k_tot, ks);
     return result;
 }
 
