@@ -723,15 +723,15 @@ OptionMap parse_options(const int argc, const char** argv)
      "Disable call filtering")
     
     ("filter-expression",
-     po::value<std::string>()->default_value("QUAL < 10 | MQ < 10 | MP < 10 | AD < 1 | AF < 0.01 | AFB > 0.25 | SB > 0.98 | BQ < 15 | DP < 1"),
+     po::value<std::string>()->default_value("QUAL < 10 | MQ < 10 | MP < 10 | AD < 1 | AF < 0.01 | AFB > 0.25 | SB > 0.98 | BQ < 15 | DP < 1 | ADP < 1"),
      "Boolean expression to use to filter variant calls")
     
     ("somatic-filter-expression",
-     po::value<std::string>()->default_value("QUAL < 2 | GQ < 20 | MQ < 30 | SMQ < 40 | SB > 0.9 | SD > 0.9 | BQ < 20 | DP < 3 | MF > 0.2 | NC > 1 | FRF > 0.5 | AD < 1 | AF < 0.0001"),
+     po::value<std::string>()->default_value("QUAL < 2 | GQ < 20 | MQ < 30 | SMQ < 40 | SB > 0.9 | SD > 0.9 | BQ < 20 | DP < 3 | ADP < 1 | MF > 0.2 | NC > 1 | FRF > 0.5 | AD < 1 | AF < 0.0001"),
      "Boolean expression to use to filter somatic variant calls")
     
     ("denovo-filter-expression",
-     po::value<std::string>()->default_value("QUAL < 50 | PP < 40 | GQ < 20 | MQ < 30 | AD < 1 | AF < 0.1 | AFB > 0.2 | SB > 0.95 | BQ < 20 | DP < 10 | DC > 1 | MF > 0.2 | FRF > 0.5 | MP < 30 | MQ0 > 2"),
+     po::value<std::string>()->default_value("QUAL < 50 | PP < 40 | GQ < 20 | MQ < 30 | AD < 1 | AF < 0.1 | AFB > 0.2 | SB > 0.95 | BQ < 20 | DP < 10 | ADP < 1 | DC > 1 | MF > 0.2 | FRF > 0.5 | MP < 30 | MQ0 > 2"),
      "Boolean expression to use to filter somatic variant calls")
     
     ("refcall-filter-expression",
