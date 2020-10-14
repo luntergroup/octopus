@@ -142,22 +142,11 @@ make_allele(const VcfRecord& call, VcfRecord::NucleotideSequence allele_sequence
         auto region = get_region(call, RegionType {});
         if (is_delete_masked(allele_sequence)) {
             allele_sequence.clear();
-            region = head_region(region);
-            // const bool consider_upstream {upstream_defined_region && overlaps(region, *upstream_defined_region)};
-            // const bool consider_downstream {downstream_defined_region && overlaps(region, *downstream_defined_region)};
-            // if (consider_upstream || consider_downstream) {
-            //     if (consider_upstream) region = right_overhang_region(region, *upstream_defined_region);
-            //     if (consider_downstream) region = left_overhang_region(region, *downstream_defined_region);
-            //     if (is_empty(region)) {
-            //         allele_sequence.clear();
-            //     } else {
-            //         const auto base_itr = std::next(std::cbegin(call.ref()), left_overhang_size(get_region(call, RegionType {}), region));
-            //         allele_sequence.assign(base_itr, std::next(base_itr, size(region)));
-            //     }
-            // } else {
-            //     allele_sequence.clear();
-            //     region = head_region(region);
-            // }
+            if (upstream_defined_region && overlaps(region, *upstream_defined_region)) {
+                region = tail_region(*upstream_defined_region);
+            } else {
+                region = head_region(region);
+            }
         } else if (allele_sequence == call.ref()) {
             if (upstream_defined_region && overlaps(region, *upstream_defined_region)) {
                 const auto num_upstream_defined_bases = static_cast<std::size_t>(overlap_size(region, *upstream_defined_region));
