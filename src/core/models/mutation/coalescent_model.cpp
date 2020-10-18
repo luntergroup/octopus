@@ -12,13 +12,15 @@
 #include <boost/math/special_functions/binomial.hpp>
 
 #include "utils/maths.hpp"
+#include "utils/mappable_algorithms.hpp"
 
 namespace octopus {
 
 CoalescentModel::CoalescentModel(Haplotype reference, Parameters params,
                                  std::size_t num_haplotyes_hint, CachingStrategy caching)
 : reference_ {std::move(reference)}
-, indel_heterozygosity_model_ {make_indel_model(reference_, {params.indel_heterozygosity})}
+, reference_repeats_ {}
+, indel_heterozygosity_model_ {make_indel_model(reference_, {params.indel_heterozygosity}, reference_repeats_)}
 , params_ {params}
 , haplotypes_ {}
 , caching_ {caching}
@@ -94,24 +96,12 @@ auto powm1(const unsigned i) noexcept // std::pow(-1, i)
     return (i % 2 == 0) ? 1 : -1;
 }
 
-auto binom(const unsigned n, const unsigned k)
+template <typename RealType>
+auto coalescent_real_space(const unsigned n, const unsigned k, const RealType theta)
 {
-    return boost::math::binomial_coefficient<CoalescentModel::LogProbability>(n, k);
-}
-
-auto log_binom(const unsigned n, const unsigned k)
-{
-    using T = CoalescentModel::LogProbability;
-    using maths::log_factorial;
-    return log_factorial<T>(n) - (log_factorial<T>(k) + log_factorial<T>(n - k));
-}
-
-template <typename T>
-auto coalescent_real_space(const unsigned n, const unsigned k, const T theta)
-{
-    T result {0};
+    RealType result {0};
     for (unsigned i {2}; i <= n; ++i) {
-        result += powm1(i) * binom(n - 1, i - 1) * ((i - 1) / (theta + i - 1)) * std::pow(theta / (theta + i - 1), k);
+        result += powm1(i) * maths::binomial_coefficient<RealType>(n - 1, i - 1) * ((i - 1) / (theta + i - 1)) * std::pow(theta / (theta + i - 1), k);
     }
     return std::log(result);
 }
@@ -132,22 +122,22 @@ auto complex_log_sum_exp(const Container& logs)
     return complex_log_sum_exp(std::cbegin(logs), std::cend(logs));
 }
 
-template <typename T>
-auto coalescent_log_space(const unsigned n, const unsigned k, const T theta)
+template <typename RealType>
+auto coalescent_log_space(const unsigned n, const unsigned k, const RealType theta)
 {
-    std::vector<std::complex<T>> tmp(n - 1, std::log(std::complex<T> {-1}));
+    std::vector<std::complex<RealType>> tmp(n - 1, std::log(std::complex<RealType> {-1}));
     for (unsigned i {2}; i <= n; ++i) {
         auto& cur = tmp[i - 2];
         cur *= i;
-        cur += log_binom(n - 1, i - 1);
+        cur += maths::log_binomial_coefficient<RealType>(n - 1, i - 1);
         cur += std::log((i - 1) / (theta + i - 1));
         cur += k * std::log(theta / (theta + i - 1));
     }
     return complex_log_sum_exp(tmp).real();
 }
 
-template <typename T>
-auto coalescent(const unsigned n, const unsigned k, const T theta)
+template <typename RealType>
+auto coalescent(const unsigned n, const unsigned k, const RealType theta)
 {
     if (n < 30 && k <= 80) {
         auto result = coalescent_real_space(n, k, theta);
@@ -160,33 +150,58 @@ auto coalescent(const unsigned n, const unsigned k, const T theta)
     }
 }
 
-template <typename T>
+template <typename RealType>
 auto coalescent(const unsigned n, const unsigned k_snp, const unsigned k_indel,
-                const T theta_snp, const T theta_indel)
+                const RealType theta_snp, const RealType theta_indel)
 {
     const auto theta = theta_snp + theta_indel;
     const auto k_tot = k_snp + k_indel;
     auto result = coalescent(n, k_tot, theta);
     result += k_snp * std::log(theta_snp / theta);
     result += k_indel * std::log(theta_indel / theta);
-    result += log_binom(k_tot, k_snp);
+    result += maths::log_binomial_coefficient<RealType>(k_tot, k_snp);
+    return result;
+}
+
+template <typename RealType, std::size_t N>
+auto coalescent(const unsigned n, 
+                const std::array<unsigned, N>& k,
+                const std::array<RealType, N>& theta)
+{
+    const auto theta_tot = std::accumulate(std::cbegin(theta), std::cend(theta), RealType {0});
+    const auto k_tot = std::accumulate(std::cbegin(k), std::cend(k), 0u);
+    auto result = coalescent(n, k_tot, theta_tot);
+    for (std::size_t i {0}; i < N; ++i) {
+        result += k[i] * std::log(theta[i] / theta_tot);
+    }
+    result += maths::log_multinomial_coefficient<RealType>(k);
     return result;
 }
 
 } // namespace
 
-CoalescentModel::LogProbability CoalescentModel::evaluate(const SiteCountTuple& t) const
+CoalescentModel::LogProbability CoalescentModel::evaluate(const SegregatingSiteCounts& counts) const
 {
-    unsigned k_snp, k_indel, n;
-    std::tie(k_snp, k_indel, n) = t;
-    if (k_indel == 0) {
-        return evaluate(k_snp, n);
+    if (counts.repeat_indels + counts.complex_indels == 0) {
+        return evaluate_no_indels(counts.snps, counts.haplotypes);
     } else {
-        return evaluate(k_snp, k_indel, n);
+        const auto indel_heterozygosities = calculate_buffered_indel_heterozygosities();
+        const auto repeat_indel_heterozygosity = maths::round_sf(indel_heterozygosities.second, 6);
+        const auto complex_indel_heterozygosity = maths::round_sf(indel_heterozygosities.first, 6);
+        SegregatingSiteCountsWithIndelHeterozygosities sites {counts, repeat_indel_heterozygosity, complex_indel_heterozygosity};
+        auto itr = k_indel_pos_result_cache_.find(sites);
+        if (itr != std::cend(k_indel_pos_result_cache_)) {
+            return itr->second;
+        }
+        const std::array<unsigned, 3> site_counts {counts.snps, counts.repeat_indels, counts.complex_indels};
+        const std::array<double, 3> site_heterozygosities {params_.snp_heterozygosity, repeat_indel_heterozygosity, complex_indel_heterozygosity};
+        const auto result = coalescent(counts.haplotypes, site_counts, site_heterozygosities);
+        k_indel_pos_result_cache_.emplace(sites, result);
+        return result;
     }
 }
 
-CoalescentModel::LogProbability CoalescentModel::evaluate(const unsigned k_snp, const unsigned n) const
+CoalescentModel::LogProbability CoalescentModel::evaluate_no_indels(const unsigned k_snp, const unsigned n) const
 {
     if (k_indel_zero_result_cache_.size() > n) {
         if (k_indel_zero_result_cache_[n].size() > k_snp) {
@@ -204,19 +219,6 @@ CoalescentModel::LogProbability CoalescentModel::evaluate(const unsigned k_snp, 
     }
     const auto result = coalescent(n, k_snp, 0, params_.snp_heterozygosity, params_.indel_heterozygosity);
     k_indel_zero_result_cache_[n][k_snp] = result;
-    return result;
-}
-
-CoalescentModel::LogProbability CoalescentModel::evaluate(const unsigned k_snp, const unsigned k_indel, const unsigned n) const
-{
-    const auto indel_heterozygosity = calculate_buffered_indel_heterozygosity();
-    const auto t = std::make_tuple(k_snp, k_indel, n, maths::round_sf(indel_heterozygosity, 6));
-    auto itr = k_indel_pos_result_cache_.find(t);
-    if (itr != std::cend(k_indel_pos_result_cache_)) {
-        return itr->second;
-    }
-    const auto result = coalescent(n, k_snp, k_indel, params_.snp_heterozygosity, indel_heterozygosity);
-    k_indel_pos_result_cache_.emplace(t, result);
     return result;
 }
 
@@ -270,25 +272,40 @@ void CoalescentModel::fill_site_buffer_from_address_cache(const Haplotype& haplo
                    std::back_inserter(site_buffer2_));
 }
 
-CoalescentModel::SiteCountTuple CoalescentModel::count_segregating_sites(const Haplotype& haplotype) const
+CoalescentModel::SegregatingSiteCounts CoalescentModel::count_segregating_sites(const Haplotype& haplotype) const
 {
     fill_site_buffer(haplotype);
     return count_segregating_sites_in_buffer(1);
 }
 
-CoalescentModel::SiteCountTuple CoalescentModel::count_segregating_sites_in_buffer(const unsigned num_haplotypes) const
+CoalescentModel::SegregatingSiteCounts CoalescentModel::count_segregating_sites_in_buffer(const unsigned num_haplotypes) const
 {
-    const auto num_indels = std::count_if(std::cbegin(site_buffer1_), std::cend(site_buffer1_),
-                                          [] (const auto& v) noexcept { return is_indel(v); });
-    return std::make_tuple(site_buffer1_.size() - num_indels, num_indels, num_haplotypes + 1);
+    unsigned repeat_indels {0}, complex_indels {0};
+    for (const auto& site : site_buffer1_) {
+        if (is_indel(site)) {
+            if (has_overlapped(reference_repeats_, site.get())) {
+                ++repeat_indels;
+            } else {
+                ++complex_indels;
+            }
+        }
+    }
+    const auto num_indels = repeat_indels + complex_indels;
+    const auto num_snps = static_cast<unsigned>(site_buffer1_.size()) - num_indels;
+    return {num_haplotypes + 1, num_snps, repeat_indels, complex_indels};
 }
 
-double CoalescentModel::calculate_buffered_indel_heterozygosity() const
+std::pair<double, double> CoalescentModel::calculate_buffered_indel_heterozygosities() const
 {
-    boost::optional<double> max_heterozygosity {};
+    boost::optional<double> min_heterozygosity {}, max_heterozygosity {};
     for (const auto& site : site_buffer1_) {
         if (is_indel(site)) {
             auto site_heterozygosity = calculate_heterozygosity(site);
+            if (min_heterozygosity) {
+                min_heterozygosity = std::min(*min_heterozygosity, site_heterozygosity);
+            } else {
+                min_heterozygosity = site_heterozygosity;
+            }
             if (max_heterozygosity) {
                 max_heterozygosity = std::max(*max_heterozygosity, site_heterozygosity);
             } else {
@@ -296,7 +313,9 @@ double CoalescentModel::calculate_buffered_indel_heterozygosity() const
             }
         }
     }
-    return max_heterozygosity ? *max_heterozygosity : params_.indel_heterozygosity;
+    if (!min_heterozygosity) min_heterozygosity = params_.indel_heterozygosity;
+    if (!max_heterozygosity) max_heterozygosity = params_.indel_heterozygosity;
+    return std::make_pair(*min_heterozygosity, *max_heterozygosity);
 }
 
 double CoalescentModel::calculate_heterozygosity(const Variant& indel) const
@@ -331,6 +350,31 @@ bool CoalescentProbabilityGreater::operator()(const Haplotype& lhs, const Haplot
     }
     const auto rhs_probability = cache_itr->second;
     return lhs_probability > rhs_probability;
+}
+
+bool operator==(const CoalescentModel::SegregatingSiteCounts& lhs, const CoalescentModel::SegregatingSiteCounts& rhs) noexcept
+{
+    return lhs.haplotypes == rhs.haplotypes && lhs.snps == rhs.snps && lhs.repeat_indels == rhs.repeat_indels && lhs.complex_indels == rhs.complex_indels;
+}
+
+std::size_t CoalescentModel::SegregatingSiteCountsHash::operator()(const SegregatingSiteCounts& counts) const noexcept
+{
+    return boost::hash_value(std::make_tuple(counts.haplotypes, counts.snps, counts.repeat_indels, counts.complex_indels));
+}
+
+std::size_t CoalescentModel::SegregatingSiteCountsWithIndelHeterozygositiesHash::operator()(const SegregatingSiteCountsWithIndelHeterozygosities& sites) const noexcept
+{
+    using boost::hash_combine;
+    std::size_t result {};
+    hash_combine(result, SegregatingSiteCountsHash{}(sites.counts));
+    hash_combine(result, std::hash<decltype(sites.repeat_heterozygosity)>()(sites.repeat_heterozygosity));
+    hash_combine(result, std::hash<decltype(sites.complex_heterozygosity)>()(sites.complex_heterozygosity));
+    return result;
+}
+
+bool CoalescentModel::SegregatingSiteCountsWithIndelHeterozygositiesEqual::operator()(const SegregatingSiteCountsWithIndelHeterozygosities& lhs, const SegregatingSiteCountsWithIndelHeterozygosities& rhs) const noexcept
+{
+    return lhs.counts == rhs.counts && lhs.repeat_heterozygosity == rhs.repeat_heterozygosity && lhs.complex_heterozygosity == rhs.complex_heterozygosity;
 }
 
 } // namespace octopus

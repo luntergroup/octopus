@@ -20,6 +20,7 @@
 #include <boost/optional.hpp>
 
 #include "concepts/indexed.hpp"
+#include "basics/tandem_repeat.hpp"
 #include "core/types/haplotype.hpp"
 #include "core/types/variant.hpp"
 #include "containers/mappable_block.hpp"
@@ -67,18 +68,42 @@ public:
     
 private:
     using VariantReference = std::reference_wrapper<const Variant>;
-    using SiteCountTuple = std::tuple<unsigned, unsigned, unsigned>;
-    using SiteCountIndelTuple = std::tuple<unsigned, unsigned, unsigned, double>;
-    
-    struct SiteCountTupleHash
+
+    struct SegregatingSiteCounts
     {
-        std::size_t operator()(const SiteCountIndelTuple& t) const noexcept
-        {
-            return boost::hash_value(t);
-        }
+        unsigned haplotypes;
+        unsigned snps;
+        unsigned repeat_indels, complex_indels;
     };
+    struct SegregatingSiteCountsWithIndelHeterozygosities
+    {
+        SegregatingSiteCounts counts;
+        double repeat_heterozygosity, complex_heterozygosity;
+    };
+    struct SegregatingSiteCountsHash
+    {
+        std::size_t operator()(const SegregatingSiteCounts& sites) const noexcept;
+    };
+    struct SegregatingSiteCountsWithIndelHeterozygositiesHash
+    {
+        std::size_t operator()(const SegregatingSiteCountsWithIndelHeterozygosities& sites) const noexcept;
+    };
+    struct SegregatingSiteCountsWithIndelHeterozygositiesEqual
+    {
+        bool operator()(const SegregatingSiteCountsWithIndelHeterozygosities& lhs,
+                        const SegregatingSiteCountsWithIndelHeterozygosities& rhs) const noexcept;
+    };
+
+    using SegregatingSiteCountsWithIndelHeterozygositiesCache =  std::unordered_map<
+        SegregatingSiteCountsWithIndelHeterozygosities, LogProbability,
+        SegregatingSiteCountsWithIndelHeterozygositiesHash,
+        SegregatingSiteCountsWithIndelHeterozygositiesEqual
+        >;
     
+    friend bool operator==(const SegregatingSiteCounts& lhs, const SegregatingSiteCounts& rhs) noexcept;
+
     Haplotype reference_;
+    std::vector<TandemRepeat> reference_repeats_;
     IndelMutationModel::ContextIndelModel indel_heterozygosity_model_;
     Parameters params_;
     MappableBlock<Haplotype> haplotypes_;
@@ -90,12 +115,11 @@ private:
     mutable std::vector<boost::optional<std::vector<Variant>>> index_cache_;
     mutable std::vector<bool> index_flag_buffer_;
     mutable std::vector<std::vector<boost::optional<LogProbability>>> k_indel_zero_result_cache_;
-    mutable std::unordered_map<SiteCountIndelTuple, LogProbability, SiteCountTupleHash> k_indel_pos_result_cache_;
+    mutable SegregatingSiteCountsWithIndelHeterozygositiesCache k_indel_pos_result_cache_;
     
-    LogProbability evaluate(const SiteCountTuple& t) const;
-    LogProbability evaluate(unsigned k_snp, unsigned n) const;
-    LogProbability evaluate(unsigned k_snp, unsigned k_indel, unsigned n) const;
-    
+    LogProbability evaluate(const SegregatingSiteCounts& t) const;
+    LogProbability evaluate_no_indels(unsigned k_snp, unsigned n) const;
+
     void fill_site_buffer(const Haplotype& haplotype) const;
     template <typename Range> void fill_site_buffer(const Range& haplotypes) const;
     template <typename Range> void fill_site_buffer(const Range& haplotypes, std::false_type) const;
@@ -104,10 +128,10 @@ private:
     void fill_site_buffer_from_value_cache(const Haplotype& haplotype) const;
     void fill_site_buffer_from_address_cache(const Haplotype& haplotype) const;
     
-    SiteCountTuple count_segregating_sites(const Haplotype& haplotype) const;
-    template <typename Container> SiteCountTuple count_segregating_sites(const Container& haplotypes) const;
-    SiteCountTuple count_segregating_sites_in_buffer(unsigned num_haplotypes) const;
-    double calculate_buffered_indel_heterozygosity() const;
+    SegregatingSiteCounts count_segregating_sites(const Haplotype& haplotype) const;
+    template <typename Container> SegregatingSiteCounts count_segregating_sites(const Container& haplotypes) const;
+    SegregatingSiteCounts count_segregating_sites_in_buffer(unsigned num_haplotypes) const;
+    std::pair<double, double> calculate_buffered_indel_heterozygosities() const;
     double calculate_heterozygosity(const Variant& indel) const;
 };
 
@@ -197,7 +221,7 @@ auto size(const Container& haplotypes) noexcept
 } // namespace detail
 
 template <typename Container>
-CoalescentModel::SiteCountTuple
+CoalescentModel::SegregatingSiteCounts
 CoalescentModel::count_segregating_sites(const Container& haplotypes) const
 {
     fill_site_buffer(haplotypes);
