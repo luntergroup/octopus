@@ -319,7 +319,7 @@ bool has_reference(const Container& haplotypes)
     return find_reference(haplotypes) != std::cend(haplotypes);
 }
 
-TemplateContainer make_read_templates_helper(const ReadContainer& reads, const ReadLinkageType linkage)
+TemplateContainer make_read_templates_helper(const ReadContainer& reads, const ReadLinkageConfig& linkage)
 {
     std::vector<AlignedTemplate> buffer {};
     buffer.reserve(reads.size());
@@ -328,7 +328,7 @@ TemplateContainer make_read_templates_helper(const ReadContainer& reads, const R
     return {ForwardSortedTag {}, std::make_move_iterator(std::begin(buffer)), std::make_move_iterator(std::end(buffer))};
 }
 
-TemplateMap make_read_templates_helper(const ReadMap& reads, const ReadLinkageType linkage)
+TemplateMap make_read_templates_helper(const ReadMap& reads, const ReadLinkageConfig& linkage)
 {
     TemplateMap result {};
     result.reserve(reads.size());
@@ -394,7 +394,10 @@ bool have_callable_region(const GenomicRegion& active_region,
 boost::optional<TemplateMap> Caller::make_read_templates(const ReadMap& reads) const
 {
     if (parameters_.read_linkage != ReadLinkageType::none) {
-        return make_read_templates_helper(reads, parameters_.read_linkage);
+        ReadLinkageConfig config {};
+        config.linkage = parameters_.read_linkage;
+        config.max_insert_size = 10'000;
+        return make_read_templates_helper(reads, config);
     } else {
         return boost::none;
     }

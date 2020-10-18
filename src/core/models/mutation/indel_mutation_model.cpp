@@ -66,7 +66,13 @@ auto find_short_tandem_repeats(const Haplotype& haplotype)
 
 IndelMutationModel::ContextIndelModel IndelMutationModel::evaluate(const Haplotype& haplotype) const
 {
-    const auto repeats = find_short_tandem_repeats(haplotype);
+    std::vector<TandemRepeat> repeats {};
+    return evaluate(haplotype, repeats);
+}
+
+IndelMutationModel::ContextIndelModel IndelMutationModel::evaluate(const Haplotype& haplotype, std::vector<TandemRepeat>& repeats) const
+{
+    repeats = find_short_tandem_repeats(haplotype);
     ContextIndelModel result {};
     const auto haplotype_len = sequence_size(haplotype);
     const auto& base_probabilities = indel_repeat_model_[0][0];
@@ -97,6 +103,12 @@ IndelMutationModel::ContextIndelModel make_indel_model(const Haplotype& context,
 {
     IndelMutationModel model {params};
     return model.evaluate(context);
+}
+
+IndelMutationModel::ContextIndelModel make_indel_model(const Haplotype& context, IndelMutationModel::Parameters params, std::vector<TandemRepeat>& repeats)
+{
+    IndelMutationModel model {params};
+    return model.evaluate(context, repeats);
 }
 
 IndelMutationModel::Probability

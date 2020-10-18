@@ -229,7 +229,7 @@ compute_haplotype_support_helper(const Genotype<Haplotype>& genotype,
     return result;
 }
 
-auto make_read_templates(const std::vector<AlignedRead>& reads, const ReadLinkageType read_linkage)
+auto make_read_templates(const std::vector<AlignedRead>& reads, const ReadLinkageConfig& read_linkage)
 {
     std::vector<AlignedTemplate> result {};
     make_read_templates(std::cbegin(reads), std::cend(reads), std::back_inserter(result), read_linkage);
@@ -241,9 +241,9 @@ compute_haplotype_support_helper(const Genotype<Haplotype>& genotype,
                                  const std::vector<AlignedRead>& reads,
                                  AmbiguousReadList& unassigned_reads,
                                  const HaplotypeLikelihoodModel& alignment_model,
-                                 const ReadLinkageType read_linkage)
+                                 const ReadLinkageConfig& read_linkage)
 {
-    if (read_linkage != ReadLinkageType::none) {
+    if (read_linkage.linkage != ReadLinkageType::none) {
         const auto templates = make_read_templates(reads, read_linkage);
         return compute_haplotype_support_helper(genotype, templates, unassigned_reads, alignment_model);
     } else {
@@ -276,7 +276,7 @@ auto assign_and_realign(const std::vector<AlignedRead>& reads,
                         const Genotype<Haplotype>& genotype,
                         const ReferenceGenome& reference,
                         const HaplotypeLikelihoodModel& alignment_model,
-                        const ReadLinkageType read_linkage,
+                        const ReadLinkageConfig& read_linkage,
                         BAMRealigner::Report& report)
 {
     std::vector<AnnotatedAlignedRead> result {};

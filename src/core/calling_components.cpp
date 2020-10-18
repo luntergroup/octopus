@@ -617,7 +617,7 @@ GenomeCallingComponents::Components::Components(ReferenceGenome&& reference, Rea
     bamout_config.copy_hom_ref_reads = options::full_bamouts_requested(options);
     bamout_config.max_buffer = read_buffer_footprint;
     bamout_config.max_threads = num_threads;
-    bamout_config.read_linkage = options::get_read_linkage_type(options);
+    bamout_config.read_linkage.linkage = options::get_read_linkage_type(options);
     profiler_config.alignment_model = bamout_config.alignment_model;
     if (reads_profile && reads_profile->length_stats.median > 1'000) {
         profiler_config.ignore_likely_misaligned_reads = false;
