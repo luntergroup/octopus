@@ -367,6 +367,8 @@ set(CORE_SOURCES
     core/csr/measures/is_refcall.cpp
     core/csr/measures/contamination.hpp
     core/csr/measures/contamination.cpp
+    core/csr/measures/contamination_sum.hpp
+    core/csr/measures/contamination_sum.cpp
     core/csr/measures/read_side_bias.hpp
     core/csr/measures/read_side_bias.cpp
     core/csr/measures/alt_allele_count.hpp
