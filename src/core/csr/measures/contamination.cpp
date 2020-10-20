@@ -254,5 +254,10 @@ std::vector<std::string> Contamination::do_requirements() const
     return result;
 }
 
+boost::optional<Measure::Aggregator> Contamination::do_aggregator() const noexcept
+{
+    return Measure::Aggregator::sum;
+}
+
 } // namespace csr
 } // namespace octopus
