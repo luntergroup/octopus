@@ -692,7 +692,7 @@ OptionMap parse_options(const int argc, const char** argv)
     po::options_description cell("Cell calling model");
     cell.add_options()
     ("max-copy-loss",
-     po::value<int>()->default_value(1),
+     po::value<int>()->default_value(0),
      "Maximum number of haplotype losses in the phylogeny")
     
     ("max-copy-gain",
