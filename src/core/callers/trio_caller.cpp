@@ -416,7 +416,7 @@ TrioCaller::infer_latents(const HaplotypeBlock& haplotypes,
         if (parameters_.maternal_ploidy == parameters_.child_ploidy) {
             auto latents = model.evaluate(maternal_genotypes, paternal_genotypes,
                                           maternal_genotypes, haplotype_likelihoods);
-            return std::make_unique<Latents>(std::move(indexed_haplotypes), std::move(maternal_genotypes), std::move(maternal_genotypes),
+            return std::make_unique<Latents>(std::move(indexed_haplotypes), std::move(maternal_genotypes), std::move(paternal_genotypes),
                                              parameters_.child_ploidy, std::move(latents), parameters_.trio);
         } else {
             auto latents = model.evaluate(maternal_genotypes, paternal_genotypes,
