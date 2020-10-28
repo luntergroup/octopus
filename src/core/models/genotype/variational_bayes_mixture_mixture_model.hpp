@@ -194,7 +194,6 @@ private:
     void
     update_mixture_concentrations(MixtureConcentrationArray& result,
                                   const MixtureConcentrationArray& prior_mixture_concentrations,
-                                  const GroupResponsibilityVector& group_responsibilities,
                                   const ComponentResponsibilityMatrix& component_responsibilities) const;
     double
     calculate_evidence(const GroupConcentrationVector& prior_group_concentrations,
@@ -204,6 +203,7 @@ private:
                        const LogProbabilityVector& genotype_log_priors,
                        const LogProbabilityVector& genotype_log_posteriors,
                        const ProbabilityVector& genotype_posteriors,
+                       const GroupOptionalPriorArray& group_log_priors,
                        const GroupResponsibilityVector& group_responsibilities,
                        const ComponentResponsibilityMatrix& component_responsibilities,
                        const HaplotypeLikelihoodMatrix& log_likelihoods) const;
