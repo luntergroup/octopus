@@ -442,7 +442,7 @@ VariationalBayesMixtureMixtureModel::update_responsibilities(ComponentResponsibi
                 for (std::size_t n {0}; n < N; ++n) {
                     if (t == 0) result[s][t][k][n] = 0;
                     if (k < K) {
-                        result[s][t][k][n] += ln_exp_pi[k] + group_responsibilities[s][t] * inner_product(genotype_posteriors, log_likelihoods[s], t, k, n);
+                        result[s][t][k][n] += ln_exp_pi[k] + inner_product(genotype_posteriors, log_likelihoods[s], t, k, n);
                     } else {
                         result[s][t][k][n] = options_.null_log_probability;
                     }
