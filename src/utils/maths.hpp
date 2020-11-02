@@ -1083,10 +1083,24 @@ void log_each(Range& values)
     for (auto& v : values) v = std::log(v);
 }
 
+template <typename Container>
+Container log_each_copy(Container values)
+{
+    log_each(values);
+    return values;
+}
+
 template <typename Range>
 void exp_each(Range& values)
 {
     for (auto& v : values) v = std::exp(v);
+}
+
+template <typename Container>
+Container exp_each_copy(Container values)
+{
+    exp_each(values);
+    return values;
 }
 
 template <typename ForwardIterator>
