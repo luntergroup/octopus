@@ -163,6 +163,9 @@ std::shared_ptr<CellCaller::Latents::HaplotypeProbabilityMap>
 CellCaller::Latents::haplotype_posteriors() const noexcept
 {
     if (haplotype_posteriors_ == nullptr) {
+        if (genotype_posteriors_ == nullptr) {
+            this->genotype_posteriors(); // init genotype_posteriors_
+        }
         auto haplotype_posteriors = calculate_haplotype_posteriors(haplotypes_, genotypes_, genotype_posteriors_array_);
         haplotype_posteriors_ = std::make_shared<HaplotypeProbabilityMap>();
         haplotype_posteriors_->reserve(haplotypes_.size());
