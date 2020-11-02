@@ -596,12 +596,11 @@ VariationalBayesMixtureMixtureModel::calculate_evidence(const GroupConcentration
             result += group_responsibilities[s][t] * (maths::log_beta(posterior_mixture_concentrations[s][t]) - maths::log_beta(prior_mixture_concentrations[s][t]));
         }
         if (group_log_priors[s]) {
-            auto sigma_expected_ln_norm = dirichlet_expectation_log(posterior_group_concentrations);
+            auto sigma_expected_ln_norm = maths::log_each_copy(group_responsibilities[s]);
             for (std::size_t t {0}; t < T; ++t) {
                 sigma_expected_ln_norm[t] += (*group_log_priors[s])[t];
-                result += group_responsibilities[s][t] * (*group_log_priors[s])[t];
             }
-            result -= maths::log_sum_exp(sigma_expected_ln_norm);
+            result += maths::log_sum_exp(sigma_expected_ln_norm);
         }
     }
     result += maths::log_beta(posterior_group_concentrations) - maths::log_beta(prior_group_concentrations);    
