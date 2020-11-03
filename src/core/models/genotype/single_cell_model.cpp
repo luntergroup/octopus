@@ -753,8 +753,10 @@ SingleCellModel::evaluate(Inferences& result,
         const auto genotype_subset_indices = propose_genotypes(genotypes, haplotype_likelihoods);
         const auto genotype_subset = copy(genotypes, genotype_subset_indices);
         const auto num_hints = std::min(genotype_subset_indices.size(), static_cast<std::size_t>(config_.max_seeds / 2));
+        std::vector<std::size_t> hint_indices(num_hints);
+        std::iota(std::begin(hint_indices), std::end(hint_indices), 0u);
         std::vector<LogProbabilityVector> hints {};
-        make_point_seeds(genotype_subset.size(), std::cbegin(genotype_subset_indices), std::next(std::cbegin(genotype_subset_indices), num_hints), hints);
+        make_point_seeds(genotype_subset.size(), hint_indices, hints);
         subclone_inferences = helper_model.evaluate(genotype_subset, haplotype_likelihoods, std::move(hints));
         SubcloneModel::Latents::ProbabilityVector weighted_genotype_posteriors(genotypes.size());
         for (std::size_t g {0}; g < genotype_subset.size(); ++g) {
