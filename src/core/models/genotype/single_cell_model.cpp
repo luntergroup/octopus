@@ -84,6 +84,7 @@ SingleCellModel::evaluate(const GenotypeVector& genotypes,
     assert(all_same_ploidy(genotypes));
     const auto num_clones = prior_model_.phylogeny().size();
     assert(num_clones <= genotypes.size());
+    assert(num_clones <= samples_.size());
     Inferences result {};
     if (num_clones == 1) {
         evaluate(result, genotypes, haplotype_likelihoods);
