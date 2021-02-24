@@ -180,7 +180,7 @@ void CancerCaller::fit_somatic_model(Latents& latents, const HaplotypeLikelihood
         if (debug_log_) stream(*debug_log_) << "Fitting somatic model with somatic ploidy " << somatic_ploidy;
         latents.inferred_somatic_ploidy_ = somatic_ploidy;
         generate_cancer_genotypes(latents, haplotype_likelihoods);
-        if (debug_log_) stream(*debug_log_) << "There are " << latents.cancer_genotypes_.size() << " candidate cancer genotypes";
+        if (debug_log_) stream(*debug_log_) << "There are " << latents.cancer_genotypes_.back().size() << " candidate cancer genotypes";
         evaluate_somatic_model(latents, haplotype_likelihoods);
         latents.somatic_model_posteriors_.push_back(latents.somatic_model_inferences_.back().approx_log_evidence);
         if (debug_log_) stream(*debug_log_) << "Evidence for somatic model with somatic ploidy "
@@ -190,7 +190,6 @@ void CancerCaller::fit_somatic_model(Latents& latents, const HaplotypeLikelihood
             if (latents.somatic_model_inferences_.back().approx_log_evidence
               < latents.somatic_model_inferences_[somatic_ploidy - 2].approx_log_evidence) {
                   latents.inferred_somatic_ploidy_ = somatic_ploidy - 1;
-                  latents.max_evidence_somatic_model_index_ = somatic_ploidy - 2;
                 break;
             }
         } else {
@@ -203,6 +202,7 @@ void CancerCaller::fit_somatic_model(Latents& latents, const HaplotypeLikelihood
     }
     maths::normalise_exp(latents.somatic_model_posteriors_);
     if (debug_log_) stream(*debug_log_) << "Best somatic model has somatic ploidy " << latents.inferred_somatic_ploidy_;
+    latents.max_evidence_somatic_model_index_ = latents.inferred_somatic_ploidy_ - 1;
 }
 
 static double calculate_model_posterior(const double normal_germline_model_log_evidence,
