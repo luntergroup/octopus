@@ -657,7 +657,7 @@ if (NOT BUILD_SHARED_LIBS)
     set(HTSlib_USE_STATIC_LIBS ON)
 endif()
 
-set(CXX_OPTIMIZATION_FLAGS -ffast-math -march=native)
+set(CXX_OPTIMIZATION_FLAGS -ffast-math -march=${COMPILER_ARCHITECTURE})
 if (CMAKE_COMPILER_IS_GNUCXX)
     set(CXX_OPTIMIZATION_FLAGS ${CXX_OPTIMIZATION_FLAGS} -mfpmath=both)
 endif()
