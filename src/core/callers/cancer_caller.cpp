@@ -396,6 +396,27 @@ auto calculate_max_germline_genotype_bases(const unsigned max_genotypes, const u
     return std::max(max_genotypes / num_somatic_genotypes, decltype(num_somatic_genotypes) {1});
 }
 
+namespace {
+
+struct CancerGenotypeLess
+{
+    template <typename T>
+    bool operator()(const CancerGenotype<T>& lhs, const CancerGenotype<T>& rhs) const
+    {
+        return lhs.germline() == rhs.germline() ? GenotypeLess()(lhs.somatic(), rhs.somatic()) : GenotypeLess()(lhs.germline(), rhs.germline());
+    }
+};
+
+template <typename IndexType>
+void erase_duplicates(MappableBlock<CancerGenotype<IndexedHaplotype<IndexType>>>& genotypes)
+{
+    using std::begin; using std::end;
+    std::sort(begin(genotypes), end(genotypes), CancerGenotypeLess {});
+    genotypes.erase(std::unique(begin(genotypes), end(genotypes)), end(genotypes));
+}
+
+} // namespace
+
 void CancerCaller::generate_cancer_genotypes_with_clean_normal(Latents& latents, const HaplotypeLikelihoodArray& haplotype_likelihoods) const
 {
     assert(parameters_.max_genotypes);
@@ -407,6 +428,7 @@ void CancerCaller::generate_cancer_genotypes_with_clean_normal(Latents& latents,
         const auto& cancer_genotype_posteriors = latents.somatic_model_inferences_.back().max_evidence_params.genotype_probabilities;
         const auto old_cancer_genotype_bases = copy_greatest_probability_values(latents.cancer_genotypes_.back(), cancer_genotype_posteriors, max_old_cancer_genotype_bases);
         latents.cancer_genotypes_.push_back(extend_somatic(old_cancer_genotype_bases, latents.indexed_haplotypes_));
+        erase_duplicates(latents.cancer_genotypes_.back());
     } else {
         assert(latents.germline_model_);
         haplotype_likelihoods.prime(normal_sample());
