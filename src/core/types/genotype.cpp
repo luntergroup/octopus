@@ -19,6 +19,30 @@ Genotype<Haplotype> remap(const Genotype<Haplotype>& genotype, const GenomicRegi
     return result;
 }
 
+bool are_equivalent(const Genotype<Allele>& lhs, const Genotype<Allele>& rhs)
+{
+    if (lhs.ploidy() != rhs.ploidy()) return false;
+    const auto is_lhs_sorted = std::is_sorted(std::cbegin(lhs), std::cend(lhs));
+    const auto is_rhs_sorted = std::is_sorted(std::cbegin(rhs), std::cend(rhs));
+    if (is_lhs_sorted && is_rhs_sorted) {
+        return lhs == rhs;
+    } else if (is_lhs_sorted) {
+        auto sorted_rhs = rhs;
+        std::sort(std::begin(sorted_rhs), std::end(sorted_rhs));
+        return lhs == sorted_rhs;
+    } else if (is_rhs_sorted) {
+        auto sorted_lhs = lhs;
+        std::sort(std::begin(sorted_lhs), std::end(sorted_lhs));
+        return sorted_lhs == rhs;
+    } else {
+        auto sorted_lhs = lhs;
+        std::sort(std::begin(sorted_lhs), std::end(sorted_lhs));
+        auto sorted_rhs = rhs;
+        std::sort(std::begin(sorted_rhs), std::end(sorted_rhs));
+        return sorted_lhs == sorted_rhs;
+    }
+}
+
 std::size_t num_genotypes(const unsigned num_elements, const unsigned ploidy)
 {
     return boost::math::binomial_coefficient<double>(num_elements + ploidy - 1, ploidy);
