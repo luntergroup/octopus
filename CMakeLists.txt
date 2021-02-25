@@ -43,7 +43,7 @@ configure_file (
 include_directories(${CMAKE_BINARY_DIR}/generated)
 
 option(BUILD_SHARED_LIBS "Build the shared library" ON)
-option(COMPILER_ARCHITECTURE "Compiler -march argument" "native")
+set(COMPILER_ARCHITECTURE "native" CACHE STRING "Compiler -march argument")
 
 set(CMAKE_COLOR_MAKEFILE ON)
 
