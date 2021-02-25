@@ -2073,6 +2073,18 @@ auto get_sample_dropout_concentrations(const OptionMap& options)
     return result;
 }
 
+auto get_phase_detection_policy(const OptionMap& options)
+{
+    const auto policy = options.at("phasing-policy").as<PhasingPolicy>();
+    switch (policy) {
+        case PhasingPolicy::conservative: return false;
+        case PhasingPolicy::aggressive: return true;
+        case PhasingPolicy::automatic:
+        // fall through
+        default: return as_unsigned("organism-ploidy", options) < 3 && get_read_linkage_type(options) != ReadLinkageType::paired_and_barcode;
+    }
+}
+
 CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& read_pipe,
                                   const InputRegionMap& regions, const OptionMap& options,
                                   const boost::optional<const ReadSetProfile&> read_profile)
@@ -2131,7 +2143,7 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
     vc_builder.set_likelihood_model(make_calling_haplotype_likelihood_model(options, read_profile));
     auto min_phase_score = options.at("min-phase-score").as<Phred<double>>();
     vc_builder.set_min_phase_score(min_phase_score);
-    vc_builder.set_early_phase_detection_policy(!options.at("disable-early-phase-detection").as<bool>());
+    vc_builder.set_early_phase_detection_policy(get_phase_detection_policy(options));
     if (!options.at("use-uniform-genotype-priors").as<bool>()) {
         vc_builder.set_snp_heterozygosity(options.at("snp-heterozygosity").as<float>());
         vc_builder.set_indel_heterozygosity(options.at("indel-heterozygosity").as<float>());

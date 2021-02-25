@@ -587,9 +587,9 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<Phred<double>>()->default_value(Phred<double> {5.0}),
      "Minimum phase score (phred scale) required to report sites as phased")
     
-    ("disable-early-phase-detection",
-     po::bool_switch()->default_value(false),
-     "Disable phase detection before haplotypes fully extended")
+    ("phasing-policy",
+     po::value<PhasingPolicy>()->default_value(PhasingPolicy::automatic),
+     "Policy for applying phasing algorithm [AUTO, CONSERVATIVE, AGGRESSIVE]")
 
     ("bad-region-tolerance",
      po::value<BadRegionTolerance>()->default_value(BadRegionTolerance::normal),
@@ -1611,6 +1611,36 @@ std::ostream& operator<<(std::ostream& os, const SampleDropoutConcentrationPair&
     return os;
 }
 
+std::istream& operator>>(std::istream& in, PhasingPolicy& result)
+{
+    std::string token;
+    in >> token;
+    if (token == "CONSERVATIVE")
+        result = PhasingPolicy::conservative;
+    else if (token == "AGGRESSIVE")
+        result = PhasingPolicy::aggressive;
+    else if (token == "AUTO")
+        result = PhasingPolicy::automatic;
+    else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token, "phasing-policy"};
+    return in;
+}
+
+std::ostream& operator<<(std::ostream& out, const PhasingPolicy& policy)
+{
+    switch (policy) {
+        case PhasingPolicy::conservative:
+            out << "CONSERVATIVE";
+            break;
+        case PhasingPolicy::aggressive:
+            out << "AGGRESSIVE";
+            break;
+        case PhasingPolicy::automatic:
+            out << "AUTO";
+            break;
+    }
+    return out;
+}
+
 namespace {
 
 template <typename T>
@@ -1737,6 +1767,8 @@ std::ostream& operator<<(std::ostream& os, const OptionMap& options)
             write_vector<SampleDropoutConcentrationPair>(options, label, os, bullet);
         } else if (is_type<ModelPosteriorPolicy>(value)) {
             os << options[label].as<ModelPosteriorPolicy>();
+        } else if (is_type<PhasingPolicy>(value)) {
+            os << options[label].as<PhasingPolicy>();
         } else {
             os << "UnknownType(" << ((boost::any)value.value()).type().name() << ")";
         }
