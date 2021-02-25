@@ -2022,6 +2022,8 @@ boost::optional<std::size_t> get_max_genotypes(const OptionMap& options, const s
         return 5'000;
     } else if (caller == "polyclone") {
         return 100'000;
+    } else if (as_unsigned("organism-ploidy", options) > 2) {
+        return 20'000;
     } else if (is_fast_mode(options)) {
         return 1'000'000;
     } else {
