@@ -1393,7 +1393,7 @@ void run_csr(GenomeCallingComponents& components)
         assert(filter);
         VcfWriter& out {*components.filtered_output()};
         namespace fs = boost::filesystem;
-        if (!components.output().is_open() && components.output().path() && fs::exists(*components.output().path())) {
+        if (components.filter_request() && !components.output().is_open() && components.output().path() && fs::exists(*components.output().path())) {
             out << read_vcf_header(*components.output().path());
         }
         filter->filter(in, out);
