@@ -386,7 +386,7 @@ void RandomForestFilter::prepare_for_classification(boost::optional<Log>& log) c
                 } catch (const std::runtime_error& e) {
                     throw MalformedForestFile {forest_paths_[forest_idx]};
                 } catch (const std::out_of_range& e) {
-                    
+                    throw MalformedForestFile {forest_paths_[forest_idx]};
                 }
                 forest->run(false, false);
                 forest->writePredictionFile();
