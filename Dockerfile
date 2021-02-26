@@ -18,7 +18,15 @@ RUN apt-get -y install \
 RUN pip3 install distro
 
 # Install Octopus
-COPY . /home/octopus
-RUN /home/octopus/scripts/install.py --dependencies --forests --threads 4 --architecture haswell
+ARG threads=4
+ARG architecture=haswell
+COPY . /opt/octopus
+RUN /opt/octopus/scripts/install.py \
+    --dependencies \
+    --forests \
+    --threads $threads \
+    --architecture $architecture
 
-ENTRYPOINT ["/home/octopus/bin/octopus"]
+ENV PATH="/opt/octopus/bin:${PATH}"
+
+ENTRYPOINT ["octopus"]
