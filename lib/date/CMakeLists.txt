@@ -14,7 +14,7 @@ set(WarningIgnores
 
 add_compile_options(-Wall -Wextra -Werror ${WarningIgnores})
 
-find_package(CURL REQUIRED)
-target_include_directories(date-tz SYSTEM PRIVATE ${CURL_INCLUDE_DIRS})
-target_link_libraries(date-tz PRIVATE ${CURL_LIBRARIES})
+# find_package(CURL REQUIRED)
+# target_include_directories(date-tz SYSTEM PRIVATE ${CURL_INCLUDE_DIRS})
+# target_link_libraries(date-tz PRIVATE ${CURL_LIBRARIES})
 
