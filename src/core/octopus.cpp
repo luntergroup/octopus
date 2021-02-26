@@ -26,6 +26,8 @@
 
 #include <boost/optional.hpp>
 
+#include "date/tz.h"
+
 #include "config/common.hpp"
 #include "basics/genomic_region.hpp"
 #include "basics/ploidy_map.hpp"
@@ -90,6 +92,16 @@ bool apply_csr(const GenomeCallingComponents& components) noexcept
 
 using CallTypeSet = std::set<std::type_index>;
 
+std::string get_current_time_str()
+{
+    using namespace date;
+    using namespace std::chrono;
+    const auto time = make_zoned(current_zone(), system_clock::now());
+    std::ostringstream ss {};
+    ss << time;
+    return ss.str();
+}
+
 VcfHeader make_vcf_header(const std::vector<SampleName>& samples,
                           const std::vector<GenomicRegion::ContigName>& contigs,
                           const ReferenceGenome& reference,
@@ -104,7 +116,8 @@ VcfHeader make_vcf_header(const std::vector<SampleName>& samples,
     builder.add_structured_field("octopus", {
         {"version", to_string(config::Version, false)},
         {"command", '"' + info.command + '"'},
-        {"options", '"' + info.options + '"'}
+        {"options", '"' + info.options + '"'},
+        {"date", '"' + get_current_time_str() + '"'}
     });
     VcfHeaderFactory factory {};
     for (const auto& type : call_types) {
