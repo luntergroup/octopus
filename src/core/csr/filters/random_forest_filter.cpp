@@ -360,6 +360,7 @@ public:
 
 void RandomForestFilter::prepare_for_classification(boost::optional<Log>& log) const
 {
+    if (log) *log << "Preparing random forests for classification";
     close_data_files();
     if (num_records_ == 0) return;
     const Path ranger_prefix {temp_directory() / "octopus_ranger_temp"};
@@ -384,6 +385,8 @@ void RandomForestFilter::prepare_for_classification(boost::optional<Log>& log) c
                                     ranger::PredictionType::RESPONSE, ranger::DEFAULT_NUM_RANDOM_SPLITS, ranger::DEFAULT_MAXDEPTH);
                 } catch (const std::runtime_error& e) {
                     throw MalformedForestFile {forest_paths_[forest_idx]};
+                } catch (const std::out_of_range& e) {
+                    
                 }
                 forest->run(false, false);
                 forest->writePredictionFile();

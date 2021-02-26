@@ -123,13 +123,13 @@ bool VcfWriter::is_open() const noexcept
     return writer_ != nullptr;
 }
 
-void VcfWriter::open()
+void VcfWriter::open(const bool overwrite)
 {
     if (!file_path_) {
         throw std::runtime_error {"VcfWriter::open: invalid open request"};
     }
     std::lock_guard<std::mutex> lock {mutex_};
-    writer_ = std::make_unique<HtslibBcfFacade>(*file_path_, HtslibBcfFacade::Mode::append);
+    writer_ = std::make_unique<HtslibBcfFacade>(*file_path_, overwrite ? HtslibBcfFacade::Mode::write : HtslibBcfFacade::Mode::append);
 }
 
 void VcfWriter::open(Path file_path)

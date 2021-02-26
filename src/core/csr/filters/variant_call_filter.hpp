@@ -126,6 +126,7 @@ private:
     virtual bool is_soft_filtered(const ClassificationList& sample_classifications, boost::optional<Phred<double>> joint_quality,
                                   const MeasureVector& measures, std::vector<std::string>& reasons) const;
     
+    VcfHeader make_header(const VcfHeader& source) const;
     VcfHeader make_header(const VcfReader& source) const;
     Measure::FacetMap compute_facets(const CallBlock& block) const;
     std::vector<Measure::FacetMap> compute_facets(const std::vector<CallBlock>& blocks) const;
