@@ -1392,11 +1392,12 @@ void run_csr(GenomeCallingComponents& components)
                                                 progress, components.num_threads());
         assert(filter);
         VcfWriter& out {*components.filtered_output()};
+        boost::optional<VcfHeader> template_header {};
         namespace fs = boost::filesystem;
         if (components.filter_request() && !components.output().is_open() && components.output().path() && fs::exists(*components.output().path())) {
-            out << read_vcf_header(*components.output().path());
+            template_header = read_vcf_header(*components.output().path());
         }
-        filter->filter(in, out);
+        filter->filter(in, out, template_header);
         out.close();
     }
 }

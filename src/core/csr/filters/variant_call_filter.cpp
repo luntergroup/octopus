@@ -101,12 +101,16 @@ std::string VariantCallFilter::name() const
     return do_name();
 }
 
-void VariantCallFilter::filter(const VcfReader& source, VcfWriter& dest) const
+void VariantCallFilter::filter(const VcfReader& source, VcfWriter& dest, boost::optional<VcfHeader> template_header) const
 {
     if (dest.is_header_written()) {
         dest.close();
         const auto header = make_header(read_header(dest));
         dest.open(true);
+        dest << header;
+        filter(source, dest, header);
+    } else if (template_header) {
+        const auto header = make_header(*template_header);
         dest << header;
         filter(source, dest, header);
     } else {

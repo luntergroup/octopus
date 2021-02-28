@@ -68,7 +68,7 @@ public:
     
     std::string name() const;
     
-    void filter(const VcfReader& source, VcfWriter& dest) const;
+    void filter(const VcfReader& source, VcfWriter& dest, boost::optional<VcfHeader> template_header = boost::none) const;
     
 protected:
     using SampleList    = std::vector<SampleName>;
