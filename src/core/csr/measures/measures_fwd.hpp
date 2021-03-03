@@ -58,5 +58,6 @@
 #include "core/csr/measures/phase_length.hpp"
 #include "core/csr/measures/max_read_length.hpp"
 #include "core/csr/measures/allele_mapping_quality.hpp"
+#include "core/csr/measures/mean_likelihood.hpp"
 
 #endif

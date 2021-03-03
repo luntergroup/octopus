@@ -1,8 +1,8 @@
 // Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
-#ifndef error_rate_hpp
-#define error_rate_hpp
+#ifndef mean_likelihood_hpp
+#define mean_likelihood_hpp
 
 #include <string>
 #include <vector>
@@ -15,7 +15,7 @@ class VcfRecord;
 
 namespace csr {
 
-class ErrorRate : public Measure
+class MeanLikelihood : public Measure
 {
     const static std::string name_;
     std::unique_ptr<Measure> do_clone() const override;

@@ -201,15 +201,20 @@ struct VariantCall : Mappable<VariantCall>
     bool is_dummy_filtered = false;
 };
 
-using VariantCalls = std::vector<VariantCall>;
+using VariantList = std::vector<VariantCall>;
 
-struct GenotypeCall
+struct GenotypeCall : Mappable<VariantCall>
 {
     template <typename T> GenotypeCall(T&& genotype, Phred<double> posterior)
     : genotype {std::forward<T>(genotype)}
     , posterior {posterior}
     {}
     
+    const GenomicRegion& mapped_region() const noexcept
+    {
+        return octopus::mapped_region(genotype);
+    }
+
     Genotype<Allele> genotype;
     Phred<double> posterior;
 };
@@ -257,20 +262,6 @@ bool contains_alt(const Genotype<IndexedHaplotype<>>& genotype_call, const Varia
     return includes(genotype_call, candidate.get().alt_allele());
 }
 
-VariantCalls
-call_candidates(const VariantPosteriorVector& candidate_posteriors,
-                const Genotype<IndexedHaplotype<>>& genotype_call,
-                const Phred<double> min_posterior)
-{
-    VariantCalls result {};
-    result.reserve(candidate_posteriors.size());
-    std::copy_if(std::cbegin(candidate_posteriors), std::cend(candidate_posteriors), std::back_inserter(result),
-                 [&genotype_call, min_posterior] (const auto& p) {
-                     return p.second >= min_posterior && contains_alt(genotype_call, p.first);
-                 });
-    return result;
-}
-
 // variant genotype calling
 
 template <typename PairIterator>
@@ -279,25 +270,9 @@ PairIterator find_map(PairIterator first, PairIterator last)
     return std::max_element(first, last, [] (const auto& lhs, const auto& rhs) { return lhs.second < rhs.second; });
 }
 
-auto call_genotype(const GenotypeProbabilityMap& genotype_log_posteriors, const bool ignore_hom_ref = false)
+const auto& get_map(const GenotypeProbabilityMap& genotype_log_posteriors)
 {
-    const auto map_itr = find_map(std::cbegin(genotype_log_posteriors), std::cend(genotype_log_posteriors));
-    assert(map_itr != std::cend(genotype_log_posteriors));
-    if (!ignore_hom_ref || !is_homozygous_reference(map_itr->first)) {
-        return map_itr->first;
-    } else {
-        const auto lhs_map_itr = find_map(std::cbegin(genotype_log_posteriors), map_itr);
-        const auto rhs_map_itr = find_map(std::next(map_itr), std::cend(genotype_log_posteriors));
-        if (lhs_map_itr != map_itr) {
-            if (rhs_map_itr != std::cend(genotype_log_posteriors)) {
-                return lhs_map_itr->second < rhs_map_itr->second ? rhs_map_itr->first : lhs_map_itr->first;
-            } else {
-                return lhs_map_itr->first;
-            }
-        } else {
-            return rhs_map_itr->first;
-        }
-    }
+    return find_map(std::cbegin(genotype_log_posteriors), std::cend(genotype_log_posteriors))->first;
 }
 
 GenotypeCallVector
@@ -311,6 +286,41 @@ call_genotypes(const Genotype<IndexedHaplotype<>>& genotype_call,
         auto genotype_chunk = copy<Allele>(genotype_call, region);
         const auto posterior = marginalise_contained(genotype_chunk, genotype_log_posteriors);
         result.emplace_back(std::move(genotype_chunk), posterior);
+    }
+    return result;
+}
+
+bool matches_all_genotypes(const Genotype<IndexedHaplotype<>>& genotype, const GenotypeCallVector& genotype_calls)
+{
+    const auto contains_helper = [&] (const auto& g) { return contains(genotype, g.genotype); };
+    return std::all_of(std::cbegin(genotype_calls), std::cend(genotype_calls), contains_helper);
+}
+
+using GenotypeProbabilityMapIterator = ProbabilityMatrix<Genotype<IndexedHaplotype<>>>::ZipIterator;
+using GenotypeProbabilityIteratorVector = std::vector<GenotypeProbabilityMapIterator>;
+
+auto get_matching_genotype_iterators(const GenotypeProbabilityMap& genotype_log_posteriors,
+                                     const GenotypeCallVector& genotype_calls)
+{
+    GenotypeProbabilityIteratorVector result {};
+    result.reserve(genotype_log_posteriors.size() / 2);
+    for (auto genotype_itr = std::cbegin(genotype_log_posteriors);
+         genotype_itr != std::cend(genotype_log_posteriors);
+        ++genotype_itr) {
+        if (matches_all_genotypes(genotype_itr->first, genotype_calls)) {
+            result.push_back(genotype_itr);
+        }
+    }
+    return result;
+}
+
+auto get_map_containing_alt(const GenotypeProbabilityIteratorVector& genotype_itrs, const VariantCall& variant)
+{
+    boost::optional<GenotypeProbabilityMapIterator> result {};
+    for (const auto genotype_itr : genotype_itrs) {
+        if ((!result || genotype_itr->second > (*result)->second) && contains_alt(genotype_itr->first, variant.variant)) {
+            result = genotype_itr;
+        }
     }
     return result;
 }
@@ -331,7 +341,7 @@ transform_call(const SampleName& sample, VariantCall&& variant_call, GenotypeCal
     return result;
 }
 
-auto transform_calls(const SampleName& sample, VariantCalls&& variant_calls,
+auto transform_calls(const SampleName& sample, VariantList&& variant_calls,
                      GenotypeCallVector&& genotype_calls)
 {
     std::vector<std::unique_ptr<octopus::VariantCall>> result {};
@@ -375,12 +385,67 @@ IndividualCaller::call_variants(const std::vector<Variant>& candidates,
     debug::log(genotype_log_posteriors, debug_log_, trace_log_);
     const auto candidate_posteriors = compute_candidate_posteriors(candidates, genotype_log_posteriors);
     debug::log(candidate_posteriors, debug_log_, trace_log_, parameters_.min_variant_posterior);
-    const bool force_call_non_ref {has_callable(candidate_posteriors, parameters_.min_variant_posterior)};
-    const auto genotype_call = octopus::call_genotype(genotype_log_posteriors, force_call_non_ref);
-    auto variant_calls = call_candidates(candidate_posteriors, genotype_call, parameters_.min_variant_posterior);
-    const auto called_regions = extract_regions(variant_calls);
-    auto genotype_calls = call_genotypes(genotype_call, genotype_log_posteriors, called_regions);
-    return transform_calls(sample(), std::move(variant_calls), std::move(genotype_calls));
+    const auto map_genotype = get_map(genotype_log_posteriors);
+    VariantList called_variants {}, callable_variants {};
+    called_variants.reserve(candidates.size());
+    for (auto& candidate: candidate_posteriors) {
+        if (candidate.second >= parameters_.min_variant_posterior) {
+            if (contains_alt(map_genotype, candidate.first)) {
+                called_variants.push_back(std::move(candidate));
+            } else {
+                callable_variants.push_back(std::move(candidate));
+            }
+        }
+    }
+    auto genotype_calls = call_genotypes(map_genotype, genotype_log_posteriors, extract_regions(called_variants));
+    // We now try to force call candidates that meet the minimum variant posterior
+    // threshold but are not part of the MAP genotype. In order to call these variants,
+    // we require that they do not interfere with any of the previously called
+    // variant genotypes, otherwise we could end up reporting inviable haplotypes.
+    const auto has_interacting = [&] (const auto& candidate) { return has_overlapped(called_variants, candidate); };
+    callable_variants.erase(std::remove_if(std::begin(callable_variants), std::end(callable_variants), has_interacting),
+                            std::end(callable_variants));
+    if (!callable_variants.empty()) {
+        auto viable_genotypes = get_matching_genotype_iterators(genotype_log_posteriors, genotype_calls);
+        if (!viable_genotypes.empty()) {
+            const static auto posterior_greater = [] (const auto& lhs, const auto& rhs) {
+                return lhs.posterior > rhs.posterior;
+            };
+            std::sort(std::begin(callable_variants), std::end(callable_variants), posterior_greater);
+            unsigned num_force_calls {0};
+            for (auto& candidate : callable_variants) {
+                const auto is_interacting = [&] (const auto& variant) { return overlaps(variant, candidate); };
+                if (std::none_of(std::crbegin(called_variants), std::next(std::crbegin(called_variants), num_force_calls), is_interacting)) {
+                    const auto new_map_genotype_itr = get_map_containing_alt(viable_genotypes, candidate);
+                    if (new_map_genotype_itr) {
+                        auto genotype_chunk = copy<Allele>((*new_map_genotype_itr)->first, mapped_region(candidate));
+                        const auto posterior = marginalise_contained(genotype_chunk, genotype_log_posteriors);
+                        const auto not_still_viable = [&] (const auto& genotype_itr) {
+                            return !contains(genotype_itr->first, genotype_chunk);
+                        };
+                        viable_genotypes.erase(std::remove_if(std::begin(viable_genotypes), std::end(viable_genotypes), not_still_viable),
+                                            std::end(viable_genotypes));
+                        called_variants.push_back(std::move(candidate));
+                        genotype_calls.emplace_back(std::move(genotype_chunk), posterior);
+                        ++num_force_calls;
+                        if (viable_genotypes.empty()) break;
+                    }
+                }
+            }
+            callable_variants.clear();
+            callable_variants.shrink_to_fit();
+            if (num_force_calls > 0) {
+                const static auto mapped_region_less = [] (const auto& lhs, const auto& rhs) { return mapped_region(lhs) < mapped_region(rhs); };
+                const auto called_variants_itr = std::prev(std::end(called_variants), num_force_calls);
+                std::sort(called_variants_itr, std::end(called_variants), mapped_region_less);
+                std::inplace_merge(std::begin(called_variants), called_variants_itr, std::end(called_variants));
+                const auto genotype_calls_itr = std::prev(std::end(genotype_calls), num_force_calls);
+                std::sort(genotype_calls_itr, std::end(genotype_calls), mapped_region_less);
+                std::inplace_merge(std::begin(genotype_calls), genotype_calls_itr, std::end(genotype_calls));
+            }
+        }
+    }
+    return transform_calls(sample(), std::move(called_variants), std::move(genotype_calls));
 }
 
 namespace {

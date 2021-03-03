@@ -41,7 +41,7 @@ public:
     friend void swap(VcfWriter& lhs, VcfWriter& rhs) noexcept;
     
     bool is_open() const noexcept;
-    void open();
+    void open(bool overwrite = false);
     void open(Path file_path);
     void close() noexcept;
     

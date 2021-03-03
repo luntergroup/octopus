@@ -254,7 +254,7 @@ auto make_reduction_map(const std::vector<T>& elements,
 template <typename T>
 auto reduce(std::vector<T>& zipped, const TrioModel::Options& options)
 {
-    auto last_full_join = std::cend(zipped);
+    auto last_full_join = std::end(zipped);
     if (options.max_genotype_combinations) {
         last_full_join = reduce(zipped, get_sample_reduction_count(*options.max_genotype_combinations), options.max_individual_log_probability_loss);
     }
@@ -395,14 +395,22 @@ auto reduce(std::vector<ParentsProbabilityPair>& parents,
         }
         // We want to make sure haplotypes that the child may have are survive to avoid false positive de novo child haplotypes
         const auto top_child_haplotypes = select_top_k_haplotypes(child, 4, genotypes.child);
+        unsigned num_children_saved {0};
         for (const auto& haplotype : top_child_haplotypes) {
             if (!is_represented(haplotype, std::begin(parents), last_full_join, genotypes)) {
                 const auto first_represented_parent = find_represented(haplotype, last_full_join, std::end(parents), genotypes);
                 if (first_represented_parent != std::end(parents)) {
-                    std::iter_swap(first_represented_parent, last_full_join);
-                    ++last_full_join;
+                    ++num_children_saved;
+                    std::iter_swap(first_represented_parent, std::prev(last_full_join, num_children_saved));
                 }
             }
+        }
+        // Finally make sure hom-ref survices in both parents - if present - to get nice QUALs
+        const auto are_reference_genotypes = [&] (const auto& p) {
+             return is_homozygous_reference(genotypes.maternal[p.maternal]) && is_homozygous_reference(genotypes.paternal[p.paternal]); };
+        const auto reference_itr = std::find_if(last_full_join, std::end(parents), are_reference_genotypes);
+        if (reference_itr != std::end(parents)) {
+            std::iter_swap(reference_itr, std::prev(last_full_join, num_children_saved + 1));
         }
     }
     return make_reduction_map(parents, last_full_join, options);
@@ -422,34 +430,39 @@ auto reduce(std::vector<GenotypeIndexProbabilityPair>& likelihoods,
 {
     if (!options.max_genotype_combinations) return make_reduction_map(likelihoods, std::cend(likelihoods), options);
     const auto reduction_count = get_sample_reduction_count(*options.max_genotype_combinations);
-    const auto last_likelihood_join = reduce(likelihoods, reduction_count, options.max_individual_log_probability_loss, lost_log_mass);
+    auto last_likelihood_join = reduce(likelihoods, reduction_count, options.max_individual_log_probability_loss, lost_log_mass);
     if (last_likelihood_join == std::end(likelihoods)) {
         return make_reduction_map(likelihoods, std::cend(likelihoods), options);
-    } else if (lost_log_mass && *lost_log_mass > options.max_individual_log_probability_loss) {
-        return make_reduction_map(likelihoods, last_likelihood_join, options); // overflow
     } else {
-        auto posteriors = compute_posteriors(likelihoods, prior_model, genotypes);
-        const auto last_posterior_join = reduce(posteriors, reduction_count, options.max_individual_log_probability_loss, lost_log_mass);
-        assert(last_posterior_join <= std::end(posteriors));
-        if (last_posterior_join != std::end(posteriors)) {
-            std::sort(std::begin(likelihoods), std::end(likelihoods), GenotypeIndexProbabilityPairGenotypeLess {});
-            std::sort(std::begin(posteriors), last_posterior_join, GenotypeIndexProbabilityPairGenotypeLess {});
-            std::vector<GenotypeIndexProbabilityPair> reordered_likelihoods {};
-            reordered_likelihoods.reserve(posteriors.size());
-            std::set_intersection(std::cbegin(likelihoods), std::cend(likelihoods),
-                                  std::begin(posteriors), last_posterior_join,
-                                  std::back_inserter(reordered_likelihoods),
-                                  GenotypeIndexProbabilityPairGenotypeLess {});
-            std::set_intersection(std::cbegin(likelihoods), std::cend(likelihoods),
-                                  last_posterior_join, std::end(posteriors),
-                                  std::back_inserter(reordered_likelihoods),
-                                  GenotypeIndexProbabilityPairGenotypeLess {});
-            likelihoods = std::move(reordered_likelihoods);
-            auto last_join = std::next(std::cbegin(likelihoods), std::distance(std::begin(posteriors), last_posterior_join));
-            return make_reduction_map(likelihoods, last_join, options);
-        } else {
-            return make_reduction_map(likelihoods, std::cend(likelihoods), options);
+        if (!lost_log_mass || *lost_log_mass <= options.max_individual_log_probability_loss) {
+            auto posteriors = compute_posteriors(likelihoods, prior_model, genotypes);
+            const auto last_posterior_join = reduce(posteriors, reduction_count, options.max_individual_log_probability_loss, lost_log_mass);
+            assert(last_posterior_join <= std::end(posteriors));
+            if (last_posterior_join != std::end(posteriors)) {
+                std::sort(std::begin(likelihoods), std::end(likelihoods), GenotypeIndexProbabilityPairGenotypeLess {});
+                std::sort(std::begin(posteriors), last_posterior_join, GenotypeIndexProbabilityPairGenotypeLess {});
+                std::vector<GenotypeIndexProbabilityPair> reordered_likelihoods {};
+                reordered_likelihoods.reserve(posteriors.size());
+                std::set_intersection(std::cbegin(likelihoods), std::cend(likelihoods),
+                                    std::begin(posteriors), last_posterior_join,
+                                    std::back_inserter(reordered_likelihoods),
+                                    GenotypeIndexProbabilityPairGenotypeLess {});
+                std::set_intersection(std::cbegin(likelihoods), std::cend(likelihoods),
+                                    last_posterior_join, std::end(posteriors),
+                                    std::back_inserter(reordered_likelihoods),
+                                    GenotypeIndexProbabilityPairGenotypeLess {});
+                likelihoods = std::move(reordered_likelihoods);
+                last_likelihood_join = std::next(std::begin(likelihoods), std::distance(std::begin(posteriors), last_posterior_join));
+            } else {
+                return make_reduction_map(likelihoods, std::cend(likelihoods), options);
+            }
         }
+        const auto is_reference_genotype = [&] (const auto& p) { return is_homozygous_reference(genotypes[p.genotype]); };
+        const auto reference_genotype_itr = std::find_if(last_likelihood_join, std::end(likelihoods), is_reference_genotype);
+        if (reference_genotype_itr != std::end(likelihoods)) {
+            std::iter_swap(reference_genotype_itr, std::prev(last_likelihood_join));
+        }
+        return make_reduction_map(likelihoods, last_likelihood_join, options);
     }
 }
 

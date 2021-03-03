@@ -1112,6 +1112,8 @@ struct GenotypeHash
     }
 };
 
+bool are_equivalent(const Genotype<Allele>& lhs, const Genotype<Allele>& rhs);
+
 std::size_t num_genotypes(unsigned num_elements, unsigned ploidy);
 boost::optional<std::size_t> num_genotypes_noexcept(unsigned num_elements, unsigned ploidy) noexcept;
 std::size_t max_num_elements(std::size_t num_genotypes, unsigned ploidy);

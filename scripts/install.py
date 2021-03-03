@@ -19,7 +19,8 @@ forests = ['germline', 'somatic']
 latest_llvm = 'llvm'
 latest_gcc = 'gcc@10'
 
-required_git_version = 1, 8, 0
+required_curl_version = 7, 41, 0
+required_git_version = 2, 7, 0
 
 class Version(object):
     def __init__(self):
@@ -110,6 +111,17 @@ def get_homebrew_name():
 def download_homebrew():
     git_clone('https://github.com/Homebrew/brew')
 
+def is_old_brew_config_curl(brew_bin):
+    brew_config = check_output([str(brew_bin), 'config']).decode("utf-8").split()
+    if 'Curl:' in brew_config:
+        brew_curl_version = tuple(int(v) for v in brew_config[brew_config.index('Curl:') + 1].split('.'))
+        return brew_curl_version < required_curl_version
+    else:
+        raise Exception("No Curl in brew config")
+
+def curl_version(curl_bin):
+    return tuple([int(v) for v in check_output([str(curl_bin), '--version']).decode("utf-8").split('\n')[0].strip().split()[1].split('.')])
+
 def is_old_brew_config_git(brew_bin):
     brew_config = check_output([str(brew_bin), 'config']).decode("utf-8").split()
     if 'Git:' in brew_config:
@@ -124,6 +136,15 @@ def which(program):
 def git_version(git_bin):
     return tuple([int(v) for v in check_output([str(git_bin), '--version']).decode("utf-8").strip().split()[-1].split('.')])
 
+def hack_old_brewed_curl():
+    env_curl = which('curl')
+    if curl_version(env_curl) < required_curl_version:
+        required_curl_version_str = '.'.join([str(v) for v in required_curl_version])
+        raise Exception('Could not find cURL version >= ' + required_curl_version_str)
+    else:
+        os.environ["HOMEBREW_CURL_PATH"] = env_curl
+        os.environ["HOMEBREW_NO_ENV_FILTERING"] = "1"
+
 def hack_old_brewed_git():
     env_git = which('git')
     if git_version(env_git) < required_git_version:
@@ -133,6 +154,37 @@ def hack_old_brewed_git():
         os.environ["HOMEBREW_GIT_PATH"] = env_git
         os.environ["HOMEBREW_NO_ENV_FILTERING"] = "1"
 
+def install_curl_from_source(install_dir):
+    curl_dir = install_dir / "curl"
+    if not curl_dir.exists():
+        call(["wget", "https://github.com/curl/curl/releases/download/curl-7_74_0/curl-7.74.0.tar.gz"])
+        call("tar -xzf curl-7.74.0.tar.gz".split())
+        Path("curl-7.74.0.tar.gz").unlink()
+        shutil.move("curl-7.74.0", curl_dir)
+        cwd = Path.cwd()
+        os.chdir(curl_dir)
+        call(["./configure"])
+        call(["make"])
+        os.chdir(cwd)
+    os.environ['PATH'] = os.pathsep.join([str(curl_dir / "src"), os.environ['PATH']])
+    os.environ["HOMEBREW_CURL_PATH"] = str(curl_dir / "src" / "curl")
+    os.environ["HOMEBREW_NO_ENV_FILTERING"] = "1"
+
+def install_git_from_source(install_dir):
+    git_dir = install_dir / "git"
+    if not git_dir.exists():
+        call(["git", "clone", "https://github.com/git/git.git"])
+        shutil.move("git", install_dir)
+        cwd = Path.cwd()
+        os.chdir(git_dir)
+        call(["make", "configure"])
+        call(["./configure"])
+        call(["make"])
+        os.chdir(cwd)
+    os.environ['PATH'] = os.pathsep.join([str(git_dir), os.environ['PATH']])
+    os.environ["HOMEBREW_GIT_PATH"] = str(git_dir / "git")
+    os.environ["HOMEBREW_NO_ENV_FILTERING"] = "1"
+    
 def gcc_version(gcc_bin):
     return tuple(int(v) for v in check_output([str(gcc_bin), '-dumpversion']).decode("utf-8").strip().split('.'))
 
@@ -149,8 +201,19 @@ def hack_centos6_brewed_gcc(brew_bin_dir):
 
 def init_homebrew(brew_bin_dir):
     brew_bin = brew_bin_dir / 'brew'
+    brew_dependency_dir = brew_bin_dir.parent.parent / "brew_dependencies"
+    if is_old_brew_config_curl(brew_bin):
+        try:
+            hack_old_brewed_curl()
+        except:
+            print("Could not find viable cURL, attempting to install from source...")
+            install_curl_from_source(brew_dependency_dir)
     if is_old_brew_config_git(brew_bin):
-        hack_old_brewed_git()
+        try:
+            hack_old_brewed_git()
+        except:
+            print("Could not find viable git, attempting to install from source...")
+            install_git_from_source(brew_dependency_dir)
     if is_centos((6,)):
         hack_centos6_brewed_gcc(brew_bin_dir)
     call([str(brew_bin), 'update'])
@@ -309,6 +372,8 @@ def main(args):
         cmake_options.append("-DBUILD_SHARED_LIBS=OFF")
     if args["verbose"]:
         cmake_options.append("-DCMAKE_VERBOSE_MAKEFILE:BOOL=ON")
+    if args["architecture"]:
+            cmake_options.append("-DCOMPILER_ARCHITECTURE=" + args["architecture"])
     if dependencies_dir is not None:
         if args["c_compiler"]:
             cmake_options.append("-DCMAKE_C_COMPILER=" + str(args["c_compiler"]))
@@ -443,5 +508,9 @@ if __name__ == '__main__':
                         default=False,
                         help='Ouput verbose make information',
                         action='store_true')
+    parser.add_argument('--architecture',
+                        required=False,
+                        type=str,
+                        help='The architecture to compile for')
     args = vars(parser.parse_args())
     main(args)

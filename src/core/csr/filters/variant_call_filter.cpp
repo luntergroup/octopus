@@ -101,10 +101,17 @@ std::string VariantCallFilter::name() const
     return do_name();
 }
 
-void VariantCallFilter::filter(const VcfReader& source, VcfWriter& dest) const
+void VariantCallFilter::filter(const VcfReader& source, VcfWriter& dest, boost::optional<VcfHeader> template_header) const
 {
     if (dest.is_header_written()) {
-        const auto header = read_header(dest);
+        dest.close();
+        const auto header = make_header(read_header(dest));
+        dest.open(true);
+        dest << header;
+        filter(source, dest, header);
+    } else if (template_header) {
+        const auto header = make_header(*template_header);
+        dest << header;
         filter(source, dest, header);
     } else {
         const auto header = make_header(source);
@@ -392,9 +399,9 @@ std::vector<std::string> VariantCallFilter::compute_reason_union(const Classific
     return result;
 }
 
-VcfHeader VariantCallFilter::make_header(const VcfReader& source) const
+VcfHeader VariantCallFilter::make_header(const VcfHeader& source) const
 {
-    VcfHeader::Builder builder {source.fetch_header()};
+    VcfHeader::Builder builder {source};
     if (output_config_.clear_info) {
         builder.clear_info();
     }
@@ -410,6 +417,11 @@ VcfHeader VariantCallFilter::make_header(const VcfReader& source) const
     }
     annotate(builder);
     return builder.build_once();
+}
+
+VcfHeader VariantCallFilter::make_header(const VcfReader& source) const
+{
+    return make_header(source.fetch_header());
 }
 
 VcfRecord::Builder VariantCallFilter::construct_template(const VcfRecord& call) const

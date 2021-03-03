@@ -84,6 +84,7 @@ SingleCellModel::evaluate(const GenotypeVector& genotypes,
     assert(all_same_ploidy(genotypes));
     const auto num_clones = prior_model_.phylogeny().size();
     assert(num_clones <= genotypes.size());
+    assert(num_clones <= samples_.size());
     Inferences result {};
     if (num_clones == 1) {
         evaluate(result, genotypes, haplotype_likelihoods);
@@ -386,9 +387,9 @@ SingleCellModel::propose_genotype_combinations(const GenotypeVector& genotypes,
         if (clusters.empty()) {
             auto population_inferences = population_model.evaluate(samples_, haplotypes, genotypes, haplotype_likelihoods);
             population_genotype_posteriors = std::move(population_inferences.posteriors.marginal_genotype_probabilities);
-            clusters = cluster_samples(population_genotype_posteriors, std::max(samples_.size() / 4, 2 * num_groups));
+            clusters = cluster_samples(population_genotype_posteriors, std::min(std::max(samples_.size() / 4, 2 * num_groups), samples_.size()));
         } else if (clusters.size() > 2 * num_groups) {
-            clusters = cluster_samples(cluster_marginal_genotype_posteriors, std::max(clusters.size() / 2, 2 * num_groups));
+            clusters = cluster_samples(cluster_marginal_genotype_posteriors, std::min(std::max(clusters.size() / 2, 2 * num_groups), samples_.size()));
         } else {
             auto num_effective_clusters = sum_entropies(cluster_marginal_genotype_posteriors);
             if ((clusters.size() == num_groups + 1 && num_effective_clusters < num_groups / 2)
@@ -405,7 +406,7 @@ SingleCellModel::propose_genotype_combinations(const GenotypeVector& genotypes,
             if (clusters.size() <= num_groups + 1) break;
             num_effective_clusters = sum_entropies(cluster_marginal_genotype_posteriors);
             if (num_groups < 4 && clusters.size() <= num_groups + 2 && num_effective_clusters < 2) break;
-            clusters = cluster_samples(cluster_marginal_genotype_posteriors, num_groups + 1);
+            clusters = cluster_samples(cluster_marginal_genotype_posteriors, std::min(num_groups + 1, samples_.size()));
         }
         cluster_marginal_genotype_posteriors.clear();
         std::vector<std::vector<SampleName>> next_samples_by_cluster {};
@@ -704,6 +705,33 @@ SingleCellModel::propose_genotype_combinations(const PhylogenyNodePloidyMap& phy
     return result;
 }
 
+namespace {
+
+auto make_point_seed(const std::size_t num_genotypes, const std::size_t idx, const double p = 0.9999)
+{
+    LogProbabilityVector result(num_genotypes, num_genotypes > 1 ? std::log((1 - p) / (num_genotypes - 1)) : 0);
+    if (num_genotypes > 1) result[idx] = std::log(p);
+    return result;
+}
+
+template <typename InputIterator>
+void make_point_seeds(const std::size_t num_genotypes,
+                      InputIterator first_indices_itr, InputIterator last_indices_itr,
+                      std::vector<LogProbabilityVector>& result, const double p = 0.9999)
+{
+    result.reserve(result.size() + std::distance(first_indices_itr, last_indices_itr));
+    std::transform(first_indices_itr, last_indices_itr, std::back_inserter(result),
+                   [=] (auto idx) { return make_point_seed(num_genotypes, idx, p); });
+}
+
+void make_point_seeds(const std::size_t num_genotypes, const std::vector<std::size_t>& indices,
+                      std::vector<LogProbabilityVector>& result, const double p = 0.9999)
+{
+    make_point_seeds(num_genotypes, std::cbegin(indices), std::cend(indices), result, p);
+}
+
+} // namespace
+
 void
 SingleCellModel::evaluate(Inferences& result,
                           const GenotypeVector& genotypes,
@@ -717,14 +745,19 @@ SingleCellModel::evaluate(Inferences& result,
     SubcloneModel::AlgorithmParameters algo_params {};
     algo_params.max_seeds = config_.max_seeds;
     algo_params.execution_policy = config_.execution_policy;
-    SubcloneModel helper_model {samples_, std::move(subclone_priors)};
+    SubcloneModel helper_model {samples_, std::move(subclone_priors), algo_params};
     SubcloneModel::InferredLatents subclone_inferences;
     if (!config_.max_genotype_combinations || genotypes.size() <= *config_.max_genotype_combinations) {
         subclone_inferences = helper_model.evaluate(genotypes, haplotype_likelihoods);
     } else {
         const auto genotype_subset_indices = propose_genotypes(genotypes, haplotype_likelihoods);
         const auto genotype_subset = copy(genotypes, genotype_subset_indices);
-        subclone_inferences = helper_model.evaluate(genotype_subset, haplotype_likelihoods);
+        const auto num_hints = std::min(genotype_subset_indices.size(), static_cast<std::size_t>(config_.max_seeds / 2));
+        std::vector<std::size_t> hint_indices(num_hints);
+        std::iota(std::begin(hint_indices), std::end(hint_indices), 0u);
+        std::vector<LogProbabilityVector> hints {};
+        make_point_seeds(genotype_subset.size(), hint_indices, hints);
+        subclone_inferences = helper_model.evaluate(genotype_subset, haplotype_likelihoods, std::move(hints));
         SubcloneModel::Latents::ProbabilityVector weighted_genotype_posteriors(genotypes.size());
         for (std::size_t g {0}; g < genotype_subset.size(); ++g) {
             weighted_genotype_posteriors[genotype_subset_indices[g]] = subclone_inferences.weighted_genotype_posteriors[g];
@@ -821,21 +854,6 @@ namespace {
 LogProbabilityVector log_uniform_dist(const std::size_t n)
 {
     return LogProbabilityVector(n, -std::log(static_cast<double>(n)));
-}
-
-auto make_point_seed(const std::size_t num_genotypes, const std::size_t idx, const double p = 0.9999)
-{
-    LogProbabilityVector result(num_genotypes, num_genotypes > 1 ? std::log((1 - p) / (num_genotypes - 1)) : 0);
-    if (num_genotypes > 1) result[idx] = std::log(p);
-    return result;
-}
-
-void make_point_seeds(const std::size_t num_genotypes, const std::vector<std::size_t>& indices,
-                      std::vector<LogProbabilityVector>& result, const double p = 0.9999)
-{
-    result.reserve(result.size() + indices.size());
-    std::transform(std::cbegin(indices), std::cend(indices), std::back_inserter(result),
-                   [=] (auto idx) { return make_point_seed(num_genotypes, idx, p); });
 }
 
 auto make_range_seed(const std::size_t num_genotypes, const std::size_t begin, const std::size_t n,

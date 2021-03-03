@@ -42,6 +42,7 @@ enum class CandidateVariantDiscoveryProtocol { illumina, pacbio };
 enum class RealignedBAMType { full, mini };
 enum class ReadDeduplicationDetectionPolicy { relaxed, aggressive };
 enum class ModelPosteriorPolicy { all, off, special };
+enum class PhasingPolicy { conservative, aggressive, automatic };
 
 struct SampleDropoutConcentrationPair
 {
@@ -77,6 +78,8 @@ std::istream& operator>>(std::istream& in, ModelPosteriorPolicy& policy);
 std::ostream& operator<<(std::ostream& os, const ModelPosteriorPolicy& policy);
 std::istream& operator>>(std::istream& in, SampleDropoutConcentrationPair& concentration);
 std::ostream& operator<<(std::ostream& os, const SampleDropoutConcentrationPair& concentration);
+std::istream& operator>>(std::istream& in, PhasingPolicy& policy);
+std::ostream& operator<<(std::ostream& os, const PhasingPolicy& policy);
 
 std::ostream& operator<<(std::ostream& os, const OptionMap& options);
 std::string to_string(const OptionMap& options, bool one_line = false, bool mark_modified = true);

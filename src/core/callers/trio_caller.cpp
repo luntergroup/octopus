@@ -416,7 +416,7 @@ TrioCaller::infer_latents(const HaplotypeBlock& haplotypes,
         if (parameters_.maternal_ploidy == parameters_.child_ploidy) {
             auto latents = model.evaluate(maternal_genotypes, paternal_genotypes,
                                           maternal_genotypes, haplotype_likelihoods);
-            return std::make_unique<Latents>(std::move(indexed_haplotypes), std::move(maternal_genotypes), std::move(maternal_genotypes),
+            return std::make_unique<Latents>(std::move(indexed_haplotypes), std::move(maternal_genotypes), std::move(paternal_genotypes),
                                              parameters_.child_ploidy, std::move(latents), parameters_.trio);
         } else {
             auto latents = model.evaluate(maternal_genotypes, paternal_genotypes,
@@ -647,18 +647,18 @@ unsigned count_occurrences(const Allele& allele, const Genotype<IndexedHaplotype
                         [&] (const auto& haplotype) { return contains_helper(haplotype, allele); });
 }
 
-bool is_denovo(const Allele& allele, const JointProbability& trio)
+bool is_denovo(const Allele& allele, const JointProbability& trio, const TrioGenotypeInfo& info)
 {
-	const auto child_occurrences = count_occurrences(allele, trio.child);
+	const auto child_occurrences = count_occurrences(allele, info.genotypes[trio.child]);
 	switch(child_occurrences) {
 		case 0: return false;
-		case 1: return !(contains_helper(trio.maternal, allele)
-                		|| contains_helper(trio.paternal, allele));
-		case 2: return !(contains_helper(trio.maternal, allele)
-						&& contains_helper(trio.paternal, allele));
+		case 1: return !(contains_helper(info.genotypes[trio.maternal], allele)
+                		|| contains_helper(info.genotypes[trio.paternal], allele));
+		case 2: return !(contains_helper(info.genotypes[trio.maternal], allele)
+						&& contains_helper(info.genotypes[trio.paternal], allele));
 		default: {
-			auto maternal_occurrences = count_occurrences(allele, trio.maternal);
-			auto paternal_occurrences = count_occurrences(allele, trio.paternal);
+			auto maternal_occurrences = count_occurrences(allele, info.genotypes[trio.maternal]);
+			auto paternal_occurrences = count_occurrences(allele, info.genotypes[trio.paternal]);
 			return maternal_occurrences > 0 && paternal_occurrences > 0 && (maternal_occurrences + paternal_occurrences) >= child_occurrences;
 		}
 	}
@@ -685,9 +685,10 @@ bool is_denovo(const Allele& allele,
 	}
 }
 
-auto compute_denovo_posterior_uncached(const Allele& allele, const TrioProbabilityVector& trio_posteriors)
+auto compute_denovo_posterior_uncached(const Allele& allele, const TrioProbabilityVector& trio_posteriors, 
+                                       const TrioGenotypeInfo& info)
 {
-    return marginalise_condition(trio_posteriors, [&] (const auto& trio) { return is_denovo(allele, trio); });
+    return marginalise_condition(trio_posteriors, [&] (const auto& trio) { return is_denovo(allele, trio, info); });
 }
 
 auto compute_denovo_posterior_cached(const Allele& allele, const TrioProbabilityVector& trio_posteriors,
@@ -704,7 +705,7 @@ auto compute_denovo_posterior(const Allele& allele, const TrioProbabilityVector&
     if (trio_posteriors.size() >= 500) {
         return compute_denovo_posterior_cached(allele, trio_posteriors, info);
     } else {
-        return compute_denovo_posterior_uncached(allele, trio_posteriors);
+        return compute_denovo_posterior_uncached(allele, trio_posteriors, info);
     }
 }
 
@@ -814,23 +815,24 @@ bool includes(const TrioCall& trio, const Allele& allele)
     return includes(trio.mother, allele) || includes(trio.father, allele) || includes(trio.child, allele);
 }
 
-bool none_mendilian_errors(const JointProbability& call, const std::vector<CalledGermlineVariant>& germline_calls)
+bool none_mendilian_errors(const JointProbability& call, const std::vector<CalledGermlineVariant>& germline_calls, const TrioGenotypeInfo& info)
 {
     return std::none_of(std::cbegin(germline_calls), std::cend(germline_calls),
-                        [&] (const auto& germline) { return is_denovo(germline.variant.alt_allele(), call); });
+                        [&] (const auto& germline) { return is_denovo(germline.variant.alt_allele(), call, info); });
 }
 
-bool all_mendilian_errors(const JointProbability& call, const std::vector<CalledDenovo>& denovo_calls)
+bool all_mendilian_errors(const JointProbability& call, const std::vector<CalledDenovo>& denovo_calls, const TrioGenotypeInfo& info)
 {
     return std::all_of(std::cbegin(denovo_calls), std::cend(denovo_calls),
-                       [&] (const auto& denovo) { return is_denovo(denovo.allele, call); });
+                       [&] (const auto& denovo) { return is_denovo(denovo.allele, call, info); });
 }
 
 bool is_viable_genotype_call(const JointProbability& call,
                              const std::vector<CalledGermlineVariant>& germline_calls,
-                             const std::vector<CalledDenovo>& denovo_calls)
+                             const std::vector<CalledDenovo>& denovo_calls,
+                             const TrioGenotypeInfo& info)
 {
-    return none_mendilian_errors(call, germline_calls) && all_mendilian_errors(call, denovo_calls);
+    return none_mendilian_errors(call, germline_calls, info) && all_mendilian_errors(call, denovo_calls, info);
 }
 
 TrioCall to_call(const JointProbability& p, const TrioGenotypeInfo& info) noexcept
@@ -848,7 +850,7 @@ auto call_trio(const TrioProbabilityVector& trio_posteriors,
                                           [] (const auto& lhs, const auto& rhs) {
                                               return lhs.probability < rhs.probability;
                                           });
-    if (trio_posteriors.size() == 1 || is_viable_genotype_call(*map_itr, germline_calls, denovo_calls)) {
+    if (trio_posteriors.size() == 1 || is_viable_genotype_call(*map_itr, germline_calls, denovo_calls, info)) {
         return to_call(*map_itr, info);
     } else {
         std::vector<std::reference_wrapper<const JointProbability>> trio_posterior_refs {};
@@ -858,7 +860,7 @@ auto call_trio(const TrioProbabilityVector& trio_posteriors,
                   [] (const auto& lhs, const auto& rhs) { return lhs.get().probability > rhs.get().probability; });
         auto viable_map_itr = std::find_if(std::next(std::cbegin(trio_posterior_refs)), std::cend(trio_posterior_refs),
                                            [&] (const auto& p) {
-                                               return is_viable_genotype_call(p,  germline_calls, denovo_calls);
+                                               return is_viable_genotype_call(p,  germline_calls, denovo_calls, info);
                                            });
         if (viable_map_itr != std::cend(trio_posterior_refs)) {
             return to_call(*viable_map_itr, info);

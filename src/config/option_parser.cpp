@@ -237,7 +237,7 @@ OptionMap parse_options(const int argc, const char** argv)
      "Allows reads marked as unmapped to be used for calling")
     
     ("min-mapping-quality",
-     po::value<int>()->default_value(10),
+     po::value<int>()->default_value(5),
      "Minimum read mapping quality required to consider a read for calling")
     
     ("good-base-quality",
@@ -502,7 +502,7 @@ OptionMap parse_options(const int argc, const char** argv)
      " (sample:contig=ploidy) ploidies, one per line")
     
     ("min-variant-posterior",
-     po::value<Phred<double>>()->default_value(Phred<double> {1.0}),
+     po::value<Phred<double>>()->default_value(Phred<double> {0.1}),
      "Report variant alleles with posterior probability (phred scale) greater than this")
     
     ("refcall",
@@ -587,9 +587,9 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<Phred<double>>()->default_value(Phred<double> {5.0}),
      "Minimum phase score (phred scale) required to report sites as phased")
     
-    ("disable-early-phase-detection",
-     po::bool_switch()->default_value(false),
-     "Disable phase detection before haplotypes fully extended")
+    ("phasing-policy",
+     po::value<PhasingPolicy>()->default_value(PhasingPolicy::automatic),
+     "Policy for applying phasing algorithm [AUTO, CONSERVATIVE, AGGRESSIVE]")
 
     ("bad-region-tolerance",
      po::value<BadRegionTolerance>()->default_value(BadRegionTolerance::normal),
@@ -692,7 +692,7 @@ OptionMap parse_options(const int argc, const char** argv)
     po::options_description cell("Cell calling model");
     cell.add_options()
     ("max-copy-loss",
-     po::value<int>()->default_value(1),
+     po::value<int>()->default_value(0),
      "Maximum number of haplotype losses in the phylogeny")
     
     ("max-copy-gain",
@@ -723,15 +723,15 @@ OptionMap parse_options(const int argc, const char** argv)
      "Disable call filtering")
     
     ("filter-expression",
-     po::value<std::string>()->default_value("QUAL < 10 | MQ < 10 | MP < 10 | AD < 1 | AF < 0.01 | AFB > 0.25 | SB > 0.98 | BQ < 15 | DP < 1"),
+     po::value<std::string>()->default_value("QUAL < 10 | MQ < 10 | MP < 10 | AD < 1 | AF < 0.01 | AFB > 0.25 | SB > 0.98 | BQ < 15 | DP < 1 | ADP < 1"),
      "Boolean expression to use to filter variant calls")
     
     ("somatic-filter-expression",
-     po::value<std::string>()->default_value("QUAL < 2 | GQ < 20 | MQ < 30 | SMQ < 40 | SB > 0.9 | SD > 0.9 | BQ < 20 | DP < 3 | MF > 0.2 | NC > 1 | FRF > 0.5 | AD < 1 | AF < 0.0001"),
+     po::value<std::string>()->default_value("QUAL < 2 | GQ < 20 | MQ < 30 | SMQ < 40 | SB > 0.9 | SD > 0.9 | BQ < 20 | DP < 3 | ADP < 1 | MF > 0.2 | NC > 1 | FRF > 0.5 | AD < 1 | AF < 0.0001"),
      "Boolean expression to use to filter somatic variant calls")
     
     ("denovo-filter-expression",
-     po::value<std::string>()->default_value("QUAL < 50 | PP < 40 | GQ < 20 | MQ < 30 | AD < 1 | AF < 0.1 | AFB > 0.2 | SB > 0.95 | BQ < 20 | DP < 10 | DC > 1 | MF > 0.2 | FRF > 0.5 | MP < 30 | MQ0 > 2"),
+     po::value<std::string>()->default_value("QUAL < 50 | PP < 40 | GQ < 20 | MQ < 30 | AD < 1 | AF < 0.1 | AFB > 0.2 | SB > 0.95 | BQ < 20 | DP < 10 | ADP < 1 | DC > 1 | MF > 0.2 | FRF > 0.5 | MP < 30 | MQ0 > 2"),
      "Boolean expression to use to filter somatic variant calls")
     
     ("refcall-filter-expression",
@@ -1611,6 +1611,36 @@ std::ostream& operator<<(std::ostream& os, const SampleDropoutConcentrationPair&
     return os;
 }
 
+std::istream& operator>>(std::istream& in, PhasingPolicy& result)
+{
+    std::string token;
+    in >> token;
+    if (token == "CONSERVATIVE")
+        result = PhasingPolicy::conservative;
+    else if (token == "AGGRESSIVE")
+        result = PhasingPolicy::aggressive;
+    else if (token == "AUTO")
+        result = PhasingPolicy::automatic;
+    else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token, "phasing-policy"};
+    return in;
+}
+
+std::ostream& operator<<(std::ostream& out, const PhasingPolicy& policy)
+{
+    switch (policy) {
+        case PhasingPolicy::conservative:
+            out << "CONSERVATIVE";
+            break;
+        case PhasingPolicy::aggressive:
+            out << "AGGRESSIVE";
+            break;
+        case PhasingPolicy::automatic:
+            out << "AUTO";
+            break;
+    }
+    return out;
+}
+
 namespace {
 
 template <typename T>
@@ -1737,6 +1767,8 @@ std::ostream& operator<<(std::ostream& os, const OptionMap& options)
             write_vector<SampleDropoutConcentrationPair>(options, label, os, bullet);
         } else if (is_type<ModelPosteriorPolicy>(value)) {
             os << options[label].as<ModelPosteriorPolicy>();
+        } else if (is_type<PhasingPolicy>(value)) {
+            os << options[label].as<PhasingPolicy>();
         } else {
             os << "UnknownType(" << ((boost::any)value.value()).type().name() << ")";
         }

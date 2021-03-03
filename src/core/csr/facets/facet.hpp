@@ -8,6 +8,7 @@
 #include <functional>
 #include <memory>
 #include <unordered_map>
+#include <map>
 
 #include <boost/variant.hpp>
 
@@ -36,6 +37,8 @@ public:
         {
             HaplotypeSupportMap assigned_wrt_reference, assigned_wrt_haplotype;
             AmbiguousReadList ambiguous_wrt_reference, ambiguous_wrt_haplotype;
+            std::map<Haplotype, std::vector<double>> assigned_likelihoods;
+            std::vector<double> ambiguous_max_likelihoods;
         };
         std::unordered_map<SampleName, HaplotypeSupportMaps> haplotypes;
         std::unordered_map<SampleName, AlleleSupportMap> alleles;

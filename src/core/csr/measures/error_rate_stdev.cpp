@@ -3,7 +3,6 @@
 
 #include "error_rate_stdev.hpp"
 
-#include <deque>
 #include <numeric>
 #include <algorithm>
 #include <iterator>
@@ -18,6 +17,7 @@
 #include "io/variant/vcf_record.hpp"
 #include "utils/maths.hpp"
 #include "../facets/samples.hpp"
+#include "../facets/alleles.hpp"
 #include "../facets/read_assignments.hpp"
 
 namespace octopus { namespace csr {
@@ -36,24 +36,16 @@ Measure::ValueType ErrorRateStdev::get_value_type() const
 
 namespace {
 
-
 auto calculate_error_rate(const AlignedRead& read) noexcept
 {
     return static_cast<double>(sum_non_matches(read.cigar())) / sequence_size(read);
 }
 
 boost::optional<double>
-compute_error_rate_stdev(const Facet::SupportMaps::HaplotypeSupportMaps& assignments, const GenomicRegion& region) noexcept
+calculate_error_rate_stdev(const ReadRefSupportSet& reads)
 {
-    std::deque<double> error_rates {};
-    for (const auto& p : assignments.assigned_wrt_haplotype) {
-        for (const auto& read : overlap_range(p.second, region)) {
-            error_rates.push_back(calculate_error_rate(read));
-        }
-    }
-    for (const auto& read : overlap_range(assignments.ambiguous_wrt_haplotype, region)) {
-        error_rates.push_back(calculate_error_rate(read.read));
-    }
+    std::vector<double> error_rates(reads.size());
+    std::transform(std::cbegin(reads), std::cend(reads), std::begin(error_rates), calculate_error_rate);
     if (!error_rates.empty()) {
         return maths::stdev(error_rates);
     } else {
@@ -66,18 +58,29 @@ compute_error_rate_stdev(const Facet::SupportMaps::HaplotypeSupportMaps& assignm
 Measure::ResultType ErrorRateStdev::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     const auto& samples = get_value<Samples>(facets.at("Samples"));
-    const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments")).haplotypes;
-    Array<Optional<ValueType>> result {};
-    result.reserve(samples.size());
-    for (const auto& sample : samples) {
-        result.emplace_back(compute_error_rate_stdev(assignments.at(sample), mapped_region(call)));
+    const auto& alleles = get_value<Alleles>(facets.at("Alleles"));
+    const auto& assignments = get_value<ReadAssignments>(facets.at("ReadAssignments")).alleles;
+    const auto num_alleles = 1 + call.num_alt();
+    Array<Array<Optional<ValueType>>> result(samples.size(), Array<Optional<ValueType>>(num_alleles));
+    for (std::size_t s {0}; s < samples.size(); ++s) {
+        const auto& sample_alleles = get(alleles, call, samples[s]);
+        assert(sample_alleles.size() == num_alleles);
+        const auto& support = assignments.at(samples[s]);
+        for (std::size_t a {0}; a < num_alleles; ++a) {
+            if (sample_alleles[a]) {
+                const auto support_set_itr = support.find(*sample_alleles[a]);
+                if (support_set_itr != std::cend(support)) {
+                    result[s][a] = calculate_error_rate_stdev(support_set_itr->second);
+                }
+            }
+        }
     }
     return result;
 }
 
 Measure::ResultCardinality ErrorRateStdev::do_cardinality() const noexcept
 {
-    return ResultCardinality::samples;
+    return ResultCardinality::samples_and_alleles;
 }
 
 const std::string& ErrorRateStdev::do_name() const
@@ -87,12 +90,17 @@ const std::string& ErrorRateStdev::do_name() const
 
 std::string ErrorRateStdev::do_describe() const
 {
-    return "Error rate standard deviation in reads overlapping the site";
+    return "Error rate standard deviation in supporting reads";
 }
 
 std::vector<std::string> ErrorRateStdev::do_requirements() const
 {
-    return {"Samples", "ReadAssignments"};
+    return {"Samples", "Alleles", "ReadAssignments"};
+}
+
+boost::optional<Measure::Aggregator> ErrorRateStdev::do_aggregator() const noexcept
+{
+    return Measure::Aggregator::max;
 }
 
 } // namespace csr

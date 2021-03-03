@@ -71,6 +71,7 @@ void init(MeasureMakerMap& measure_makers)
     measure_makers[name<PhaseLength>()]                 = [] () { return make_wrapped_measure<PhaseLength>(); };
     measure_makers[name<MaxReadLength>()]               = [] () { return make_wrapped_measure<MaxReadLength>(); };
     measure_makers[name<AlleleMappingQuality>()]        = [] () { return make_wrapped_measure<AlleleMappingQuality>(); };
+    measure_makers[name<MeanLikelihood>()]               = [] () { return make_wrapped_measure<MeanLikelihood>(); };
 }
 
 class BadParameterList : public UserError

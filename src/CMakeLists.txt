@@ -423,6 +423,8 @@ set(CORE_SOURCES
     core/csr/measures/phase_length.cpp
     core/csr/measures/max_read_length.hpp
     core/csr/measures/max_read_length.cpp
+    core/csr/measures/mean_likelihood.hpp
+    core/csr/measures/mean_likelihood.cpp
     core/csr/measures/allele_mapping_quality.hpp
     core/csr/measures/allele_mapping_quality.cpp
     
@@ -655,7 +657,7 @@ if (NOT BUILD_SHARED_LIBS)
     set(HTSlib_USE_STATIC_LIBS ON)
 endif()
 
-set(CXX_OPTIMIZATION_FLAGS -ffast-math -march=native)
+set(CXX_OPTIMIZATION_FLAGS -ffast-math -march=${COMPILER_ARCHITECTURE})
 if (CMAKE_COMPILER_IS_GNUCXX)
     set(CXX_OPTIMIZATION_FLAGS ${CXX_OPTIMIZATION_FLAGS} -mfpmath=both)
 endif()
@@ -666,7 +668,7 @@ if (BUILD_TESTING)
     target_compile_features(Octopus PRIVATE cxx_thread_local)
     target_compile_options(Octopus PRIVATE ${CXX_OPTIMIZATION_FLAGS})
     target_include_directories(Octopus PUBLIC ${octopus_SOURCE_DIR}/lib ${octopus_SOURCE_DIR}/src)
-    target_link_libraries(Octopus tandem ranger)
+    target_link_libraries(Octopus tandem ranger date-tz)
     target_compile_definitions(Octopus PRIVATE -DBOOST_LOG_DYN_LINK) # Required for log
     find_package (Boost 1.65 REQUIRED COMPONENTS ${REQUIRED_BOOST_LIBRARIES} REQUIRED)
     message(STATUS "Boost include dir: " ${Boost_INCLUDE_DIR})
@@ -698,7 +700,7 @@ elseif (CMAKE_BUILD_TYPE MATCHES Debug)
     add_executable(octopus-debug main.cpp ${OCTOPUS_SOURCES} ${INCLUDE_SOURCES})
     target_compile_features(octopus-debug PRIVATE cxx_thread_local)
     target_include_directories(octopus-debug PUBLIC ${octopus_SOURCE_DIR}/lib ${octopus_SOURCE_DIR}/src)
-    target_link_libraries(octopus-debug tandem ranger)
+    target_link_libraries(octopus-debug tandem ranger date-tz)
     if (NOT BUILD_SHARED_LIBS)
         message(STATUS "Linking against boost static libraries")
         set(Boost_USE_STATIC_LIBS ON)
@@ -721,7 +723,7 @@ elseif (CMAKE_BUILD_TYPE MATCHES Debug)
         ${Boost_INCLUDE_DIR}
         ${GMP_INCLUDES}
         ${HTSlib_INCLUDE_DIRS})
-    target_link_libraries (octopus-debug tandem ranger ${Boost_LIBRARIES} ${GMP_LIBRARIES} ${HTSlib_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
+    target_link_libraries (octopus-debug tandem ranger date-tz ${Boost_LIBRARIES} ${GMP_LIBRARIES} ${HTSlib_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
     configure_file (
         "${PROJECT_SOURCE_DIR}/src/config/system.h.in"
         "${PROJECT_BINARY_DIR}/generated/system.hpp"
@@ -754,7 +756,7 @@ elseif (CMAKE_BUILD_TYPE MATCHES RelWithDebInfo)
         ${Boost_INCLUDE_DIR}
         ${GMP_INCLUDES}
         ${HTSlib_INCLUDE_DIRS})
-    target_link_libraries (octopus-sanitize tandem ranger ${Boost_LIBRARIES} ${GMP_LIBRARIES} ${HTSlib_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${SanitizeFlags})
+    target_link_libraries (octopus-sanitize tandem ranger date-tz ${Boost_LIBRARIES} ${GMP_LIBRARIES} ${HTSlib_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${SanitizeFlags})
     configure_file (
         "${PROJECT_SOURCE_DIR}/src/config/system.h.in"
         "${PROJECT_BINARY_DIR}/generated/system.hpp"
@@ -786,7 +788,7 @@ else()
         ${Boost_INCLUDE_DIR}
         ${GMP_INCLUDES}
         ${HTSlib_INCLUDE_DIRS})
-    target_link_libraries (octopus tandem ranger ${Boost_LIBRARIES} ${GMP_LIBRARIES} ${HTSlib_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
+    target_link_libraries (octopus tandem ranger date-tz ${Boost_LIBRARIES} ${GMP_LIBRARIES} ${HTSlib_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
     if (NOT BUILD_SHARED_LIBS)
         if (CMAKE_COMPILER_IS_GNUCXX)
             target_link_libraries(octopus m mvec -static -static-libgcc -static-libstdc++)

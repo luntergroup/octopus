@@ -26,6 +26,8 @@
 
 #include <boost/optional.hpp>
 
+#include "date/tz.h"
+
 #include "config/common.hpp"
 #include "basics/genomic_region.hpp"
 #include "basics/ploidy_map.hpp"
@@ -90,6 +92,16 @@ bool apply_csr(const GenomeCallingComponents& components) noexcept
 
 using CallTypeSet = std::set<std::type_index>;
 
+std::string get_current_time_str()
+{
+    using namespace date;
+    using namespace std::chrono;
+    const auto time = make_zoned(current_zone(), system_clock::now());
+    std::ostringstream ss {};
+    ss << time;
+    return ss.str();
+}
+
 VcfHeader make_vcf_header(const std::vector<SampleName>& samples,
                           const std::vector<GenomicRegion::ContigName>& contigs,
                           const ReferenceGenome& reference,
@@ -104,7 +116,8 @@ VcfHeader make_vcf_header(const std::vector<SampleName>& samples,
     builder.add_structured_field("octopus", {
         {"version", to_string(config::Version, false)},
         {"command", '"' + info.command + '"'},
-        {"options", '"' + info.options + '"'}
+        {"options", '"' + info.options + '"'},
+        {"date", '"' + get_current_time_str() + '"'}
     });
     VcfHeaderFactory factory {};
     for (const auto& type : call_types) {
@@ -122,6 +135,25 @@ VcfHeader make_vcf_header(const std::vector<SampleName>& samples,
 {
     return make_vcf_header(samples, std::vector<GenomicRegion::ContigName> {contig},
                            reference, call_types, info);
+}
+
+VcfHeader read_vcf_header(const VcfReader::Path& vcf_filename)
+{
+    VcfReader vcf {vcf_filename};
+    return vcf.fetch_header();
+}
+
+VcfHeader make_vcf_header(const GenomeCallingComponents::Path& filter_vcf,
+                          const UserCommandInfo& info)
+{
+    VcfHeader::Builder builder {read_vcf_header(filter_vcf)};
+    builder.add_structured_field("octopus", {
+        {"version", to_string(config::Version, false)},
+        {"command", '"' + info.command + '"'},
+        {"options", '"' + info.options + '"'},
+        {"date", '"' + get_current_time_str() + '"'}
+    });
+    return builder.build_once();
 }
 
 bool has_reads(const GenomicRegion& region, ContigCallingComponents& components)
@@ -146,6 +178,8 @@ void write_caller_output_header(GenomeCallingComponents& components, const UserC
     if (components.sites_only() && !apply_csr(components)) {
         components.output() << make_vcf_header({}, components.contigs(), components.reference(),
                                                call_types, info);
+    } else if (components.filter_request()) {
+        components.output() << make_vcf_header(*components.filter_request(), info);
     } else {
         components.output() << make_vcf_header(components.samples(), components.contigs(),
                                                components.reference(), call_types, info);
@@ -1358,7 +1392,12 @@ void run_csr(GenomeCallingComponents& components)
                                                 progress, components.num_threads());
         assert(filter);
         VcfWriter& out {*components.filtered_output()};
-        filter->filter(in, out);
+        boost::optional<VcfHeader> template_header {};
+        namespace fs = boost::filesystem;
+        if (components.filter_request() && !components.output().is_open() && components.output().path() && fs::exists(*components.output().path())) {
+            template_header = read_vcf_header(*components.output().path());
+        }
+        filter->filter(in, out, template_header);
         out.close();
     }
 }

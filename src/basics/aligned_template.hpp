@@ -241,21 +241,27 @@ make_paired_and_barcode_linked_read_templates(ForwardIterator first_read_itr, Fo
 
 } // namespace detail
 
+struct ReadLinkageConfig
+{
+    ReadLinkageType linkage = ReadLinkageType::paired;
+    boost::optional<GenomicRegion::Size> max_insert_size = boost::none;
+    bool linked_only = false;
+};
+
 template <typename ForwardIterator, typename OutputIterator>
 OutputIterator
 make_read_templates(ForwardIterator first_read_itr, ForwardIterator last_read_itr,
                     OutputIterator result_itr,
-                    const ReadLinkageType linkage,
-                    const bool linked_only = false)
+                    ReadLinkageConfig config = ReadLinkageConfig {})
 {
-    if (linkage == ReadLinkageType::paired_and_barcode) {
-        return detail::make_paired_and_barcode_linked_read_templates(first_read_itr, last_read_itr, result_itr, linked_only);
-    } else if (linkage == ReadLinkageType::barcode_only) {
-        return detail::make_barcode_linked_read_templates(first_read_itr, last_read_itr, result_itr, linked_only);
-    } else if (linkage == ReadLinkageType::paired) {
-        return detail::make_paired_read_templates(first_read_itr, last_read_itr, result_itr, linked_only);
+    if (config.linkage == ReadLinkageType::paired_and_barcode) {
+        return detail::make_paired_and_barcode_linked_read_templates(first_read_itr, last_read_itr, result_itr, config.linked_only);
+    } else if (config.linkage == ReadLinkageType::barcode_only) {
+        return detail::make_barcode_linked_read_templates(first_read_itr, last_read_itr, result_itr, config.linked_only);
+    } else if (config.linkage == ReadLinkageType::paired) {
+        return detail::make_paired_read_templates(first_read_itr, last_read_itr, result_itr, config.linked_only, config.max_insert_size);
     } else {
-        assert(linkage == ReadLinkageType::none);
+        assert(config.linkage == ReadLinkageType::none);
         return result_itr;
     }
 }

@@ -57,7 +57,6 @@ void Call::set_phase(const SampleName& sample, PhaseCall phase)
 void Call::replace(const char old_base, const char replacement_base)
 {
     this->replace_called_alleles(old_base, replacement_base);
-    
     for (auto& p : genotype_calls_) {
         auto& called_genotype = p.second.genotype;
         auto it = std::find_if_not(std::cbegin(called_genotype), std::cend(called_genotype),

@@ -43,7 +43,7 @@ std::unique_ptr<Call> CellVariantCall::do_clone() const
 
 bool CellVariantCall::is_somatic() const
 {
-    const auto genotype_call_not_equal = [] (const auto& lhs, const auto& rhs) { return lhs.second.genotype != rhs.second.genotype; };
+    const auto genotype_call_not_equal = [] (const auto& lhs, const auto& rhs) { return !are_equivalent(lhs.second.genotype, rhs.second.genotype); };
     return std::adjacent_find(std::cbegin(genotype_calls_), std::cend(genotype_calls_), genotype_call_not_equal) != std::cend(genotype_calls_);
 }
 

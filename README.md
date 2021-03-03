@@ -33,7 +33,7 @@ $ source ~/.bash_profile
 Call some variants:
 
 ```shell
-$ FOREST="$(pwd)/octopus/resources/forests/0.7.0/germline.v0.7.0.forest"
+$ FOREST="$(pwd)/octopus/resources/forests/germline.v0.7.0.forest"
 $ octopus -R hs37d5.fa -I NA12878.bam -T 1 to MT -o NA12878.octopus.vcf.gz --forest $FOREST --threads 8
 ```
 
@@ -43,7 +43,7 @@ Consult the [command line reference](https://github.com/luntergroup/octopus/wiki
 * A C++14 compiler with SSE2 support
 * A C++14 standard library implementation
 * Git 2.5 or greater
-* Boost 1.65 or greater
+* Boost 1.74 or greater
 * htslib 1.4 or greater
 * GMP 5.1.0 or greater
 * CMake 3.9 or greater
