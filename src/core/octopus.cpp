@@ -112,10 +112,6 @@ std::string get_current_time_str()
         ss << time;
     } catch (const std::exception& e) {
         // https://github.com/HowardHinnant/date/issues/310
-        const std::string bad_zoneinfo_msg {"failed to find zoneinfo"};
-        if (e.what() != bad_zoneinfo_msg) {
-            throw;
-        }
         static bool warned {false};
         if (!warned) {
             logging::WarningLogger warn_log {};
