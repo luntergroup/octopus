@@ -363,6 +363,7 @@ std::vector<VcfRecord> VcfRecordFactory::make(std::vector<CallWrapper>&& calls) 
                 const auto& gt = itr->call->get_genotype_call(sample).genotype;
                 for (unsigned i {0}; i < gt.ploidy(); ++i) {
                     if (itr->call->is_represented(gt[i])) {
+                        assert(prev_represented.back().size() >= i);
                         prev_represented.back()[i] = std::addressof(*itr->call);
                     }
                 }
