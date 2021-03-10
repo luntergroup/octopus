@@ -240,6 +240,35 @@ void pad_indels(std::vector<CallWrapper>& calls, const std::vector<SampleName>& 
     }
 }
 
+class InconsistentPloidyError : public ProgramError
+{
+public:
+    InconsistentPloidyError(SampleName sample, Genotype<Allele> first, Genotype<Allele> second)
+    : sample_ {std::move(sample)}
+    , first_ {std::move(first)}
+    , second_ {std::move(second)}
+    {}
+private:
+    SampleName sample_;
+    Genotype<Allele> first_, second_;
+    
+    std::string do_where() const override
+    {
+        return "VcfRecordFactory::make";
+    }
+    std::string do_why() const override
+    {
+        std::ostringstream ss {};
+        ss << "In sample " << sample_ << ", calls at "
+           << first_.mapped_region()
+           << " & " << second_.mapped_region()
+           << " were called in the same phase set but have different genotype ploidies"
+           << " (" << first_.ploidy() << " & "
+           << second_.ploidy() << ")";
+        return ss.str();
+    }
+};
+
 std::vector<VcfRecord> VcfRecordFactory::make(std::vector<CallWrapper>&& calls) const
 {
     using std::begin; using std::end; using std::cbegin; using std::cend; using std::next;
@@ -357,13 +386,16 @@ std::vector<VcfRecord> VcfRecordFactory::make(std::vector<CallWrapper>&& calls) 
         std::vector<std::vector<const Call*>> prev_represented {};
         prev_represented.reserve(samples_.size());
         for (const auto& sample : samples_) {
-            const auto ploidy = block_begin_itr->call->get_genotype_call(sample).genotype.ploidy();
+            const auto& genotype = block_begin_itr->call->get_genotype_call(sample).genotype;
+            const auto ploidy = genotype.ploidy();
             prev_represented.emplace_back(ploidy, nullptr);
             for (auto itr = block_begin_itr; itr != block_head_end_itr; ++itr) {
                 const auto& gt = itr->call->get_genotype_call(sample).genotype;
                 for (unsigned i {0}; i < gt.ploidy(); ++i) {
                     if (itr->call->is_represented(gt[i])) {
-                        assert(prev_represented.back().size() >= i);
+                        if (prev_represented.back().size() < i) {
+                            throw InconsistentPloidyError {sample, genotype, gt};
+                        }
                         prev_represented.back()[i] = std::addressof(*itr->call);
                     }
                 }
