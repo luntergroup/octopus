@@ -97,11 +97,26 @@ bool is_interacting_indel(BidirIt first, BidirIt allele, BidirIt last,
 }
 
 template <typename BidirIt>
+bool overlaps_downstream_indel_pad(BidirIt allele, BidirIt last)
+{
+    if (allele != last && std::next(allele) != last) {
+        const auto target_region = tail_position(expand_rhs(mapped_region(*allele), 1));
+        const auto overlapped = overlap_range(std::next(allele), last, target_region);
+        auto itr = std::find_if(std::cbegin(overlapped), std::cend(overlapped),
+                                [] (const auto& allele) { return is_indel(allele); });
+        return itr != std::cend(overlapped);
+    } else {
+        return false;
+    }
+}
+
+template <typename BidirIt>
 bool is_good_indicator_begin(BidirIt first_possible, BidirIt allele_itr, BidirIt last_possible)
 {
     return !(is_sandwich_allele(first_possible, allele_itr, last_possible)
              || is_indel_boundary(first_possible, allele_itr, last_possible)
-             || is_interacting_indel(first_possible, allele_itr, last_possible));
+             || is_interacting_indel(first_possible, allele_itr, last_possible)
+             || overlaps_downstream_indel_pad(allele_itr, last_possible));
 }
 
 template <typename BidirIt>
