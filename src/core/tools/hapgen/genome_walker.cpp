@@ -97,14 +97,11 @@ bool is_interacting_indel(BidirIt first, BidirIt allele, BidirIt last,
 }
 
 template <typename BidirIt>
-bool overlaps_downstream_indel_pad(BidirIt allele, BidirIt last)
+bool splits_indel_pad_base(BidirIt first, BidirIt allele, BidirIt last)
 {
-    if (allele != last && std::next(allele) != last) {
-        const auto target_region = tail_position(expand_rhs(mapped_region(*allele), 1));
-        const auto overlapped = overlap_range(std::next(allele), last, target_region);
-        auto itr = std::find_if(std::cbegin(overlapped), std::cend(overlapped),
-                                [] (const auto& allele) { return is_indel(allele); });
-        return itr != std::cend(overlapped);
+    if (allele != first && (is_indel(*allele) || is_empty_region(*allele))) {
+        const auto pad_region = head_position(expand_lhs(mapped_region(*allele), 1));
+        return has_overlapped(first, allele, pad_region);
     } else {
         return false;
     }
@@ -116,7 +113,7 @@ bool is_good_indicator_begin(BidirIt first_possible, BidirIt allele_itr, BidirIt
     return !(is_sandwich_allele(first_possible, allele_itr, last_possible)
              || is_indel_boundary(first_possible, allele_itr, last_possible)
              || is_interacting_indel(first_possible, allele_itr, last_possible)
-             || overlaps_downstream_indel_pad(allele_itr, last_possible));
+             || splits_indel_pad_base(first_possible, allele_itr, last_possible));
 }
 
 template <typename BidirIt>
@@ -217,7 +214,7 @@ GenomeWalker::walk(const GenomicRegion& previous_region,
                     auto expanded_leftmost = mapped_region(*it);
                     std::for_each(it, included_itr, [&] (const auto& allele) {
                         const auto ref_dist = reference_distance(allele);
-                        if (ref_dist > 1) {
+                        if (ref_dist > 0) {
                             const auto max_expansion = std::min(mapped_begin(allele), 2 * ref_dist);
                             auto expanded_allele_begin = mapped_begin(allele) - max_expansion;
                             if (expanded_allele_begin < mapped_begin(expanded_leftmost)) {
