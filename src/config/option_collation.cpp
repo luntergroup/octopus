@@ -1220,7 +1220,7 @@ auto make_variant_generator_builder(const OptionMap& options, const boost::optio
         }
         scanner_options.match = get_candidate_variant_match_predicate(options);
         scanner_options.use_clipped_coverage_tracking = true;
-        if (!options.at("allow-pileup-candidates-from-likely-misaligned-reads").as<bool>()) {
+        if (!options.at("force-pileup-candidates").as<bool>()) {
             CigarScanner::Options::MisalignmentParameters misalign_params {};
             misalign_params.max_expected_mutation_rate = get_max_expected_heterozygosity(options);
             misalign_params.snv_threshold = as_unsigned("min-pileup-base-quality", options);

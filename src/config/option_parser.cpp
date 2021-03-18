@@ -376,9 +376,9 @@ OptionMap parse_options(const int argc, const char** argv)
      "Minimum number of reads that must support a variant if it is to be considered a candidate."
      " By default octopus will automatically determine this value")
      
-    ("allow-pileup-candidates-from-likely-misaligned-reads",
+    ("force-pileup-candidates",
      po::bool_switch()->default_value(false),
-     "Allow pileup candidate variants discovered from reads that are considered likely to be misaligned")
+     "Include pileup candidate variants discovered from reads that are considered likely to be misaligned")
     
     ("max-variant-size",
      po::value<int>()->default_value(2000),
