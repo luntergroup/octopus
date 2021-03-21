@@ -296,21 +296,17 @@ OptionMap parse_options(const int argc, const char** argv)
      po::bool_switch()->default_value(false),
      "Filter reads with possible adapter contamination")
     
-    ("no-reads-with-decoy-supplementary-alignments",
-     po::bool_switch()->default_value(false),
-     "Filter reads with supplementary alignments mapped to decoy contigs")
+    ("max-decoy-supplementary-alignment-mapping-quality",
+     po::value<int>()->default_value(5),
+     "Filter reads with supplementary alignments mapped to decoy contigs with mapping quality greater than this")
     
-    ("allow-reads-with-good-decoy-supplementary-alignments",
-     po::bool_switch()->default_value(false),
-     "Do not filer reads with supplementary alignments mapped to decoy contigs with high mapping quality (--min-mapping-quality)")
+    ("max-unplaced-supplementary-alignment-mapping-quality",
+     po::value<int>()->default_value(5),
+     "Filter reads with supplementary alignments mapped to unplaced contigs with mapping quality greater than this")
     
-    ("no-reads-with-unplaced-or-unlocalized-supplementary-alignments",
-     po::bool_switch()->default_value(false),
-     "Filter reads with supplementary alignments mapped to unplaced or unlocalized contigs")
-    
-    ("allow-reads-with-good-unplaced-or-unlocalized-supplementary-alignments",
-     po::bool_switch()->default_value(false),
-     "Do not filer reads with supplementary alignments mapped to unplaced or unlocalized contigs with high mapping quality (--min-mapping-quality)")
+    ("max-unlocalized-supplementary-alignment-mapping-quality",
+     po::value<int>()->default_value(5),
+     "Filter reads with supplementary alignments mapped to unlocalized contigs with mapping quality greater than this")
     
     ("disable-downsampling",
      po::bool_switch()->default_value(false),

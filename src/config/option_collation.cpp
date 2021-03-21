@@ -939,17 +939,23 @@ auto make_read_filterer(const OptionMap& options)
     if (options.at("no-adapter-contaminated-reads").as<bool>()) {
         result.add(make_unique<IsNotContaminated>());
     }
-    if (options.at("no-reads-with-decoy-supplementary-alignments").as<bool>()) {
+    const auto max_decoy_supplementary_mq = as_unsigned("max-decoy-supplementary-alignment-mapping-quality", options);
+    if (max_decoy_supplementary_mq > 0) {
+        result.add(make_unique<NoDecoySupplementaryAlignments>(max_decoy_supplementary_mq));
+    } else {
         result.add(make_unique<NoDecoySupplementaryAlignments>());
-    } else if (!options.at("allow-reads-with-good-decoy-supplementary-alignments").as<bool>()) {
-        result.add(make_unique<NoDecoySupplementaryAlignments>(min_mapping_quality));
     }
-    if (options.at("no-reads-with-unplaced-or-unlocalized-supplementary-alignments").as<bool>()) {
-        result.add(make_unique<NoUnlocalizedSupplementaryAlignments>());
+    const auto max_unplaced_supplementary_mq = as_unsigned("max-unplaced-supplementary-alignment-mapping-quality", options);
+    if (max_unplaced_supplementary_mq > 0) {
+        result.add(make_unique<NoUnplacedSupplementaryAlignments>(max_unplaced_supplementary_mq));
+    } else {
         result.add(make_unique<NoUnplacedSupplementaryAlignments>());
-    } else if (!options.at("allow-reads-with-good-unplaced-or-unlocalized-supplementary-alignments").as<bool>()) {
-        result.add(make_unique<NoUnlocalizedSupplementaryAlignments>(min_mapping_quality));
-        result.add(make_unique<NoUnplacedSupplementaryAlignments>(min_mapping_quality));
+    }
+    const auto max_unlocalized_supplementary_mq = as_unsigned("max-unlocalized-supplementary-alignment-mapping-quality", options);
+    if (max_unlocalized_supplementary_mq > 0) {
+        result.add(make_unique<NoUnlocalizedSupplementaryAlignments>(max_unlocalized_supplementary_mq));
+    } else {
+        result.add(make_unique<NoUnlocalizedSupplementaryAlignments>());
     }
     result.shrink_to_fit();
     return result;
