@@ -26,6 +26,9 @@
 
 #include <boost/optional.hpp>
 
+#include "date/tz.h"
+#include "date/ptz.h"
+
 #include "config/common.hpp"
 #include "basics/genomic_region.hpp"
 #include "basics/ploidy_map.hpp"
@@ -90,6 +93,37 @@ bool apply_csr(const GenomeCallingComponents& components) noexcept
 
 using CallTypeSet = std::set<std::type_index>;
 
+template <class Duration>
+inline
+auto
+make_zoned(const Posix::time_zone& tz, const date::sys_time<Duration>& st)
+{
+    return date::zoned_time<typename std::common_type<Duration, std::chrono::seconds>::type,
+                            Posix::time_zone>{tz, st};
+}
+
+std::string get_current_time_str()
+{
+    using namespace date;
+    using namespace std::chrono;
+    std::ostringstream ss {};
+    try {
+        const auto time = make_zoned(current_zone(), system_clock::now());
+        ss << time;
+    } catch (const std::exception& e) {
+        // https://github.com/HowardHinnant/date/issues/310
+        static bool warned {false};
+        if (!warned) {
+            logging::WarningLogger warn_log {};
+            warn_log << "Failed to find system time zone information. Assuming UTC.";
+            warned = true;
+        }
+        const auto time = make_zoned(Posix::time_zone{"UTC0"}, system_clock::now());
+        ss << time;
+    }
+    return ss.str();
+}
+
 VcfHeader make_vcf_header(const std::vector<SampleName>& samples,
                           const std::vector<GenomicRegion::ContigName>& contigs,
                           const ReferenceGenome& reference,
@@ -104,7 +138,8 @@ VcfHeader make_vcf_header(const std::vector<SampleName>& samples,
     builder.add_structured_field("octopus", {
         {"version", to_string(config::Version, false)},
         {"command", '"' + info.command + '"'},
-        {"options", '"' + info.options + '"'}
+        {"options", '"' + info.options + '"'},
+        {"date", '"' + get_current_time_str() + '"'}
     });
     VcfHeaderFactory factory {};
     for (const auto& type : call_types) {
@@ -122,6 +157,25 @@ VcfHeader make_vcf_header(const std::vector<SampleName>& samples,
 {
     return make_vcf_header(samples, std::vector<GenomicRegion::ContigName> {contig},
                            reference, call_types, info);
+}
+
+VcfHeader read_vcf_header(const VcfReader::Path& vcf_filename)
+{
+    VcfReader vcf {vcf_filename};
+    return vcf.fetch_header();
+}
+
+VcfHeader make_vcf_header(const GenomeCallingComponents::Path& filter_vcf,
+                          const UserCommandInfo& info)
+{
+    VcfHeader::Builder builder {read_vcf_header(filter_vcf)};
+    builder.add_structured_field("octopus", {
+        {"version", to_string(config::Version, false)},
+        {"command", '"' + info.command + '"'},
+        {"options", '"' + info.options + '"'},
+        {"date", '"' + get_current_time_str() + '"'}
+    });
+    return builder.build_once();
 }
 
 bool has_reads(const GenomicRegion& region, ContigCallingComponents& components)
@@ -146,6 +200,8 @@ void write_caller_output_header(GenomeCallingComponents& components, const UserC
     if (components.sites_only() && !apply_csr(components)) {
         components.output() << make_vcf_header({}, components.contigs(), components.reference(),
                                                call_types, info);
+    } else if (components.filter_request()) {
+        components.output() << make_vcf_header(*components.filter_request(), info);
     } else {
         components.output() << make_vcf_header(components.samples(), components.contigs(),
                                                components.reference(), call_types, info);
@@ -1358,7 +1414,12 @@ void run_csr(GenomeCallingComponents& components)
                                                 progress, components.num_threads());
         assert(filter);
         VcfWriter& out {*components.filtered_output()};
-        filter->filter(in, out);
+        boost::optional<VcfHeader> template_header {};
+        namespace fs = boost::filesystem;
+        if (components.filter_request() && !components.output().is_open() && components.output().path() && fs::exists(*components.output().path())) {
+            template_header = read_vcf_header(*components.output().path());
+        }
+        filter->filter(in, out, template_header);
         out.close();
     }
 }

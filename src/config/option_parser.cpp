@@ -296,21 +296,17 @@ OptionMap parse_options(const int argc, const char** argv)
      po::bool_switch()->default_value(false),
      "Filter reads with possible adapter contamination")
     
-    ("no-reads-with-decoy-supplementary-alignments",
-     po::bool_switch()->default_value(false),
-     "Filter reads with supplementary alignments mapped to decoy contigs")
+    ("max-decoy-supplementary-alignment-mapping-quality",
+     po::value<int>()->default_value(5),
+     "Filter reads with supplementary alignments mapped to decoy contigs with mapping quality greater than this")
     
-    ("allow-reads-with-good-decoy-supplementary-alignments",
-     po::bool_switch()->default_value(false),
-     "Do not filer reads with supplementary alignments mapped to decoy contigs with high mapping quality (--min-mapping-quality)")
+    ("max-unplaced-supplementary-alignment-mapping-quality",
+     po::value<int>()->default_value(5),
+     "Filter reads with supplementary alignments mapped to unplaced contigs with mapping quality greater than this")
     
-    ("no-reads-with-unplaced-or-unlocalized-supplementary-alignments",
-     po::bool_switch()->default_value(false),
-     "Filter reads with supplementary alignments mapped to unplaced or unlocalized contigs")
-    
-    ("allow-reads-with-good-unplaced-or-unlocalized-supplementary-alignments",
-     po::bool_switch()->default_value(false),
-     "Do not filer reads with supplementary alignments mapped to unplaced or unlocalized contigs with high mapping quality (--min-mapping-quality)")
+    ("max-unlocalized-supplementary-alignment-mapping-quality",
+     po::value<int>()->default_value(5),
+     "Filter reads with supplementary alignments mapped to unlocalized contigs with mapping quality greater than this")
     
     ("disable-downsampling",
      po::bool_switch()->default_value(false),
@@ -376,9 +372,9 @@ OptionMap parse_options(const int argc, const char** argv)
      "Minimum number of reads that must support a variant if it is to be considered a candidate."
      " By default octopus will automatically determine this value")
      
-    ("allow-pileup-candidates-from-likely-misaligned-reads",
+    ("force-pileup-candidates",
      po::bool_switch()->default_value(false),
-     "Allow pileup candidate variants discovered from reads that are considered likely to be misaligned")
+     "Include pileup candidate variants discovered from reads that are considered likely to be misaligned")
     
     ("max-variant-size",
      po::value<int>()->default_value(2000),
@@ -587,9 +583,9 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<Phred<double>>()->default_value(Phred<double> {5.0}),
      "Minimum phase score (phred scale) required to report sites as phased")
     
-    ("disable-early-phase-detection",
-     po::bool_switch()->default_value(false),
-     "Disable phase detection before haplotypes fully extended")
+    ("phasing-policy",
+     po::value<PhasingPolicy>()->default_value(PhasingPolicy::automatic),
+     "Policy for applying phasing algorithm [AUTO, CONSERVATIVE, AGGRESSIVE]")
 
     ("bad-region-tolerance",
      po::value<BadRegionTolerance>()->default_value(BadRegionTolerance::normal),
@@ -1615,6 +1611,36 @@ std::ostream& operator<<(std::ostream& os, const SampleDropoutConcentrationPair&
     return os;
 }
 
+std::istream& operator>>(std::istream& in, PhasingPolicy& result)
+{
+    std::string token;
+    in >> token;
+    if (token == "CONSERVATIVE")
+        result = PhasingPolicy::conservative;
+    else if (token == "AGGRESSIVE")
+        result = PhasingPolicy::aggressive;
+    else if (token == "AUTO")
+        result = PhasingPolicy::automatic;
+    else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token, "phasing-policy"};
+    return in;
+}
+
+std::ostream& operator<<(std::ostream& out, const PhasingPolicy& policy)
+{
+    switch (policy) {
+        case PhasingPolicy::conservative:
+            out << "CONSERVATIVE";
+            break;
+        case PhasingPolicy::aggressive:
+            out << "AGGRESSIVE";
+            break;
+        case PhasingPolicy::automatic:
+            out << "AUTO";
+            break;
+    }
+    return out;
+}
+
 namespace {
 
 template <typename T>
@@ -1741,6 +1767,8 @@ std::ostream& operator<<(std::ostream& os, const OptionMap& options)
             write_vector<SampleDropoutConcentrationPair>(options, label, os, bullet);
         } else if (is_type<ModelPosteriorPolicy>(value)) {
             os << options[label].as<ModelPosteriorPolicy>();
+        } else if (is_type<PhasingPolicy>(value)) {
+            os << options[label].as<PhasingPolicy>();
         } else {
             os << "UnknownType(" << ((boost::any)value.value()).type().name() << ")";
         }

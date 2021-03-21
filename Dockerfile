@@ -1,6 +1,7 @@
 FROM ubuntu:latest
 
-ENV DEBIAN_FRONTEND=noninteractive
+ARG DEBIAN_FRONTEND=noninteractive
+ENV TZ=Europe/London
 
 # Get all apt dependencies
 RUN apt-get -y update
@@ -17,7 +18,15 @@ RUN apt-get -y install \
 RUN pip3 install distro
 
 # Install Octopus
-COPY . /home/octopus
-RUN /home/octopus/scripts/install.py --dependencies --forests --threads 4
+ARG threads=4
+ARG architecture=haswell
+COPY . /opt/octopus
+RUN /opt/octopus/scripts/install.py \
+    --dependencies \
+    --forests \
+    --threads $threads \
+    --architecture $architecture
 
-ENTRYPOINT ["/home/octopus/bin/octopus"]
+ENV PATH="/opt/octopus/bin:${PATH}"
+
+ENTRYPOINT ["octopus"]

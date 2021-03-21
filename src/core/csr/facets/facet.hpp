@@ -8,6 +8,7 @@
 #include <functional>
 #include <memory>
 #include <unordered_map>
+#include <map>
 
 #include <boost/variant.hpp>
 

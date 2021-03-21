@@ -939,17 +939,23 @@ auto make_read_filterer(const OptionMap& options)
     if (options.at("no-adapter-contaminated-reads").as<bool>()) {
         result.add(make_unique<IsNotContaminated>());
     }
-    if (options.at("no-reads-with-decoy-supplementary-alignments").as<bool>()) {
+    const auto max_decoy_supplementary_mq = as_unsigned("max-decoy-supplementary-alignment-mapping-quality", options);
+    if (max_decoy_supplementary_mq > 0) {
+        result.add(make_unique<NoDecoySupplementaryAlignments>(max_decoy_supplementary_mq));
+    } else {
         result.add(make_unique<NoDecoySupplementaryAlignments>());
-    } else if (!options.at("allow-reads-with-good-decoy-supplementary-alignments").as<bool>()) {
-        result.add(make_unique<NoDecoySupplementaryAlignments>(min_mapping_quality));
     }
-    if (options.at("no-reads-with-unplaced-or-unlocalized-supplementary-alignments").as<bool>()) {
-        result.add(make_unique<NoUnlocalizedSupplementaryAlignments>());
+    const auto max_unplaced_supplementary_mq = as_unsigned("max-unplaced-supplementary-alignment-mapping-quality", options);
+    if (max_unplaced_supplementary_mq > 0) {
+        result.add(make_unique<NoUnplacedSupplementaryAlignments>(max_unplaced_supplementary_mq));
+    } else {
         result.add(make_unique<NoUnplacedSupplementaryAlignments>());
-    } else if (!options.at("allow-reads-with-good-unplaced-or-unlocalized-supplementary-alignments").as<bool>()) {
-        result.add(make_unique<NoUnlocalizedSupplementaryAlignments>(min_mapping_quality));
-        result.add(make_unique<NoUnplacedSupplementaryAlignments>(min_mapping_quality));
+    }
+    const auto max_unlocalized_supplementary_mq = as_unsigned("max-unlocalized-supplementary-alignment-mapping-quality", options);
+    if (max_unlocalized_supplementary_mq > 0) {
+        result.add(make_unique<NoUnlocalizedSupplementaryAlignments>(max_unlocalized_supplementary_mq));
+    } else {
+        result.add(make_unique<NoUnlocalizedSupplementaryAlignments>());
     }
     result.shrink_to_fit();
     return result;
@@ -1220,7 +1226,7 @@ auto make_variant_generator_builder(const OptionMap& options, const boost::optio
         }
         scanner_options.match = get_candidate_variant_match_predicate(options);
         scanner_options.use_clipped_coverage_tracking = true;
-        if (!options.at("allow-pileup-candidates-from-likely-misaligned-reads").as<bool>()) {
+        if (!options.at("force-pileup-candidates").as<bool>()) {
             CigarScanner::Options::MisalignmentParameters misalign_params {};
             misalign_params.max_expected_mutation_rate = get_max_expected_heterozygosity(options);
             misalign_params.snv_threshold = as_unsigned("min-pileup-base-quality", options);
@@ -2022,6 +2028,8 @@ boost::optional<std::size_t> get_max_genotypes(const OptionMap& options, const s
         return 5'000;
     } else if (caller == "polyclone") {
         return 100'000;
+    } else if (as_unsigned("organism-ploidy", options) > 2) {
+        return 20'000;
     } else if (is_fast_mode(options)) {
         return 1'000'000;
     } else {
@@ -2069,6 +2077,18 @@ auto get_sample_dropout_concentrations(const OptionMap& options)
         result = options.at("sample-dropout-concentrations").as<std::vector<SampleDropoutConcentrationPair>>();
     }
     return result;
+}
+
+auto get_phase_detection_policy(const OptionMap& options)
+{
+    const auto policy = options.at("phasing-policy").as<PhasingPolicy>();
+    switch (policy) {
+        case PhasingPolicy::conservative: return false;
+        case PhasingPolicy::aggressive: return true;
+        case PhasingPolicy::automatic:
+        // fall through
+        default: return as_unsigned("organism-ploidy", options) < 3 && get_read_linkage_type(options) != ReadLinkageType::paired_and_barcode;
+    }
 }
 
 CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& read_pipe,
@@ -2129,7 +2149,7 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
     vc_builder.set_likelihood_model(make_calling_haplotype_likelihood_model(options, read_profile));
     auto min_phase_score = options.at("min-phase-score").as<Phred<double>>();
     vc_builder.set_min_phase_score(min_phase_score);
-    vc_builder.set_early_phase_detection_policy(!options.at("disable-early-phase-detection").as<bool>());
+    vc_builder.set_early_phase_detection_policy(get_phase_detection_policy(options));
     if (!options.at("use-uniform-genotype-priors").as<bool>()) {
         vc_builder.set_snp_heterozygosity(options.at("snp-heterozygosity").as<float>());
         vc_builder.set_indel_heterozygosity(options.at("indel-heterozygosity").as<float>());

@@ -166,12 +166,11 @@ std::istream& operator>>(std::istream& str, Field& field)
 {
     std::getline(str, field.data, ',');
     auto pos = field.data.find_first_of('=');
-    if (pos != field.data.length() - 1 && field.data[pos + 1] == '"') {
+    if (pos != field.data.length() - 1 && field.data[pos + 1] == '"' && field.data.back() != '"') {
         std::string s;
-        while (field.data.back() != '"') {
-            std::getline(str, s);
-            field.data += s;
-        }
+        std::getline(str, s, '"');
+        field.data += s + '"';
+        str.ignore();
     }
     return str;
 }

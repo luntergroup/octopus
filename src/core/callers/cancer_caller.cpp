@@ -425,7 +425,7 @@ void CancerCaller::generate_cancer_genotypes_with_clean_normal(Latents& latents,
     const auto max_allowed_cancer_genotypes = *parameters_.max_genotypes;
     if (!latents.cancer_genotypes_.empty()) {
         const auto max_old_cancer_genotype_bases = std::max(max_allowed_cancer_genotypes / num_haplotypes, std::size_t {1});
-        const auto& cancer_genotype_posteriors = latents.somatic_model_inferences_.back().max_evidence_params.genotype_probabilities;
+        const auto& cancer_genotype_posteriors = latents.somatic_model_inferences_.back().weighted_genotype_posteriors;
         const auto old_cancer_genotype_bases = copy_greatest_probability_values(latents.cancer_genotypes_.back(), cancer_genotype_posteriors, max_old_cancer_genotype_bases);
         latents.cancer_genotypes_.push_back(extend_somatic(old_cancer_genotype_bases, latents.indexed_haplotypes_));
         erase_duplicates(latents.cancer_genotypes_.back());

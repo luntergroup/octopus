@@ -372,6 +372,8 @@ def main(args):
         cmake_options.append("-DBUILD_SHARED_LIBS=OFF")
     if args["verbose"]:
         cmake_options.append("-DCMAKE_VERBOSE_MAKEFILE:BOOL=ON")
+    if args["architecture"]:
+            cmake_options.append("-DCOMPILER_ARCHITECTURE=" + args["architecture"])
     if dependencies_dir is not None:
         if args["c_compiler"]:
             cmake_options.append("-DCMAKE_C_COMPILER=" + str(args["c_compiler"]))
@@ -506,5 +508,9 @@ if __name__ == '__main__':
                         default=False,
                         help='Ouput verbose make information',
                         action='store_true')
+    parser.add_argument('--architecture',
+                        required=False,
+                        type=str,
+                        help='The architecture to compile for')
     args = vars(parser.parse_args())
     main(args)

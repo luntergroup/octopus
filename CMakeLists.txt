@@ -8,7 +8,7 @@ project(octopus)
 
 set(octopus_VERSION_MAJOR 0)
 set(octopus_VERSION_MINOR 7)
-set(octopus_VERSION_PATCH 0)
+set(octopus_VERSION_PATCH 1)
 set(octopus_VERSION_RELEASE "")
 
 # Generate list of compile commands.  This helps debugging and doesn't have a downside.
@@ -43,6 +43,7 @@ configure_file (
 include_directories(${CMAKE_BINARY_DIR}/generated)
 
 option(BUILD_SHARED_LIBS "Build the shared library" ON)
+set(COMPILER_ARCHITECTURE "native" CACHE STRING "Compiler -march argument")
 
 set(CMAKE_COLOR_MAKEFILE ON)
 

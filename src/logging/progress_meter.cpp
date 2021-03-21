@@ -306,10 +306,12 @@ void ProgressMeter::log_completed(const GenomicRegion& region)
 
 void ProgressMeter::log_completed(const GenomicRegion::ContigName& contig)
 {
-    const auto& contig_regions = target_regions_.at(contig);
-    if (!contig_regions.empty()) {
-        const auto contig_region = encompassing_region(contig_regions.front(), contig_regions.back());
-        log_completed(contig_region);
+    if (target_regions_.count(contig) == 1) {
+        const auto& contig_regions = target_regions_.at(contig);
+        if (!contig_regions.empty()) {
+            const auto contig_region = encompassing_region(contig_regions.front(), contig_regions.back());
+            log_completed(contig_region);
+        }
     }
 }
 
