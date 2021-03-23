@@ -102,8 +102,8 @@ public:
     bool has(const Tag& tag, const StructuredKey& k) const noexcept;
     
     const Value& at(const BasicKey& k) const;
-    const Value& find(const Tag& search_tag, const StructuredKey& search_key,
-                      const StructuredKey& id_key, const Value& id_value) const;
+    const Value& find(const Tag& search_tag, const StructuredKey& id_key,
+                      const Value& id_value, const StructuredKey& search_key) const;
     
     std::vector<BasicKey> basic_keys() const;
     std::vector<Tag> tags() const;
@@ -162,12 +162,16 @@ VcfHeader::VcfHeader(T&& file_format, U&& samples, B&& basic_fields, S&& structu
 , structured_fields_ {std::forward<S>(structured_fields)}
 {}
 
-const std::string& get_id_field_value(const VcfHeader& header, const VcfHeader::Tag& t,
-                                      const VcfHeader::StructuredKey& id_value,
-                                      const VcfHeader::StructuredKey& lookup_key);
+const VcfHeader::Value&
+get_id_field_value(const VcfHeader& header, 
+                   const VcfHeader::Tag& t,
+                   const VcfHeader::StructuredKey& id_value,
+                   const VcfHeader::StructuredKey& lookup_key);
 
-const std::string& get_id_field_type(const VcfHeader& header, const VcfHeader::Tag& t,
-                                     const VcfHeader::Value& id_value);
+const VcfHeader::Value& 
+get_id_field_type(const VcfHeader& header, 
+                  const VcfHeader::Tag& t,
+                  const VcfHeader::Value& id_value);
 
 VcfType get_typed_value(const VcfHeader& header, const VcfHeader::Tag& t,
                         const VcfHeader::StructuredKey& key, const VcfHeader::Value& value);
