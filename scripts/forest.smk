@@ -535,7 +535,7 @@ rule install_ranger:
         "ranger/cpp_version/build/ranger"
     shell:
         """
-        rm -r ranger
+        rm -rf ranger
         git clone https://github.com/dancooke/ranger
         mkdir ranger/cpp_version/build && cd "$_"
         cmake ..
