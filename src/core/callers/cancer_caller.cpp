@@ -1492,9 +1492,9 @@ void CancerCaller::log(const ModelPosteriors& model_posteriors) const
 
 namespace debug {
 
-template <typename S>
+template <typename S, typename GenotypeReference>
 void print_genotype_posteriors(S&& stream,
-                               const std::unordered_map<Genotype<IndexedHaplotype<>>, double>& genotype_posteriors,
+                               std::vector<std::pair<GenotypeReference, double>> genotype_posteriors,
                                const std::size_t n = std::numeric_limits<std::size_t>::max())
 {
     const auto m = std::min(n, genotype_posteriors.size());
@@ -1503,14 +1503,10 @@ void print_genotype_posteriors(S&& stream,
     } else {
         stream << "Printing top " << m << " genotype posteriors " << '\n';
     }
-    using GenotypeReference = std::reference_wrapper<const Genotype<IndexedHaplotype<>>>;
-    std::vector<std::pair<GenotypeReference, double>> v {};
-    v.reserve(genotype_posteriors.size());
-    std::copy(std::cbegin(genotype_posteriors), std::cend(genotype_posteriors), std::back_inserter(v));
-    const auto mth = std::next(std::begin(v), m);
-    std::partial_sort(std::begin(v), mth, std::end(v),
+    const auto mth = std::next(std::begin(genotype_posteriors), m);
+    std::partial_sort(std::begin(genotype_posteriors), mth, std::end(genotype_posteriors),
                       [] (const auto& lhs, const auto& rhs) { return lhs.second > rhs.second; });
-    std::for_each(std::begin(v), mth,
+    std::for_each(std::begin(genotype_posteriors), mth,
                   [&] (const auto& p) {
                       print_variant_alleles(stream, p.first.get());
                       stream << " " << p.second << '\n';
@@ -1544,6 +1540,10 @@ void CancerCaller::log(const GenotypeVector& germline_genotypes,
         auto map_somatic = find_map_genotype(cancer_posteriors);
         auto map_cancer_genotype = map_somatic->first.get();
         somatic_log << "MAP cancer genotype: ";
+        auto weighted_cancer_posteriors = zip_cref(cancer_genotypes, somatic_inferences.weighted_genotype_posteriors);
+        auto weighted_somatic_log = stream(*debug_log_);
+        weighted_somatic_log << "Weighted cancer genotypes... ";
+        debug::print_genotype_posteriors(weighted_somatic_log, weighted_cancer_posteriors, 10);
         debug::print_variant_alleles(somatic_log, map_cancer_genotype);
         somatic_log << ' ' << map_somatic->second;
         auto map_marginal_germline = find_map_genotype(germline_genotype_posteriors);
@@ -1551,9 +1551,6 @@ void CancerCaller::log(const GenotypeVector& germline_genotypes,
         marginal_germline_log << "MAP marginal germline genotype: ";
         debug::print_variant_alleles(marginal_germline_log, map_marginal_germline->first);
         marginal_germline_log << ' ' << map_marginal_germline->second;
-    }
-    if (trace_log_) {
-        debug::print_genotype_posteriors(stream(*trace_log_), germline_genotype_posteriors);
     }
 }
 
