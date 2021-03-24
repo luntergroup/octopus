@@ -1552,6 +1552,12 @@ void CancerCaller::log(const GenotypeVector& germline_genotypes,
         debug::print_variant_alleles(marginal_germline_log, map_marginal_germline->first);
         marginal_germline_log << ' ' << map_marginal_germline->second;
     }
+    if (trace_log_) {
+        auto weighted_cancer_posteriors = zip_cref(cancer_genotypes, somatic_inferences.weighted_genotype_posteriors);
+        auto weighted_somatic_log = stream(*trace_log_);
+        weighted_somatic_log << "Weighted cancer genotypes... ";
+        debug::print_genotype_posteriors(weighted_somatic_log, weighted_cancer_posteriors);
+    }
 }
 
 } // namespace octopus
