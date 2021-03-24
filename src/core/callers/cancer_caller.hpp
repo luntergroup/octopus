@@ -215,7 +215,6 @@ private:
     // somatic model
     std::vector<MappableBlock<CancerGenotype<IndexedHaplotype<>>>> cancer_genotypes_;
     std::vector<SomaticModel::InferredLatents> somatic_model_inferences_;
-    boost::optional<MappableBlock<Genotype<IndexedHaplotype<>>>> critical_germline_genotypes_;
     std::vector<double> somatic_model_posteriors_;
     std::size_t max_evidence_somatic_model_index_;
     unsigned inferred_somatic_ploidy_ = 1;

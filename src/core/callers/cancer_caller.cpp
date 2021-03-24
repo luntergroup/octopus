@@ -17,7 +17,6 @@
 #include <boost/iterator/zip_iterator.hpp>
 #include <boost/tuple/tuple.hpp>
 #include <boost/multiprecision/gmp.hpp>
-#include <boost/iterator/transform_iterator.hpp>
 
 #include "basics/genomic_region.hpp"
 #include "containers/probability_matrix.hpp"
@@ -300,26 +299,13 @@ auto zip_cref(const Range& values, const std::vector<double>& probabilities)
     return result;
 }
 
-template <typename InputIt, typename OutputIt,
-          typename UnaryOperator>
-OutputIt
-partial_sum_transform(InputIt first, InputIt last, OutputIt d_first,
-                      UnaryOperator op)
-{
-    using boost::make_transform_iterator;
-    return std::partial_sum(make_transform_iterator(first, op),
-                            make_transform_iterator(last, op),
-                            d_first);
-}
-
 template <typename G>
 MappableBlock<G>
 copy_greatest_probability_values(const MappableBlock<G>& values,
                                  const std::vector<double>& probabilities,
                                  const std::size_t n,
                                  const boost::optional<double> min_include_probability = boost::none,
-                                 const boost::optional<double> max_exclude_probability = boost::none,
-                                 const boost::optional<double> min_total_probability = boost::none)
+                                 const boost::optional<double> max_exclude_probability = boost::none)
 {
     assert(values.size() == probabilities.size());
     if (values.size() <= n) return values;
@@ -336,17 +322,6 @@ copy_greatest_probability_values(const MappableBlock<G>& values,
         last_include_itr = std::partition(last_include_itr, std::end(value_probabilities),
                                           [&] (const auto& p) noexcept { return p.second > *max_exclude_probability; });
     }
-    if (min_total_probability) {
-        std::vector<double> cumulative_probabilities(std::distance(std::begin(value_probabilities), last_include_itr));
-        partial_sum_transform(std::begin(value_probabilities), last_include_itr, std::begin(cumulative_probabilities),
-                              [] (const auto& p) { return p.second; });
-        if (cumulative_probabilities.back() > *min_total_probability) {
-            auto total_itr = std::upper_bound(std::cbegin(cumulative_probabilities), std::cend(cumulative_probabilities), *min_total_probability);
-            auto num_cumulative = std::distance(std::cbegin(cumulative_probabilities), total_itr);
-            if (num_cumulative == 0) ++num_cumulative;
-            last_include_itr = std::next(std::begin(value_probabilities), num_cumulative);
-        }
-    }
     MappableBlock<G> result {mapped_region(values)};
     result.reserve(std::distance(std::begin(value_probabilities), last_include_itr));
     std::transform(std::begin(value_probabilities), last_include_itr, std::back_inserter(result),
@@ -359,11 +334,10 @@ auto copy_greatest_probability_genotypes(const MappableBlock<G>& genotypes,
                                          const std::vector<double>& probabilities,
                                          const std::size_t n,
                                          const boost::optional<double> min_include_probability = boost::none,
-                                         const boost::optional<double> max_exclude_probability = boost::none,
-                                         const boost::optional<double> min_total_probability = boost::none)
+                                         const boost::optional<double> max_exclude_probability = boost::none)
 {
     assert(genotypes.size() == probabilities.size());
-    return copy_greatest_probability_values(genotypes, probabilities, n, min_include_probability, max_exclude_probability, min_total_probability);
+    return copy_greatest_probability_values(genotypes, probabilities, n, min_include_probability, max_exclude_probability);
 }
 
 auto calculate_posteriors_with_germline_likelihood_model(const MappableBlock<CancerGenotype<IndexedHaplotype<>>>& genotypes,
@@ -441,47 +415,7 @@ void erase_duplicates(MappableBlock<CancerGenotype<IndexedHaplotype<IndexType>>>
     genotypes.erase(std::unique(begin(genotypes), end(genotypes)), end(genotypes));
 }
 
-template <typename IndexType>
-auto find_genotype_with_germline(const MappableBlock<CancerGenotype<IndexedHaplotype<IndexType>>>& genotypes,
-                                 const Genotype<IndexedHaplotype<IndexType>>& germline)
-{
-    const auto has_germline = [&] (const auto& genotype) { return genotype.germline() == germline; }; 
-    return std::find_if(std::cbegin(genotypes), std::cend(genotypes), has_germline);
-}
-
-template <typename IndexType>
-bool has_genotype_with_germline(const MappableBlock<CancerGenotype<IndexedHaplotype<IndexType>>>& genotypes,
-                                const Genotype<IndexedHaplotype<IndexType>>& germline)
-{
-    return find_genotype_with_germline(genotypes, germline) != std::cend(genotypes);
-}
-
 } // namespace
-
-namespace debug {
-
-template <typename S, typename GenotypeReference>
-void print_genotype_posteriors(S&& stream,
-                               std::vector<std::pair<GenotypeReference, double>> genotype_posteriors,
-                               const std::size_t n = std::numeric_limits<std::size_t>::max())
-{
-    const auto m = std::min(n, genotype_posteriors.size());
-    if (m == genotype_posteriors.size()) {
-        stream << "Printing all genotype posteriors " << '\n';
-    } else {
-        stream << "Printing top " << m << " genotype posteriors " << '\n';
-    }
-    const auto mth = std::next(std::begin(genotype_posteriors), m);
-    std::partial_sort(std::begin(genotype_posteriors), mth, std::end(genotype_posteriors),
-                      [] (const auto& lhs, const auto& rhs) { return lhs.second > rhs.second; });
-    std::for_each(std::begin(genotype_posteriors), mth,
-                  [&] (const auto& p) {
-                      print_variant_alleles(stream, p.first.get());
-                      stream << " " << p.second << '\n';
-                  });
-}
-
-} // namespace debug
 
 void CancerCaller::generate_cancer_genotypes_with_clean_normal(Latents& latents, const HaplotypeLikelihoodArray& haplotype_likelihoods) const
 {
@@ -490,60 +424,9 @@ void CancerCaller::generate_cancer_genotypes_with_clean_normal(Latents& latents,
     const auto& germline_genotypes = latents.germline_genotypes_;
     const auto max_allowed_cancer_genotypes = *parameters_.max_genotypes;
     if (!latents.cancer_genotypes_.empty()) {
-        if (!latents.critical_germline_genotypes_) {
-            const auto& germline_normal_posteriors = latents.normal_germline_inferences_->posteriors.genotype_probabilities;
-            latents.critical_germline_genotypes_ = copy_greatest_probability_genotypes(germline_genotypes, germline_normal_posteriors, 5, 0.25, boost::none, 0.99);
-            if (debug_log_) {
-                auto normal_posteriors = zip_cref(germline_genotypes, germline_normal_posteriors);
-                auto log = stream(*debug_log_);
-                log << "Critical germline genotypes from normal... ";
-                debug::print_genotype_posteriors(log, normal_posteriors, latents.critical_germline_genotypes_->size());
-            }
-        }
         const auto max_old_cancer_genotype_bases = std::max(max_allowed_cancer_genotypes / num_haplotypes, std::size_t {1});
         const auto& cancer_genotype_posteriors = latents.somatic_model_inferences_.back().weighted_genotype_posteriors;
-        const auto& old_cancer_genotypes = latents.cancer_genotypes_.back();
-        if (debug_log_) {
-            auto cancer_posteriors = zip_cref(old_cancer_genotypes, cancer_genotype_posteriors);
-            auto log = stream(*debug_log_);
-            log << "Generating next cancer genotypes from weighted bases... ";
-            debug::print_genotype_posteriors(log, cancer_posteriors, 3);
-        }
-        auto old_cancer_genotype_bases = copy_greatest_probability_values(old_cancer_genotypes, cancer_genotype_posteriors, max_old_cancer_genotype_bases);
-        if (!latents.critical_germline_genotypes_->empty()) {
-            // When there are several somatic haplotypes, the model may try to assign
-            // some of these to the normal. We need to try and recover genotypes
-            // with low probability but contain a high probability germline.
-            std::vector<std::size_t> unselected_critical_base_indices {};
-            for (const auto& critical_germline : *latents.critical_germline_genotypes_) {
-                if (!has_genotype_with_germline(old_cancer_genotype_bases, critical_germline)) {
-                    std::vector<std::pair<double, std::size_t>> candidates {};
-                    double candidate_total_probability {0};
-                    for (std::size_t i {0}; i < old_cancer_genotypes.size(); ++i) {
-                        if (old_cancer_genotypes[i].germline() == critical_germline) {
-                            candidates.emplace_back(cancer_genotype_posteriors[i], i);
-                            candidate_total_probability += cancer_genotype_posteriors[i];
-                        }
-                    }
-                    for (auto& p : candidates) p.first /= candidate_total_probability;
-                    std::sort(std::begin(candidates), std::end(candidates), std::greater<> {});
-                    std::vector<double> candidate_cumulative_probabilities(candidates.size());
-                    partial_sum_transform(std::cbegin(candidates), std::cend(candidates), std::begin(candidate_cumulative_probabilities),
-                                         [] (const auto& p) { return p.first; });
-                    auto last_critical_candidate_itr = std::upper_bound(std::cbegin(candidate_cumulative_probabilities), std::cend(candidate_cumulative_probabilities), 0.99);
-                    const auto num_critical_candidate_ = std::distance(std::cbegin(candidate_cumulative_probabilities), last_critical_candidate_itr);
-                    std::transform(std::cbegin(candidates), std::next(std::cbegin(candidates), num_critical_candidate_),
-                                   std::back_inserter(unselected_critical_base_indices), [] (const auto& p) { return p.second; });
-                    if (unselected_critical_base_indices.size() > max_old_cancer_genotype_bases) break;
-                }
-            }
-            std::sort(std::begin(unselected_critical_base_indices), std::end(unselected_critical_base_indices));
-            const auto num_replacements = std::min(unselected_critical_base_indices.size(), old_cancer_genotype_bases.size());
-            const auto first_old_base_replace_itr = std::prev(std::end(old_cancer_genotype_bases), num_replacements);
-            std::transform(std::cbegin(unselected_critical_base_indices), std::cend(unselected_critical_base_indices),
-                            first_old_base_replace_itr,
-                            [&] (auto idx) { return old_cancer_genotypes[idx]; });
-        }
+        const auto old_cancer_genotype_bases = copy_greatest_probability_values(latents.cancer_genotypes_.back(), cancer_genotype_posteriors, max_old_cancer_genotype_bases);
         latents.cancer_genotypes_.push_back(extend_somatic(old_cancer_genotype_bases, latents.indexed_haplotypes_));
         erase_duplicates(latents.cancer_genotypes_.back());
     } else {
@@ -1606,6 +1489,31 @@ void CancerCaller::log(const ModelPosteriors& model_posteriors) const
         stream(*debug_log_) << "Somatic model posterior:  " << model_posteriors.somatic;
     }
 }
+
+namespace debug {
+
+template <typename S, typename GenotypeReference>
+void print_genotype_posteriors(S&& stream,
+                               std::vector<std::pair<GenotypeReference, double>> genotype_posteriors,
+                               const std::size_t n = std::numeric_limits<std::size_t>::max())
+{
+    const auto m = std::min(n, genotype_posteriors.size());
+    if (m == genotype_posteriors.size()) {
+        stream << "Printing all genotype posteriors " << '\n';
+    } else {
+        stream << "Printing top " << m << " genotype posteriors " << '\n';
+    }
+    const auto mth = std::next(std::begin(genotype_posteriors), m);
+    std::partial_sort(std::begin(genotype_posteriors), mth, std::end(genotype_posteriors),
+                      [] (const auto& lhs, const auto& rhs) { return lhs.second > rhs.second; });
+    std::for_each(std::begin(genotype_posteriors), mth,
+                  [&] (const auto& p) {
+                      print_variant_alleles(stream, p.first.get());
+                      stream << " " << p.second << '\n';
+                  });
+}
+
+} // namespace debug
 
 void CancerCaller::log(const GenotypeVector& germline_genotypes,
                        const GermlineGenotypeProbabilityMap& germline_genotype_posteriors,
