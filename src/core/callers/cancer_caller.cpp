@@ -169,23 +169,81 @@ void CancerCaller::set_cancer_genotype_prior_model(Latents& latents) const
     latents.cancer_genotype_prior_model_ = CancerGenotypePriorModel {*latents.germline_prior_model_, std::move(mutation_model)};
 }
 
+namespace {
+
+template <typename Range>
+std::size_t max_element_index(const Range& values)
+{
+    auto max_itr = std::max_element(std::cbegin(values), std::cend(values));
+    return std::distance(std::cbegin(values), max_itr);
+}
+
+struct CancerGenotypeLess
+{
+    template <typename T>
+    bool operator()(const CancerGenotype<T>& lhs, const CancerGenotype<T>& rhs) const
+    {
+        return lhs.germline() == rhs.germline() ? GenotypeLess()(lhs.somatic(), rhs.somatic()) : GenotypeLess()(lhs.germline(), rhs.germline());
+    }
+};
+
+template <typename IndexType>
+void erase_duplicates(MappableBlock<CancerGenotype<IndexedHaplotype<IndexType>>>& genotypes)
+{
+    using std::begin; using std::end;
+    std::sort(begin(genotypes), end(genotypes), CancerGenotypeLess {});
+    genotypes.erase(std::unique(begin(genotypes), end(genotypes)), end(genotypes));
+}
+
+} // namespace
+
 void CancerCaller::fit_somatic_model(Latents& latents, const HaplotypeLikelihoodArray& haplotype_likelihoods) const
 {
     set_cancer_genotype_prior_model(latents);
     latents.max_evidence_somatic_model_index_ = 0;
-    latents.cancer_genotypes_.reserve(parameters_.max_somatic_haplotypes);
-    latents.somatic_model_inferences_.reserve(parameters_.max_somatic_haplotypes);
-    latents.somatic_model_posteriors_.reserve(latents.somatic_model_inferences_.size());
+    latents.cancer_genotypes_.reserve(parameters_.max_somatic_haplotypes + 1);
+    latents.somatic_model_inferences_.reserve(parameters_.max_somatic_haplotypes + 1);
+    latents.somatic_model_posteriors_.reserve(latents.somatic_model_inferences_.size() + 1);
     for (unsigned somatic_ploidy {1}; somatic_ploidy <= parameters_.max_somatic_haplotypes; ++somatic_ploidy) {
         if (debug_log_) stream(*debug_log_) << "Fitting somatic model with somatic ploidy " << somatic_ploidy;
         latents.inferred_somatic_ploidy_ = somatic_ploidy;
         generate_cancer_genotypes(latents, haplotype_likelihoods);
         if (debug_log_) stream(*debug_log_) << "There are " << latents.cancer_genotypes_.back().size() << " candidate cancer genotypes";
         evaluate_somatic_model(latents, haplotype_likelihoods);
+        if (somatic_ploidy > 1) {
+            const auto map_genotype_idx = max_element_index(latents.somatic_model_inferences_.back().max_evidence_params.genotype_probabilities);
+            const auto& map_genotype = latents.cancer_genotypes_.back()[map_genotype_idx];
+            MappableBlock<CancerGenotype<IndexedHaplotype<>>> confirmation_genotypes {map_genotype};
+            for (unsigned i {0}; i < map_genotype.germline_ploidy(); ++i) {
+                for (unsigned j {0}; j < somatic_ploidy; ++j) {
+                    auto rearranged_genotype = map_genotype;
+                    std::swap(rearranged_genotype.germline()[i], rearranged_genotype.somatic()[j]);
+                    std::sort(std::begin(rearranged_genotype.germline()), std::end(rearranged_genotype.germline()));
+                    std::sort(std::begin(rearranged_genotype.somatic()), std::end(rearranged_genotype.somatic()));
+                    confirmation_genotypes.push_back(std::move(rearranged_genotype));
+                }
+            }
+            erase_duplicates(confirmation_genotypes);
+            latents.cancer_genotypes_.push_back(std::move(confirmation_genotypes));
+            evaluate_somatic_model(latents, haplotype_likelihoods);
+            confirmation_genotypes = std::move(latents.cancer_genotypes_.back());
+            latents.cancer_genotypes_.pop_back();
+            auto confirmation_inferences = std::move(latents.somatic_model_inferences_.back());
+            latents.somatic_model_inferences_.pop_back();
+            const auto map_confirmation_genotype_idx = max_element_index(confirmation_inferences.max_evidence_params.genotype_probabilities);
+            const auto& map_confirmation_genotype = confirmation_genotypes[map_confirmation_genotype_idx];
+            if (map_confirmation_genotype != map_genotype) {
+                if (debug_log_) {
+                    *debug_log_ << "Rerunning somatic model with somatic ploidy " << somatic_ploidy << " with rearranged genotypes";
+                }
+                latents.somatic_model_inferences_.pop_back();
+                utils::append(std::move(confirmation_genotypes), latents.cancer_genotypes_.back());
+                evaluate_somatic_model(latents, haplotype_likelihoods);
+            }
+        }
         latents.somatic_model_posteriors_.push_back(latents.somatic_model_inferences_.back().approx_log_evidence);
         if (debug_log_) stream(*debug_log_) << "Evidence for somatic model with somatic ploidy "
                              << somatic_ploidy << " is " << latents.somatic_model_posteriors_.back();
-        
         if (somatic_ploidy > 1) {
             if (latents.somatic_model_inferences_.back().approx_log_evidence
               < latents.somatic_model_inferences_[somatic_ploidy - 2].approx_log_evidence) {
@@ -395,27 +453,6 @@ auto calculate_max_germline_genotype_bases(const unsigned max_genotypes, const u
     const auto num_somatic_genotypes = num_genotypes(num_haplotypes, somatic_ploidy);
     return std::max(max_genotypes / num_somatic_genotypes, decltype(num_somatic_genotypes) {1});
 }
-
-namespace {
-
-struct CancerGenotypeLess
-{
-    template <typename T>
-    bool operator()(const CancerGenotype<T>& lhs, const CancerGenotype<T>& rhs) const
-    {
-        return lhs.germline() == rhs.germline() ? GenotypeLess()(lhs.somatic(), rhs.somatic()) : GenotypeLess()(lhs.germline(), rhs.germline());
-    }
-};
-
-template <typename IndexType>
-void erase_duplicates(MappableBlock<CancerGenotype<IndexedHaplotype<IndexType>>>& genotypes)
-{
-    using std::begin; using std::end;
-    std::sort(begin(genotypes), end(genotypes), CancerGenotypeLess {});
-    genotypes.erase(std::unique(begin(genotypes), end(genotypes)), end(genotypes));
-}
-
-} // namespace
 
 void CancerCaller::generate_cancer_genotypes_with_clean_normal(Latents& latents, const HaplotypeLikelihoodArray& haplotype_likelihoods) const
 {
