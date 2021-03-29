@@ -513,6 +513,20 @@ auto find_spliced(const MappableBlock<IndexedHaplotype<IndexType>>& targets,
     return std::find_if(std::cbegin(targets), std::cend(targets), is_spliced_query);
 }
 
+template <typename IndexType>
+auto find_spliced(const MappableBlock<IndexedHaplotype<IndexType>>& targets,
+                  const IndexedHaplotype<IndexType>& query,
+                  const std::vector<Variant>& splicers)
+{
+    const auto is_spliced_query = [&] (const auto& target) {
+        auto diffs = target.difference(query);
+        return diffs.size() == splicers.size()
+            && std::equal(std::cbegin(diffs), std::cend(diffs), std::cbegin(splicers), 
+                          [] (const auto& lhs, const auto& rhs) { return lhs.alt_allele() == rhs.ref_allele();});
+    };
+    return std::find_if(std::cbegin(targets), std::cend(targets), is_spliced_query);
+}
+
 void CancerCaller::generate_cancer_genotypes_with_clean_normal(Latents& latents, const HaplotypeLikelihoodArray& haplotype_likelihoods) const
 {
     assert(parameters_.max_genotypes);
@@ -525,7 +539,7 @@ void CancerCaller::generate_cancer_genotypes_with_clean_normal(Latents& latents,
         const auto old_cancer_genotype_bases = copy_greatest_probability_values(latents.cancer_genotypes_.back(), cancer_genotype_posteriors, max_old_cancer_genotype_bases);
         latents.cancer_genotypes_.push_back(extend_somatic(old_cancer_genotype_bases, latents.indexed_haplotypes_));
         const auto old_somatic_ploidy = old_cancer_genotype_bases.front().somatic_ploidy();
-        // Then there is a somatic haplotype with 2 or more somatic mutations
+        // If there is a somatic haplotype with 2 or more somatic mutations
         // which could have been 'phased' together even if there is no direct
         // read support for this. We need to try to split these mutations
         // onto different haplotypes and have the model evaluate that
@@ -547,6 +561,16 @@ void CancerCaller::generate_cancer_genotypes_with_clean_normal(Latents& latents,
                                 Genotype<IndexedHaplotype<>> split_somatic_genotype {*switched_ref_itr, *switched_alt_itr};
                                 latents.cancer_genotypes_.back().emplace_back(old_cancer_genotype_bases[g].germline(), std::move(split_somatic_genotype));
                             }
+                        }
+                        // Alternatively, the somatics might have been placed in the germline
+                        // causing reversions. We can therefore try to find the correct reference
+                        // haplotype by reversing these.
+                        const auto reversion_itr = find_spliced(latents.indexed_haplotypes_, somatic_haplotype, putative_somatics);
+                        if (reversion_itr != std::cend(latents.indexed_haplotypes_)) {
+                            Genotype<IndexedHaplotype<>> corrected_germline {*reversion_itr, latents.indexed_haplotypes_[other_idx]};
+                            auto new_somatic = old_cancer_genotype_bases[g].somatic();
+                            new_somatic.emplace(old_cancer_genotype_bases[g].germline()[origin_idx]);
+                            latents.cancer_genotypes_.back().emplace_back(std::move(corrected_germline), std::move(new_somatic));
                         }
                     }
                 }
