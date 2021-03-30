@@ -120,6 +120,8 @@ def load_config():
     global measures
     if "measures" in config:
         measures = config["measures"]
+        if type(measures) is str:
+            measures = measures.split(" ")
     elif all(example.kind == "somatic" for example in examples):
         measures = default_somatic_measures
     elif any(example.kind == "somatic" for example in examples):
