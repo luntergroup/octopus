@@ -546,6 +546,15 @@ void CancerCaller::generate_cancer_genotypes_with_clean_normal(Latents& latents,
         // configuration to be confident of phasing.
         for (std::size_t g {0}; g < std::min(std::size_t {3}, old_cancer_genotype_bases.size()); ++g) {
             const auto putative_somatics = get_somatics(old_cancer_genotype_bases[g]);
+            if (debug_log_) {
+                auto log = stream(*debug_log_);
+                log << "Putative somatics for genotype ";
+                debug::print_variant_alleles(log, old_cancer_genotype_bases[g]);
+                log << '\n';
+                for (const auto& somatic : putative_somatics) {
+                    log << '\t' << somatic << '\n';
+                }
+            }
             if (putative_somatics.size() > old_somatic_ploidy) {
                 for (const auto& somatic_haplotype : old_cancer_genotype_bases[g].somatic()) {
                     if (old_somatic_ploidy == 1) {
@@ -571,6 +580,13 @@ void CancerCaller::generate_cancer_genotypes_with_clean_normal(Latents& latents,
                             auto new_somatic = old_cancer_genotype_bases[g].somatic();
                             new_somatic.emplace(old_cancer_genotype_bases[g].germline()[origin_idx]);
                             latents.cancer_genotypes_.back().emplace_back(std::move(corrected_germline), std::move(new_somatic));
+                            if (debug_log_) {
+                                auto log = stream(*debug_log_);
+                                log << "Found candidate reversed germline haplotype: ";
+                                debug::print_variant_alleles(log, *reversion_itr);
+                                log << "\nCorrected genotype is: ";
+                                debug::print_variant_alleles(log, latents.cancer_genotypes_.back().back());
+                            }
                         }
                     }
                 }
