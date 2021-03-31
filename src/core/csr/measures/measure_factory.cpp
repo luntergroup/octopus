@@ -11,6 +11,8 @@
 #include "exceptions/user_error.hpp"
 #include "utils/map_utils.hpp"
 #include "utils/string_utils.hpp"
+#include "io/variant/vcf_header.hpp"
+#include "io/variant/vcf_spec.hpp"
 
 namespace octopus { namespace csr {
 
@@ -161,6 +163,37 @@ std::vector<std::string> get_all_measure_names()
         init(measure_makers);
     }
     return extract_sorted_keys(measure_makers);
+}
+
+VcfHeader make_header(const std::vector<MeasureWrapper>& measures)
+{
+    VcfHeader::Builder builder {};
+    for (const auto& measure : measures) {
+        measure.annotate(builder);
+    }
+    return builder.build_once();
+}
+
+void print_help(const std::vector<MeasureWrapper>& measures, std::ostream& os)
+{
+    const auto header = make_header(measures); 
+    os << "Name\tKind\tNumber\tType\tDescription" << std::endl;
+    for (const auto& measure : measures) {
+        os << measure.name() << '\t';
+        using namespace vcfspec::header;
+        const auto kind = header.has(format, measure.name()) ? format : info;
+        os << kind << '\t';
+        os << get_id_field_value(header, kind, measure.name(), meta::struc::number) << '\t';
+        os << get_id_field_value(header, kind, measure.name(), meta::struc::type) << '\t';
+        os << get_id_field_value(header, kind, measure.name(), meta::struc::description) << '\t';
+        os << std::endl;
+    }
+}
+
+void print_all_measures_help(std::ostream& os)
+{
+    const auto measures = make_measures(get_all_measure_names());
+    print_help(measures, os);
 }
 
 } // namespace csr
