@@ -544,6 +544,8 @@ rule install_ranger:
         make
         """
 
+localrules: install_ranger
+
 rule ranger_train:
     input:
         data = rules.make_ranger_data.output,
