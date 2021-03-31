@@ -47,7 +47,7 @@ private:
     std::vector<MeasureIndexRange> hard_ranges_, soft_ranges_;
     std::function<std::size_t(std::vector<Measure::ResultType>)> chooser_;
     std::vector<bool> unique_filter_keys_;
-    std::size_t first_chooser_measure_index_, num_chooser_measures_;
+    std::size_t num_chooser_measures_;
     
     virtual bool passes_all_hard_filters(const MeasureVector& measures) const override;
     virtual bool passes_all_soft_filters(const MeasureVector& measures) const override;

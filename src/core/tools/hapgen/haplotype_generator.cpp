@@ -575,35 +575,23 @@ std::vector<unsigned> get_max_ref_distances(const std::vector<GenomicRegion>& re
     return result;
 }
 
-std::vector<GenomicRegion> 
-get_joined_blocks(const std::vector<GenomicRegion>& blocks,
-                  const MappableFlatSet<Allele>& alleles,
-                  const HaplotypeTree& tree)
+std::vector<GenomicRegion> get_joined_blocks(const std::vector<GenomicRegion>& blocks,
+                                             const MappableFlatSet<Allele>& alleles,
+                                             const HaplotypeTree& tree)
 {
-    std::vector<GenomicRegion> expanded_blocks {}, lhs_expanded_blocks {};
+    std::vector<GenomicRegion> expanded_blocks {};
     expanded_blocks.reserve(blocks.size());
-    lhs_expanded_blocks.reserve(blocks.size());
     for (const auto& block : blocks) {
         auto ref_dist = max_ref_distance(block, alleles, tree);
-        if (ref_dist > 0) {
-            expanded_blocks.push_back(expand(block, ref_dist));
-            // lhs_expanded_blocks ensure indels are always called
-            // with alleles adjacent to them on their left, to avoid problems
-            // when the indel is REF padded during VCF encoding.
-            lhs_expanded_blocks.push_back(expand_lhs(block, 1));
-        }
+        if (ref_dist > 0) expanded_blocks.push_back(expand(block, ref_dist));
     }
     if (expanded_blocks.empty()) return blocks;
     std::sort(std::begin(expanded_blocks), std::end(expanded_blocks));
-    std::sort(std::begin(lhs_expanded_blocks), std::end(lhs_expanded_blocks));
     std::vector<GenomicRegion> interacting_expanded_blocks {};
     interacting_expanded_blocks.reserve(expanded_blocks.size());
     std::copy_if(std::begin(expanded_blocks), std::end(expanded_blocks), std::back_inserter(interacting_expanded_blocks),
                  [&] (const auto& block) { return count_overlapped(expanded_blocks, block) > 1; });
-    std::copy_if(std::begin(lhs_expanded_blocks), std::end(lhs_expanded_blocks), std::back_inserter(interacting_expanded_blocks),
-                 [&] (const auto& block) { return count_overlapped(blocks, block) > 1; });
     if (interacting_expanded_blocks.empty()) return blocks;
-    std::sort(std::begin(interacting_expanded_blocks), std::end(interacting_expanded_blocks));
     const auto join_regions = extract_covered_regions(interacting_expanded_blocks);
     std::vector<GenomicRegion> result {};
     result.reserve(blocks.size());

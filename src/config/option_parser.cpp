@@ -296,17 +296,21 @@ OptionMap parse_options(const int argc, const char** argv)
      po::bool_switch()->default_value(false),
      "Filter reads with possible adapter contamination")
     
-    ("max-decoy-supplementary-alignment-mapping-quality",
-     po::value<int>()->default_value(5),
-     "Filter reads with supplementary alignments mapped to decoy contigs with mapping quality greater than this")
+    ("no-reads-with-decoy-supplementary-alignments",
+     po::bool_switch()->default_value(false),
+     "Filter reads with supplementary alignments mapped to decoy contigs")
     
-    ("max-unplaced-supplementary-alignment-mapping-quality",
-     po::value<int>()->default_value(5),
-     "Filter reads with supplementary alignments mapped to unplaced contigs with mapping quality greater than this")
+    ("allow-reads-with-good-decoy-supplementary-alignments",
+     po::bool_switch()->default_value(false),
+     "Do not filer reads with supplementary alignments mapped to decoy contigs with high mapping quality (--min-mapping-quality)")
     
-    ("max-unlocalized-supplementary-alignment-mapping-quality",
-     po::value<int>()->default_value(5),
-     "Filter reads with supplementary alignments mapped to unlocalized contigs with mapping quality greater than this")
+    ("no-reads-with-unplaced-or-unlocalized-supplementary-alignments",
+     po::bool_switch()->default_value(false),
+     "Filter reads with supplementary alignments mapped to unplaced or unlocalized contigs")
+    
+    ("allow-reads-with-good-unplaced-or-unlocalized-supplementary-alignments",
+     po::bool_switch()->default_value(false),
+     "Do not filer reads with supplementary alignments mapped to unplaced or unlocalized contigs with high mapping quality (--min-mapping-quality)")
     
     ("disable-downsampling",
      po::bool_switch()->default_value(false),
@@ -372,9 +376,9 @@ OptionMap parse_options(const int argc, const char** argv)
      "Minimum number of reads that must support a variant if it is to be considered a candidate."
      " By default octopus will automatically determine this value")
      
-    ("force-pileup-candidates",
+    ("allow-pileup-candidates-from-likely-misaligned-reads",
      po::bool_switch()->default_value(false),
-     "Include pileup candidate variants discovered from reads that are considered likely to be misaligned")
+     "Allow pileup candidate variants discovered from reads that are considered likely to be misaligned")
     
     ("max-variant-size",
      po::value<int>()->default_value(2000),
@@ -723,11 +727,11 @@ OptionMap parse_options(const int argc, const char** argv)
      "Boolean expression to use to filter variant calls")
     
     ("somatic-filter-expression",
-     po::value<std::string>()->default_value("QUAL < 2 | GQ < 20 | MQ < 30 | SMQ < 40 | SB > 0.9 | SD > 0.9 | BQ < 20 | DP < 3 | ADP < 1 | MF > 0.2 | CF > 0.1 | FRF > 0.5 | AD < 1 | AF < 0.0001"),
+     po::value<std::string>()->default_value("QUAL < 2 | GQ < 20 | MQ < 30 | SMQ < 40 | SB > 0.9 | SD > 0.9 | BQ < 20 | DP < 3 | ADP < 1 | MF > 0.2 | NC > 1 | FRF > 0.5 | AD < 1 | AF < 0.0001"),
      "Boolean expression to use to filter somatic variant calls")
     
     ("denovo-filter-expression",
-     po::value<std::string>()->default_value("QUAL < 50 | PP < 40 | GQ < 20 | MQ < 30 | AD < 1 | AF < 0.1 | AFB > 0.2 | SB > 0.95 | BQ < 20 | DP < 10 | ADP < 1 | CF > 0.1 | MF > 0.2 | FRF > 0.5 | MP < 30 | MQ0 > 2"),
+     po::value<std::string>()->default_value("QUAL < 50 | PP < 40 | GQ < 20 | MQ < 30 | AD < 1 | AF < 0.1 | AFB > 0.2 | SB > 0.95 | BQ < 20 | DP < 10 | ADP < 1 | DC > 1 | MF > 0.2 | FRF > 0.5 | MP < 30 | MQ0 > 2"),
      "Boolean expression to use to filter somatic variant calls")
     
     ("refcall-filter-expression",
@@ -745,10 +749,6 @@ OptionMap parse_options(const int argc, const char** argv)
     ("annotations",
      po::value<std::vector<std::string>>()->multitoken()->implicit_value(std::vector<std::string> {"active"}, "active")->composing(),
      "Annotations to write to final VCF")
-    
-     ("aggregate-annotations",
-     po::bool_switch()->default_value(false),
-     "Aggregate all multi-value annotations into a single value")
     
     ("filter-vcf",
      po::value<fs::path>(),

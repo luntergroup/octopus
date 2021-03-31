@@ -41,8 +41,8 @@ void init(MeasureMakerMap& measure_makers)
     measure_makers[name<MismatchCount>()]               = [] () { return make_wrapped_measure<MismatchCount>(); };
     measure_makers[name<MismatchFraction>()]            = [] () { return make_wrapped_measure<MismatchFraction>(); };
     measure_makers[name<IsRefcall>()]                   = [] () { return make_wrapped_measure<IsRefcall>(); };
-    measure_makers[name<Contamination>()]               = [] () { return make_wrapped_measure<Contamination>(); };
-    measure_makers[name<ContaminationSum>()]            = [] () { return make_wrapped_measure<ContaminationSum>(); };
+    measure_makers[name<NormalContamination>()]         = [] () { return make_wrapped_measure<NormalContamination>(); };
+    measure_makers[name<DeNovoContamination>()]         = [] () { return make_wrapped_measure<DeNovoContamination>(); };
     measure_makers[name<ReadSideBias>()]                = [] () { return make_wrapped_measure<ReadSideBias>(); };
     measure_makers[name<AltAlleleCount>()]              = [] () { return make_wrapped_measure<AltAlleleCount>(); };
     measure_makers[name<STRLength>()]                   = [] () { return make_wrapped_measure<STRLength>(); };

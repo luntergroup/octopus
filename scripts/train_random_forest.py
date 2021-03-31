@@ -226,7 +226,6 @@ def run_octopus(octopus, reference, reads, regions, threads, output,
                   ['-t', str(regions), \
                    '--ignore-unmapped-contigs', \
                    '--disable-call-filtering', \
-                   '--aggregate-annotations', \
                    '--threads', str(threads), \
                    '-o', str(output)]
     if annotations == "all":

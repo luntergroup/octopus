@@ -129,7 +129,6 @@ RandomForestFilter::RandomForestFilter(FacetFactory facet_factory,
 , forest_paths_ {std::move(ranger_forests)}
 , chooser_ {std::move(chooser)}
 , forest_measure_info_ {}
-, first_chooser_measure_index_ {0}
 , num_chooser_measures_ {chooser_measures.size()}
 , options_ {std::move(options)}
 , threading_ {threading}
@@ -137,9 +136,10 @@ RandomForestFilter::RandomForestFilter(FacetFactory facet_factory,
 , data_buffer_ {}
 {
     forest_measure_info_.reserve(ranger_forests.size());
+    std::size_t index {0};
     for (const auto& measures : forest_measures) {
-        forest_measure_info_.push_back({first_chooser_measure_index_, measures.size()});
-        first_chooser_measure_index_ += measures.size();
+        forest_measure_info_.push_back({index, measures.size()});
+        index += measures.size();
     }
 }
 
@@ -185,9 +185,7 @@ Phred<double> RandomForestFilter::min_soft_call_quality() const noexcept
 
 std::int8_t RandomForestFilter::choose_forest(const MeasureVector& measures) const
 {
-    const auto first_chooser_measure_itr = std::next(std::cbegin(measures), first_chooser_measure_index_);
-    const auto last_chooser_measure_itr = std::next(first_chooser_measure_itr, num_chooser_measures_);
-    const MeasureVector chooser_measures {first_chooser_measure_itr, last_chooser_measure_itr};
+    const MeasureVector chooser_measures(std::prev(std::cend(measures), num_chooser_measures_), std::cend(measures));
     return chooser_(chooser_measures);
 }
 

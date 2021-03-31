@@ -43,7 +43,6 @@ ConditionalThresholdVariantCallFilter::ConditionalThresholdVariantCallFilter(Fac
 , soft_ranges_ {}
 , chooser_ {std::move(chooser)}
 , unique_filter_keys_ {}
-, first_chooser_measure_index_ {}
 , num_chooser_measures_ {chooser_measures.size()}
 {
     measures_.shrink_to_fit();
@@ -61,7 +60,6 @@ ConditionalThresholdVariantCallFilter::ConditionalThresholdVariantCallFilter(Fac
         unique_filter_keys_.push_back(are_all_unique(filter_keys));
         k += p.soft.size();
     }
-    first_chooser_measure_index_ = i;
 }
 
 bool ConditionalThresholdVariantCallFilter::passes_all_hard_filters(const MeasureVector& measures) const
@@ -87,9 +85,7 @@ std::vector<std::string> ConditionalThresholdVariantCallFilter::get_failing_vcf_
 
 std::size_t ConditionalThresholdVariantCallFilter::choose_filter(const MeasureVector& measures) const
 {
-    const auto first_chooser_measure_itr = std::next(std::cbegin(measures), first_chooser_measure_index_);
-    const auto last_chooser_measure_itr = std::next(first_chooser_measure_itr, num_chooser_measures_);
-    const MeasureVector chooser_measures {first_chooser_measure_itr, last_chooser_measure_itr};
+    const MeasureVector chooser_measures(std::prev(std::cend(measures), num_chooser_measures_), std::cend(measures));
     return chooser_(chooser_measures);
 }
 

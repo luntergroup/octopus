@@ -81,7 +81,7 @@ private:
     std::vector<std::unique_ptr<ranger::Forest>> forests_;
     std::function<std::int8_t(std::vector<Measure::ResultType>)> chooser_;
     std::vector<ForestMeasureInfo> forest_measure_info_;
-    std::size_t first_chooser_measure_index_, num_chooser_measures_;
+    std::size_t num_chooser_measures_;
     Options options_;
     ConcurrencyPolicy threading_;
     

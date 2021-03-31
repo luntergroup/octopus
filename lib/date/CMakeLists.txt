@@ -3,8 +3,7 @@ set(DATE_SOURCES
     tz.h
     tz.cpp
     tz_private.h
-    ios.h
-    ptz.h)
+    ios.h)
 
 add_library(date-tz STATIC ${DATE_SOURCES})
 

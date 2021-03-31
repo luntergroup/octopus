@@ -369,10 +369,8 @@ void Measure::annotate(VcfRecord::Builder& record, const ResultType& value, cons
         } else {
             if (aggregate_alleles && this->aggregator()) {
                 record.set_info(this->name(), this->serialise(boost::apply_visitor(AggregatorVisitor {*this->aggregator()}, value)));
-            } else if (is_one_value_annotation(this->cardinality())) {
-                record.set_info(this->name(), this->serialise(value));
             } else {
-                record.set_info(this->name(), utils::split(this->serialise(value), vcfspec::info::valueSeperator));
+                record.set_info(this->name(), this->serialise(value));
             }
         }
     }
