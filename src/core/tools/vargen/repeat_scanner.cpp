@@ -236,11 +236,20 @@ struct AdjacentRepeatPair : public Mappable<AdjacentRepeatPair>
     region {encompassing_region(this->lhs, this->rhs)} {}
 };
 
+auto generate_tandem_repeats(const ReferenceGenome& reference, const GenomicRegion& region,
+                             const unsigned max_period, const unsigned min_tract_length)
+{
+    auto result = find_exact_tandem_repeats(reference, region, max_period);
+    const auto is_too_short = [=] (const auto& repeat) { return region_size(repeat) < min_tract_length; };
+    result.erase(std::remove_if(std::begin(result), std::end(result), is_too_short), std::end(result));
+    return result;
+}
+
 std::deque<AdjacentRepeatPair>
 find_adjacent_tandem_repeats(const ReferenceGenome& reference, const GenomicRegion& region,
-                             const unsigned max_period)
+                             const unsigned max_period, const unsigned min_tract_length)
 {
-    const auto repeats = find_exact_tandem_repeats(reference, region, max_period);
+    const auto repeats = generate_tandem_repeats(reference, region, max_period, min_tract_length);
     std::deque<AdjacentRepeatPair> result {};
     if (repeats.size() > 1) {
         for (auto lhs_itr = std::cbegin(repeats); lhs_itr != std::prev(std::cend(repeats)); ++lhs_itr) {
@@ -300,9 +309,14 @@ void RepeatScanner::generate(const GenomicRegion& region, std::vector<Variant>& 
             assert(!segment.empty());
             const auto segment_region = encompassing_region(segment);
             const auto repeat_search_region = expand(segment_region, 100);
-            const auto segment_repeat_pairs = find_adjacent_tandem_repeats(reference_, repeat_search_region, options_.max_period);
+            const auto segment_repeat_pairs = find_adjacent_tandem_repeats(reference_, repeat_search_region, options_.max_period, options_.min_tract_length);
             for (const auto& mnv : segment) {
                 for (const auto& repeat_pair : overlap_range(segment_repeat_pairs, mnv)) {
+                    if (is_snv(mnv) && (repeat_pair.lhs.period() > 1 || repeat_pair.rhs.period() > 1
+                      || !(mnv.alt_allele().sequence() == repeat_pair.lhs.motif() || mnv.alt_allele().sequence() == repeat_pair.rhs.motif()))) {
+                        // Only try to split SNV candidates sandwiched by homopolymers
+                        continue;
+                    }
                     if (are_adjacent(repeat_pair.lhs, mnv) && contains(repeat_pair.rhs, mnv)) {
                         // insertion of lhs repeat, deletion of rhs repeat
                         const auto num_deleted_periods = count_whole_repeats(region_size(mnv), repeat_pair.rhs.period());

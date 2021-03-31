@@ -1,8 +1,8 @@
 // Copyright (c) 2015-2020 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
-#ifndef denovo_contamination_hpp
-#define denovo_contamination_hpp
+#ifndef contamination_hpp
+#define contamination_hpp
 
 #include <string>
 #include <vector>
@@ -15,7 +15,7 @@ class VcfRecord;
 
 namespace csr {
 
-class DeNovoContamination : public Measure
+class Contamination : public Measure
 {
     const static std::string name_;
     
@@ -26,6 +26,7 @@ class DeNovoContamination : public Measure
     const std::string& do_name() const override;
     std::string do_describe() const override;
     std::vector<std::string> do_requirements() const override;
+    boost::optional<Aggregator> do_aggregator() const noexcept override;
 };
 
 } // namespace csr
