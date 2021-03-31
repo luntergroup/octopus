@@ -939,23 +939,17 @@ auto make_read_filterer(const OptionMap& options)
     if (options.at("no-adapter-contaminated-reads").as<bool>()) {
         result.add(make_unique<IsNotContaminated>());
     }
-    const auto max_decoy_supplementary_mq = as_unsigned("max-decoy-supplementary-alignment-mapping-quality", options);
-    if (max_decoy_supplementary_mq > 0) {
-        result.add(make_unique<NoDecoySupplementaryAlignments>(max_decoy_supplementary_mq));
-    } else {
+    if (options.at("no-reads-with-decoy-supplementary-alignments").as<bool>()) {
         result.add(make_unique<NoDecoySupplementaryAlignments>());
+    } else if (!options.at("allow-reads-with-good-decoy-supplementary-alignments").as<bool>()) {
+        result.add(make_unique<NoDecoySupplementaryAlignments>(min_mapping_quality));
     }
-    const auto max_unplaced_supplementary_mq = as_unsigned("max-unplaced-supplementary-alignment-mapping-quality", options);
-    if (max_unplaced_supplementary_mq > 0) {
-        result.add(make_unique<NoUnplacedSupplementaryAlignments>(max_unplaced_supplementary_mq));
-    } else {
-        result.add(make_unique<NoUnplacedSupplementaryAlignments>());
-    }
-    const auto max_unlocalized_supplementary_mq = as_unsigned("max-unlocalized-supplementary-alignment-mapping-quality", options);
-    if (max_unlocalized_supplementary_mq > 0) {
-        result.add(make_unique<NoUnlocalizedSupplementaryAlignments>(max_unlocalized_supplementary_mq));
-    } else {
+    if (options.at("no-reads-with-unplaced-or-unlocalized-supplementary-alignments").as<bool>()) {
         result.add(make_unique<NoUnlocalizedSupplementaryAlignments>());
+        result.add(make_unique<NoUnplacedSupplementaryAlignments>());
+    } else if (!options.at("allow-reads-with-good-unplaced-or-unlocalized-supplementary-alignments").as<bool>()) {
+        result.add(make_unique<NoUnlocalizedSupplementaryAlignments>(min_mapping_quality));
+        result.add(make_unique<NoUnplacedSupplementaryAlignments>(min_mapping_quality));
     }
     result.shrink_to_fit();
     return result;
@@ -1226,7 +1220,7 @@ auto make_variant_generator_builder(const OptionMap& options, const boost::optio
         }
         scanner_options.match = get_candidate_variant_match_predicate(options);
         scanner_options.use_clipped_coverage_tracking = true;
-        if (!options.at("force-pileup-candidates").as<bool>()) {
+        if (!options.at("allow-pileup-candidates-from-likely-misaligned-reads").as<bool>()) {
             CigarScanner::Options::MisalignmentParameters misalign_params {};
             misalign_params.max_expected_mutation_rate = get_max_expected_heterozygosity(options);
             misalign_params.snv_threshold = as_unsigned("min-pileup-base-quality", options);
@@ -1243,8 +1237,6 @@ auto make_variant_generator_builder(const OptionMap& options, const boost::optio
     }
     if (repeat_candidate_variant_generator_enabled(options)) {
         RepeatScanner::Options repeat_scanner_options {};
-        repeat_scanner_options.min_snvs = 1;
-        repeat_scanner_options.min_base_quality = 10;
         repeat_scanner_options.min_vaf = get_repeat_scanner_min_vaf(options);
         result.set_repeat_scanner(repeat_scanner_options);
     }

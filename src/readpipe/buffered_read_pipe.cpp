@@ -118,8 +118,7 @@ GenomicRegion BufferedReadPipe::get_max_fetch_region(const GenomicRegion& reques
     if (hints_.empty() || hints_.count(request.contig_name()) == 0 || hints_.at(request.contig_name()).empty()) {
         return default_max_region;
     } else {
-        const auto hint_search_region = right_overhang_region(default_max_region, request);
-        const auto contained_hints = contained_range(hints_.at(request.contig_name()), hint_search_region);
+        const auto contained_hints = contained_range(hints_.at(request.contig_name()), default_max_region);
         if (empty(contained_hints)) {
             return request;
         } else {

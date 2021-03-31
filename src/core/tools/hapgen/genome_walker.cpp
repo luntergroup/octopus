@@ -97,23 +97,11 @@ bool is_interacting_indel(BidirIt first, BidirIt allele, BidirIt last,
 }
 
 template <typename BidirIt>
-bool splits_indel_pad_base(BidirIt first, BidirIt allele, BidirIt last)
-{
-    if (allele != first && (is_indel(*allele) || is_empty_region(*allele))) {
-        const auto pad_region = head_position(expand_lhs(mapped_region(*allele), 1));
-        return has_overlapped(first, allele, pad_region);
-    } else {
-        return false;
-    }
-}
-
-template <typename BidirIt>
 bool is_good_indicator_begin(BidirIt first_possible, BidirIt allele_itr, BidirIt last_possible)
 {
     return !(is_sandwich_allele(first_possible, allele_itr, last_possible)
              || is_indel_boundary(first_possible, allele_itr, last_possible)
-             || is_interacting_indel(first_possible, allele_itr, last_possible)
-             || splits_indel_pad_base(first_possible, allele_itr, last_possible));
+             || is_interacting_indel(first_possible, allele_itr, last_possible));
 }
 
 template <typename BidirIt>
@@ -214,7 +202,7 @@ GenomeWalker::walk(const GenomicRegion& previous_region,
                     auto expanded_leftmost = mapped_region(*it);
                     std::for_each(it, included_itr, [&] (const auto& allele) {
                         const auto ref_dist = reference_distance(allele);
-                        if (ref_dist > 0) {
+                        if (ref_dist > 1) {
                             const auto max_expansion = std::min(mapped_begin(allele), 2 * ref_dist);
                             auto expanded_allele_begin = mapped_begin(allele) - max_expansion;
                             if (expanded_allele_begin < mapped_begin(expanded_leftmost)) {

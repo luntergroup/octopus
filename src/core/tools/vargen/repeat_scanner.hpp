@@ -34,7 +34,6 @@ public:
     {
         unsigned min_snvs = 2;
         unsigned max_period = 6;
-        unsigned min_tract_length = 3;
         unsigned min_observations = 2;
         unsigned min_sample_observations = 2;
         boost::optional<double> min_vaf = boost::none;
