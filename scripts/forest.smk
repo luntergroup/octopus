@@ -548,8 +548,8 @@ localrules: install_ranger
 
 rule ranger_train:
     input:
-        data = rules.make_ranger_data.output,
-        ranger = rules.install_ranger.output
+        ranger = rules.install_ranger.output,
+        data = rules.make_ranger_data.output
     output:
         prefix + ".forest"
     params:
@@ -560,7 +560,7 @@ rule ranger_train:
     threads: 100
     shell:
         "{input.ranger} \
-        --file {input} \
+        --file {input.data} \
         --depvarname TP \
         --probability \
         --nthreads {threads} \
