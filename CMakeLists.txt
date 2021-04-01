@@ -8,7 +8,7 @@ project(octopus)
 
 set(octopus_VERSION_MAJOR 0)
 set(octopus_VERSION_MINOR 7)
-set(octopus_VERSION_PATCH 1)
+set(octopus_VERSION_PATCH 2)
 set(octopus_VERSION_RELEASE "")
 
 # Generate list of compile commands.  This helps debugging and doesn't have a downside.
