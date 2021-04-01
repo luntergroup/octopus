@@ -263,7 +263,8 @@ def get_brewed_compiler_binaries(homebrew_dir):
         gcc_dir = cellar_dir / latest_gcc
         gcc_version = os.listdir(str(gcc_dir))[0]
         gcc_bin_dir = gcc_dir / gcc_version / 'bin'
-        return gcc_bin_dir / 'gcc', gcc_bin_dir / 'g++'
+        gcc_major_version = gcc_version.split('.')[0]
+        return gcc_bin_dir / ('gcc-' + gcc_major_version), gcc_bin_dir / ('g++-' + gcc_major_version)
 
 def patch_homebrew_centos_gcc9(homebrew_dir):
     homebrew_bin_dir = homebrew_dir / 'bin'
