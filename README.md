@@ -75,7 +75,7 @@ Depending on your Ubuntu distribution, some requirements can be installed with `
 ```shell
 $ sudo add-apt-repository ppa:ubuntu-toolchain-r/test
 $ sudo apt-get update && sudo apt-get upgrade
-$ sudo apt-get install gcc-7
+$ sudo apt-get install gcc-10
 $ sudo apt-get install libgmp3-dev
 $ sudo apt-get install git-all
 $ sudo apt-get install python3
@@ -127,13 +127,13 @@ $ ./scripts/install.py --cxx_compiler /path/to/cpp/compiler # or just the compil
 For example, if the requirement instructions above were used:
 
 ```shell
-$ ./scripts/install.py --cxx_compiler clang++-4.0
+$ ./scripts/install.py --cxx_compiler clang++-11.0
 ```
 
 On some systems, you may also need to specify a C compiler which is the same version as your C++ compiler, otherwise you'll get lots of link errors. This can be done with the `--c_compiler` option:
 
 ```shell
-$ ./scripts/install.py -cxx g++-7 -c gcc-7 
+$ ./scripts/install.py -cxx g++-10 -c gcc-10
 ```
 
 By default this installs to `/bin` relative to where you installed octopus. To install to a different location (e.g. `/usr/local/bin`) use:
@@ -163,7 +163,7 @@ $ cmake -DCMAKE_INSTALL_PREFIX=/usr/local/bin ..
 CMake will try to find a suitable compiler on your system, if you'd like you use a specific compiler use the `-D` option, for example:
 
 ```shell
-$ cmake -D CMAKE_C_COMPILER=clang-4.0 -D CMAKE_CXX_COMPILER=clang++-4.0 ..
+$ cmake -D CMAKE_C_COMPILER=clang-11.0 -D CMAKE_CXX_COMPILER=clang++-11.0 ..
 ```
 
 You can check installation was successful by executing the command:
@@ -302,10 +302,10 @@ $ octopus -C cell -R H37Rv.fa -I cellA.bam cellB.bam cellC.bam --normal-sample N
 
 #### HLA genotyping
 
-To call phased HLA genotypes, increase the default lagging level:
+To call phased HLA genotypes, use backtracking:
 
 ```shell
-$ octopus -R hs37d5.fa -I NA12878.bam -t hla-regions.bed --lagging-level AGGRESSIVE
+$ octopus -R hs37d5.fa -I NA12878.bam -t hla-regions.bed --backtrack AGGRESSIVE
 ```
 
 #### Multithreaded calling
@@ -377,7 +377,7 @@ which is at least consistent, but rapidly becomes unmanageable as the length and
 
 ## Documentation
 
-Complete [user](https://github.com/luntergroup/octopus/blob/develop/doc/manuals/user/octopus-user-manual.pdf) and [developer](https://github.com/luntergroup/octopus/blob/develop/doc/manuals/dev/octopus-dev-manual.pdf) documentation is available in the doc directory.
+Complete documentation for the latest version is available in the [wiki](https://github.com/luntergroup/octopus/wiki).
 
 ## Support
 
@@ -385,7 +385,7 @@ Please report any bugs or feature requests to the [octopus issue tracker](https:
 
 ## Contributing
 
-Contributions are very welcome, but please first review the [contribution guidelines](CONTRIBUTING.md).
+Contributions are very welcome! Contribution guidelines can be found [here](CONTRIBUTING.md).
 
 ## Authors
 
