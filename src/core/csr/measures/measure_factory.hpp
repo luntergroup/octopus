@@ -6,6 +6,7 @@
 
 #include <string>
 #include <vector>
+#include <ostream>
 
 #include "utils/string_utils.hpp"
 #include "measure.hpp"
@@ -17,6 +18,9 @@ MeasureWrapper make_measure(std::string name);
 std::vector<MeasureWrapper> make_measures(std::vector<std::string> names);
 
 std::vector<std::string> get_all_measure_names();
+
+void print_help(const std::vector<MeasureWrapper>& measures, std::ostream& os);
+void print_all_measures_help(std::ostream& os);
 
 } // namespace csr
 } // namespace octopus

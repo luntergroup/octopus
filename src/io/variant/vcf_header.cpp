@@ -51,7 +51,11 @@ bool VcfHeader::has(const Tag& t) const noexcept
 
 bool VcfHeader::has(const Tag& t, const StructuredKey& k) const noexcept
 {
-    return structured_fields_.count(t) > 0; // TODO: complete this
+    const auto er = structured_fields_.equal_range(t);
+    return std::find_if(er.first, er.second,
+                        [&] (const auto& p) {
+                            return p.second.at(vcfspec::header::meta::struc::id) == k;
+                        }) != er.second;
 }
 
 const VcfHeader::Value& VcfHeader::at(const BasicKey& k) const
@@ -59,8 +63,8 @@ const VcfHeader::Value& VcfHeader::at(const BasicKey& k) const
     return basic_fields_.at(k);
 }
 
-const VcfHeader::Value& VcfHeader::find(const Tag& search_tag, const StructuredKey& search_key,
-                                        const StructuredKey& id_key, const Value& id_value) const
+const VcfHeader::Value& VcfHeader::find(const Tag& search_tag, const StructuredKey& id_key,
+                                        const Value& id_value, const StructuredKey& search_key) const
 {
     const auto er = structured_fields_.equal_range(search_tag);
     return std::find_if(er.first, er.second,
@@ -118,15 +122,19 @@ const VcfHeader::StructuredFieldMap& VcfHeader::structured_fields() const noexce
 
 // non-member methods
 
-const VcfHeader::Value& get_id_field_value(const VcfHeader& header, const VcfHeader::Tag& tag,
-                                           const VcfHeader::Value& id_value,
-                                           const VcfHeader::StructuredKey& lookup_key)
+const VcfHeader::Value&
+get_id_field_value(const VcfHeader& header, 
+                   const VcfHeader::Tag& tag,
+                   const VcfHeader::StructuredKey& id_value,
+                   const VcfHeader::StructuredKey& lookup_key)
 {
     return header.find(tag, vcfspec::header::meta::struc::id, id_value, lookup_key);
 }
 
-const VcfHeader::Value& get_id_field_type(const VcfHeader& header, const VcfHeader::Tag& tag,
-                                              const VcfHeader::Value& id_value)
+const VcfHeader::Value& 
+get_id_field_type(const VcfHeader& header, 
+                  const VcfHeader::Tag& tag,
+                  const VcfHeader::Value& id_value)
 {
     using namespace vcfspec::header::meta;
     return header.find(tag, struc::id, id_value, struc::type);

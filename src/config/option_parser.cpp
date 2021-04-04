@@ -22,6 +22,8 @@
 #include "exceptions/user_error.hpp"
 #include "config.hpp"
 
+#include "core/csr/measures/measure_factory.hpp"
+
 namespace po = boost::program_options;
 namespace fs = boost::filesystem;
 
@@ -776,8 +778,10 @@ OptionMap parse_options(const int argc, const char** argv)
     .add(variant_discovery).add(haplotype_generation).add(general_variant_calling)
     .add(cancer).add(trio).add(polyclone).add(cell).add(call_filtering);
     
+    po::options_description conditional_help_options("Octopus help command line options");
+    conditional_help_options.add(general).add(call_filtering);
     OptionMap vm_init;
-    po::store(run(po::command_line_parser(argc, argv).options(general).allow_unregistered()), vm_init);
+    po::store(run(po::command_line_parser(argc, argv).options(conditional_help_options).allow_unregistered()), vm_init);
     
     if (vm_init.count("help") == 1) {
         po::store(run(po::command_line_parser(argc, argv).options(general_variant_calling).allow_unregistered()), vm_init);
@@ -820,6 +824,10 @@ OptionMap parse_options(const int argc, const char** argv)
             }
         } else {
             std::cout << all << std::endl;
+        }
+        if (vm_init.count("annotations") == 1) {
+            std::cout << "Available annotations:\n" << std::endl;
+            csr::print_all_measures_help(std::cout);
         }
         return vm_init;
     }

@@ -17,7 +17,7 @@ forest_url_base = google_cloud_octopus_base + "/forests"
 forests = ['germline', 'somatic']
 
 latest_llvm = 'llvm'
-latest_gcc = 'gcc@10'
+latest_gcc = 'gcc'
 
 required_curl_version = 7, 41, 0
 required_git_version = 2, 7, 0
@@ -262,10 +262,9 @@ def get_brewed_compiler_binaries(homebrew_dir):
     else:
         gcc_dir = cellar_dir / latest_gcc
         gcc_version = os.listdir(str(gcc_dir))[0]
-        gcc_bin_dir = gcc_dir /gcc_version / 'bin'
-        gcc_bin_name = latest_gcc.replace('@', '-')
-        gxx_bin_name =  gcc_bin_name.replace('cc', '++')
-        return gcc_bin_dir / gcc_bin_name, gcc_bin_dir / gxx_bin_name
+        gcc_bin_dir = gcc_dir / gcc_version / 'bin'
+        gcc_major_version = gcc_version.split('.')[0]
+        return gcc_bin_dir / ('gcc-' + gcc_major_version), gcc_bin_dir / ('g++-' + gcc_major_version)
 
 def patch_homebrew_centos_gcc9(homebrew_dir):
     homebrew_bin_dir = homebrew_dir / 'bin'
