@@ -200,20 +200,14 @@ auto inner_product(const T1& lhs, const T2& rhs) noexcept
 }
 
 template <typename T>
-inline auto digamma_diff(const T a, const T b)
-{
-    using boost::math::digamma;
-    return digamma(a) - digamma(b);
-}
-
-template <typename T>
 auto dirichlet_expectation_log(const std::vector<T>& concentrations)
 {
     std::vector<T> result(concentrations.size());
     if (concentrations.size() > 1) {
-        const auto alpha_0 = sum(concentrations);
+        using boost::math::digamma;
+        const auto digamma_alpha_0 = digamma(sum(concentrations));
         std::transform(std::cbegin(concentrations), std::cend(concentrations), std::begin(result),
-                       [=] (auto alpha) { return digamma_diff(alpha, alpha_0); });
+                       [=] (auto alpha) { return digamma(alpha) - digamma_alpha_0; });
     }
     return result;
 }
