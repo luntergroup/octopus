@@ -2280,6 +2280,11 @@ auto get_caller_type(const OptionMap& options, const std::vector<SampleName>& sa
     return get_caller_type(options, samples, get_pedigree(options, samples));
 }
 
+bool aggregate_annotations(const OptionMap& options)
+{
+    return options.at("aggregate-annotations").as<bool>();
+}
+
 std::unique_ptr<VariantCallFilterFactory>
 make_call_filter_factory(const ReferenceGenome& reference, ReadPipe& read_pipe, const OptionMap& options,
                          boost::optional<fs::path> temp_directory)
@@ -2350,6 +2355,7 @@ make_call_filter_factory(const ReferenceGenome& reference, ReadPipe& read_pipe, 
                 auto annotations = get_requested_measure_annotations(options);
                 output_options.annotations.insert(std::begin(annotations), std::end(annotations));
             }
+            output_options.aggregate_allele_annotations = aggregate_annotations(options);
             result->set_output_options(std::move(output_options));
         }
     }
