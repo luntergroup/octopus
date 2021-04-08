@@ -606,10 +606,12 @@ SingleCellModel::propose_genotype_combinations(const PhylogenyNodePloidyMap& phy
         unsigned best_ploidy {1};
         double max_log_evidence {};
         for (unsigned ploidy {1}; ploidy < genotypes_by_ploidy.size(); ++ploidy) {
-            const auto inferences = zygosity_individual_model.evaluate(genotypes_by_ploidy[ploidy], haplotype_likelihoods);
-            if (ploidy == 1 || max_log_evidence < inferences.log_evidence) {
-                best_ploidy = ploidy;
-                max_log_evidence = inferences.log_evidence;
+            if (!genotypes_by_ploidy[ploidy].empty()) {
+                const auto inferences = zygosity_individual_model.evaluate(genotypes_by_ploidy[ploidy], haplotype_likelihoods);
+                if (ploidy == 1 || max_log_evidence < inferences.log_evidence) {
+                    best_ploidy = ploidy;
+                    max_log_evidence = inferences.log_evidence;
+                }
             }
         }
         sample_ploidies.push_back(best_ploidy);
