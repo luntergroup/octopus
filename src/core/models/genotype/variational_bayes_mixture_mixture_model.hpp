@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2020 Daniel Cooke
+// Copyright (c) 2015-2021 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef variational_bayes_mixture_mixture_model_hpp
@@ -135,13 +135,21 @@ private:
     using GroupOptionalLogPriorVector = boost::optional<LogProbabilityVector>; // One element per group
     using GroupOptionalLogPriorArray = std::vector<GroupOptionalLogPriorVector>; // One element per sample
     
+    using ExpandedLikelihood = std::vector<float>; // One element per genotype combination
+    using ExpandedGenotype = std::vector<ExpandedLikelihood>; // One element per read
+    using ExpandedHaplotypeLikelihoodVector = std::vector<ExpandedGenotype>; // One element per haplotype in genotype
+    using ExpandedGroupLikelihoodVector = std::vector<ExpandedHaplotypeLikelihoodVector>; // One element per group
+    using ExpandedHaplotypeLikelihoodMatrix = std::vector<ExpandedGroupLikelihoodVector>; // One element per sample
+
     Options options_;
     
     GroupOptionalLogPriorVector to_logs(const GroupOptionalPriorVector& prior) const;
     GroupOptionalLogPriorArray to_logs(const GroupOptionalPriorArray& priors) const;
+    ExpandedHaplotypeLikelihoodMatrix expand(const HaplotypeLikelihoodMatrix& likelihoods) const;
     PointInferences
     evaluate(const LogProbabilityVector& genotype_log_priors,
              const HaplotypeLikelihoodMatrix& log_likelihoods,
+             const ExpandedHaplotypeLikelihoodMatrix& expanded_log_likelihoods,
              const GroupOptionalLogPriorArray& group_log_priors,
              const GroupConcentrationVector& group_concentrations,
              const MixtureConcentrationArray& mixture_concentrations,
@@ -165,14 +173,14 @@ private:
                           const MixtureConcentrationArray& mixture_concentrations,
                           const ProbabilityVector& genotype_priors,
                           const GroupResponsibilityVector& group_responsibilities,
-                          const HaplotypeLikelihoodMatrix& log_likelihoods) const;
+                          const ExpandedHaplotypeLikelihoodMatrix& log_likelihoods) const;
     void
     update_responsibilities(ComponentResponsibilityMatrix& result,
                             const GroupConcentrationVector& group_concentrations,
                             const MixtureConcentrationArray& mixture_concentrations,
                             const ProbabilityVector& genotype_posteriors,
                             const GroupResponsibilityVector& group_responsibilities,
-                            const HaplotypeLikelihoodMatrix& log_likelihoods) const;
+                            const ExpandedHaplotypeLikelihoodMatrix& log_likelihoods) const;
     void
     update_genotype_log_posteriors(LogProbabilityVector& result,
                                    const LogProbabilityVector& genotype_log_priors,

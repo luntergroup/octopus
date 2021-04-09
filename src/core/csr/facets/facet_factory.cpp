@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2020 Daniel Cooke
+// Copyright (c) 2015-2021 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "facet_factory.hpp"
@@ -159,7 +159,7 @@ bool requires_reads(const std::vector<std::string>& facets) noexcept
 
 bool requires_genotypes(const std::string& facet) noexcept
 {
-    const static std::array<std::string, 1> genotype_facets{name<ReadAssignments>()};
+    const static std::array<std::string, 2> genotype_facets {name<Genotypes>(), name<ReadAssignments>()};
     return std::find(std::cbegin(genotype_facets), std::cend(genotype_facets), facet) != std::cend(genotype_facets);
 }
 

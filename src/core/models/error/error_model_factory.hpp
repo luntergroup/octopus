@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2020 Daniel Cooke
+// Copyright (c) 2015-2021 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef error_model_factory_hpp
@@ -14,7 +14,7 @@
 
 namespace octopus {
 
-enum class LibraryPreparation { pcr, pcr_free, tenx };
+enum class LibraryPreparation { pcr, pcr_free, tenx, mda };
 enum class Sequencer { hiseq_2000, hiseq_2500, hiseq_4000, xten, novaseq, bgiseq_500, pacbio, pacbio_ccs };
 
 struct ModelConfig

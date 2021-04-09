@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2020 Daniel Cooke
+// Copyright (c) 2015-2021 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "threshold_filter.hpp"
@@ -113,14 +113,15 @@ VariantCallFilter::Classification ThresholdVariantCallFilter::classify(const Mea
 
 bool ThresholdVariantCallFilter::passes_all_hard_filters(const MeasureVector& measures) const
 {
-    return passes_all_filters(std::cbegin(measures), std::next(std::cbegin(measures), hard_thresholds_.size()),
-                              std::cbegin(hard_thresholds_));
+    const auto last_hard = std::next(std::cbegin(measures), hard_thresholds_.size());
+    return passes_all_filters(std::cbegin(measures), last_hard, std::cbegin(hard_thresholds_));
 }
 
 bool ThresholdVariantCallFilter::passes_all_soft_filters(const MeasureVector& measures) const
 {
-    return passes_all_filters(std::next(std::cbegin(measures), hard_thresholds_.size()), std::cend(measures),
-                              std::cbegin(soft_thresholds_));
+    const auto first_soft = std::next(std::cbegin(measures), hard_thresholds_.size());
+    const auto last_soft = std::next(first_soft, soft_thresholds_.size());
+    return passes_all_filters(first_soft, last_soft, std::cbegin(soft_thresholds_));
 }
 
 std::vector<std::string> ThresholdVariantCallFilter::get_failing_vcf_filter_keys(const MeasureVector& measures) const

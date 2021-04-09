@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2020 Daniel Cooke
+// Copyright (c) 2015-2021 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "single_cell_model.hpp"
@@ -606,10 +606,12 @@ SingleCellModel::propose_genotype_combinations(const PhylogenyNodePloidyMap& phy
         unsigned best_ploidy {1};
         double max_log_evidence {};
         for (unsigned ploidy {1}; ploidy < genotypes_by_ploidy.size(); ++ploidy) {
-            const auto inferences = zygosity_individual_model.evaluate(genotypes_by_ploidy[ploidy], haplotype_likelihoods);
-            if (ploidy == 1 || max_log_evidence < inferences.log_evidence) {
-                best_ploidy = ploidy;
-                max_log_evidence = inferences.log_evidence;
+            if (!genotypes_by_ploidy[ploidy].empty()) {
+                const auto inferences = zygosity_individual_model.evaluate(genotypes_by_ploidy[ploidy], haplotype_likelihoods);
+                if (ploidy == 1 || max_log_evidence < inferences.log_evidence) {
+                    best_ploidy = ploidy;
+                    max_log_evidence = inferences.log_evidence;
+                }
             }
         }
         sample_ploidies.push_back(best_ploidy);
@@ -629,9 +631,9 @@ SingleCellModel::propose_genotype_combinations(const PhylogenyNodePloidyMap& phy
         if (clusters.empty()) {
             auto population_inferences = population_model.evaluate(samples_, haplotypes, genotypes, haplotype_likelihoods);
             population_genotype_posteriors = std::move(population_inferences.posteriors.marginal_genotype_probabilities);
-            clusters = cluster_samples(population_genotype_posteriors, std::max(samples_.size() / 4, 2 * num_groups));
+            clusters = cluster_samples(population_genotype_posteriors, std::min(std::max(samples_.size() / 4, 2 * num_groups), samples_.size()));
         } else if (clusters.size() > 2 * num_groups) {
-            clusters = cluster_samples(cluster_marginal_genotype_posteriors, std::max(clusters.size() / 2, 2 * num_groups));
+            clusters = cluster_samples(cluster_marginal_genotype_posteriors, std::min(std::max(clusters.size() / 2, 2 * num_groups), samples_.size()));
         } else {
             auto num_effective_clusters = sum_entropies(cluster_marginal_genotype_posteriors);
             if ((clusters.size() == num_groups + 1 && num_effective_clusters < num_groups / 2)
@@ -646,7 +648,7 @@ SingleCellModel::propose_genotype_combinations(const PhylogenyNodePloidyMap& phy
                 cluster_marginal_genotype_posteriors.pop_back();
             }
             if (clusters.size() <= num_groups + 1) break;
-            clusters = cluster_samples(cluster_marginal_genotype_posteriors, num_groups + 1);
+            clusters = cluster_samples(cluster_marginal_genotype_posteriors, std::min(num_groups + 1, samples_.size()));
         }
         cluster_marginal_genotype_posteriors.clear();
         std::vector<std::vector<SampleName>> next_samples_by_cluster {};

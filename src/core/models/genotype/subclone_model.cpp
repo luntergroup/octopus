@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2020 Daniel Cooke
+// Copyright (c) 2015-2021 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "subclone_model.hpp"
@@ -133,6 +133,10 @@ compute_genotype_likelihoods_with_fixed_mixture_model(const std::vector<SampleNa
     return result;
 }
 
+auto evaluate(const Genotype<IndexedHaplotype<>>& genotype, const ConstantMixtureGenotypeLikelihoodModel& model)
+{
+    return model.evaluate(genotype);
+}
 auto evaluate(const CancerGenotype<IndexedHaplotype<>>& genotype, const ConstantMixtureGenotypeLikelihoodModel& model)
 {
     return model.evaluate(demote(genotype));
@@ -243,14 +247,41 @@ generate_seeds(const std::vector<SampleName>& samples,
     if (result.size() > max_seeds) return result;
     max_seeds -= result.size();
     result.reserve(max_seeds);
-    result.push_back(genotype_log_priors);
-    IndividualModel germline_model {priors.genotype_prior_model};
-    if (haplotypes) germline_model.prime(*haplotypes);
+    ConstantMixtureGenotypeLikelihoodModel basic_likelihood_model {haplotype_log_likelihoods};
+    std::vector<LogProbabilityVector> basic_sample_likelihoods {};
+    basic_sample_likelihoods.reserve(samples.size());
     for (const auto& sample : samples) {
-        haplotype_log_likelihoods.prime(sample);
-        auto latents = germline_model.evaluate(genotypes, haplotype_log_likelihoods);
-        result.push_back(std::move(latents.posteriors.genotype_log_probabilities));
+        basic_likelihood_model.cache().prime(sample);
+        basic_sample_likelihoods.push_back(evaluate(genotypes, basic_likelihood_model));
     }
+    auto basic_likelihoods = add_all_and_normalise(basic_sample_likelihoods);
+    auto basic_posteriors = add_and_normalise(genotype_log_priors, basic_likelihoods);
+    result.push_back(basic_posteriors);
+    --max_seeds;
+    if (max_seeds == 0) return result;
+    result.push_back(basic_likelihoods);
+    --max_seeds;
+    if (max_seeds == 0) return result;
+    result.push_back(genotype_log_priors);
+    maths::normalise_logs(result.back());
+    --max_seeds;
+    if (max_seeds == 0) return result;
+    for (auto& likelihoods : basic_sample_likelihoods) {
+        result.push_back(std::move(likelihoods));
+        --max_seeds;
+        if (max_seeds == 0) return result;
+    }
+    std::vector<std::pair<double, std::size_t>> ranked_basic_posteriors {};
+    ranked_basic_posteriors.reserve(genotypes.size());
+    for (std::size_t i {0}; i < genotypes.size(); ++i) {
+        ranked_basic_posteriors.push_back({basic_posteriors[i], i});
+    }
+    const auto nth_ranked_basic_posteriors_itr = std::next(std::begin(ranked_basic_posteriors), max_seeds);
+    std::partial_sort(std::begin(ranked_basic_posteriors),
+                      nth_ranked_basic_posteriors_itr,
+                      std::end(ranked_basic_posteriors), std::greater<> {});
+    std::transform(std::begin(ranked_basic_posteriors), nth_ranked_basic_posteriors_itr,
+                   std::back_inserter(result), [&] (const auto& p) { return make_point_seed(genotypes.size(), p.second); });
     return result;
 }
 
