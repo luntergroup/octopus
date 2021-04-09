@@ -454,36 +454,6 @@ auto calculate_max_germline_genotype_bases(const unsigned max_genotypes, const u
     return std::max(max_genotypes / num_somatic_genotypes, decltype(num_somatic_genotypes) {1});
 }
 
-bool is_somatic(const Allele& allele, const CancerGenotype<IndexedHaplotype<>>& genotype)
-{
-    return contains(genotype.somatic(), allele) && !contains(genotype.germline(), allele);
-}
-
-template <typename IndexType>
-std::vector<Variant>
-get_somatic_alts(const CancerGenotype<IndexedHaplotype<IndexType>>& genotype, const std::vector<Variant>& variants)
-{
-    std::vector<Variant> result {};
-    std::copy_if(std::cbegin(variants), std::cend(variants), std::back_inserter(result),
-                 [&] (const auto& variant) { return is_somatic(variant.alt_allele(), genotype); });
-    return result;
-}
-
-template <typename IndexType>
-std::vector<Variant>
-get_somatics(const CancerGenotype<IndexedHaplotype<IndexType>>& genotype)
-{
-    std::vector<Variant> candidates {};
-    for (const auto& somatic : genotype.somatic()) {
-        for (const auto& germline : genotype.germline()) {
-            utils::append(somatic.difference(germline), candidates);
-        }
-    }
-    std::sort(std::begin(candidates), std::end(candidates)),
-    candidates.erase(std::unique(std::begin(candidates), std::end(candidates)), std::end(candidates));
-    return get_somatic_alts(genotype, candidates);
-}
-
 template <typename IndexType>
 unsigned
 identify_origin(const Genotype<IndexedHaplotype<IndexType>>& germline,
@@ -499,6 +469,13 @@ identify_origin(const Genotype<IndexedHaplotype<IndexType>>& germline,
         }
     }
     return result;
+}
+
+template <typename IndexType>
+std::vector<Variant>
+get_somatics(const IndexedHaplotype<IndexType>& germline, const IndexedHaplotype<IndexType>& somatic)
+{
+    return somatic.difference(germline);
 }
 
 template <typename IndexType>
@@ -538,55 +515,57 @@ void CancerCaller::generate_cancer_genotypes_with_clean_normal(Latents& latents,
         const auto& cancer_genotype_posteriors = latents.somatic_model_inferences_.back().weighted_genotype_posteriors;
         const auto old_cancer_genotype_bases = copy_greatest_probability_values(latents.cancer_genotypes_.back(), cancer_genotype_posteriors, max_old_cancer_genotype_bases);
         latents.cancer_genotypes_.push_back(extend_somatic(old_cancer_genotype_bases, latents.indexed_haplotypes_));
-        const auto old_somatic_ploidy = old_cancer_genotype_bases.front().somatic_ploidy();
         // If there is a somatic haplotype with 2 or more somatic mutations
         // which could have been 'phased' together even if there is no direct
         // read support for this. We need to try to split these mutations
         // onto different haplotypes and have the model evaluate that
         // configuration to be confident of phasing.
         for (std::size_t g {0}; g < std::min(std::size_t {3}, old_cancer_genotype_bases.size()); ++g) {
-            const auto putative_somatics = get_somatics(old_cancer_genotype_bases[g]);
             if (debug_log_) {
                 auto log = stream(*debug_log_);
-                log << "Putative somatics for genotype ";
+                log << "Looking for phasable somatis in ";
                 debug::print_variant_alleles(log, old_cancer_genotype_bases[g]);
-                log << '\n';
-                for (const auto& somatic : putative_somatics) {
-                    log << '\t' << somatic << '\n';
-                }
             }
-            if (putative_somatics.size() > old_somatic_ploidy) {
-                for (const auto& somatic_haplotype : old_cancer_genotype_bases[g].somatic()) {
-                    if (old_somatic_ploidy == 1) {
-                        const auto origin_idx = identify_origin(old_cancer_genotype_bases[g].germline(), somatic_haplotype);
-                        const auto other_idx = origin_idx > 0 ? origin_idx - 1 : origin_idx + 1;
-                        for (const Variant& switcher : putative_somatics) {
-                            const auto switched_alt_itr = find_spliced(latents.indexed_haplotypes_, latents.indexed_haplotypes_[other_idx], switcher.alt_allele());
-                            if (switched_alt_itr == std::cend(latents.indexed_haplotypes_)) {
-                                continue;
-                            }
-                            const auto switched_ref_itr = find_spliced(latents.indexed_haplotypes_, somatic_haplotype, switcher.ref_allele());
-                            if (switched_ref_itr != std::cend(latents.indexed_haplotypes_)) {
-                                Genotype<IndexedHaplotype<>> split_somatic_genotype {*switched_ref_itr, *switched_alt_itr};
-                                latents.cancer_genotypes_.back().emplace_back(old_cancer_genotype_bases[g].germline(), std::move(split_somatic_genotype));
-                            }
+            for (const auto& somatic_haplotype : old_cancer_genotype_bases[g].somatic()) {
+                const auto origin_idx = identify_origin(old_cancer_genotype_bases[g].germline(), somatic_haplotype);
+                const auto putative_somatics = get_somatics(old_cancer_genotype_bases[g].germline()[origin_idx], somatic_haplotype);
+                if (debug_log_) {
+                    auto log = stream(*debug_log_);
+                    log << "Putative somatics in haplotype ";
+                    debug::print_variant_alleles(log, somatic_haplotype);
+                    log << '\n';
+                    for (const auto& somatic : putative_somatics) {
+                        log << '\t' << somatic << '\n';
+                    }
+                }
+                if (putative_somatics.size() > 1) {
+                    const auto other_idx = origin_idx > 0 ? origin_idx - 1 : origin_idx + 1;
+                    for (const Variant& switcher : putative_somatics) {
+                        const auto switched_alt_itr = find_spliced(latents.indexed_haplotypes_, latents.indexed_haplotypes_[other_idx], switcher.alt_allele());
+                        if (switched_alt_itr == std::cend(latents.indexed_haplotypes_)) {
+                            continue;
                         }
-                        // Alternatively, the somatics might have been placed in the germline
-                        // causing reversions. We can therefore try to find the correct reference
-                        // haplotype by reversing these.
-                        const auto reversion_itr = find_spliced(latents.indexed_haplotypes_, somatic_haplotype, putative_somatics);
-                        if (reversion_itr != std::cend(latents.indexed_haplotypes_)) {
-                            Genotype<IndexedHaplotype<>> corrected_germline {*reversion_itr, latents.indexed_haplotypes_[other_idx]};
-                            auto new_somatic = old_cancer_genotype_bases[g].somatic();
-                            new_somatic.emplace(old_cancer_genotype_bases[g].germline()[origin_idx]);
-                            latents.cancer_genotypes_.back().emplace_back(std::move(corrected_germline), std::move(new_somatic));
-                            if (debug_log_) {
-                                auto log = stream(*debug_log_);
-                                log << "Found candidate reversed germline haplotype: ";
-                                debug::print_variant_alleles(log, *reversion_itr);
-                                log << "\nCorrected genotype is: ";
-                                debug::print_variant_alleles(log, latents.cancer_genotypes_.back().back());
-                            }
+                        const auto switched_ref_itr = find_spliced(latents.indexed_haplotypes_, somatic_haplotype, switcher.ref_allele());
+                        if (switched_ref_itr != std::cend(latents.indexed_haplotypes_)) {
+                            Genotype<IndexedHaplotype<>> split_somatic_genotype {*switched_ref_itr, *switched_alt_itr};
+                            latents.cancer_genotypes_.back().emplace_back(old_cancer_genotype_bases[g].germline(), std::move(split_somatic_genotype));
+                        }
+                    }
+                    // Alternatively, the somatics might have been placed in the germline
+                    // causing reversions. We can therefore try to find the correct reference
+                    // haplotype by reversing these.
+                    const auto reversion_itr = find_spliced(latents.indexed_haplotypes_, somatic_haplotype, putative_somatics);
+                    if (reversion_itr != std::cend(latents.indexed_haplotypes_)) {
+                        Genotype<IndexedHaplotype<>> corrected_germline {*reversion_itr, latents.indexed_haplotypes_[other_idx]};
+                        auto new_somatic = old_cancer_genotype_bases[g].somatic();
+                        new_somatic.emplace(old_cancer_genotype_bases[g].germline()[origin_idx]);
+                        latents.cancer_genotypes_.back().emplace_back(std::move(corrected_germline), std::move(new_somatic));
+                        if (debug_log_) {
+                            auto log = stream(*debug_log_);
+                            log << "Found candidate reversed germline haplotype: ";
+                            debug::print_variant_alleles(log, *reversion_itr);
+                            log << "\nCorrected genotype is: ";
+                            debug::print_variant_alleles(log, latents.cancer_genotypes_.back().back());
                         }
                     }
                 }
@@ -1051,6 +1030,11 @@ BigFloat marginalise(const Allele& allele, const MappableBlock<Genotype<IndexedH
                                          0.0, std::plus<> {}, [&allele] (const auto& genotype, const auto probability) {
         return contains(genotype, allele) ? 0.0 : probability; });
     return BigFloat {1.0} - BigFloat {inv_result};
+}
+
+bool is_somatic(const Allele& allele, const CancerGenotype<IndexedHaplotype<>>& genotype)
+{
+    return contains(genotype.somatic(), allele) && !contains(genotype.germline(), allele);
 }
 
 BigFloat marginalise(const Allele& allele, const MappableBlock<CancerGenotype<IndexedHaplotype<>>>& genotypes, const std::vector<double>& probabilities,
