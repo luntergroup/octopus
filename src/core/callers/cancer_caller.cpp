@@ -204,7 +204,7 @@ identify_origin(const Genotype<IndexedHaplotype<IndexType>>& germline,
     std::size_t result {0}, min_diffs {0};
     for (unsigned i {0}; i < germline.ploidy(); ++i) {
         const auto num_diffs = mutant.difference(germline[i]).size();
-        if (result == 0 || num_diffs < min_diffs) {
+        if (i == 0 || num_diffs < min_diffs) {
             result = i;
             min_diffs = num_diffs;
         }
