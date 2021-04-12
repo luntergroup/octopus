@@ -233,7 +233,7 @@ VariantCallFilter::read_next_blocks(VcfIterator& first, const VcfIterator& last,
 {
     std::vector<VariantCallFilter::CallBlock> result {};
     if (can_measure_multiple_blocks()) {
-        const auto max_blocks = max_concurrent_blocks();
+        const auto max_blocks = max_concurrent_blocks(samples);
         result.reserve(max_blocks);
         while (result.size() < max_blocks) {
             result.push_back(read_next_block(first, last, samples));
@@ -606,10 +606,10 @@ bool VariantCallFilter::is_multithreaded() const noexcept
     return !workers_.empty();
 }
 
-unsigned VariantCallFilter::max_concurrent_blocks() const noexcept
+unsigned VariantCallFilter::max_concurrent_blocks(const SampleList& samples) const noexcept
 {
     if (is_multithreaded()) {
-        return std::min(100 * workers_.size(), std::size_t {10'000});
+        return std::max(std::min(100 * workers_.size(), std::size_t {10'000}) / samples.size(), std::size_t {1});
     } else {
         return 1;
     }

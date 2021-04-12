@@ -143,7 +143,7 @@ private:
     void fail(const SampleName& sample, VcfRecord::Builder& call, std::vector<std::string> reasons) const;
     void fail(VcfRecord::Builder& call, std::vector<std::string> reasons) const;
     bool is_multithreaded() const noexcept;
-    unsigned max_concurrent_blocks() const noexcept;
+    unsigned max_concurrent_blocks(const SampleList& samples) const noexcept;
 };
 
 } // namespace csr
