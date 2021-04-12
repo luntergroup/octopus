@@ -306,7 +306,7 @@ void CancerCaller::fit_somatic_model(Latents& latents, const HaplotypeLikelihood
                     for (const auto& somatic : somatics) {
                         const auto seen_itr = somatic_origins.find(somatic);
                         if (seen_itr != std::cend(somatic_origins) && seen_itr->second.first != origin_idx) {
-                            auto spliced_itr = find_spliced(latents.indexed_haplotypes_, somatic_haplotype, somatic.alt_allele());
+                            auto spliced_itr = find_spliced(latents.indexed_haplotypes_, somatic_haplotype, somatic.ref_allele());
                             if (spliced_itr != std::cend(latents.indexed_haplotypes_)) {
                                 auto new_genotype = map_genotype;
                                 new_genotype.somatic()[somatic_idx] = *spliced_itr;
@@ -318,7 +318,7 @@ void CancerCaller::fit_somatic_model(Latents& latents, const HaplotypeLikelihood
                             }
                             const auto other_somatic_idx = seen_itr->second.second;
                             const auto& other_somatic_haplotype = map_genotype.somatic()[other_somatic_idx];
-                            spliced_itr = find_spliced(latents.indexed_haplotypes_, other_somatic_haplotype, somatic.alt_allele());
+                            spliced_itr = find_spliced(latents.indexed_haplotypes_, other_somatic_haplotype, somatic.ref_allele());
                             if (spliced_itr != std::cend(latents.indexed_haplotypes_)) {
                                 auto new_genotype = map_genotype;
                                 new_genotype.somatic()[other_somatic_idx] = *spliced_itr;
