@@ -169,8 +169,8 @@ def load_config():
             else:
                 if not example.confident.exists():
                     raise ValueError(example.confident + " does not exist")
-            calls_sample = ps.AlignmentFile(example.reads[0]).header["RG"][0]["SM"]
-            example.truth, example.confident = {calls_sample: example.truth}, {calls_sample: example.confident}
+            read_samples = [ps.AlignmentFile(example.reads[n]).header["RG"][0]["SM"] for n in range(len(example.reads))]
+            example.truth, example.confident = {sample: example.truth for sample in read_samples}, {sample: example.confident for sample in read_samples}
 
     return {example.name: example for example in examples}, TrainingOptions(config['training'] if "training" in config else None)
 
