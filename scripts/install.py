@@ -99,8 +99,14 @@ def is_centos(version=None):
     else:
         return False
 
-def download_file(url, file_name):
-    urllib.request.urlretrieve(url, str(file_name))
+def download_file(url, file_name, max_attempts=10):
+    try:
+        urllib.request.urlretrieve(url, str(file_name))
+    except:
+        if max_attempts > 1:
+            download_file(url, file_name, max_attempts - 1)
+        else:
+            raise
 
 def git_clone(project):
     call(['git', 'clone', project])
