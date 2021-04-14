@@ -101,6 +101,7 @@ class ForestHyperparameters:
 
 class TrainingOptions:
     def __init__(self, d):
+        self.training_fraction = d["training_fraction"] if d is not None and "training_fraction" in d else None
         self.hyperparameters = ForestHyperparameters(d["hyperparameters"] if d is not None and "hyperparameters" in d else {})
 
 prefix = default_prefix
@@ -504,18 +505,20 @@ rule cat_annotations:
         "cat {input} > {output}"
 localrules: cat_annotations
 
-def make_ranger_master_data_file(in_filenames, out_filename, header):
+def make_ranger_master_data_file(in_filenames, out_filename, header, sample=None):
     lines = []
     for file in in_filenames:
         lines += file.open().readlines()
     random.shuffle(lines)
+    if sample is not None:
+        lines = lines[:int(sample * len(lines))]
     with out_filename.open(mode='w') as file:
         file.write(header + '\n')
         file.writelines(lines)
 
 def get_sample_kind(example, sample):
-    if example.kind == "somatic" and "--normal-sample" in example.options:
-        normal_sample_idx = example.options.index("--normal-sample")
+    if example.kind == "somatic" and "--normal-samples" in example.options:
+        normal_sample_idx = example.options.index("--normal-samples")
         if example.options[normal_sample_idx + 1] == sample:
             return "germline"
     return example.kind
@@ -528,9 +531,10 @@ rule make_ranger_data:
     output:
         "dat/" + prefix + ".dat"
     params:
-        header = " ".join(measures + ['TP'])
+        header = " ".join(measures + ['TP']),
+        training_fraction = options.training_fraction
     run:
-        make_ranger_master_data_file([Path(i) for i in input], Path(output[0]), params.header)
+        make_ranger_master_data_file([Path(i) for i in input], Path(output[0]), params.header, sample=params.training_fraction)
 
 rule install_ranger:
     output:
