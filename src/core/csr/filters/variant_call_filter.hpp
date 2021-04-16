@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2020 Daniel Cooke
+// Copyright (c) 2015-2021 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef variant_call_filter_hpp
@@ -143,7 +143,7 @@ private:
     void fail(const SampleName& sample, VcfRecord::Builder& call, std::vector<std::string> reasons) const;
     void fail(VcfRecord::Builder& call, std::vector<std::string> reasons) const;
     bool is_multithreaded() const noexcept;
-    unsigned max_concurrent_blocks() const noexcept;
+    unsigned max_concurrent_blocks(const SampleList& samples) const noexcept;
 };
 
 } // namespace csr

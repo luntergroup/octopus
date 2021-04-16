@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2020 Daniel Cooke
+// Copyright (c) 2015-2021 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "variant_call_filter.hpp"
@@ -30,6 +30,7 @@
 #include "utils/parallel_transform.hpp"
 #include "io/variant/vcf_writer.hpp"
 #include "io/variant/vcf_spec.hpp"
+#include "core/csr/measures/measure_factory.hpp"
 
 namespace octopus { namespace csr {
 
@@ -66,7 +67,7 @@ VariantCallFilter::VariantCallFilter(FacetFactory facet_factory,
 : measures_ {std::move(measures)}
 , debug_log_ {logging::get_debug_log()}
 , facet_factory_ {std::move(facet_factory)}
-, facet_names_ {get_all_requirements(measures_)}
+, facet_names_ {}
 , output_config_ {output_config}
 , duplicate_measures_ {}
 , workers_ {get_pool_size(threading)}
@@ -83,9 +84,11 @@ VariantCallFilter::VariantCallFilter(FacetFactory facet_factory,
     logging::WarningLogger warn_log {};
     for (const auto& annotation : output_config_.annotations) {
         if (!contains(measures_, annotation)) {
-            stream(warn_log) << "The measure " << annotation << " is not active and will not be reported";
+            measures_.push_back(make_measure(annotation));
         }
     }
+    measures_.shrink_to_fit();
+    facet_names_ = get_all_requirements(measures_);
 }
 
 inline VcfHeader read_header(const VcfWriter& writer)
@@ -230,7 +233,7 @@ VariantCallFilter::read_next_blocks(VcfIterator& first, const VcfIterator& last,
 {
     std::vector<VariantCallFilter::CallBlock> result {};
     if (can_measure_multiple_blocks()) {
-        const auto max_blocks = max_concurrent_blocks();
+        const auto max_blocks = max_concurrent_blocks(samples);
         result.reserve(max_blocks);
         while (result.size() < max_blocks) {
             result.push_back(read_next_block(first, last, samples));
@@ -603,10 +606,10 @@ bool VariantCallFilter::is_multithreaded() const noexcept
     return !workers_.empty();
 }
 
-unsigned VariantCallFilter::max_concurrent_blocks() const noexcept
+unsigned VariantCallFilter::max_concurrent_blocks(const SampleList& samples) const noexcept
 {
     if (is_multithreaded()) {
-        return std::min(100 * workers_.size(), std::size_t {10'000});
+        return std::max(std::min(100 * workers_.size(), std::size_t {10'000}) / samples.size(), std::size_t {1});
     } else {
         return 1;
     }

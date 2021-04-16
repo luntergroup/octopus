@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2020 Daniel Cooke
+// Copyright (c) 2015-2021 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "mean_likelihood.hpp"
@@ -46,7 +46,7 @@ Measure::ResultType MeanLikelihood::do_evaluate(const VcfRecord& call, const Fac
     const auto& genotypes = get_value<Genotypes>(facets.at("Genotypes"));
     Array<Array<Optional<ValueType>>> result(samples.size());
     for (std::size_t s {0}; s < samples.size(); ++s) {
-        const auto sample = samples[s];
+        const auto& sample = samples[s];
         const auto& genotype = get_genotype(genotypes, call, sample);
         assert(genotype.ploidy() == call.ploidy(sample));
         result[s] = Array<Optional<ValueType>>(genotype.ploidy());

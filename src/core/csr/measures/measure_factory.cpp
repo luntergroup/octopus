@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2020 Daniel Cooke
+// Copyright (c) 2015-2021 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "measure_factory.hpp"
@@ -73,7 +73,8 @@ void init(MeasureMakerMap& measure_makers)
     measure_makers[name<PhaseLength>()]                 = [] () { return make_wrapped_measure<PhaseLength>(); };
     measure_makers[name<MaxReadLength>()]               = [] () { return make_wrapped_measure<MaxReadLength>(); };
     measure_makers[name<AlleleMappingQuality>()]        = [] () { return make_wrapped_measure<AlleleMappingQuality>(); };
-    measure_makers[name<MeanLikelihood>()]               = [] () { return make_wrapped_measure<MeanLikelihood>(); };
+    measure_makers[name<MeanLikelihood>()]              = [] () { return make_wrapped_measure<MeanLikelihood>(); };
+    measure_makers[name<PhylogenyPosterior>()]          = [] () { return make_wrapped_measure<PhylogenyPosterior>(); };
 }
 
 class BadParameterList : public UserError

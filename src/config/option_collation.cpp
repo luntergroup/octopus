@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2020 Daniel Cooke
+// Copyright (c) 2015-2021 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "option_collation.hpp"
@@ -2035,14 +2035,14 @@ boost::optional<std::size_t> get_max_genotype_combinations(const OptionMap& opti
 {
     if (options.count("max-genotype-combinations") == 1) {
         return as_unsigned("max-genotype-combinations", options);
-    } else if (is_fast_mode(options)) {
-        return 10'000;
     } else if (caller == "cell") {
         return 1'000;
+    } else if (is_fast_mode(options)) {
+        return 10'000;
     } else if (caller == "trio") {
-        return 1'000'000;
+        return 100'000;
     } else if (caller == "population") {
-        return 500'000;
+        return 100'000;
     } else {
         return boost::none;
     }
@@ -2272,6 +2272,11 @@ auto get_caller_type(const OptionMap& options, const std::vector<SampleName>& sa
     return get_caller_type(options, samples, get_pedigree(options, samples));
 }
 
+bool aggregate_annotations(const OptionMap& options)
+{
+    return options.at("aggregate-annotations").as<bool>();
+}
+
 std::unique_ptr<VariantCallFilterFactory>
 make_call_filter_factory(const ReferenceGenome& reference, ReadPipe& read_pipe, const OptionMap& options,
                          boost::optional<fs::path> temp_directory)
@@ -2342,6 +2347,7 @@ make_call_filter_factory(const ReferenceGenome& reference, ReadPipe& read_pipe, 
                 auto annotations = get_requested_measure_annotations(options);
                 output_options.annotations.insert(std::begin(annotations), std::end(annotations));
             }
+            output_options.aggregate_allele_annotations = aggregate_annotations(options);
             result->set_output_options(std::move(output_options));
         }
     }

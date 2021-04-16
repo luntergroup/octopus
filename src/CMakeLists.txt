@@ -427,6 +427,8 @@ set(CORE_SOURCES
     core/csr/measures/mean_likelihood.cpp
     core/csr/measures/allele_mapping_quality.hpp
     core/csr/measures/allele_mapping_quality.cpp
+    core/csr/measures/phylogeny_posterior.hpp
+    core/csr/measures/phylogeny_posterior.cpp
     
     core/models/haplotype_likelihood_array.hpp
     core/models/haplotype_likelihood_array.cpp

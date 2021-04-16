@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2020 Daniel Cooke
+// Copyright (c) 2015-2021 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "measure.hpp"
@@ -369,8 +369,10 @@ void Measure::annotate(VcfRecord::Builder& record, const ResultType& value, cons
         } else {
             if (aggregate_alleles && this->aggregator()) {
                 record.set_info(this->name(), this->serialise(boost::apply_visitor(AggregatorVisitor {*this->aggregator()}, value)));
-            } else {
+            } else if (is_one_value_annotation(this->cardinality())) {
                 record.set_info(this->name(), this->serialise(value));
+            } else {
+                record.set_info(this->name(), utils::split(this->serialise(value), vcfspec::info::valueSeperator));
             }
         }
     }

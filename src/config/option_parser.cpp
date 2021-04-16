@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2020 Daniel Cooke
+// Copyright (c) 2015-2021 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #include "option_parser.hpp"
@@ -751,6 +751,10 @@ OptionMap parse_options(const int argc, const char** argv)
     ("annotations",
      po::value<std::vector<std::string>>()->multitoken()->implicit_value(std::vector<std::string> {"active"}, "active")->composing(),
      "Annotations to write to final VCF")
+    
+     ("aggregate-annotations",
+     po::bool_switch()->default_value(false),
+     "Aggregate all multi-value annotations into a single value")
     
     ("filter-vcf",
      po::value<fs::path>(),

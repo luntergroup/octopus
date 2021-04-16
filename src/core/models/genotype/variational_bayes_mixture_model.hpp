@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2020 Daniel Cooke
+// Copyright (c) 2015-2021 Daniel Cooke
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 #ifndef variational_bayes_mixture_model_hpp
@@ -170,20 +170,14 @@ auto sum(const VBAlpha<K>& alpha) noexcept
     return std::accumulate(std::cbegin(alpha), std::cend(alpha), T {0});
 }
 
-template <typename T>
-inline auto digamma_diff(const T a, const T b)
-{
-    using boost::math::digamma;
-    return digamma(a) - digamma(b);
-}
-
 template <typename T, std::size_t K>
 auto compute_digamma_diffs(const std::array<T, K>& alphas)
 {
     std::array<T, K> result;
-    const auto a0 = sum(alphas);
+    using boost::math::digamma;
+    const auto digamma_a0 = digamma(sum(alphas));
     for (unsigned k {0}; k < K; ++k) {
-        result[k] = digamma_diff(alphas[k], a0);
+        result[k] = digamma(alphas[k]) - digamma_a0;
     }
     return result;
 }
