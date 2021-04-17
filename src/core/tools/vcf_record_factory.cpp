@@ -578,6 +578,11 @@ void set_allele_counts(const Call& call, const std::vector<SampleName>& samples,
     result.set_info("AN", p.second);
 }
 
+auto phred_round(const double phreds)
+{
+    return phreds < 1 ? maths::round_sf(phreds, 2) : maths::round(phreds, 2);
+}
+
 VcfRecord VcfRecordFactory::make(std::unique_ptr<Call> call) const
 {
     auto result = VcfRecord::Builder {};
@@ -595,13 +600,13 @@ VcfRecord VcfRecordFactory::make(std::unique_ptr<Call> call) const
     result.set_ref(call->reference().sequence());
     set_allele_counts(*call, samples_, alts, result);
     result.set_alt(std::move(alts));
-    result.set_qual(std::min(max_qual, maths::round(call->quality().score(), 2)));
+    result.set_qual(std::min(max_qual, phred_round(call->quality().score())));
     const auto call_reads = copy_overlapped(reads_, region);
     result.set_info("NS",  count_samples_with_coverage(call_reads));
     result.set_info("DP",  sum_max_coverages(call_reads));
     result.set_info("MQ",  static_cast<unsigned>(rmq_mapping_quality(call_reads)));
     if (call->model_posterior()) {
-        result.set_info("MP",  maths::round(call->model_posterior()->score(), 2));
+        result.set_info("MP",  phred_round(call->model_posterior()->score()));
     }
     if (!sites_only_) {
         if (call->all_phased()) {
@@ -612,7 +617,7 @@ VcfRecord VcfRecordFactory::make(std::unique_ptr<Call> call) const
         for (const auto& sample : samples_) {
             const auto& genotype_call = call->get_genotype_call(sample);
             static const Phred<double> max_genotype_quality {10'000};
-            const auto gq = static_cast<int>(std::round(std::min(max_genotype_quality, genotype_call.posterior).score()));
+            const auto gq = static_cast<int>(phred_round(std::min(max_genotype_quality, genotype_call.posterior).score()));
             set_vcf_genotype(sample, genotype_call, result, is_refcall);
             result.set_format(sample, "GQ", std::to_string(gq));
             result.set_format(sample, "DP", max_coverage(call_reads.at(sample)));
@@ -739,13 +744,13 @@ VcfRecord VcfRecordFactory::make_segment(std::vector<std::unique_ptr<Call>>&& ca
     result.set_alt(std::move(alt_alleles));
     auto q = std::min_element(std::cbegin(calls), std::cend(calls),
                               [] (const auto& lhs, const auto& rhs) { return lhs->quality() < rhs->quality(); });
-    result.set_qual(std::min(max_qual, maths::round(q->get()->quality().score(), 2)));
+    result.set_qual(std::min(max_qual, phred_round(q->get()->quality().score())));
     result.set_info("NS",  count_samples_with_coverage(reads_, region));
     result.set_info("DP",  sum_max_coverages(reads_, region));
     result.set_info("MQ",  static_cast<unsigned>(rmq_mapping_quality(reads_, region)));
     const auto mp = get_model_posterior(calls);
     if (mp) {
-        result.set_info("MP", maths::round(*mp, 2));
+        result.set_info("MP", phred_round(*mp));
     }
     if (!sites_only_) {
         if (calls.front()->all_phased()) {
@@ -757,7 +762,7 @@ VcfRecord VcfRecordFactory::make_segment(std::vector<std::unique_ptr<Call>>&& ca
         for (const auto& sample : samples_) {
             const auto posterior = calls.front()->get_genotype_call(sample).posterior;
             static const Phred<double> max_genotype_quality {10'000};
-            const auto gq = static_cast<int>(std::round(std::min(max_genotype_quality, posterior).score()));
+            const auto gq = static_cast<int>(phred_round(std::min(max_genotype_quality, posterior).score()));
             auto& genotype_call = *sample_itr++;
             if (is_refcall) {
                 std::replace(std::begin(genotype_call), std::end(genotype_call),
