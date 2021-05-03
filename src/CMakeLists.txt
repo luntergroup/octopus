@@ -570,6 +570,7 @@ set(CORE_SOURCES
     core/types/phylogeny.cpp
     core/types/indexed_haplotype.hpp
     core/types/shared_haplotype.hpp
+    core/types/partitioned_genotype.hpp
 
     core/calling_components.hpp
     core/calling_components.cpp
