@@ -10,6 +10,7 @@
 #include "core/types/indexed_haplotype.hpp"
 #include "core/types/genotype.hpp"
 #include "core/types/cancer_genotype.hpp"
+#include "core/types/partitioned_genotype.hpp"
 #include "core/models/haplotype_likelihood_array.hpp"
 
 namespace octopus { namespace model {
@@ -41,6 +42,8 @@ public:
     LogProbability evaluate(const Genotype<IndexedHaplotype<>>& genotype) const;
     LogProbability evaluate(const CancerGenotype<Haplotype>& genotype) const;
     LogProbability evaluate(const CancerGenotype<IndexedHaplotype<>>& genotype) const;
+    template <typename IndexType, std::size_t K>
+    LogProbability evaluate(const PartitionedGenotype<IndexedHaplotype<IndexType>, K>& genotype) const;
 
 private:
     const HaplotypeLikelihoodArray& likelihoods_;
@@ -48,6 +51,32 @@ private:
     mutable std::vector<HaplotypeLikelihoodArray::LikelihoodVectorRef> likelihood_refs_;
     mutable std::vector<HaplotypeLikelihoodArray::LogProbability> buffer_;
 };
+
+template <typename IndexType, std::size_t K>
+VariableMixtureGenotypeLikelihoodModel::LogProbability 
+VariableMixtureGenotypeLikelihoodModel::evaluate(const PartitionedGenotype<IndexedHaplotype<IndexType>, K>& genotype) const
+{
+    assert(genotype.ploidy() == mixtures_.size());
+    assert(buffer_.size() == mixtures_.size());
+    LogProbability result {0};
+    const auto num_likelihoods = likelihoods_.num_likelihoods();
+    for (std::size_t read_idx {0}; read_idx < num_likelihoods; ++read_idx) {
+        const auto get_likelihood = [=] (const auto& haplotype, auto log_mixture) noexcept {
+                           return log_mixture + likelihoods_[haplotype][read_idx]; };
+        auto buffer_itr = std::begin(buffer_);
+        unsigned offset {0};
+        for (std::size_t k {0}; k < K; ++k) {
+            const auto& partition = genotype.partition(k);
+            buffer_itr = std::transform(std::cbegin(partition), std::cend(partition),
+                                        std::next(std::cbegin(log_mixtures_), offset), 
+                                        buffer_itr,
+                                        get_likelihood);
+            offset += partition.ploidy();
+        }
+        result += maths::log_sum_exp(buffer_);
+    }
+    return result;
+}
 
 template <typename Container1, typename Container2>
 Container2&
