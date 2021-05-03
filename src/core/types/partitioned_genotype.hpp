@@ -52,7 +52,10 @@ public:
 
     unsigned ploidy() const noexcept;
 
-    friend bool operator==(const PartitionedGenotype<MappableType, K>& lhs, const PartitionedGenotype<MappableType, K>& rhs);
+    friend bool operator==(const PartitionedGenotype& lhs, const PartitionedGenotype& rhs)
+    {
+        return lhs.partitions_ == rhs.partitions_;
+    }
     
 private:
     std::array<Genotype<MappableType>, K> partitions_;
@@ -114,12 +117,6 @@ std::pair<std::size_t, unsigned> PartitionedGenotype<MappableType, K>::find_part
 }
 
 // free functions
-
-template <typename MappableType, std::size_t K>
-bool operator==(const PartitionedGenotype<MappableType, K>& lhs, const PartitionedGenotype<MappableType, K>& rhs)
-{
-    return lhs.partitions_ == rhs.partitions_;
-}
 
 namespace debug {
 
