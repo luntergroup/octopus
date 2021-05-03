@@ -479,7 +479,7 @@ Caller::call_variants(const GenomicRegion& call_region,
         }
         auto has_removal_impact = filter_haplotypes(haplotypes, haplotype_generator, haplotype_likelihoods, protected_haplotypes);
         if (haplotypes.empty()) continue;
-        const auto caller_latents = infer_latents(haplotypes, haplotype_likelihoods);
+        const auto caller_latents = infer_latents_helper(haplotypes, active_reads, haplotype_likelihoods);
         if (trace_log_) {
             debug::print_haplotype_posteriors(stream(*trace_log_), *caller_latents->haplotype_posteriors());
         } else if (debug_log_) {
@@ -596,6 +596,105 @@ void Caller::remove_duplicates(HaplotypeBlock& haplotypes) const
             stream(*debug_log_) << "There are no duplicate haplotypes";
         }
     }
+}
+
+template <typename Range>
+auto assign_reads(const Range& reads, const std::vector<IndexedHaplotype<>>& haplotypes, const HaplotypeLikelihoodArray& haplotype_likelihoods)
+{
+    std::vector<std::vector<std::size_t>> result(haplotypes.size());
+    const double min_assigned_log_probability {std::log(1.5) - std::log(haplotypes.size())};
+    for (std::size_t n {0}; n < reads.size(); ++n) {
+        std::vector<double> log_probabilities(haplotypes.size());
+        for (std::size_t k {0}; k < haplotypes.size(); ++k) {
+            log_probabilities[k] = haplotype_likelihoods[haplotypes[k]][n];
+        }
+        maths::normalise_logs(log_probabilities);
+        auto max_log_probability_itr = std::max_element(std::cbegin(log_probabilities), std::cend(log_probabilities));
+        if (*max_log_probability_itr > min_assigned_log_probability) {
+            auto assigned_k = std::distance(std::cbegin(log_probabilities), max_log_probability_itr);
+            result[assigned_k].push_back(n);
+        }
+    }
+    return result;
+}
+
+auto get_mapping_quality(const AlignedRead& read)
+{
+    return read.mapping_quality();
+}
+
+auto get_mapping_quality(const AlignedTemplate& reads)
+{
+    const static auto mq_less = [] (const auto& lhs, const auto& rhs) { 
+        return lhs.mapping_quality() < rhs.mapping_quality(); };
+    return get_mapping_quality(*std::max_element(std::cbegin(reads), std::cend(reads), mq_less));
+}
+
+void print_reads(const ReadMap& reads)
+{
+    for (const auto& p : reads) {
+        std::cout << p.first << std::endl;
+        for (std::size_t n {0}; n < p.second.size(); ++n) {
+            std::cout << n << ": " << p.second[n] << std::endl;
+        }
+    }
+}
+void print_reads(const TemplateMap& reads)
+{
+    for (const auto& p : reads) {
+        std::cout << p.first << std::endl;
+        for (std::size_t n {0}; n < p.second.size(); ++n) {
+            std::cout << n << ": ";
+            for (const auto& read : p.second[n]) {
+                std::cout << read << ' ';
+            }
+            std::cout << std::endl;
+        }
+    }
+}
+
+std::unique_ptr<Caller::Latents>
+Caller::infer_latents_helper(const HaplotypeBlock& haplotypes,
+                             const boost::variant<ReadMap, TemplateMap>& reads,
+                             const HaplotypeLikelihoodArray& haplotype_likelihoods) const
+{
+    auto latents = infer_latents(haplotypes, haplotype_likelihoods);
+
+    const auto haplotype_posteriors = latents->haplotype_posteriors();
+    std::vector<IndexedHaplotype<>> candidate_missmapped_haplotypes {};
+    for (const auto& p : *haplotype_posteriors) {
+        if (p.second >= 0.0001) {
+            candidate_missmapped_haplotypes.push_back(p.first);
+        }
+    }
+    std::vector<std::vector<AlignedRead::MappingQuality>> assigned_haplotype_mqs(candidate_missmapped_haplotypes.size());
+    for (std::size_t sample_idx {0}; sample_idx < samples_.size(); ++sample_idx) {
+        const auto& sample = samples_[sample_idx];
+        boost::apply_visitor([&] (const auto& reads) {
+            haplotype_likelihoods.prime(sample);
+            const auto& sample_reads = reads.at(sample);
+            const auto read_assignments = assign_reads(sample_reads, candidate_missmapped_haplotypes, haplotype_likelihoods);
+            for (std::size_t k {0}; k < candidate_missmapped_haplotypes.size(); ++k) {
+                for (auto n : read_assignments[k]) {
+                    assigned_haplotype_mqs[k].push_back(get_mapping_quality(sample_reads[n]));
+                }
+            }
+        }, reads);
+    }
+    std::unordered_map<IndexedHaplotype<>, double> haplotype_mqs {};
+    for (std::size_t k {0}; k < candidate_missmapped_haplotypes.size(); ++k) {
+        if (!assigned_haplotype_mqs[k].empty()) {
+            haplotype_mqs.emplace(candidate_missmapped_haplotypes[k], maths::mean(assigned_haplotype_mqs[k]));
+        }
+    }
+    if (haplotype_mqs.size() > 1) {
+        auto check = check_model(haplotypes, haplotype_likelihoods, haplotype_mqs, *latents);
+        if (check->model_log_posterior < std::log(0.05)) {
+            latents = std::move(check->violation_latents);
+        }
+    }
+
+    return latents;
 }
 
 bool Caller::filter_haplotypes(HaplotypeBlock& haplotypes,

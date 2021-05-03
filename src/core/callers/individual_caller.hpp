@@ -72,6 +72,18 @@ private:
     infer_latents(const HaplotypeBlock& haplotypes,
                   const HaplotypeLikelihoodArray& haplotype_likelihoods) const override;
     
+    boost::optional<Caller::ModelViolation>
+    check_model(const HaplotypeBlock& haplotypes,
+                const HaplotypeLikelihoodArray& haplotype_likelihoods,
+                const std::unordered_map<IndexedHaplotype<>, double>& haplotype_mqs,
+                const Caller::Latents& latents) const override;
+    
+    boost::optional<Caller::ModelViolation>
+    check_model(const HaplotypeBlock& haplotypes,
+                const HaplotypeLikelihoodArray& haplotype_likelihoods,
+                const std::unordered_map<IndexedHaplotype<>, double>& haplotype_mqs,
+                const Latents& latents) const;
+    
     boost::optional<double>
     calculate_model_posterior(const HaplotypeBlock& haplotypes,
                               const HaplotypeLikelihoodArray& haplotype_likelihoods,
@@ -99,9 +111,14 @@ private:
     const SampleName& sample() const noexcept;
     
     std::unique_ptr<GenotypePriorModel> make_prior_model(const HaplotypeBlock& haplotypes) const;
-    GenotypeBlock propose_genotypes(const HaplotypeBlock& haplotypes,
-                                    const IndexedHaplotypeBlock& indexed_haplotypes,
-                                    const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
+    GenotypeBlock 
+    propose_genotypes(const HaplotypeBlock& haplotypes,
+                      const IndexedHaplotypeBlock& indexed_haplotypes,
+                      const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
+    GenotypeBlock 
+    propose_model_check_genotypes(const HaplotypeBlock& haplotypes,
+                                  const IndexedHaplotypeBlock& indexed_haplotypes,
+                                  const Latents& latents) const;
 };
 
 class IndividualCaller::Latents : public Caller::Latents
@@ -123,15 +140,19 @@ public:
             IndividualCaller::GenotypeBlock genotypes,
             ModelInferences&& latents);
     
-    std::shared_ptr<HaplotypeProbabilityMap> haplotype_posteriors() const noexcept override;
-    std::shared_ptr<GenotypeProbabilityMap> genotype_posteriors() const noexcept override;
+    std::shared_ptr<HaplotypeProbabilityMap> haplotype_posteriors() const override;
+    std::shared_ptr<GenotypeProbabilityMap> genotype_posteriors() const override;
+    std::shared_ptr<GenotypeProbabilityMap> genotype_log_posteriors() const;
     
 private:
-    std::shared_ptr<GenotypeProbabilityMap> genotype_log_posteriors_, genotype_posteriors_;
-    std::shared_ptr<HaplotypeProbabilityMap> haplotype_posteriors_;
-    double model_log_evidence_;
+    mutable std::shared_ptr<GenotypeProbabilityMap> genotype_log_posteriors_, genotype_posteriors_;
+    mutable std::shared_ptr<HaplotypeProbabilityMap> haplotype_posteriors_;
+    IndexedHaplotypeBlock haplotypes_;
+    IndividualCaller::GenotypeBlock genotypes_;
+    ModelInferences latents_;
+    SampleName samples_;
     
-    HaplotypeProbabilityMap calculate_haplotype_posteriors(const IndexedHaplotypeBlock& haplotypes);
+    HaplotypeProbabilityMap calculate_haplotype_posteriors(const IndexedHaplotypeBlock& haplotypes) const;
 };
 
 } // namespace octopus

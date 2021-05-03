@@ -123,6 +123,12 @@ protected:
         virtual std::shared_ptr<GenotypeProbabilityMap> genotype_posteriors() const = 0;
     };
     
+    struct ModelViolation
+    {
+        std::unique_ptr<Latents> violation_latents;
+        double model_log_posterior;
+    };
+
 private:
     enum class GeneratorStatus { good, skipped, done };
     
@@ -156,6 +162,12 @@ private:
     infer_latents(const HaplotypeBlock& haplotypes,
                   const HaplotypeLikelihoodArray& haplotype_likelihoods) const = 0;
     
+    virtual boost::optional<ModelViolation>
+    check_model(const HaplotypeBlock& haplotypes,
+                const HaplotypeLikelihoodArray& haplotype_likelihoods,
+                const std::unordered_map<IndexedHaplotype<>, double>& haplotype_mqs, 
+                const Latents& latents) const { return boost::none; }
+
     virtual Genotype<IndexedHaplotype<>> call_genotype(const Latents& latents, const SampleName& sample) const;
     
     virtual boost::optional<double>
@@ -209,6 +221,11 @@ private:
                                     boost::optional<GenomicRegion>& backtrack_region,
                                     HaplotypeGenerator& haplotype_generator) const;
     void remove_duplicates(HaplotypeBlock& haplotypes) const;
+    std::unique_ptr<Latents>
+    infer_latents_helper(const HaplotypeBlock& haplotypes,
+                         const boost::variant<ReadMap, TemplateMap>& reads,
+                         const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
+    
     bool filter_haplotypes(HaplotypeBlock& haplotypes, HaplotypeGenerator& haplotype_generator,
                            HaplotypeLikelihoodArray& haplotype_likelihoods,
                            const std::deque<Haplotype>& protected_haplotypes) const;
