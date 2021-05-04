@@ -119,7 +119,7 @@ const std::string BugReport {"https://github.com/luntergroup/octopus/issues"};
 
 const std::vector<std::string> Authors {"Daniel Cooke"};
 
-const std::string CopyrightNotice {"Copyright (c) 2015-2020 University of Oxford"};
+const std::string CopyrightNotice {"Copyright (c) 2015-2021 University of Oxford"};
 
 const unsigned CommandLineWidth {72};
 

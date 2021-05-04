@@ -350,7 +350,7 @@ Octopus will generate BAM files `realigned/NA12878.bam` and `realigned/NA24385.b
 
 ## Output format
 
-Octopus outputs variants in the [VCF 4.3 format](https://github.com/samtools/hts-specs/blob/master/VCFv4.3.pdf). To represent complex multi-allelic loci, Octopus prefers a decompose alleles into multiple records and use the `*` allele to resoolve conflicts, for example:
+Octopus outputs variants in the [VCF 4.3 format](https://github.com/samtools/hts-specs/blob/master/VCFv4.3.pdf). To represent complex multi-allelic loci, Octopus prefers to decompose alleles into multiple records and use the `*` allele to resolve conflicts, for example:
 
 ```
 #CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	NA12878
@@ -366,14 +366,14 @@ in contrast to how such a site would usually be represented, either:
 1	102738191	.	ATTATTTATTTAT	A	.	.	.	GT	1/0
 ```
 
-which is inconsistent as the reference is deduced in each record, or:
+which is inconsistent as existence of the reference allele is implied in each record, or:
 
 ```
 #CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	NA12878
 1	102738191	.	ATTATTTATTTAT	ATTAT,A	.	.	.	GT	1/2
 ```
 
-which is at least consistent, but rapidly becomes unmanageable as the length and number of overlapping variants increases.
+which is consistent, but rapidly becomes unmanageable as the length and number of overlapping variants increases.
 
 ## Documentation
 

@@ -27,6 +27,7 @@
 #include <boost/optional.hpp>
 
 #include "date/tz.h"
+#include "date/ptz.h"
 
 #include "config/common.hpp"
 #include "basics/genomic_region.hpp"
@@ -92,13 +93,34 @@ bool apply_csr(const GenomeCallingComponents& components) noexcept
 
 using CallTypeSet = std::set<std::type_index>;
 
+template <class Duration>
+inline
+auto
+make_zoned(const Posix::time_zone& tz, const date::sys_time<Duration>& st)
+{
+    return date::zoned_time<typename std::common_type<Duration, std::chrono::seconds>::type,
+                            Posix::time_zone>{tz, st};
+}
+
 std::string get_current_time_str()
 {
     using namespace date;
     using namespace std::chrono;
-    const auto time = make_zoned(current_zone(), system_clock::now());
     std::ostringstream ss {};
-    ss << time;
+    try {
+        const auto time = make_zoned(current_zone(), system_clock::now());
+        ss << time;
+    } catch (const std::exception& e) {
+        // https://github.com/HowardHinnant/date/issues/310
+        static bool warned {false};
+        if (!warned) {
+            logging::WarningLogger warn_log {};
+            warn_log << "Failed to find system time zone information. Assuming UTC.";
+            warned = true;
+        }
+        const auto time = make_zoned(Posix::time_zone{"UTC0"}, system_clock::now());
+        ss << time;
+    }
     return ss.str();
 }
 
