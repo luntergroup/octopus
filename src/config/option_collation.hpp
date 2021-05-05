@@ -89,6 +89,7 @@ ReadPipe make_call_filter_read_pipe(ReadManager& read_manager, const ReferenceGe
 boost::optional<fs::path> get_output_path(const OptionMap& options);
 
 fs::path create_temp_file_directory(const OptionMap& options);
+bool keep_temporary_files(const OptionMap& options);
 
 bool is_filter_training_mode(const OptionMap& options);
 
