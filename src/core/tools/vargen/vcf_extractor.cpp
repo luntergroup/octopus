@@ -87,6 +87,10 @@ void extract_variants(const VcfRecord& record, Container& result, const bool spl
                 result.emplace_back(record.chrom(), record.pos() - 1,
                                     capitalise_copy(record.ref()),
                                     capitalise_copy(alt_allele));
+                if (ref_allele.size() > 1 && alt_allele.size() > 1 && can_trim(result.back())) {
+                    // MNV with reference padding
+                    result.back() = trim(result.back());
+                }
             }
         }
     }
