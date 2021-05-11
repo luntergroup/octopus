@@ -98,6 +98,10 @@ OptionMap parse_options(const int argc, const char** argv)
      po::value<fs::path>()->default_value("octopus-temp"),
      "File name prefix of temporary directory for calling")
     
+    ("keep-temporary-files",
+     po::bool_switch()->default_value(false),
+     "Do not remove temporary files, even after an error")
+    
     ("reference,R",
      po::value<fs::path>()->required(),
      "Indexed FASTA format reference genome file to be analysed")

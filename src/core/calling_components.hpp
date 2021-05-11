@@ -62,6 +62,7 @@ public:
     MemoryFootprint read_buffer_footprint() const noexcept;
     std::size_t read_buffer_size() const noexcept;
     const boost::optional<Path>& temp_directory() const noexcept;
+    bool keep_temporary_files() const noexcept;
     boost::optional<unsigned> num_threads() const noexcept;
     const HaplotypeLikelihoodModel& haplotype_likelihood_model() const noexcept;
     HaplotypeLikelihoodModel realignment_haplotype_likelihood_model() const;
@@ -126,6 +127,7 @@ private:
         // Components that require temporary directory during construction appear last to make
         // exception handling easier.
         boost::optional<Path> temp_directory;
+        bool keep_temp_files;
         std::unique_ptr<VariantCallFilterFactory> call_filter_factory;
         
         void setup_progress_meter(const options::OptionMap& options);

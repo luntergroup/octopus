@@ -2520,6 +2520,11 @@ fs::path create_temp_file_directory(const OptionMap& options)
     return result;
 }
 
+bool keep_temporary_files(const OptionMap& options)
+{
+    return options.at("keep-temporary-files").as<bool>();
+}
+
 boost::optional<fs::path> filter_request(const OptionMap& options)
 {
     if (is_call_filtering_requested(options) && is_set("filter-vcf", options)) {

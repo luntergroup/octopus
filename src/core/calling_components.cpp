@@ -105,6 +105,11 @@ const boost::optional<GenomeCallingComponents::Path>& GenomeCallingComponents::t
     return components_.temp_directory;
 }
 
+bool GenomeCallingComponents::keep_temporary_files() const noexcept
+{
+    return components_.keep_temp_files;
+}
+
 boost::optional<unsigned> GenomeCallingComponents::num_threads() const noexcept
 {
     return components_.num_threads;
@@ -613,6 +618,7 @@ GenomeCallingComponents::Components::Components(ReferenceGenome&& reference, Rea
         if (temp_directory) fs::remove_all(*temp_directory);
         throw;
     }
+    keep_temp_files = options::keep_temporary_files(options);
     bamout_config.alignment_model = realignment_haplotype_likelihood_model;
     bamout_config.copy_hom_ref_reads = options::full_bamouts_requested(options);
     bamout_config.max_buffer = read_buffer_footprint;
@@ -769,7 +775,7 @@ bool validate(const GenomeCallingComponents& components)
 void cleanup(GenomeCallingComponents& components) noexcept
 {
     logging::InfoLogger log {};
-    if (components.temp_directory()) {
+    if (components.temp_directory() && !components.keep_temporary_files()) {
         try {
             const auto num_files_removed = fs::remove_all(*components.temp_directory());
             stream(log) << "Removed " << num_files_removed << " temporary files";
