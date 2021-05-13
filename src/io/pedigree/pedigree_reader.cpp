@@ -64,7 +64,10 @@ struct PedRecord
 
 bool is_valid_ped_record(const std::vector<std::string>& fields)
 {
-    return fields.size() >= 5 && (fields[4] == "1" || fields[4] == "2");
+    return fields.size() >= 5
+         && (fields[4] == "1" || fields[4] == "2") // sex specified
+         && fields[1] != fields[2] && fields[1] != fields[3]
+         && (fields[2] != fields[3] || fields[2] == "0"); // members unique
 }
 
 PedRecord parse_ped_line(const std::string& line)
@@ -110,12 +113,20 @@ Pedigree read_pedigree(const boost::filesystem::path& ped_file)
     const auto first_descendant = std::partition(std::begin(records), std::end(records), is_founder);
     Pedigree result {records.size()};
     std::for_each(std::begin(records), first_descendant,
-                  [&result] (PedRecord& record) {
+                  [&] (PedRecord& record) {
                       result.add_founder({record.sample, to_pedigree_sex(record.sex)});
                   });
     std::for_each(first_descendant, std::end(records),
-                  [&result] (PedRecord& record) {
-                      result.add_descendant({record.sample, to_pedigree_sex(record.sex)}, record.mother, record.father);
+                  [&] (PedRecord& record) {
+                      try {
+                          result.add_descendant({record.sample, to_pedigree_sex(record.sex)}, record.mother, record.father);
+                      } catch (const std::runtime_error& e) {
+                          if (std::string {e.what()} == "Parent not in pedigree") {
+                              throw MalformedPED {ped_file};
+                          } else {
+                              throw;
+                          }
+                      }
                   });
     return result;
 }

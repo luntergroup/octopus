@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <iterator>
 #include <cassert>
+#include <stdexcept>
 
 #include <boost/property_map/property_map.hpp>
 #include <boost/graph/copy.hpp>
@@ -87,10 +88,14 @@ void Pedigree::add_founder(Member parent)
 void Pedigree::add_descendant(Member offspring, const SampleName& mother, const SampleName& father)
 {
     const auto offspring_vertex = add_new_member(std::move(offspring));
-    const auto mother_vertex  = get_vertex(mother);
-    const auto father_vertex  = get_vertex(father);
-    boost::add_edge(mother_vertex, offspring_vertex, tree_);
-    boost::add_edge(father_vertex, offspring_vertex, tree_);
+    try {
+        const auto mother_vertex  = get_vertex(mother);
+        const auto father_vertex  = get_vertex(father);
+        boost::add_edge(mother_vertex, offspring_vertex, tree_);
+        boost::add_edge(father_vertex, offspring_vertex, tree_);
+    } catch (const std::out_of_range&) {
+        throw std::runtime_error {"Parent not in pedigree"};
+    }
 }
 
 bool Pedigree::is_member(const SampleName& member) const noexcept
