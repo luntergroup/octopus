@@ -13,6 +13,7 @@
 #include "config/config.hpp"
 #include "config/option_collation.hpp"
 #include "utils/map_utils.hpp"
+#include "utils/thread_pool.hpp"
 #include "logging/logging.hpp"
 #include "exceptions/user_error.hpp"
 
@@ -425,8 +426,14 @@ auto profile_reads_helper(const std::vector<SampleName>& samples,
 {
     ReadSetProfileConfig config {};
     config.fragment_size = options::max_read_length(options);
+    const auto threads = options::get_num_threads(options);
+    ThreadPool pool {threads ? *threads : 1};
+    boost::optional<ThreadPool&> workers {};
+    if (threads && *threads > 1) {
+        workers = pool;
+    }
     if (samples.size() == 1) {
-        auto result = profile_reads(samples, reference, input_regions, source, config);
+        auto result = profile_reads(samples, reference, input_regions, source, config, workers);
         if (result) result->depth_stats.sample.clear(); // no need to keep this duplicate info
         return result;
     } else if (options::use_same_read_profile_for_all_samples(options)) {
@@ -443,11 +450,11 @@ auto profile_reads_helper(const std::vector<SampleName>& samples,
             }
             if (include_sample) profile_samples.push_back(sample);
         }
-        auto result = profile_reads(profile_samples, reference, input_regions, source, config);
+        auto result = profile_reads(profile_samples, reference, input_regions, source, config, workers);
         if (result) result->depth_stats.sample.clear();
         return result;
     } else {
-        return profile_reads(samples, reference, input_regions, source, config);
+        return profile_reads(samples, reference, input_regions, source, config, workers);
     }
 }
 

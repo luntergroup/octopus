@@ -14,6 +14,7 @@
 #include "basics/aligned_read.hpp"
 #include "io/reference/reference_genome.hpp"
 #include "io/read/read_manager.hpp"
+#include "thread_pool.hpp"
 
 namespace octopus {
 
@@ -68,7 +69,8 @@ profile_reads(const std::vector<SampleName>& samples,
               const ReferenceGenome& reference,
               const InputRegionMap& regions,
               const ReadManager& source,
-              ReadSetProfileConfig config = ReadSetProfileConfig {});
+              ReadSetProfileConfig config = ReadSetProfileConfig {},
+              boost::optional<ThreadPool&> workers = boost::none);
 
 std::ostream& operator<<(std::ostream& os, const ReadSetProfile& profile);
 
