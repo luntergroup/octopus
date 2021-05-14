@@ -129,12 +129,14 @@ FamilyModel::evaluate(const SampleVector& samples,
     const auto max_possible_genotype_combinations = compute_num_combinations(genotypes.size(), samples.size());
     GenotypeLogLikelihoodMatrix genotype_likelihoods {};
     GenotypeCombinationMatrix genotype_combinations {};
-    if (!max_possible_genotype_combinations || *max_possible_genotype_combinations < options_.max_genotype_combinations) {
+    if (max_possible_genotype_combinations && (!options_.max_genotype_combinations || *max_possible_genotype_combinations < options_.max_genotype_combinations)) {
         genotype_likelihoods = compute_genotype_log_likelihoods(samples, genotypes, haplotype_likelihoods);
         genotype_combinations = generate_all_genotype_combinations(genotypes.size(), samples.size());
     } else {
         PopulationModel::Options population_model_options {};
-        population_model_options.max_genotype_combinations = options_.max_genotype_combinations;
+        if (options_.max_genotype_combinations) {
+            population_model_options.max_genotype_combinations = options_.max_genotype_combinations;
+        }
         PopulationModel population_model {prior_model_.population_model(), population_model_options, debug_log_};
         auto population_inferences = population_model.evaluate(samples, haplotypes, genotypes, haplotype_likelihoods);
         genotype_combinations = select_top_k_tuples<unsigned>(population_inferences.posteriors.marginal_genotype_probabilities, *options_.max_genotype_combinations);
