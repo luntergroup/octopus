@@ -9,6 +9,7 @@
 #include "trio_caller.hpp"
 #include "polyclone_caller.hpp"
 #include "cell_caller.hpp"
+#include "family_caller.hpp"
 
 namespace octopus {
 
@@ -383,6 +384,12 @@ CallerBuilder& CallerBuilder::set_somatic_cnv_prior(double prior) noexcept
     return *this;
 }
 
+CallerBuilder& CallerBuilder::set_pedigree(Pedigree pedigree)
+{
+    params_.pedigree = std::move(pedigree);
+    return *this;
+}
+
 std::unique_ptr<Caller> CallerBuilder::build(const ContigName& contig) const
 {
     if (factory_.count(caller_) == 0) {
@@ -558,7 +565,22 @@ CallerBuilder::CallerFactoryMap CallerBuilder::generate_factory() const
                                                     params_.normal_samples,
                                                     params_.somatic_cnv_prior
                                                 });
-        }}
+        }},
+        {"family", [this, &samples] () {
+            return std::make_unique<FamilyCaller>(make_components(),
+                                                      params_.general,
+                                                      FamilyCaller::Parameters {
+                                                          *params_.pedigree,
+                                                          get_ploidies(samples, *requested_contig_, params_.ploidies),
+                                                          make_population_prior_model(params_.snp_heterozygosity, params_.indel_heterozygosity),
+                                                          {*params_.snv_denovo_prior, *params_.indel_denovo_prior},
+                                                          params_.min_variant_posterior,
+                                                          params_.min_denovo_posterior,
+                                                          params_.min_refcall_posterior,
+                                                          params_.max_genotype_combinations,
+                                                          params_.deduplicate_haplotypes_with_caller_model
+                                                      });
+        }},
     };
 }
 

@@ -221,6 +221,8 @@ set(CORE_SOURCES
     core/callers/polyclone_caller.cpp
     core/callers/cell_caller.hpp
     core/callers/cell_caller.cpp
+    core/callers/family_caller.hpp
+    core/callers/family_caller.cpp
 
     core/types/calls/call_types.hpp
     core/types/calls/call.hpp
@@ -467,6 +469,12 @@ set(CORE_SOURCES
     core/models/genotype/single_cell_prior_model.cpp
     core/models/genotype/single_cell_model.hpp
     core/models/genotype/single_cell_model.cpp
+    core/models/genotype/inheritance_model.hpp
+    core/models/genotype/inheritance_model.cpp
+    core/models/genotype/pedigree_prior_model.hpp
+    core/models/genotype/pedigree_prior_model.cpp
+    core/models/genotype/family_model.hpp
+    core/models/genotype/family_model.cpp
 
     core/models/pairhmm/pair_hmm.hpp
     core/models/pairhmm/simd_pair_hmm.hpp

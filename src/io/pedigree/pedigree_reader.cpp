@@ -82,7 +82,7 @@ PedRecord parse_ped_line(const std::string& line)
 
 bool is_founder(const PedRecord& record)
 {
-    return record.mother == "0" || record.father == "0";
+    return record.mother == "0" && record.father == "0";
 }
 
 Pedigree::Member::Sex to_pedigree_sex(const std::string& ped_sex)
@@ -119,7 +119,13 @@ Pedigree read_pedigree(const boost::filesystem::path& ped_file)
     std::for_each(first_descendant, std::end(records),
                   [&] (PedRecord& record) {
                       try {
-                          result.add_descendant({record.sample, to_pedigree_sex(record.sex)}, record.mother, record.father);
+                          if (record.mother == "0") {
+                              result.add_descendant({record.sample, to_pedigree_sex(record.sex)}, record.father);
+                          } else if (record.father == "0") {
+                              result.add_descendant({record.sample, to_pedigree_sex(record.sex)}, record.mother);
+                          } else {
+                              result.add_descendant({record.sample, to_pedigree_sex(record.sex)}, record.mother, record.father);
+                          }
                       } catch (const std::runtime_error& e) {
                           if (std::string {e.what()} == "Parent not in pedigree") {
                               throw MalformedPED {ped_file};

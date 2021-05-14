@@ -1817,8 +1817,9 @@ auto get_caller_type(const OptionMap& options, const std::vector<SampleName>& sa
     if (is_set("maternal-sample", options) || is_set("paternal-sample", options)
 		|| (pedigree && is_trio(samples, *pedigree))) {
         result = "trio";
-    }
-    if (is_cancer_calling(options)) {
+    } else if (pedigree) {
+        result = "family";
+    } else if (is_cancer_calling(options)) {
         result = "cancer";
     }
     return result;
@@ -2205,8 +2206,13 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
         vc_builder.set_min_somatic_posterior(min_somatic_posterior);
         vc_builder.set_normal_contamination_risk(get_normal_contamination_risk(options));
         vc_builder.set_tumour_germline_concentration(options.at("tumour-germline-concentration").as<float>());
-    } else if (caller == "trio") {
-        vc_builder.set_trio(make_trio(read_pipe.samples(), options, pedigree));
+    } else if (caller == "trio" || caller == "family") {
+        if (caller == "trio") {
+            vc_builder.set_trio(make_trio(read_pipe.samples(), options, pedigree));
+        } else {
+            assert(pedigree);
+            vc_builder.set_pedigree(*pedigree);
+        }
         vc_builder.set_snv_denovo_prior(options.at("denovo-snv-prior").as<float>());
         vc_builder.set_indel_denovo_prior(options.at("denovo-indel-prior").as<float>());
         vc_builder.set_min_denovo_posterior(options.at("min-denovo-posterior").as<Phred<double>>());

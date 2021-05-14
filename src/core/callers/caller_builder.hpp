@@ -106,7 +106,7 @@ public:
     CallerBuilder& set_max_copy_gains(unsigned gains) noexcept;
     CallerBuilder& set_somatic_cnv_prior(double prior) noexcept;
     
-    // pedigree
+    // family
     CallerBuilder& set_pedigree(Pedigree pedigree);
     
     std::unique_ptr<Caller> build(const ContigName& contig) const;
@@ -165,7 +165,7 @@ private:
         unsigned max_copy_loss, max_copy_gain;
         double somatic_cnv_prior;
         
-        // pedigree
+        // family
         boost::optional<Pedigree> pedigree;
     };
     

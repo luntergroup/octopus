@@ -37,9 +37,14 @@ public:
     ~Pedigree() = default;
     
     void add_founder(Member parent);
+    void add_descendant(Member offspring, const SampleName& parent);
     void add_descendant(Member offspring, const SampleName& mother, const SampleName& father);
     
     bool is_member(const SampleName& member) const noexcept;
+    bool is_founder(const SampleName& member) const;
+    std::size_t num_parents(const SampleName& member) const;
+    std::size_t num_offspring(const SampleName& member) const;
+
     boost::optional<const SampleName&> mother_of(const SampleName& child) const;
     boost::optional<const SampleName&> father_of(const SampleName& child) const;
     std::vector<Member> offspring_of(const Member& parent) const;

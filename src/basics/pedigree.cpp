@@ -85,12 +85,23 @@ void Pedigree::add_founder(Member parent)
      add_new_member(std::move(parent));
 }
 
+void Pedigree::add_descendant(Member offspring, const SampleName& parent)
+{
+    const auto offspring_vertex = add_new_member(std::move(offspring));
+    try {
+        const auto parent_vertex = get_vertex(parent);
+        boost::add_edge(parent_vertex, offspring_vertex, tree_);
+    } catch (const std::out_of_range&) {
+        throw std::runtime_error {"Parent not in pedigree"};
+    }
+}
+
 void Pedigree::add_descendant(Member offspring, const SampleName& mother, const SampleName& father)
 {
     const auto offspring_vertex = add_new_member(std::move(offspring));
     try {
-        const auto mother_vertex  = get_vertex(mother);
-        const auto father_vertex  = get_vertex(father);
+        const auto mother_vertex = get_vertex(mother);
+        const auto father_vertex = get_vertex(father);
         boost::add_edge(mother_vertex, offspring_vertex, tree_);
         boost::add_edge(father_vertex, offspring_vertex, tree_);
     } catch (const std::out_of_range&) {
@@ -101,6 +112,23 @@ void Pedigree::add_descendant(Member offspring, const SampleName& mother, const 
 bool Pedigree::is_member(const SampleName& member) const noexcept
 {
     return members_.count(member) == 1;
+}
+
+bool Pedigree::is_founder(const SampleName& member) const
+{
+    return num_parents(member) == 0;
+}
+
+std::size_t Pedigree::num_parents(const SampleName& member) const
+{
+    const auto parents = boost::inv_adjacent_vertices(get_vertex(member), tree_);
+    return std::distance(parents.first, parents.second);
+}
+
+std::size_t Pedigree::num_offspring(const SampleName& member) const
+{
+    const auto offspring = boost::adjacent_vertices(get_vertex(member), tree_);
+    return std::distance(offspring.first, offspring.second);
 }
 
 boost::optional<const SampleName&> Pedigree::mother_of(const SampleName& child) const
