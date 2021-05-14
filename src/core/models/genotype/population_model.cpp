@@ -498,7 +498,7 @@ auto propose_genotype_combinations(const PopulationModel::GenotypeVector& genoty
     if (max_possible_genotype_combinations && *max_possible_genotype_combinations <= max_genotype_combinations) {
         return generate_all_genotype_combinations(genotypes.size(), num_samples);
     }
-    auto result = select_top_k_tuples(em_genotype_marginals, max_genotype_combinations);
+    auto result = select_top_k_tuples<std::size_t>(em_genotype_marginals, max_genotype_combinations);
     const auto top_k_genotype_indices = select_top_k_genotypes(genotypes, em_genotype_marginals, num_samples / 2);
     for (const auto genotype_idx : top_k_genotype_indices) {
         for (std::size_t sample_idx {0}; sample_idx < num_samples; ++sample_idx) {
@@ -602,19 +602,19 @@ PopulationModel::evaluate(const SampleVector& samples,
                           const HaplotypeLikelihoodArray& haplotype_likelihoods) const
 {
     assert(!genotypes.empty());
-    const auto genotype_log_likelihoods = compute_genotype_log_likelihoods(samples, genotypes, haplotype_likelihoods);
-    const auto num_possible_genotype_combinations = compute_num_combinations(genotypes.size(), samples.size());
     InferredLatents result;
+    result.posteriors.genotype_log_likelihoods = compute_genotype_log_likelihoods(samples, genotypes, haplotype_likelihoods);
+    const auto num_possible_genotype_combinations = compute_num_combinations(genotypes.size(), samples.size());
     GenotypeCombinationMatrix genotype_combinations {};
     if (!options_.max_genotype_combinations || (num_possible_genotype_combinations && *num_possible_genotype_combinations <= *options_.max_genotype_combinations)) {
         genotype_combinations = generate_all_genotype_combinations(genotypes.size(), samples.size());
     } else {
         const auto max_genotype_combinations = options_.max_genotype_combinations ? *options_.max_genotype_combinations : *num_possible_genotype_combinations;
         const EMOptions em_options {options_.max_em_iterations, options_.em_epsilon};
-        const auto em_genotype_marginals = compute_approx_genotype_marginal_posteriors(haplotypes, genotypes, genotype_log_likelihoods, em_options);
+        const auto em_genotype_marginals = compute_approx_genotype_marginal_posteriors(haplotypes, genotypes, result.posteriors.genotype_log_likelihoods, em_options);
         genotype_combinations = propose_genotype_combinations(genotypes, em_genotype_marginals, max_genotype_combinations);
     }
-    calculate_posterior_marginals(genotypes, genotype_combinations, genotype_log_likelihoods, prior_model_, result);
+    calculate_posterior_marginals(genotypes, genotype_combinations, result.posteriors.genotype_log_likelihoods, prior_model_, result);
     return result;
 }
 
@@ -681,21 +681,21 @@ PopulationModel::evaluate(const SampleVector& samples,
                           const HaplotypeLikelihoodArray& haplotype_likelihoods) const
 {
     const auto genotype_masks = make_genotype_masks(sample_ploidies, genotypes);
-    const auto genotype_log_likelihoods = compute_genotype_log_likelihoods(samples, genotypes, haplotype_likelihoods, genotype_masks);
+    InferredLatents result {};
+    result.posteriors.genotype_log_likelihoods = compute_genotype_log_likelihoods(samples, genotypes, haplotype_likelihoods, genotype_masks);
     std::vector<std::size_t> sample_genotype_set_ids, genotype_set_sizes;
     std::tie(sample_genotype_set_ids, genotype_set_sizes) = get_genotype_sets(sample_ploidies, genotypes);
     const auto num_possible_genotype_combinations = compute_num_combinations(sample_genotype_set_ids, genotype_set_sizes);
-    InferredLatents result {};
     GenotypeCombinationMatrix genotype_combinations {};
     if (!options_.max_genotype_combinations || (num_possible_genotype_combinations && *num_possible_genotype_combinations <= *options_.max_genotype_combinations)) {
         genotype_combinations = generate_all_genotype_combinations(sample_genotype_set_ids, genotype_set_sizes);
     } else {
         const auto max_genotype_combinations = options_.max_genotype_combinations ? *options_.max_genotype_combinations : *num_possible_genotype_combinations;
         const EMOptions em_options {options_.max_em_iterations, options_.em_epsilon};
-        const auto em_genotype_marginals = compute_approx_genotype_marginal_posteriors(haplotypes, genotypes, genotype_log_likelihoods, sample_ploidies, em_options);
+        const auto em_genotype_marginals = compute_approx_genotype_marginal_posteriors(haplotypes, genotypes, result.posteriors.genotype_log_likelihoods, sample_ploidies, em_options);
         genotype_combinations = propose_genotype_combinations(genotypes, em_genotype_marginals, max_genotype_combinations);
     }
-    calculate_posterior_marginals(genotypes, genotype_combinations, genotype_log_likelihoods, prior_model_, result);
+    calculate_posterior_marginals(genotypes, genotype_combinations, result.posteriors.genotype_log_likelihoods, prior_model_, result);
     return result;
 }
 

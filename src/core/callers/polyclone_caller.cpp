@@ -519,7 +519,7 @@ propose_subclone_model_hints(const GenotypeBlock& curr_genotypes,
                              const model::IndividualModel::InferredLatents& haploid_latents,
                              const std::size_t max)
 {
-    const auto top_haploid_indices = select_top_k_indices(haploid_latents.posteriors.genotype_log_probabilities, max);
+    const auto top_haploid_indices = select_top_k_indices<std::size_t>(haploid_latents.posteriors.genotype_log_probabilities, max);
     std::vector<model::SubcloneModel::Latents::LogProbabilityVector> result {};
     result.reserve(max);
     for (std::size_t i {0}; i < haplotypes.size() && result.size() < max; ++i) {
@@ -548,8 +548,8 @@ propose_subclone_model_hints(const GenotypeBlock& curr_genotypes,
                              const model::IndividualModel::InferredLatents& haploid_latents,
                              const std::size_t max)
 {
-    const auto top_prev_genotype_indices = select_top_k_indices(sublonal_inferences.weighted_genotype_posteriors, max);
-    const auto top_haploid_indices = select_top_k_indices(haploid_latents.posteriors.genotype_log_probabilities, max);
+    const auto top_prev_genotype_indices = select_top_k_indices<std::size_t>(sublonal_inferences.weighted_genotype_posteriors, max);
+    const auto top_haploid_indices = select_top_k_indices<std::size_t>(haploid_latents.posteriors.genotype_log_probabilities, max);
     std::vector<model::SubcloneModel::Latents::LogProbabilityVector> result {};
     result.reserve(max);
     for (std::size_t i {0}; i < top_prev_genotype_indices.size() && result.size() < max; ++i) {

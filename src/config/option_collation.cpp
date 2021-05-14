@@ -2077,7 +2077,7 @@ boost::optional<std::size_t> get_max_genotype_combinations(const OptionMap& opti
         return 1'000;
     } else if (is_fast_mode(options)) {
         return 10'000;
-    } else if (caller == "trio") {
+    } else if (caller == "trio" || caller == "family") {
         return 100'000;
     } else if (caller == "population") {
         return 100'000;

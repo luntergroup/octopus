@@ -33,6 +33,8 @@ public:
     {
         using ProbabilityVector = std::vector<double>;
         std::vector<ProbabilityVector> marginal_genotype_probabilities;
+        using GenotypeLogLikelihoodMatrix = std::vector<ProbabilityVector>;
+        GenotypeLogLikelihoodMatrix genotype_log_likelihoods;
     };
     struct InferredLatents
     {

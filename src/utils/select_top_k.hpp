@@ -15,9 +15,10 @@
 
 namespace octopus {
 
-using Index = std::size_t;
+template <typename Index = std::size_t>
 using IndexTuple = std::vector<Index>;
-using IndexTupleVector = std::vector<IndexTuple>;
+template <typename Index>
+using IndexTupleVector = std::vector<IndexTuple<Index>>;
 
 namespace detail {
 
@@ -44,7 +45,7 @@ auto copy_k_second(const std::vector<std::pair<_, T>>& pairs, std::size_t k)
 
 } // namespace detail
 
-template <typename T, typename BinaryPredicate = std::greater<T>>
+template <typename Index, typename T, typename BinaryPredicate = std::greater<T>>
 std::vector<Index>
 select_top_k_indices(const std::vector<T>& values, const std::size_t k,
                      const bool sorted = true,
@@ -73,7 +74,7 @@ select_top_k_indices(const std::vector<T>& values, const std::size_t k,
 
 namespace detail {
 
-template <typename T>
+template <typename Index, typename T>
 auto index(const std::vector<T>& values)
 {
     std::vector<std::pair<T, Index>> result(values.size());
@@ -83,47 +84,48 @@ auto index(const std::vector<T>& values)
     return result;
 }
 
-template <typename T>
+template <typename Index, typename T>
 auto index_and_sort(const std::vector<T>& values, const std::size_t k)
 {
-    auto result = index(values);
+    auto result = index<Index>(values);
     const auto kth = std::next(std::begin(result), std::min(k, result.size()));
     std::partial_sort(std::begin(result), kth, std::end(result), std::greater<> {});
     result.erase(kth, std::end(result));
     return result;
 }
 
-template <typename T>
+template <typename Index, typename T>
 struct IndexTupleScorePair
 {
-    IndexTuple indices;
+    IndexTuple<Index> indices;
     T score;
 };
 
-template <typename T>
-bool operator>(const IndexTupleScorePair<T>& lhs, const IndexTupleScorePair<T>& rhs) noexcept
+template <typename Index, typename T>
+bool operator>(const IndexTupleScorePair<Index, T>& lhs, const IndexTupleScorePair<Index, T>& rhs) noexcept
 {
     return lhs.score > rhs.score;
 }
 
-template <typename T>
-using IndexTupleScorePairVector = std::vector<IndexTupleScorePair<T>>;
+template <typename Index, typename T>
+using IndexTupleScorePairVector = std::vector<IndexTupleScorePair<Index, T>>;
 
-using IndexPair = std::pair<std::size_t, std::size_t>;
+template <typename Index>
+using IndexPair = std::pair<Index, Index>;
 
-template <typename T>
-std::vector<IndexPair>
+template <typename Index, typename T>
+std::vector<IndexPair<Index>>
 find_k_max_pairs(const std::vector<T>& lhs, const std::vector<T>& rhs, const std::size_t k)
 {
     // Modified from https://leetcode.com/problems/find-k-pairs-with-smallest-sums/discuss/84607/Clean-16ms-C++-O(N)-Space-O(KlogN)-Time-Solution-using-Priority-queue
-    std::vector<IndexPair> result {};
+    std::vector<IndexPair<Index>> result {};
     if (lhs.empty() || rhs.empty() || k == 0)
         return result;
-    auto cmp = [&lhs, &rhs] (const IndexPair& a, const IndexPair& b) {
+    auto cmp = [&lhs, &rhs] (const IndexPair<Index>& a, const IndexPair<Index>& b) {
         return lhs[a.first] + rhs[a.second] < lhs[b.first] + rhs[b.second]; };
-    std::vector<IndexPair> heap_storage {};
+    std::vector<IndexPair<Index>> heap_storage {};
     heap_storage.reserve(k);
-    std::priority_queue<IndexPair, decltype(heap_storage), decltype(cmp)> max_heap {cmp, std::move(heap_storage)};
+    std::priority_queue<IndexPair<Index>, decltype(heap_storage), decltype(cmp)> max_heap {cmp, std::move(heap_storage)};
     max_heap.emplace(0, 0);
     for (std::size_t i {0}; i < k && !max_heap.empty(); ++i) {
         const auto idx_pair = max_heap.top(); max_heap.pop();
@@ -136,17 +138,17 @@ find_k_max_pairs(const std::vector<T>& lhs, const std::vector<T>& rhs, const std
     return result;
 }
 
-template <typename T>
-void join(const std::vector<std::pair<T, std::size_t>>& values,
-          IndexTupleScorePairVector<T>& result,
+template <typename Index, typename T>
+void join(const std::vector<std::pair<T, Index>>& values,
+          IndexTupleScorePairVector<Index, T>& result,
           const std::size_t k,
-          IndexTupleScorePairVector<T>& buffer)
+          IndexTupleScorePairVector<Index, T>& buffer)
 {
     const auto n = std::min(k, values.size());
     if (n == 0) return;
     if (result.empty()) {
         std::transform(std::cbegin(values), std::next(std::cbegin(values), n),
-                       std::back_inserter(result), [=] (const auto& p) -> IndexTupleScorePair<T> {
+                       std::back_inserter(result), [=] (const auto& p) -> IndexTupleScorePair<Index, T> {
             return {{p.second}, p.first};
         });
     } else {
@@ -154,7 +156,7 @@ void join(const std::vector<std::pair<T, std::size_t>>& values,
             std::vector<T> vals1(values.size()), vals2(result.size());
             std::transform(std::cbegin(values), std::cend(values), std::begin(vals1), [] (const auto& p) { return p.first; });
             std::transform(std::cbegin(result), std::cend(result), std::begin(vals2), [] (const auto& p) { return p.score; });
-            const auto max_pairs = find_k_max_pairs(vals1, vals2, std::min(k, n * result.size()));
+            const auto max_pairs = find_k_max_pairs<Index>(vals1, vals2, std::min(k, n * result.size()));
             buffer.clear();
             buffer.reserve(max_pairs.size());
             for (const auto& p : max_pairs) {
@@ -176,20 +178,20 @@ void join(const std::vector<std::pair<T, std::size_t>>& values,
 
 } // namespace detail
 
-template <typename T>
-IndexTupleVector
+template <typename Index, typename T>
+IndexTupleVector<Index>
 select_top_k_tuples(const std::vector<std::vector<T>>& values, const std::size_t k)
 {
     // Implements a variant of the top-K selection algorithm
     // See Henderson & Eliassi-Rad (http://eliassi.org/papers/henderson-llnltr09.pdf)
     // for comparison.
     // Returns results in descending score order
-    detail::IndexTupleScorePairVector<T> joins {}, buffer {};
+    detail::IndexTupleScorePairVector<Index, T> joins {}, buffer {};
     joins.reserve(k);
     for (const auto& v : values) {
-        detail::join(detail::index_and_sort(v, k), joins, k, buffer);
+        detail::join(detail::index_and_sort<Index>(v, k), joins, k, buffer);
     }
-    IndexTupleVector result {};
+    IndexTupleVector<Index> result {};
     result.reserve(k);
     for (auto& p : joins) {
         result.push_back(std::move(p.indices));

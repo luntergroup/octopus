@@ -123,7 +123,7 @@ SingleCellModel::propose_genotypes(const GenotypeVector& genotypes,
     const auto merged_likelihoods = haplotype_likelihoods.merge_samples();
     const IndividualModel pooled_model {prior_model_.germline_prior_model()};
     const auto pooled_model_inferences = pooled_model.evaluate(genotypes, merged_likelihoods);
-    return select_top_k_indices(pooled_model_inferences.posteriors.genotype_log_probabilities, *config_.max_genotype_combinations);
+    return select_top_k_indices<std::size_t>(pooled_model_inferences.posteriors.genotype_log_probabilities, *config_.max_genotype_combinations);
 }
 
 namespace {
@@ -260,15 +260,15 @@ std::vector<T> select(const std::vector<bool>& selectors, const std::vector<T>& 
     return result;
 }
 
-template <typename T>
-IndexTupleVector
+template <typename IndexType, typename T>
+IndexTupleVector<IndexType>
 select_top_k_combinations(const std::vector<std::vector<T>>& values, const std::size_t k, const std::size_t n)
 {
-    const auto tuples = select_top_k_tuples(values, k);
+    const auto tuples = select_top_k_tuples<std::size_t>(values, k);
     if (values.size() <= n) {
         return tuples;
     } else {
-        IndexTupleVector result {};
+        IndexTupleVector<IndexType> result {};
         result.reserve(k);
         std::vector<bool> selectors(values.size());
         std::fill_n(std::rbegin(selectors), n, 1);
@@ -426,7 +426,7 @@ SingleCellModel::propose_genotype_combinations(const GenotypeVector& genotypes,
     
     GenotypeCombinationVector result {};
     for (auto k = 10; result.empty() && k < 10'000; k *= 2) {
-        result = select_top_k_combinations(cluster_marginal_genotype_posteriors, k * max_genotype_combinations, num_groups);
+        result = select_top_k_combinations<std::size_t>(cluster_marginal_genotype_posteriors, k * max_genotype_combinations, num_groups);
         // Remove combinations with duplicate genotypes as these are redundant according to model.
         erase_combinations_with_duplicate_indices(result, genotypes.size());
         // Reorder the combinations, keeping only the most probable one under the prior
@@ -670,7 +670,7 @@ SingleCellModel::propose_genotype_combinations(const PhylogenyNodePloidyMap& phy
     for (std::size_t id {0}; id < num_groups; ++id) required_ploidies[id] = phylogeny_ploidies.at(id);
     GenotypeCombinationVector result {};
     const auto k = config_.max_genotype_combinations ? 100 * *config_.max_genotype_combinations : std::numeric_limits<std::size_t>::max();
-    result = select_top_k_combinations(cluster_marginal_genotype_posteriors, k, num_groups);
+    result = select_top_k_combinations<std::size_t>(cluster_marginal_genotype_posteriors, k, num_groups);
     // Remove combinations with duplicate genotypes as these are redundant according to model.
     erase_combinations_with_duplicate_indices(result, genotypes.size());
     // Reorder the combinations, keeping only the most probable one under the prior

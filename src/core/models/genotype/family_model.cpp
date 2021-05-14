@@ -4,7 +4,10 @@
 #include "family_model.hpp"
 
 #include "utils/maths.hpp"
+#include "utils/select_top_k.hpp"
+#include "utils/append.hpp"
 #include "constant_mixture_genotype_likelihood_model.hpp"
+#include "population_model.hpp"
 
 namespace octopus { namespace model {
 
@@ -86,6 +89,18 @@ auto generate_all_genotype_combinations(const std::size_t num_genotypes, const s
     return result;
 }
 
+template <typename Range>
+boost::optional<std::size_t> find_hom_ref_idx(const Range& genotypes)
+{
+    auto itr = std::find_if(std::cbegin(genotypes), std::cend(genotypes),
+                            [] (const auto& g) { return is_homozygous_reference(g); });
+    if (itr != std::cend(genotypes)) {
+        return std::distance(std::cbegin(genotypes), itr);
+    } else {
+        return boost::none;
+    }
+}
+
 template <typename Container>
 auto sum(const Container& values)
 {
@@ -111,8 +126,40 @@ FamilyModel::evaluate(const SampleVector& samples,
                       const HaplotypeLikelihoodArray& haplotype_likelihoods) const
 {
     assert(!genotypes.empty());
-    const auto genotype_likelihoods = compute_genotype_log_likelihoods(samples, genotypes, haplotype_likelihoods);
-    auto genotype_combinations = generate_all_genotype_combinations(genotypes.size(), samples.size());
+    const auto max_possible_genotype_combinations = compute_num_combinations(genotypes.size(), samples.size());
+    GenotypeLogLikelihoodMatrix genotype_likelihoods {};
+    GenotypeCombinationMatrix genotype_combinations {};
+    if (!max_possible_genotype_combinations || *max_possible_genotype_combinations < options_.max_genotype_combinations) {
+        genotype_likelihoods = compute_genotype_log_likelihoods(samples, genotypes, haplotype_likelihoods);
+        genotype_combinations = generate_all_genotype_combinations(genotypes.size(), samples.size());
+    } else {
+        PopulationModel::Options population_model_options {};
+        population_model_options.max_genotype_combinations = options_.max_genotype_combinations;
+        PopulationModel population_model {prior_model_.population_model(), population_model_options, debug_log_};
+        auto population_inferences = population_model.evaluate(samples, haplotypes, genotypes, haplotype_likelihoods);
+        genotype_combinations = select_top_k_tuples<unsigned>(population_inferences.posteriors.marginal_genotype_probabilities, *options_.max_genotype_combinations);
+        const auto hom_ref_genotype_idx = find_hom_ref_idx(genotypes);
+        if (hom_ref_genotype_idx) {
+            // Add some reference combinations to get nicer QUALs
+            std::vector<GenotypeCombinationVector> reference_combinations {};
+            GenotypeCombinationVector ref_indices(samples.size(), *hom_ref_genotype_idx);
+            if (std::find(std::cbegin(genotype_combinations), std::cend(genotype_combinations), ref_indices) == std::cend(genotype_combinations)) {
+                reference_combinations.push_back(std::move(ref_indices));
+            }
+            for (std::size_t s {0}; s < samples.size(); ++s) {
+                const auto is_sample_homref = [=] (const auto& combination) { return combination[s] == *hom_ref_genotype_idx; };
+                if (std::find_if(std::cbegin(genotype_combinations), std::cend(genotype_combinations), is_sample_homref) == std::cend(genotype_combinations)) {
+                    auto new_combination = genotype_combinations.front(); // the best
+                    new_combination[s] = *hom_ref_genotype_idx;
+                    if (std::find(std::cbegin(reference_combinations), std::cend(reference_combinations), new_combination) == std::cend(reference_combinations)) {
+                        reference_combinations.push_back(std::move(new_combination));
+                    }
+                }
+            }
+            utils::append(std::move(reference_combinations), genotype_combinations);
+        }
+        genotype_likelihoods = std::move(population_inferences.posteriors.genotype_log_likelihoods);
+    }
     std::vector<double> posteriors(genotype_combinations.size());
     GenotypeLogLikelihoodVector likelihoods_buffer(genotype_likelihoods.size());
     for (std::size_t g {0}; g < genotype_combinations.size(); ++g) {
