@@ -211,7 +211,6 @@ bool all_members(const std::vector<SampleName>& samples, const Pedigree& pedigre
 bool is_trio(const std::vector<SampleName>& samples, const Pedigree& pedigree)
 {
     if (samples.size() == 3 && all_members(samples, pedigree)) {
-        if (pedigree.size() == 3) return true;
         if (is_parent_of(samples[0], samples[2], pedigree)) {
             return is_parent_of(samples[1], samples[2], pedigree);
         } else if (is_parent_of(samples[0], samples[1], pedigree)) {
