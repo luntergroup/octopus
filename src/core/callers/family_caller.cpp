@@ -487,6 +487,12 @@ auto call_genotypes(const std::vector<SampleName>& samples,
     }
 }
 
+bool includes(const GenotypeVector& genotypes, const Allele& allele)
+{
+    const auto includes_allele = [&] (const auto& genotype) { return includes(genotype, allele); };
+    return std::any_of(std::cbegin(genotypes), std::cend(genotypes), includes_allele);
+}
+
 auto compute_posterior(const Genotype<Allele>& genotype, const GenotypeProbabilityMap::InnerMap& posteriors)
 {
     auto p = std::accumulate(std::cbegin(posteriors), std::cend(posteriors), 0.0,
@@ -599,23 +605,25 @@ FamilyCaller::call_variants(const std::vector<Variant>& candidates, const Latent
     const auto genotype_calls = call_genotypes(samples_, joint_genotype_posteriors, marginal_genotype_posteriors, latents.genotypes_);
     std::vector<std::unique_ptr<VariantCall>> result {};
     for (const auto allele_idx : called_allele_indices) {
-        auto variant_idx = find_variant_index(alleles[allele_idx], candidates);
-        if (variant_idx) {
-            const Variant& variant {candidates[*variant_idx]};
-            std::vector<GenotypePosterior> variant_genotype_calls {};
-            variant_genotype_calls.reserve(samples_.size());
-            for (std::size_t sample_idx {0}; sample_idx < samples_.size(); ++sample_idx) {
-                auto variant_genotype = marginalise(mapped_region(variant), marginal_genotype_posteriors[samples_[sample_idx]], genotype_calls[sample_idx]);
-                variant_genotype_calls.push_back(std::move(variant_genotype));
-            }
-            const auto variant_posterior = allele_posteriors[allele_idx];
-            const bool denovo = std::find(std::cbegin(called_denovo_allele_indices), std::cend(called_denovo_allele_indices), allele_idx) != std::cend(called_denovo_allele_indices);
-            if (denovo) {
-                auto denovo_posterior = max(denovo_posteriors[allele_idx]);
-                assert(denovo_posterior);
-                result.push_back(make_denovo_call(variant, variant_posterior, *denovo_posterior, samples_, variant_genotype_calls));
-            } else {
-                result.push_back(make_germline_call(variant, variant_posterior, samples_, variant_genotype_calls));
+        if (includes(genotype_calls, alleles[allele_idx])) {
+            auto variant_idx = find_variant_index(alleles[allele_idx], candidates);
+            if (variant_idx) {
+                const Variant& variant {candidates[*variant_idx]};
+                std::vector<GenotypePosterior> variant_genotype_calls {};
+                variant_genotype_calls.reserve(samples_.size());
+                for (std::size_t sample_idx {0}; sample_idx < samples_.size(); ++sample_idx) {
+                    auto variant_genotype = marginalise(mapped_region(variant), marginal_genotype_posteriors[samples_[sample_idx]], genotype_calls[sample_idx]);
+                    variant_genotype_calls.push_back(std::move(variant_genotype));
+                }
+                const auto variant_posterior = allele_posteriors[allele_idx];
+                const bool denovo = std::find(std::cbegin(called_denovo_allele_indices), std::cend(called_denovo_allele_indices), allele_idx) != std::cend(called_denovo_allele_indices);
+                if (denovo) {
+                    auto denovo_posterior = max(denovo_posteriors[allele_idx]);
+                    assert(denovo_posterior);
+                    result.push_back(make_denovo_call(variant, variant_posterior, *denovo_posterior, samples_, variant_genotype_calls));
+                } else {
+                    result.push_back(make_germline_call(variant, variant_posterior, samples_, variant_genotype_calls));
+                }
             }
         }
     }
