@@ -586,7 +586,7 @@ FamilyCaller::call_variants(const std::vector<Variant>& candidates, const Latent
     const MarginalisationInfo info {latents.genotypes_, latents.haplotypes_};
     const auto allele_posteriors = compute_segregation_posteriors(alleles, joint_genotype_posteriors, info);
     const auto called_allele_indices = call_indices(allele_posteriors, parameters_.min_variant_posterior);
-    std::vector<std::vector<boost::optional<Phred<double>>>> denovo_posteriors(called_allele_indices.size(), std::vector<boost::optional<Phred<double>>>(samples_.size()));
+    std::vector<std::vector<boost::optional<Phred<double>>>> denovo_posteriors(alleles.size(), std::vector<boost::optional<Phred<double>>>(samples_.size()));
     std::vector<std::size_t> called_denovo_allele_indices {};
     called_denovo_allele_indices.reserve(called_allele_indices.size());
     for (const auto& p : offspring_with_two_parents_) {
