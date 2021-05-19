@@ -104,7 +104,7 @@ std::string MalformedFileError::do_why() const
 std::string MalformedFileError::do_help() const
 {
     if (!valid_types_.empty()) {
-        return "check the file is not currupted";
+        return "check the file is not corrupted";
     }
     return "check you did not mistake the command line option";
 }

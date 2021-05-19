@@ -46,6 +46,7 @@
 #include "exceptions/program_error.hpp"
 #include "exceptions/system_error.hpp"
 #include "exceptions/missing_file_error.hpp"
+#include "exceptions/malformed_file_error.hpp"
 #include "core/csr/filters/threshold_filter_factory.hpp"
 #include "core/csr/filters/training_filter_factory.hpp"
 #include "core/csr/filters/random_forest_filter_factory.hpp"
@@ -652,6 +653,16 @@ public:
     MissingReadPathFile(fs::path p) : MissingFileError {std::move(p), "read path"} {};
 };
 
+class MalfordReadPathFile : public MalformedFileError
+{
+    std::string do_where() const override
+    {
+        return "get_read_paths";
+    }
+public:
+    MalfordReadPathFile(fs::path p) : MalformedFileError {std::move(p)} {};
+};
+
 void remove_duplicates(std::vector<fs::path>& paths, const std::string& type, const bool log = true)
 {
     std::sort(std::begin(paths), std::end(paths));
@@ -704,13 +715,19 @@ std::vector<fs::path> get_read_paths(const OptionMap& options, const bool log = 
                 e.set_location_specified("the command line option '--reads-file'");
                 throw e;
             }
-            auto paths = get_resolved_paths_from_file(path_to_read_paths, options);
-            if (log && paths.empty()) {
-                logging::WarningLogger log {};
-                stream(log) << "The read path file you specified " << path_to_read_paths
-                            << " in the command line option '--reads-file' is empty";
+            try {
+                auto paths = get_resolved_paths_from_file(path_to_read_paths, options);
+                if (log && paths.empty()) {
+                    logging::WarningLogger log {};
+                    stream(log) << "The read path file you specified " << path_to_read_paths
+                                << " in the command line option '--reads-file' is empty";
+                }
+                append(std::move(paths), result);
+            } catch (...) {
+                MalfordReadPathFile e {path_to_read_paths, "tex"};
+                e.set_location_specified("the command line option '--reads-file'");
+                throw e;
             }
-            append(std::move(paths), result);
         }
     }
     remove_duplicates(result, "read", log);
