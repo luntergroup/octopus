@@ -29,14 +29,8 @@ std::unique_ptr<IVcfReaderImpl> make_vcf_reader(const VcfReader::Path& file_path
         ss << " does not exist";
         throw std::runtime_error {ss.str()};
     }
-    
     auto file_type = file_path.extension().string();
-    
     if (file_type == ".vcf") {
-        auto vcf_file_size = fs::file_size(file_path);
-        if (vcf_file_size > 1e9) { // 1GB
-            throw std::runtime_error {"VCF file " + file_path.string() + " is too big"};
-        }
         return std::make_unique<VcfParser>(file_path);
     } else {
         return std::make_unique<HtslibBcfFacade>(file_path, HtslibBcfFacade::Mode::read);

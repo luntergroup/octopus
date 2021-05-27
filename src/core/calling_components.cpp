@@ -756,6 +756,10 @@ GenomeCallingComponents collate_genome_calling_components(const options::OptionM
         throw UnmatchedReference {reference};
     }
     auto output = make_output_vcf_writer(options);
+    if (output.path() && output.path()->extension().string() == ".vcf") {
+        logging::WarningLogger log {};
+        log << "Uncompressed VCF output requested - this may result in large output files";
+    }
     return GenomeCallingComponents {
         std::move(reference),
         std::move(read_manager),

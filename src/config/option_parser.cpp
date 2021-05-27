@@ -1181,6 +1181,8 @@ void validate(const OptionMap& vm)
     };
     conflicting_options(vm, "maternal-sample", "normal-sample");
     conflicting_options(vm, "paternal-sample", "normal-sample");
+    conflicting_options(vm, "sites-only", "bamout");
+    conflicting_options(vm, "sites-only", "data-profile");
     for (const auto& option : positive_int_options) {
         check_positive(option, vm);
     }

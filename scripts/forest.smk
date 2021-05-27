@@ -311,7 +311,7 @@ def get_vcfeval_ploidy_option(example, sample):
         ploidy_idx = example.options.index("--organism-ploidy")
         if ploidy_idx >= 0:
             ploidy = example.options[ploidy_idx + 1]
-            return "--Xdefault-ploidy=" + str(ploidy)
+            return "--sample-ploidy=" + str(ploidy)
     return ""
 
 rule vcfeval:
