@@ -1130,7 +1130,7 @@ boost::optional<double> get_repeat_scanner_min_vaf(const OptionMap& options)
     } else if (is_single_cell_calling(options)) {
         return 0.005;
     } else {
-        return boost::none;
+        return 0.05;
     }
 }
 
