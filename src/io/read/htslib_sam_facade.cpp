@@ -319,43 +319,21 @@ bool is_sorted(const std::vector<T>& v)
 }
 
 template <typename T>
-bool is_subset_helper(const std::vector<T>& lhs, const std::vector<T>& rhs)
+std::vector<T> sort(std::vector<T> v)
 {
-    return std::includes(cbegin(lhs), cend(lhs), cbegin(rhs), cend(rhs));
+    std::sort(std::begin(v), std::end(v));
+    return v;
 }
 
 template <typename T>
-bool is_subset_helper_sort_rhs(const std::vector<T>& lhs, std::vector<T> rhs)
-{
-    std::sort(std::begin(rhs), std::end(rhs));
-    return is_subset_helper(lhs, rhs);
-}
-
-template <typename T>
-bool is_subset_helper_sort_lhs(std::vector<T> lhs, const std::vector<T>& rhs)
-{
-    std::sort(std::begin(lhs), std::end(lhs));
-    return is_subset_helper(lhs, rhs);
-}
-
-template <typename T>
-bool is_subset_helper_sort_both(std::vector<T> lhs, std::vector<T> rhs)
-{
-    std::sort(std::begin(lhs), std::end(lhs));
-    std::sort(std::begin(rhs), std::end(rhs));
-    return is_subset_helper(lhs, rhs);
-}
-
-// Returns true iff rhs a subset of lhs.
-template <typename T>
-bool is_subset(const std::vector<T>& lhs, const std::vector<T>& rhs)
+bool set_equal(const std::vector<T>& lhs, const std::vector<T>& rhs)
 {
     if (is_sorted(lhs)) {
-        return is_sorted(rhs) ? is_subset_helper(lhs, rhs) : is_subset_helper_sort_rhs(lhs, rhs);
+        return is_sorted(rhs) ? lhs == rhs : lhs == sort(rhs);
     } else if (is_sorted(rhs)) {
-        return is_subset_helper_sort_lhs(lhs, rhs);
+        return sort(lhs) == rhs;
     } else {
-        return is_subset_helper_sort_both(lhs, rhs);
+        return sort(lhs) == sort(rhs);
     }
 }
 
@@ -427,7 +405,7 @@ HtslibSamFacade::iterate(const std::vector<SampleName>& samples,
     if (samples.empty()) return true;
     if (samples.size() == 1) {
         return iterate(samples.front(), region, visitor);
-    } else if (is_subset(samples, samples_)) {
+    } else if (set_equal(samples, samples_)) {
         return iterate(region, visitor);
     } else {
         const auto readable_samples = get_readable_samples(samples, samples_);
@@ -488,7 +466,7 @@ HtslibSamFacade::iterate(const std::vector<SampleName>& samples,
     if (samples.empty()) return true;
     if (samples.size() == 1) {
         return iterate(samples.front(), region, visitor);
-    } else if (is_subset(samples, samples_)) {
+    } else if (set_equal(samples, samples_)) {
         return iterate(region, visitor);
     } else {
         const auto readable_samples = get_readable_samples(samples, samples_);
@@ -523,7 +501,7 @@ bool HtslibSamFacade::has_reads(const std::vector<SampleName>& samples, const Ge
 {
     if (samples.empty()) return false;
     if (samples.size() == 1) return has_reads(samples.front(), region);
-    if (is_subset(samples, samples_)) return has_reads(region);
+    if (set_equal(samples, samples_)) return has_reads(region);
     const auto readable_samples = get_readable_samples(samples, samples_);
     HtslibIterator it {*this, region};
     while (++it) {
@@ -558,7 +536,7 @@ std::size_t HtslibSamFacade::count_reads(const std::vector<SampleName>& samples,
 {
     if (samples.empty()) return 0;
     if (samples.size() == 1) return count_reads(samples.front(), region);
-    if (is_subset(samples, samples_)) return count_reads(region);
+    if (set_equal(samples, samples_)) return count_reads(region);
     const auto readable_samples = get_readable_samples(samples, samples_);
     HtslibIterator it {*this, region};
     std::size_t result {0};
@@ -608,7 +586,7 @@ HtslibSamFacade::extract_read_positions(const std::vector<SampleName>& samples, 
 {
     if (samples.empty()) return {};
     if (samples.size() == 1) return extract_read_positions(samples.front(), region, max_coverage);
-    if (is_subset(samples, samples_)) return extract_read_positions(region, max_coverage);
+    if (set_equal(samples, samples_)) return extract_read_positions(region, max_coverage);
     PositionList result {};
     result.reserve(max_coverage);
     HtslibIterator it {*this, region};
@@ -692,7 +670,7 @@ HtslibSamFacade::SampleReadMap HtslibSamFacade::fetch_reads(const std::vector<Sa
     if (samples.size() == 1) {
         return {{samples.front(), fetch_reads(samples.front(), region)}};
     }
-    if (is_subset(samples_, samples)) return fetch_reads(region);
+    if (set_equal(samples_, samples)) return fetch_reads(region);
     HtslibIterator it {*this, region};
     SampleReadMap result {samples.size()};
     for (const auto& sample : samples) {
