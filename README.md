@@ -33,7 +33,7 @@ $ source ~/.bash_profile
 Call some variants:
 
 ```shell
-$ FOREST="$(pwd)/octopus/resources/forests/germline.v0.7.0.forest"
+$ FOREST="$(pwd)/octopus/resources/forests/germline.v0.7.4.forest"
 $ octopus -R hs37d5.fa -I NA12878.bam -T 1 to MT -o NA12878.octopus.vcf.gz --forest $FOREST --threads 8
 ```
 
