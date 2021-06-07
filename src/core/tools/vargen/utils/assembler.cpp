@@ -1763,10 +1763,13 @@ double Assembler::bubble_score(const Path& path) const
             });
         };
         add_strand_weights(boost::in_edges(path.front(), graph_));
-        add_strand_weights(boost::in_edges(path.back(), graph_));
-        auto strand_bias = maths::fisher_exact_test(weight_stats.total_forward, context_forward_weight + 1,
-                                                    weight_stats.total_reverse, context_reverse_weight + 1);
-        result *= (1 - strand_bias);
+        // path.front() is reference, path.back() is not
+        const auto p = boost::adjacent_vertices(path.back(), graph_);
+        std::for_each(p.first, p.second, [&] (Vertex v) {
+            add_strand_weights(boost::out_edges(v, graph_));
+        });
+        result *= maths::fisher_exact_test(weight_stats.total_forward, context_forward_weight,
+                                                    weight_stats.total_reverse, context_reverse_weight);
     }
     result *= base_quality_probability(head_mean_base_quality(path));
     if (path.size() > 2) {
