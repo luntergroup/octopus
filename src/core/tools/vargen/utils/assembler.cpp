@@ -1752,12 +1752,21 @@ double Assembler::bubble_score(const Path& path) const
 {
     if (path.size() < 2) return 0;
     const auto weight_stats = compute_weight_stats(path);
-    auto result = weight_stats.stdev > weight_stats.mean ? std::min(weight_stats.mean, weight_stats.median) : std::max(weight_stats.mean, weight_stats.median);
-    if (params_.strand_tail_mass) {
-        const auto tail_mass = maths::beta_tail_probability(static_cast<double>(weight_stats.total_forward + 1),
-                                                            static_cast<double>(weight_stats.total_reverse + 1),
-                                                            *params_.strand_tail_mass);
-        result *= (1.0 - tail_mass);
+    auto result = weight_stats.max;
+    if (params_.use_strand_bias) {
+        GraphEdge::WeightType context_forward_weight {0}, context_reverse_weight {0};
+        const auto add_strand_weights = [&] (const auto& p) {
+            std::for_each(p.first, p.second, [&] (const Edge e) {
+                const auto forward_weight = graph_[e].forward_strand_weight;
+                context_forward_weight += forward_weight;
+                context_reverse_weight += (graph_[e].weight - forward_weight);
+            });
+        };
+        add_strand_weights(boost::in_edges(path.front(), graph_));
+        add_strand_weights(boost::in_edges(path.back(), graph_));
+        auto strand_bias = maths::fisher_exact_test(weight_stats.total_forward, context_forward_weight + 1,
+                                                    weight_stats.total_reverse, context_reverse_weight + 1);
+        result *= (1 - strand_bias);
     }
     result *= base_quality_probability(head_mean_base_quality(path));
     if (path.size() > 2) {
