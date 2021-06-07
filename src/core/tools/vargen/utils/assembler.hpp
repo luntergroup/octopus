@@ -9,6 +9,7 @@
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
+#include <functional>
 #include <cstddef>
 #include <utility>
 #include <tuple>
@@ -46,8 +47,10 @@ public:
     struct Parameters
     {
         unsigned kmer_size;
-        boost::optional<double> strand_tail_mass = boost::none;
+        bool use_strand_bias = true;
     };
+
+    using BubbleScoreSetter = std::function<double(std::size_t, std::size_t)>;
     
     Assembler() = delete;
     
@@ -94,7 +97,7 @@ public:
     
     void clear();
     
-    std::deque<Variant> extract_variants(unsigned max_bubbles, double min_bubble_score);
+    std::deque<Variant> extract_variants(unsigned max_bubbles, BubbleScoreSetter min_bubble_scorer);
     
     void write_dot(std::ostream& out) const;
     
@@ -305,10 +308,11 @@ private:
     Edge head_edge(const Path& path) const;
     int head_mean_base_quality(const Path& path) const;
     int tail_mean_base_quality(const Path& path) const;
+    double get_min_bubble_score(Vertex ref_head, Vertex ref_tail, BubbleScoreSetter min_bubble_scorer) const;
     double bubble_score(const Path& path) const;
-    std::deque<Variant> extract_bubble_paths(unsigned max_bubbles, double min_bubble_score);
+    std::deque<Variant> extract_bubble_paths(unsigned max_bubbles, BubbleScoreSetter min_bubble_scorer);
     std::deque<SubGraph> find_independent_subgraphs() const;
-    std::deque<Variant> extract_bubble_paths_with_ksp(unsigned k, double min_bubble_score);
+    std::deque<Variant> extract_bubble_paths_with_ksp(unsigned k, BubbleScoreSetter min_bubble_scorer);
     
     // for debug
     

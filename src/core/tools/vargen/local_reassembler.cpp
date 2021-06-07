@@ -573,7 +573,7 @@ LocalReassembler::assemble_bin(const unsigned kmer_size, const Bin& bin, std::de
     if (size(assemble_region) < kmer_size) return AssemblerStatus::failed;
     const auto reference_sequence = reference_.get().fetch_sequence(assemble_region);
     if (!utils::is_canonical_dna(reference_sequence)) return AssemblerStatus::failed;
-    Assembler assembler {{kmer_size, 0.01}, reference_sequence};
+    Assembler assembler {{kmer_size, true}, reference_sequence};
     if (assembler.is_unique_reference()) {
         load(bin, assembler);
         return try_assemble_region(assembler, reference_sequence, assemble_region, result);
@@ -1017,7 +1017,11 @@ LocalReassembler::try_assemble_region(Assembler& assembler, const NucleotideSequ
     if (assembler.is_empty() || assembler.is_all_reference()) {
         return status;
     }
-    auto variants = assembler.extract_variants(max_bubbles_, calculate_min_bubble_score(assemble_region));
+    const auto min_bubble_score = [&] (const auto ref_head_idx, const auto ref_tail_idx) -> double {
+        const auto ref_bubble_region = expand_rhs(shift(head_region(assemble_region), ref_head_idx), ref_tail_idx - ref_head_idx);
+        return calculate_min_bubble_score(ref_bubble_region);
+    };
+    auto variants = assembler.extract_variants(max_bubbles_, min_bubble_score);
     assembler.clear();
     if (!variants.empty()) {
         trim_reference(variants);
@@ -1048,14 +1052,14 @@ LocalReassembler::try_assemble_region(Assembler& assembler, const NucleotideSequ
     return status;
 }
 
-double LocalReassembler::calculate_min_bubble_score(const GenomicRegion& assemble_region) const
+double LocalReassembler::calculate_min_bubble_score(const GenomicRegion& bubble_region) const
 {
     ReadBaseCountMap read_counts {};
     read_counts.reserve(read_buffer_.size());
     for (const auto& p : read_buffer_) {
-        read_counts.emplace(p.first, count_base_pairs(p.second, assemble_region));
+        read_counts.emplace(p.first, count_base_pairs(p.second, bubble_region));
     }
-    return min_bubble_score_(assemble_region, read_counts);
+    return min_bubble_score_(bubble_region, read_counts);
 }
 
 double DepthBasedBubbleScoreSetter::operator()(const GenomicRegion& region, const LocalReassembler::ReadBaseCountMap& read_counts) const

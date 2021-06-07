@@ -137,7 +137,7 @@ private:
     AssemblerStatus assemble_bin(unsigned kmer_size, const Bin& bin, std::deque<Variant>& result) const;
     AssemblerStatus try_assemble_region(Assembler& assembler, const NucleotideSequence& reference_sequence,
                                         const GenomicRegion& reference_region, std::deque<Variant>& result) const;
-    double calculate_min_bubble_score(const GenomicRegion& assemble_region) const;
+    double calculate_min_bubble_score(const GenomicRegion& bubble_region) const;
 };
 
 struct ConstantBubbleScoreSetter
