@@ -1278,10 +1278,10 @@ auto make_variant_generator_builder(const OptionMap& options, const boost::optio
             reassembler_options.mask_threshold = as_unsigned("assembler-mask-base-quality", options);
         }
         reassembler_options.execution_policy = get_thread_execution_policy(options);
-        reassembler_options.num_fallbacks = as_unsigned("num-fallback-kmers", options);
+        reassembler_options.num_fallbacks = as_unsigned("max-fallback-kmers", options);
         reassembler_options.fallback_interval_size = as_unsigned("fallback-kmer-gap", options);
-        reassembler_options.bin_size = as_unsigned("max-region-to-assemble", options);
-        reassembler_options.bin_overlap = as_unsigned("max-assemble-region-overlap", options);
+        reassembler_options.bin_size = as_unsigned("max-assembly-region-size", options);
+        reassembler_options.bin_overlap = as_unsigned("max-assembly-region-overlap", options);
         reassembler_options.min_kmer_observations = as_unsigned("min-kmer-prune", options);
         reassembler_options.max_bubbles = as_unsigned("max-bubbles", options);
         reassembler_options.min_bubble_score = get_assembler_bubble_score_setter(options);

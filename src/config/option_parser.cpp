@@ -391,19 +391,19 @@ OptionMap parse_options(const int argc, const char** argv)
      ->default_value(std::vector<int> {10, 15, 20}, "10 15 20")->composing(),
      "Kmer sizes to use for local assembly")
     
-    ("num-fallback-kmers",
+    ("max-fallback-kmers",
      po::value<int>()->default_value(10),
-     "How many local assembly fallback kmer sizes to use if the default sizes fail")
+     "How many local assembly fallback kmer sizes to try if the default sizes fail")
     
     ("fallback-kmer-gap",
      po::value<int>()->default_value(10),
      "Gap size used to generate local assembly fallback kmers")
     
-    ("max-region-to-assemble",
+    ("max-assembly-region-size",
      po::value<int>()->default_value(600),
      "The maximum region size that can be used for local assembly")
     
-    ("max-assemble-region-overlap",
+    ("max-assembly-region-overlap",
      po::value<int>()->default_value(200),
      "Maximum number of bases allowed to overlap assembly regions")
     
@@ -1163,12 +1163,12 @@ void validate(const OptionMap& vm)
         "threads", "mask-low-quality-tails", "mask-tails", "soft-clip-mask-threshold", "mask-soft-clipped-boundary-bases",
         "min-mapping-quality", "good-base-quality", "min-good-bases", "min-read-length",
         "max-read-length", "min-base-quality", "max-variant-size",
-        "num-fallback-kmers", "max-assemble-region-overlap", "assembler-mask-base-quality",
+        "max-fallback-kmers", "max-assembly-region-overlap", "assembler-mask-base-quality",
         "min-kmer-prune", "max-bubbles", "max-holdout-depth", "max-copy-loss", "max-copy-gain"
     };
     const std::vector<std::string> strictly_positive_int_options {
         "max-open-read-files", "downsample-above", "downsample-target", "min-supporting-reads",
-        "max-region-to-assemble", "fallback-kmer-gap", "organism-ploidy",
+        "max-assembly-region-size", "fallback-kmer-gap", "organism-ploidy",
         "max-haplotypes", "haplotype-holdout-threshold", "haplotype-overflow",
         "max-genotypes", "max-genotype-combinations", "max-somatic-haplotypes", "max-clones",
         "max-vb-seeds", "max-indel-errors", "max-base-quality", "max-phylogeny-size"
