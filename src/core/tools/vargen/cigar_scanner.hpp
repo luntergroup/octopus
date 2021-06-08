@@ -65,6 +65,7 @@ public:
         Variant::MappingDomain::Size max_variant_size = 2000;
         boost::optional<MisalignmentParameters> misalignment_parameters = MisalignmentParameters {};
         bool split_mnvs = true;
+        bool ignore_strand_bias = false;
     };
     
     CigarScanner() = delete;

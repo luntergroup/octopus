@@ -65,6 +65,7 @@ LocalReassembler::LocalReassembler(const ReferenceGenome& reference, Options opt
 , min_bubble_score_ {options.min_bubble_score}
 , max_variant_size_ {options.max_variant_size}
 , cycle_tolerance_ {options.cycle_tolerance}
+, ignore_strand_bias_ {options.ignore_strand_bias}
 {
     if (max_bin_size_ == 0) {
         throw std::runtime_error {"bin size must be greater than zero"};
@@ -573,7 +574,9 @@ LocalReassembler::assemble_bin(const unsigned kmer_size, const Bin& bin, std::de
     if (size(assemble_region) < kmer_size) return AssemblerStatus::failed;
     const auto reference_sequence = reference_.get().fetch_sequence(assemble_region);
     if (!utils::is_canonical_dna(reference_sequence)) return AssemblerStatus::failed;
-    Assembler assembler {{kmer_size, true}, reference_sequence};
+    Assembler::Parameters assembler_params {kmer_size};
+    assembler_params.use_strand_bias = !ignore_strand_bias_;
+    Assembler assembler {assembler_params, reference_sequence};
     if (assembler.is_unique_reference()) {
         load(bin, assembler);
         return try_assemble_region(assembler, reference_sequence, assemble_region, result);
