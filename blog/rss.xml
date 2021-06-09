@@ -9,7 +9,7 @@
         <generator>https://github.com/jpmonette/feed</generator>
         <item>
             <title><![CDATA[Welcome]]></title>
-            <link>https://luntergroup.github.io/blog/welcome</link>
+            <link>https://luntergroup.github.io/octopus/blog/welcome</link>
             <guid>welcome</guid>
             <pubDate>Thu, 10 Jun 2021 00:00:00 GMT</pubDate>
             <description><![CDATA[Welcome to the new Octopus website!]]></description>
