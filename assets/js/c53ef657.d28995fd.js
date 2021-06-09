@@ -1,0 +1,1 @@
+(self.webpackChunkwebsite=self.webpackChunkwebsite||[]).push([[556],{5526:function(s){"use strict";s.exports=JSON.parse('{"allTagsPath":"/blog/tags","slug":"octopus","name":"octopus","count":1,"permalink":"/blog/tags/octopus"}')}}]);

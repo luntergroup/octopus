@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0">
+    <channel>
+        <title>Octopus Blog</title>
+        <link>https://luntergroup.github.io/blog</link>
+        <description>Octopus Blog</description>
+        <lastBuildDate>Thu, 10 Jun 2021 00:00:00 GMT</lastBuildDate>
+        <docs>https://validator.w3.org/feed/docs/rss2.html</docs>
+        <generator>https://github.com/jpmonette/feed</generator>
+        <item>
+            <title><![CDATA[Welcome]]></title>
+            <link>https://luntergroup.github.io/blog/welcome</link>
+            <guid>welcome</guid>
+            <pubDate>Thu, 10 Jun 2021 00:00:00 GMT</pubDate>
+            <description><![CDATA[Welcome to the new Octopus website!]]></description>
+        </item>
+    </channel>
+</rss>
