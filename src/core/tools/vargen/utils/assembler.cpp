@@ -1741,12 +1741,16 @@ double Assembler::bubble_score(const Path& path) const
                                            weight_stats.total_reverse, context_reverse_weight);
     }
     if (params_.use_base_quality) {
-        const auto get_edge_probability = [&] (const Vertex& source, const Vertex& dest) {
+        const auto get_edge_probability = [&] (const Vertex& source, const Vertex& dest) -> double {
             Edge e; bool good;
             std::tie(e, good) = boost::edge(source, dest, graph_);
             assert(good);
-            auto mean_base_quality = graph_[e].base_quality_sum / graph_[e].weight;
-            return base_quality_probability(mean_base_quality);
+            if (graph_[e].weight > 0) {
+                auto mean_base_quality = graph_[e].base_quality_sum / graph_[e].weight;
+                return base_quality_probability(mean_base_quality);
+            } else {
+                return 0;
+            }
         };
         result *= std::inner_product(std::cbegin(path), std::prev(std::cend(path)),
                                      std::next(std::cbegin(path)), 1.0,
