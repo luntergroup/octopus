@@ -1771,9 +1771,11 @@ double Assembler::bubble_score(const Path& path) const
         result *= maths::fisher_exact_test(weight_stats.total_forward, context_forward_weight,
                                                     weight_stats.total_reverse, context_reverse_weight);
     }
-    result *= base_quality_probability(head_mean_base_quality(path));
-    if (path.size() > 2) {
-        result *= base_quality_probability(tail_mean_base_quality(path));
+    if (params_.use_base_qualities) {
+        result *= base_quality_probability(head_mean_base_quality(path));
+        if (path.size() > 2) {
+            result *= base_quality_probability(tail_mean_base_quality(path));
+        }
     }
     return result;
 }

@@ -48,6 +48,7 @@ public:
     {
         unsigned kmer_size;
         bool use_strand_bias = true;
+        bool use_base_qualities = true;
     };
 
     using BubbleScoreSetter = std::function<double(std::size_t, std::size_t)>;
