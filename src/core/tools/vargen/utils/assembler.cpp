@@ -1696,6 +1696,37 @@ bool is_dominated_by_path(const V& vertex, const BidirectionalIt first, const Bi
     return std::find(rfirst, rlast, dominator) != rlast;
 }
 
+Assembler::Edge Assembler::head_edge(const Path& path) const
+{
+    assert(path.size() > 1);
+    Edge e; bool good;
+    std::tie(e, good) = boost::edge(path[0], path[1], graph_);
+    assert(good);
+    return e;
+}
+
+int Assembler::head_mean_base_quality(const Path& path) const
+{
+    const auto& fork_edge = graph_[head_edge(path)];
+    return fork_edge.weight > 0 ? fork_edge.base_quality_sum / fork_edge.weight : 0;
+}
+int Assembler::tail_mean_base_quality(const Path& path) const
+{
+    if (path.size() < 3) return 0;
+    int base_quality_sum {0};
+    const auto add_edge = [&] (const auto& u, const auto& v) {
+        Edge e; bool good;
+        std::tie(e, good) = boost::edge(u, v, graph_);
+        assert(good);
+        base_quality_sum += graph_[e].base_quality_sum;
+        return graph_[e].weight;
+    };
+    auto total_weight = std::inner_product(std::next(std::cbegin(path)), std::prev(std::cend(path)),
+                       std::next(std::cbegin(path), 2), GraphEdge::WeightType {0},
+                       std::plus<> {}, add_edge);
+    return base_quality_sum / total_weight;
+}
+
 double Assembler::get_min_bubble_score(Vertex ref_head, Vertex ref_tail, BubbleScoreSetter min_bubble_scorer) const
 {
     const auto ref_head_itr = std::find(std::cbegin(reference_vertices_), std::cend(reference_vertices_), ref_head);
@@ -1738,23 +1769,11 @@ double Assembler::bubble_score(const Path& path) const
             add_strand_weights(boost::out_edges(v, graph_));
         });
         result *= maths::fisher_exact_test(weight_stats.total_forward, context_forward_weight,
-                                           weight_stats.total_reverse, context_reverse_weight);
+                                                    weight_stats.total_reverse, context_reverse_weight);
     }
-    if (params_.use_base_quality) {
-        const auto get_edge_probability = [&] (const Vertex& source, const Vertex& dest) -> double {
-            Edge e; bool good;
-            std::tie(e, good) = boost::edge(source, dest, graph_);
-            assert(good);
-            if (graph_[e].weight > 0) {
-                auto mean_base_quality = graph_[e].base_quality_sum / graph_[e].weight;
-                return base_quality_probability(mean_base_quality);
-            } else {
-                return 0;
-            }
-        };
-        result *= std::inner_product(std::cbegin(path), std::prev(std::cend(path)),
-                                     std::next(std::cbegin(path)), 1.0,
-                                     std::multiplies<> {}, get_edge_probability);
+    result *= base_quality_probability(head_mean_base_quality(path));
+    if (path.size() > 2) {
+        result *= base_quality_probability(tail_mean_base_quality(path));
     }
     return result;
 }

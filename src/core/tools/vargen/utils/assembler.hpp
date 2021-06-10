@@ -48,7 +48,6 @@ public:
     {
         unsigned kmer_size;
         bool use_strand_bias = true;
-        bool use_base_quality = true;
     };
 
     using BubbleScoreSetter = std::function<double(std::size_t, std::size_t)>;
@@ -306,6 +305,9 @@ private:
     backtrack_until_nonreference(const PredecessorMap& predecessors, Vertex from) const;
     Path extract_nonreference_path(const PredecessorMap& predecessors, Vertex from) const;
     std::vector<EdgePath> extract_k_shortest_paths(Vertex src, Vertex dst, unsigned k) const;
+    Edge head_edge(const Path& path) const;
+    int head_mean_base_quality(const Path& path) const;
+    int tail_mean_base_quality(const Path& path) const;
     double get_min_bubble_score(Vertex ref_head, Vertex ref_tail, BubbleScoreSetter min_bubble_scorer) const;
     double bubble_score(const Path& path) const;
     std::deque<Variant> extract_bubble_paths(unsigned max_bubbles, BubbleScoreSetter min_bubble_scorer);
