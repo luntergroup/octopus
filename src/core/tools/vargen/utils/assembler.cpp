@@ -1721,7 +1721,7 @@ double Assembler::bubble_score(const Path& path) const
 {
     if (path.size() < 2) return 0;
     const auto weight_stats = compute_weight_stats(path);
-    auto result = weight_stats.max;
+    auto result = static_cast<double>(weight_stats.max);
     if (params_.use_strand_bias) {
         GraphEdge::WeightType context_forward_weight {0}, context_reverse_weight {0};
         const auto add_strand_weights = [&] (const auto& p) {
