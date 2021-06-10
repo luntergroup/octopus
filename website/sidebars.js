@@ -11,19 +11,20 @@
 
 module.exports = {
   docs: [
-    'introduction',
     {
       type: 'category',
       label: 'Getting Started',
       collapsed: false,
-      items: ['installation'],
+      items: [
+        'introduction',
+        'installation',
+      ],
     },
     {
       type: 'category',
       label: 'Guides',
       collapsed: true,
       items: [
-        'guides/introduction',
         'guides/preprocessing',
         'guides/discovery',
         'guides/haplotypes',
@@ -64,7 +65,7 @@ module.exports = {
     {
       type: 'category',
       label: 'Case studies',
-      collapsed: false,
+      collapsed: true,
       items: [
         'tutorials/germline'
       ],

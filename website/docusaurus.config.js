@@ -103,7 +103,7 @@ module.exports = {
           ],
         },
       ],
-      copyright: `Copyright © ${new Date().getFullYear()} Daniel P. Cooke. Built with Docusaurus.`,
+      copyright: `Copyright © ${new Date().getFullYear()} Daniel Cooke. Built with Docusaurus.`,
     },
   },
   presets: [
