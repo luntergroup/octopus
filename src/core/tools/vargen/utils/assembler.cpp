@@ -1768,8 +1768,9 @@ double Assembler::bubble_score(const Path& path) const
         std::for_each(p.first, p.second, [&] (Vertex v) {
             add_strand_weights(boost::out_edges(v, graph_));
         });
-        result *= maths::fisher_exact_test(weight_stats.total_forward, context_forward_weight,
-                                                    weight_stats.total_reverse, context_reverse_weight);
+        auto pval = maths::fisher_exact_test(weight_stats.total_forward, context_forward_weight,
+                                            weight_stats.total_reverse, context_reverse_weight);
+        if (pval < 0.01) result *= pval;
     }
     if (params_.use_base_qualities) {
         result *= base_quality_probability(head_mean_base_quality(path));
