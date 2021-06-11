@@ -54,7 +54,7 @@ rule samtools_index_fasta:
     output:
          "{fasta}.fai"
     container:
-        "docker://biocontainers/bioslimcontainers/bwa-samtools"
+        "docker://mblanche/bwa-samtools"
     shell:
         "samtools faidx {input}"
 
@@ -69,7 +69,7 @@ rule bwa_index:
         "data/references/{reference}.fa.pac",
         "data/references/{reference}.fa.sa"
     container:
-        "docker://biocontainers/bioslimcontainers/bwa-samtools"
+        "docker://mblanche/bwa-samtools"
     shell:
         "bwa index {input.fa}"
 
@@ -90,7 +90,7 @@ rule bwa_map:
         "logs/bwa/{library}.{reference}.log"
     threads: 16
     container:
-        "docker://biocontainers/bioslimcontainers/bwa-samtools"
+        "docker://mblanche/bwa-samtools"
     shell:
         "(bwa mem -t {threads} -R '{params.rg}' {input.fa} {input.fq1} {input.fq2} | \
           samtools view -bh | \
@@ -103,7 +103,7 @@ rule samtools_index_bam:
     output:
         "data/reads/mapped/{prefix}.bam.bai"
     container:
-        "docker://biocontainers/bioslimcontainers/bwa-samtools"
+        "docker://mblanche/bwa-samtools"
     shell:
         "samtools index {input}"
 
