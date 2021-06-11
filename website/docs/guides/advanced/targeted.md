@@ -7,7 +7,7 @@ By default, octopus will call all contigs specified in the reference index. Howe
 
 #### `--regions` (`-T`) and `--skip-regions` (`-K`)
 
-Provide a list of regions directly to the command line to call or not call. The format is `<chr>[:start][-][end]`. So the following are valid:
+Provide a list of regions directly to the command line to call or not call. The format is `<chr>[:start][-[end]]`. So the following are valid:
 
   * `chr1`: all of `chr1`.
   * `chr2:10,000,000`: the single position `10000000` in `chr2`.
@@ -31,7 +31,7 @@ Will call all contigs in the reference index other than `Y`. You can provide bot
 
 :::tip
 
-The `--region` option accepts a special ranged argument in the form `<lhs> to <rhs>` where `lhs` and `rhs` are contig names or positions. The reference index is used to expand the range. For example `chr1 to chr3` is expanded to `chr1` `chr2` `chr3`. You can also specify positional start or end points, e.g. `1:10,000,000 to X`. Only one region range can be specified. If it so happens that one of your reference contigs is called `to` then you cannot use this feature!
+The `--region` option accepts a special ranged argument in the form `<lhs> to <rhs>` where `lhs` and `rhs` are contig names or positions. The reference index is used to expand the range. For example `chr1 to chr3` is expanded to `chr1` `chr2` `chr3`. You can also specify positional start or end points, e.g., `1:10,000,000 to X`. Only one region range can be specified. If it so happens that one of your reference contigs is called `to` then you cannot use this feature!
 
 :::
 

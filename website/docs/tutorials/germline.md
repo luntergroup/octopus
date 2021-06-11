@@ -3,9 +3,15 @@ id: germline
 title: Germline WGS
 ---
 
-This case study looks at whole-genome germline variant calling in a single individual (NA12878).
+This case study considers whole-genome germline variant calling in an individual. We will use the syntheic-diploid sample [CHM1-CHM13](https://www.nature.com/articles/s41592-018-0054-7).
 
-### Prerequisites
+This tutorial is [included](../../static/snakemake/germline.smk) as a [Snakemake](https://snakemake.readthedocs.io/en/stable/#) workflow. Run it with
+
+```shell
+$ snakemake --snakefile germline.smk -j 16 --use-singularity
+```
+
+## Prerequisites
 
 - [samtools](https://github.com/samtools/samtools)
 - [bcftools](https://github.com/samtools/bcftools)
@@ -13,97 +19,115 @@ This case study looks at whole-genome germline variant calling in a single indiv
 - [RTG Tools](https://github.com/RealTimeGenomics/rtg-tools)
 - [Octopus](https://github.com/luntergroup/octopus) (with [random forests](https://github.com/luntergroup/octopus/wiki/Variant-filtering:-Random-Forest) installed).
 
-### Download data files
+This tutorial assumes a directory structure like
 
-First download raw reads from the Illumina platinum genomes project for individual NA12878:
-
-```shell
-$ mkdir ~/fastq && cd ~/fastq
-$ wget https://storage.googleapis.com/genomics-public-data/platinum-genomes/fastq/ERR194147_1.fastq.gz
-$ wget https://storage.googleapis.com/genomics-public-data/platinum-genomes/fastq/ERR194147_2.fastq.gz
+```
+.
+└───data
+│   └───references
+│   └───reads
+│   │   └───raw
+│   │   └───mapped
+│   └───truth
+└───results
+    └───calls
+    └───eval
 ```
 
-Next download a copy of the human reference sequence. In this example we use GRCh37 plus a decoy contig (recommended). If you prefer to use GRCh38, be sure to get a copy without alternative contigs or patches (but with a decoy contig), such as the one available [here](ftp://ftp.ncbi.nlm.nih.gov/genomes/all/GCA/000/001/405/GCA_000001405.15_GRCh38/seqs_for_alignment_pipelines.ucsc_ids/GCA_000001405.15_GRCh38_no_alt_plus_hs38d1_analysis_set.fna.gz).
+We'll go ahead and create this upfront:
 
 ```shell
-$ mkdir ~/reference && cd ~/reference
-$ wget ftp://ftp-$ trace.ncbi.nih.gov/1000genomes/ftp/technical/reference/phase2_reference_assembly_sequence/hs37d5.fa.gz && gzip -d hs37d5.fa.gz
+$ mkdir -p data/{references,truth} data/reads/{raw,mapped}
+$ mkdir -p results/{calls,eval}
 ```
 
-To evaluate our calls we need a truth set. We use the Genome In a Bottle (GIAB) version 3.3.2 high confidence calls for NA12878 (HG001):
+## Download data
+
+First, download WGS CHM1-CHM13 PCR-free Illumina HiSeq-X10 reads ([PRJEB13208](https://www.ebi.ac.uk/ena/browser/view/PRJEB13208)) from EBI:
 
 ```shell
-$ mkdir ~/vcf/giab && cd ~/vcf/giab
-$ wget ftp://ftp-trace.ncbi.nlm.nih.gov//giab/ftp/release/NA12878_HG001/NISTv3.3.2/GRCh37
+$ curl ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR134/003/ERR1341793/ERR1341793_1.fastq.gz | gzip > data/reads/raw/CHM1-CHM13_1.fastq.gz
+$ curl ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR134/003/ERR1341793/ERR1341793_2.fastq.gz | gzip > data/reads/raw/CHM1-CHM13_2.fastq.gz
 ```
 
-### Map reads to reference genome
-
-First we need to index the reference sequence:
+Next, we need a reference genome. In this example we'll use GRCh38 with ALT and decoys contigs (hs38DH). The simplest way to get this is with `bwakit`:
 
 ```shell
-$ cd ~/reference
-$ samtools faidx hs37d5.fa
-$ bwa index hs37d5.fa
+$ run-gen-ref hs38DH
+$ mv hs38DH.fa* data/references
 ```
 
-Then map our reads to the reference:
+We'll also need the truth variants to evaluate our calls, which we can get from the [CHM-eval GitHub](https://github.com/lh3/CHM-eval):
 
 ```shell
-$ mkdir ~/bam 
-$ bwa mem -t 15 -R "@RG\tID:1\tSM:NA12878\tLB:platinum\tPU:illumina" \
-      ~/reference/hs37d5.fa \
-      ~/fastq/ERR194147_1.fastq.gz ~/fastq/ERR194147_2.fastq.gz \
-      | samtools view -bh | samtools sort -@ 5 -o ~/bam/NA12878.platinum.b37.bam -
-$ samtools index ~/bam/NA12878.platinum.b37.bam
+$ curl -L https://github.com/lh3/CHM-eval/releases/download/v0.5/CHM-evalkit-20180222.tar | tar xf - > data/truth/syndip
+```
+
+## Map reads
+
+First, we need to index the reference genome for alignment:
+
+```shell
+$ samtools faidx data/references/hs38DH.fa
+$ bwa index data/references/hs38DH.fa
+```
+
+Next, we map the raw reads to the reference genome with `bwa mem`:
+
+```shell
+$ bwa mem -t 16 \
+     -R "@RG\tID:0\tSM:NA128CHM1-CHM1378\tLB:Broad\tPU:Illumina" \
+     data/reference/hs38DH.fa \
+     data/reads/raw/CHM1-CHM13_1.fastq.gz data/reads/raw/CHM1-CHM13_2.fastq.gz | \
+     samtools view -bh | \
+     samtools sort -@ 4 -o data/reads/mapped/CHM1-CHM13.hs38DH.bwa-mem.bam -
+$ samtools index data/reads/mapped/CHM1-CHM13.hs38DH.bwa-mem.bam
 ```
 
 This should take a few hours.
 
-### Call variants
+## Call variants
 
-We do not recommend pre-processing the raw BWA alignments (e.g. duplicate marking, or base quality score recalibration) as we do not find this provides consistent  improvements in accuracy, and tends to slow down calling as pre-processed reads files can be larger than the originals. As this is human data, the default arguments for octopus should work well. We restrict calling to the autosomes plus X as these are the only contigs present in the validation sets. We also request a 'legacy' VCF file to use for benchmarking (see section on octopus's default VCF format).
+Now we can call variants with `octopus`. Since this is single-sample germline calling, we'll be using the [individual](../guides/models/individual.md) calling model. We'll also set the [sequence error model](../guides/errorModels.md) to reflect the PCR-free library design of this sample and Illlumina X10 sequencer, and use [random forest filtering](../guides/filtering/forest.md). Finally, we [restrict calling](../guides/advanced/targeted.md) to the primary chromosomes and use the built-in [multithreading](../guides/advanced/threading.md):
 
 ```shell
 $ octopus \
-     -R ~/reference/hs37d5.fa \
-     -I ~/bam/NA12878.platinum.b37.bam \
-     -T 1 to MT \
-     --sequence-error-model PCR-FREE.HISEQ-2000 \
-     --forest forests/germline.v0.6.0-beta.forest \
-     -o ~/vcf/NA12878.platinum.b37.octopus.vcf.gz \
-     --threads 20 \
-     --legacy
+     -R data/reference/hs38DH.fa \
+     -I data/reads/mapped/CHM1-CHM13.hs38DH.bwa-mem.bam \
+     -T chr1 to chrM \
+     --sequence-error-model PCRF.X10 \
+     --forest resources/forests/germline.v0.7.4.forest \
+     -o results/calls/CHM1-CHM13.hs38DH.bwa-mem.octopus.vcf.gz \
+     --threads 16
 ```
 
 This should complete in a few hours.
 
-### Evaluate variant calls
+## Evaluate variants
 
-Finally, we will evaluate our calls with RTG Tools `vcfeval`. This command requires the reference sequence to be preprocessed:
+Finally, we will evaluate our calls with RTG Tools `vcfeval`. This tool requires the reference sequence to be preprocessed:
 
 ```shell
-$ ~/tools/rtgtools/rtg format -o ~/reference/hs37d5_sdf ~/reference/hs37d5.fa
+$ rtg format -o ~/reference/hs37d5_sdf ~/reference/hs37d5.fa
 ```
 
-Then run vcfeval:
+Then evaluate the calls with `vcfeval`:
 
 ```shell
 $ rtg vcfeval \
-     -t ~/reference/hs37d5_sdf \
-     -b ~/vcf/giab/HG001_GRCh37_truth.vcf.gz \
-     --evaluation-regions ~/vcf/giab/HG001_GRCh37_hiconf.bed \
-     -c ~/vcf/NA12878.platinum.b37.octopus.legacy.vcf.gz \
-     -o ~/eval/NA12878.platinum.b37.octopus.eval \
-     -f FORMAT.RFQUAL \
+     -t data/reference/hs38DH.sdf \
+     -b data/truth/syndip/full.38.vcf.gz \
+     --evaluation-regions data/truth/syndip/full.38.bed.gz \
+     -c results/calls/CHM1-CHM13.hs38DH.bwa-mem.octopus.vcf.gz \
+     -o results/eval/CHM1-CHM13.hs38DH.bwa-mem.octopus.pass.vcfeval \
+     -f RFGQ \
+     -m annotate \
      --ref-overlap
 ```
 
-We see the following results:
+We should see the following results:
 
 ```shell
 Threshold  True-pos-baseline  True-pos-call  False-pos  False-neg  Precision  Sensitivity  F-measure
 ----------------------------------------------------------------------------------------------------
-    4.770            3680280        3703892       2042      10581     0.9994       0.9971     0.9983
-     None            3681055        3704782       3297       9806     0.9991       0.9973     0.9982
 ```
