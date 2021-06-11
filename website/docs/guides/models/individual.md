@@ -1,9 +1,9 @@
 ---
 id: individual
-title: individual
+title: Individual
 ---
 
-The `individual` calling model is used to call germline variants in a single sample of known ploidy. It is the simplest model.
+The `individual` calling model is used to call germline variants in a single sample with known ploidy. It is the simplest model Octopus offers.
 
 ## Usage
 
@@ -25,9 +25,9 @@ By default, octopus automatically detects and calls all samples contained in the
 $ octopus -R hs37d5.fa -I multi-sample.bam -S NA12878
 ```
 
-## Setting ploidy
+## Setting the ploidy
 
-Octopus is setup to call diploid samples by default. If your sample is not diploid you can set the ploidy with the `--organism-ploidy` (`-P`) option:
+Octopus assume diploid samples by default. If your sample is not diploid you can set the ploidy with the `--organism-ploidy` (`-P`) option:
 
 ```shell
 $ octopus -R hs37d5.fa -I haploid.bam -P 1

@@ -1,6 +1,6 @@
 ---
 id: trio
-title: trio
+title: Trio
 ---
 
 The `trio` calling model is for calling germline variation and _de novo_ mutations in parent-offspring trios.

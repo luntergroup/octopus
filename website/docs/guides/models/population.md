@@ -1,6 +1,6 @@
 ---
 id: population
-title: population
+title: Population
 ---
 
 The `population` calling model is for jointly calling germline variation in small cohorts of samples with known ploidy but unknown pedigree structure. 

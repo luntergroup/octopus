@@ -1,6 +1,6 @@
 ---
 id: cell
-title: cell
+title: Cell
 ---
 
 The `cell` calling model is used to call germline and somatic variants in single cell and minibatch cell sequencing data. The model attempts to infer local phylogenies for the cells and accounts for allelic biases and dropout often observed in single cell sequencing data.

@@ -23,11 +23,17 @@ $ octopus -R hs37d5.fa -I NA12878.bam \
 
 Conversely the `--skip-regions` is for providing a list of regions **not** to call. The format is exactly the same as for `--regions`, so:
 
-```shell
+```console
 $ octopus -R hs37d5.fa -I NA12878.bam -K Y
 ```
 
 Will call all contigs in the reference index other than `Y`. You can provide both `--regions` and `--skip-regions` together, in which case the complement of `--region` and `--skip-regions` will be used.
+
+:::tip
+
+The `--region` option accepts a special ranged argument in the form `<lhs> to <rhs>` where `lhs` and `rhs` are contig names or positions. The reference index is used to expand the range. For example `chr1 to chr3` is expanded to `chr1` `chr2` `chr3`. You can also specify positional start or end points, e.g. `1:10,000,000 to X`. Only one region range can be specified. If it so happens that one of your reference contigs is called `to` then you cannot use this feature!
+
+:::
 
 #### `--regions-file` (`-t`) and `--skip-regions-file` (`-k`)
 

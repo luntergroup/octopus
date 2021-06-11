@@ -1,6 +1,6 @@
 ---
 id: polyclone
-title: polyclone
+title: Polyclone
 ---
 
 The `polyclone` calling model is for calling variation in a pooled sample of haploid clones where the number and mixture composition of clones is unknown, as is sometimes the case in bacteria or virus sequencing studies. 

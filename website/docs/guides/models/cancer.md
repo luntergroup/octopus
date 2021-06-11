@@ -1,6 +1,6 @@
 ---
 id: cancer
-title: cancer
+title: Cancer
 ---
 
 The `cancer` calling model is for calling germline variation and somatic mutations in tumours. The model can jointly genotype multiple tumours from the same individual, and make use of a normal sample for improved classification power.
