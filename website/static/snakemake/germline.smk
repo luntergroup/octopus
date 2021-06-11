@@ -7,7 +7,7 @@ rule download_hs38DH:
         "data/references/hs38DH.fa",
         "data/references/hs38DH.fa.alt"
     container:
-        "docker://biocontainers/bwakit"
+        "docker://biocontainers/bwakit:v0.7.15_cv1"
     shell:
         """
         run-gen-ref hs38DH
