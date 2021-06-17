@@ -337,11 +337,11 @@ bool operator<(const Assembler::Variant& lhs, const Assembler::Variant& rhs) noe
 }
 
 std::deque<Assembler::Variant>
-Assembler::extract_variants(const unsigned max_bubbles, const double min_bubble_score)
+Assembler::extract_variants(const unsigned max_bubbles, const BubbleScoreSetter min_bubble_scorer)
 {
     if (is_empty() || is_all_reference()) return {};
     set_all_edge_transition_scores_from(reference_head());
-    auto result = extract_bubble_paths(max_bubbles, min_bubble_score);
+    auto result = extract_bubble_paths(max_bubbles, min_bubble_scorer);
     std::sort(std::begin(result), std::end(result));
     result.erase(std::unique(std::begin(result), std::end(result)), std::end(result));
     return result;
@@ -1727,6 +1727,17 @@ int Assembler::tail_mean_base_quality(const Path& path) const
     return base_quality_sum / total_weight;
 }
 
+double Assembler::get_min_bubble_score(Vertex ref_head, Vertex ref_tail, BubbleScoreSetter min_bubble_scorer) const
+{
+    const auto ref_head_itr = std::find(std::cbegin(reference_vertices_), std::cend(reference_vertices_), ref_head);
+    assert(ref_head_itr != std::cend(reference_vertices_));
+    const auto ref_head_idx = static_cast<std::size_t>(std::distance(std::cbegin(reference_vertices_), ref_head_itr));
+    const auto ref_tail_itr = std::find(ref_head_itr, std::cend(reference_vertices_), ref_tail);
+    assert(ref_tail_itr != std::cend(reference_vertices_));
+    const auto ref_tail_idx = static_cast<std::size_t>(std::distance(std::cbegin(reference_vertices_), ref_tail_itr));
+    return min_bubble_scorer(ref_head_idx, ref_tail_idx);
+}
+
 namespace {
 
 double base_quality_probability(const int base_quality)
@@ -1741,16 +1752,31 @@ double Assembler::bubble_score(const Path& path) const
 {
     if (path.size() < 2) return 0;
     const auto weight_stats = compute_weight_stats(path);
-    auto result = weight_stats.stdev > weight_stats.mean ? std::min(weight_stats.mean, weight_stats.median) : std::max(weight_stats.mean, weight_stats.median);
-    if (params_.strand_tail_mass) {
-        const auto tail_mass = maths::beta_tail_probability(static_cast<double>(weight_stats.total_forward + 1),
-                                                            static_cast<double>(weight_stats.total_reverse + 1),
-                                                            *params_.strand_tail_mass);
-        result *= (1.0 - tail_mass);
+    auto result = static_cast<double>(weight_stats.max);
+    if (params_.use_strand_bias) {
+        GraphEdge::WeightType context_forward_weight {0}, context_reverse_weight {0};
+        const auto add_strand_weights = [&] (const auto& p) {
+            std::for_each(p.first, p.second, [&] (const Edge e) {
+                const auto forward_weight = graph_[e].forward_strand_weight;
+                context_forward_weight += forward_weight;
+                context_reverse_weight += (graph_[e].weight - forward_weight);
+            });
+        };
+        add_strand_weights(boost::in_edges(path.front(), graph_));
+        // path.front() is reference, path.back() is not
+        const auto p = boost::adjacent_vertices(path.back(), graph_);
+        std::for_each(p.first, p.second, [&] (Vertex v) {
+            add_strand_weights(boost::out_edges(v, graph_));
+        });
+        auto pval = maths::fisher_exact_test(weight_stats.total_forward, context_forward_weight,
+                                            weight_stats.total_reverse, context_reverse_weight);
+        if (pval < 0.001) result *= pval;
     }
-    result *= base_quality_probability(head_mean_base_quality(path));
-    if (path.size() > 2) {
-        result *= base_quality_probability(tail_mean_base_quality(path));
+    if (params_.use_base_qualities) {
+        result *= base_quality_probability(head_mean_base_quality(path));
+        if (path.size() > 2) {
+            result *= base_quality_probability(tail_mean_base_quality(path));
+        }
     }
     return result;
 }
@@ -1791,7 +1817,7 @@ auto make_bfs_searcher(Vertex v)
 }
 
 std::deque<Assembler::Variant>
-Assembler::extract_bubble_paths(unsigned k, const double min_bubble_score)
+Assembler::extract_bubble_paths(unsigned k, const BubbleScoreSetter min_bubble_scorer)
 {
     auto num_remaining_alt_kmers = num_kmers() - num_reference_kmers();
     std::deque<Variant> result {};
@@ -1806,7 +1832,7 @@ Assembler::extract_bubble_paths(unsigned k, const double min_bubble_score)
             // complete reference path is shortest path
             if (dominator_tree) {
                 if (use_weights) {
-                    utils::append(extract_bubble_paths_with_ksp(k, min_bubble_score), result);
+                    utils::append(extract_bubble_paths_with_ksp(k, min_bubble_scorer), result);
                     return result;
                 } else {
                     use_weights = true;
@@ -1829,6 +1855,7 @@ Assembler::extract_bubble_paths(unsigned k, const double min_bubble_score)
             const auto ref_before_bubble = predecessors.at(alt_path.front());
             auto ref_seq = make_reference(ref_before_bubble, ref);
             alt_path.push_front(ref_before_bubble);
+            const auto min_bubble_score = get_min_bubble_score(ref_before_bubble, ref, min_bubble_scorer);
             const auto score = bubble_score(alt_path);
             const bool is_extractable {score >= min_bubble_score};
             auto alt_seq = make_sequence(alt_path);
@@ -1964,7 +1991,7 @@ Assembler::extract_bubble_paths(unsigned k, const double min_bubble_score)
                 prune_reference_flanks();
                 regenerate_vertex_indices();
             }
-            utils::append(extract_bubble_paths_with_ksp(k, min_bubble_score), result);
+            utils::append(extract_bubble_paths_with_ksp(k, min_bubble_scorer), result);
             return result;
         } else if (!removed_bubble) {
             use_weights = true;
@@ -2011,7 +2038,7 @@ std::deque<Assembler::SubGraph> Assembler::find_independent_subgraphs() const
     }
 }
 
-std::deque<Assembler::Variant> Assembler::extract_bubble_paths_with_ksp(const unsigned k, const double min_bubble_score)
+std::deque<Assembler::Variant> Assembler::extract_bubble_paths_with_ksp(const unsigned k, const BubbleScoreSetter min_bubble_scorer)
 {
     const auto subgraphs = find_independent_subgraphs();
     std::deque<Variant> result {};
@@ -2035,6 +2062,7 @@ std::deque<Assembler::Variant> Assembler::extract_bubble_paths_with_ksp(const un
                 std::transform(alt_head_itr, std::next(alt_tail_itr), std::back_inserter(alt_path),
                                [this] (Edge e) { return boost::source(e, graph_); });
                 const auto num_ref_kmers = count_kmers(ref_seq, kmer_size());
+                const auto min_bubble_score = get_min_bubble_score(ref_before_bubble, ref_after_bubble, min_bubble_scorer);
                 const auto score = bubble_score(alt_path);
                 if (score >= min_bubble_score) {
                     auto alt_seq = make_sequence(alt_path);

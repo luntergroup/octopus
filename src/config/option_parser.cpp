@@ -431,6 +431,10 @@ OptionMap parse_options(const int argc, const char** argv)
     ("min-bubble-score",
      po::value<double>()->default_value(2.0),
      "Minimum bubble score that will be extracted from the assembly graph")
+
+    ("allow-strand-biased-candidates",
+     po::bool_switch()->default_value(false),
+     "Do not account for strand bias when evaluating whether to include a candidate variant")
     
     ("min-candidate-credible-vaf-probability",
      po::value<float>()->default_value(0.75),

@@ -1261,6 +1261,7 @@ auto make_variant_generator_builder(const OptionMap& options, const boost::optio
         } else {
             scanner_options.misalignment_parameters = boost::none;
         }
+        scanner_options.ignore_strand_bias = options.at("allow-strand-biased-candidates").as<bool>();
         result.set_cigar_scanner(std::move(scanner_options));
     }
     if (repeat_candidate_variant_generator_enabled(options)) {
@@ -1287,6 +1288,7 @@ auto make_variant_generator_builder(const OptionMap& options, const boost::optio
         reassembler_options.min_bubble_score = get_assembler_bubble_score_setter(options);
         reassembler_options.max_variant_size = as_unsigned("max-variant-size", options);
         reassembler_options.cycle_tolerance = get_assembler_cycle_tolerance(options);
+        reassembler_options.ignore_strand_bias = options.at("allow-strand-biased-candidates").as<bool>();
         result.set_local_reassembler(std::move(reassembler_options));
     }
     if (is_set("source-candidates", options) || is_set("source-candidates-file", options)) {

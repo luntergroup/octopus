@@ -49,6 +49,7 @@ public:
         BubbleScoreSetter min_bubble_score            = [] (const GenomicRegion&, const ReadBaseCountMap&) { return 2.0; };
         Variant::MappingDomain::Size max_variant_size = 5000;
         CyclicGraphTolerance cycle_tolerance          = CyclicGraphTolerance::high;
+        bool ignore_strand_bias                       = false;
     };
     
     LocalReassembler() = delete;
@@ -126,6 +127,7 @@ private:
     BubbleScoreSetter min_bubble_score_;
     Variant::MappingDomain::Size max_variant_size_;
     Options::CyclicGraphTolerance cycle_tolerance_;
+    bool ignore_strand_bias_;
     
     void prepare_bins(const GenomicRegion& active_region, BinList& bins) const;
     bool should_assemble_bin(const Bin& bin) const;
@@ -137,7 +139,7 @@ private:
     AssemblerStatus assemble_bin(unsigned kmer_size, const Bin& bin, std::deque<Variant>& result) const;
     AssemblerStatus try_assemble_region(Assembler& assembler, const NucleotideSequence& reference_sequence,
                                         const GenomicRegion& reference_region, std::deque<Variant>& result) const;
-    double calculate_min_bubble_score(const GenomicRegion& assemble_region) const;
+    double calculate_min_bubble_score(const GenomicRegion& bubble_region) const;
 };
 
 struct ConstantBubbleScoreSetter
