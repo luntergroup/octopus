@@ -79,43 +79,58 @@ IndividualCaller::Latents::Latents(const SampleName& sample,
                                    const IndexedHaplotypeBlock& haplotypes,
                                    IndividualCaller::GenotypeBlock genotypes,
                                    ModelInferences&& inferences)
-: genotype_posteriors_ {}
+: genotype_log_posteriors_ {}
+, genotype_posteriors_ {}
 , haplotype_posteriors_ {}
-, model_log_evidence_ {inferences.log_evidence}
-{
-    GenotypeProbabilityMap genotype_log_posteriors {std::cbegin(genotypes), std::cend(genotypes)};
-    insert_sample(sample, inferences.posteriors.genotype_log_probabilities, genotype_log_posteriors);
-    genotype_log_posteriors_ = std::make_shared<GenotypeProbabilityMap>(std::move(genotype_log_posteriors));
-    GenotypeProbabilityMap genotype_posteriors {std::make_move_iterator(std::begin(genotypes)), std::make_move_iterator(std::end(genotypes))};
-    insert_sample(sample, inferences.posteriors.genotype_probabilities, genotype_posteriors);
-    genotype_posteriors_  = std::make_shared<GenotypeProbabilityMap>(std::move(genotype_posteriors));
-    haplotype_posteriors_ = std::make_shared<HaplotypeProbabilityMap>(calculate_haplotype_posteriors(haplotypes));
-}
+, haplotypes_ {std::move(haplotypes)}
+, genotypes_ {std::move(genotypes)}
+, latents_ {std::move(inferences)}
+, samples_ {sample}
+{}
 
 std::shared_ptr<IndividualCaller::Latents::HaplotypeProbabilityMap>
-IndividualCaller::Latents::haplotype_posteriors() const noexcept
+IndividualCaller::Latents::haplotype_posteriors() const
 {
+    if (!haplotype_posteriors_) {
+        haplotype_posteriors_ = std::make_shared<HaplotypeProbabilityMap>(calculate_haplotype_posteriors(haplotypes_));
+    }
     return haplotype_posteriors_;
 }
 
 std::shared_ptr<IndividualCaller::Latents::GenotypeProbabilityMap>
-IndividualCaller::Latents::genotype_posteriors() const noexcept
+IndividualCaller::Latents::genotype_posteriors() const
 {
+    if (!genotype_posteriors_) {
+        GenotypeProbabilityMap genotype_posteriors {std::cbegin(genotypes_), std::cend(genotypes_)};
+        insert_sample(samples_, latents_.posteriors.genotype_probabilities, genotype_posteriors);
+        genotype_posteriors_ = std::make_shared<GenotypeProbabilityMap>(std::move(genotype_posteriors));
+    }
     return genotype_posteriors_;
+}
+
+std::shared_ptr<IndividualCaller::Latents::GenotypeProbabilityMap>
+IndividualCaller::Latents::genotype_log_posteriors() const
+{
+    if (!genotype_log_posteriors_) {
+        GenotypeProbabilityMap genotype_log_posteriors {std::cbegin(genotypes_), std::cend(genotypes_)};
+        insert_sample(samples_, latents_.posteriors.genotype_log_probabilities, genotype_log_posteriors);
+        genotype_log_posteriors_ = std::make_shared<GenotypeProbabilityMap>(std::move(genotype_log_posteriors));
+    }
+    return genotype_log_posteriors_;
 }
 
 // IndividualCaller::Latents private methods
 
 IndividualCaller::Latents::HaplotypeProbabilityMap
-IndividualCaller::Latents::calculate_haplotype_posteriors(const IndexedHaplotypeBlock& haplotypes)
+IndividualCaller::Latents::calculate_haplotype_posteriors(const IndexedHaplotypeBlock& haplotypes) const
 {
-    assert(genotype_posteriors_ != nullptr);
+    const auto& genotype_posteriors = *this->genotype_posteriors();
     HaplotypeProbabilityMap result {haplotypes.size()};
     for (const auto& haplotype : haplotypes) {
         result.emplace(haplotype, 0.0);
     }
-    const auto& sample = std::cbegin(*genotype_posteriors_)->first;
-    for (const auto& p : (*genotype_posteriors_)[sample]) {
+    const auto& sample = std::cbegin(genotype_posteriors)->first;
+    for (const auto& p : genotype_posteriors[sample]) {
         for (const auto& haplotype : collapse(p.first)) {
             result.at(haplotype) += p.second;
         }
@@ -164,13 +179,13 @@ IndividualCaller::calculate_model_posterior(const HaplotypeBlock& haplotypes,
                                             const Latents& latents) const
 {
     const auto indexed_haplotypes = index(haplotypes);
-    const auto genotypes = generate_all_genotypes(indexed_haplotypes, parameters_.ploidy + 1);
+    const auto genotypes = propose_model_check_genotypes(haplotypes, indexed_haplotypes, latents);
     const auto prior_model = make_prior_model(haplotypes);
     prior_model->prime(haplotypes);
     const model::IndividualModel model {*prior_model, debug_log_};
     haplotype_likelihoods.prime(sample());
     const auto inferences = model.evaluate(genotypes, haplotype_likelihoods);
-    return octopus::calculate_model_posterior(latents.model_log_evidence_, inferences.log_evidence);
+    return octopus::calculate_model_posterior(latents.latents_.log_evidence, inferences.log_evidence);
 }
 
 namespace {
@@ -381,7 +396,7 @@ IndividualCaller::call_variants(const std::vector<Variant>& candidates,
                                 const Latents& latents) const
 {
     if (parameters_.ploidy == 0) return {};
-    const auto& genotype_log_posteriors = (*latents.genotype_log_posteriors_)[sample()];
+    const auto& genotype_log_posteriors = (*latents.genotype_log_posteriors())[sample()];
     debug::log(genotype_log_posteriors, debug_log_, trace_log_);
     const auto candidate_posteriors = compute_candidate_posteriors(candidates, genotype_log_posteriors);
     debug::log(candidate_posteriors, debug_log_, trace_log_, parameters_.min_variant_posterior);
@@ -583,8 +598,8 @@ IndividualCaller::call_reference(const std::vector<Allele>& alleles,
                                  const Latents& latents,
                                  const ReadPileupMap& pileups) const
 {
-    const auto& genotype_posteriors = (*latents.genotype_posteriors_)[sample()];
-    const auto& genotype_log_posteriors = (*latents.genotype_log_posteriors_)[sample()];
+    const auto& genotype_posteriors = (*latents.genotype_posteriors())[sample()];
+    const auto& genotype_log_posteriors = (*latents.genotype_log_posteriors())[sample()];
     auto calls = octopus::call_reference(alleles, genotype_posteriors, genotype_log_posteriors,
                                          pileups.at(sample()),parameters_.min_refcall_posterior);
     return transform_calls(std::move(calls), sample(), parameters_.ploidy);
@@ -713,6 +728,21 @@ IndividualCaller::propose_genotypes(const HaplotypeBlock& haplotypes,
             result = std::move(next_result);
         }
     }
+    return result;
+}
+
+IndividualCaller::GenotypeBlock 
+IndividualCaller::propose_model_check_genotypes(const HaplotypeBlock& haplotypes,
+                                                const IndexedHaplotypeBlock& indexed_haplotypes,
+                                                const Latents& latents) const
+{   
+    auto current_genotypes = latents.genotypes_;
+    sort_by_other(current_genotypes, latents.latents_.posteriors.genotype_log_probabilities);
+    const auto num_seeds = std::min(std::size_t {3}, current_genotypes.size());
+    auto seed_itr = std::prev(std::end(current_genotypes), num_seeds);
+    GenotypeBlock result {mapped_region(haplotypes)};
+    extend(seed_itr, std::end(current_genotypes), indexed_haplotypes, std::back_inserter(result));
+    erase_duplicates(result);
     return result;
 }
 
