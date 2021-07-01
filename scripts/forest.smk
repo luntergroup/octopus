@@ -328,7 +328,8 @@ rule vcfeval:
         bed_regions = lambda wildcards: str(examples[wildcards.label].regions),
         squash_ploidy = lambda wildcards: "--squash-ploidy" if wildcards.kind == "somatic" else "",
         ploidy = lambda wildcards: get_vcfeval_ploidy_option(examples[wildcards.label], wildcards.sample),
-        calls_sample = lambda wildcards: "ALT" if wildcards.kind == "somatic" else wildcards.sample
+        calls_sample = lambda wildcards: "ALT" if wildcards.kind == "somatic" else wildcards.sample,
+        mode = "annotate"
     threads: 20
     shell:
         "bcftools view -h {input.baseline_vcf} | \
@@ -345,6 +346,7 @@ rule vcfeval:
          --ref-overlap \
          --no-roc \
          --threads {threads} \
+         -m {params.mode} \
          -o {output} \
          {params.squash_ploidy} \
          {params.ploidy} \
@@ -404,26 +406,23 @@ def rename_vcf(old_name, new_name, index=True):
             new_index_name = new_name.with_suffix(new_name.suffix + ".tbi")
             old_index_name.rename(new_index_name)
 
-def add_vcfeval_missing_homrefs(vcfeval_dir, octopus_vcf, sample, regions=None):
-    if has_homref_calls(octopus_vcf, sample=sample):
-        # Missing TP homref calls should be any calls not in the vcfeval TP or FP sets, but in the source VCF
-        vcfeval_tp_vcf_filename, vcfeval_fp_vcf_filename = vcfeval_dir / "tp.vcf.gz", vcfeval_dir / "fp.vcf.gz"
-        tp_homref_vcf_filename = vcfeval_dir / 'tp.homref.vcf.gz'
-        complement_vcf(octopus_vcf, [vcfeval_tp_vcf_filename, vcfeval_fp_vcf_filename], tp_homref_vcf_filename, regions_bed=regions)
-        new_tp_vcf_filename = vcfeval_dir / "tp.with_homref.vcf.gz"
-        concat_vcfs([vcfeval_tp_vcf_filename, tp_homref_vcf_filename], new_tp_vcf_filename)
-        rename_vcf(new_tp_vcf_filename, vcfeval_tp_vcf_filename)
-        remove_vcf(tp_homref_vcf_filename)
-        
-        # Missing FP homref calls should be any calls in the vcfeval FN and the source set, but not already in the FP set
-        fp_homref_vcf_filename = vcfeval_dir / "fp.homref.vcf.gz"
-        intersect_vcfs([octopus_vcf, vcfeval_dir / "fn.vcf.gz"], fp_homref_vcf_filename, regions_bed=regions)
-        new_fp_vcf_filename = vcfeval_dir / "fp.with_homref.vcf.gz"
-        concat_vcfs([vcfeval_fp_vcf_filename, fp_homref_vcf_filename], new_fp_vcf_filename) # removes duplicates already in FP set
-        rename_vcf(new_fp_vcf_filename, vcfeval_fp_vcf_filename)
-        remove_vcf(fp_homref_vcf_filename)
+def classify_vcfeval_ignored_calls(vcfeval_dir, octopus_vcf, sample, regions=None):
+    calls_vcf = ps.VariantFile(vcfeval_dir / "calls.vcf.gz")
+    baseline_vcf = ps.VariantFile(vcfeval_dir / "baseline.vcf.gz")
+    new_calls_vcf = ps.VariantFile(vcfeval_dir / "calls.homref.vcf.gz", 'w', header=calls_vcf.header)
+    for call in calls_vcf:
+        if call.info["CALL"] == "IGN":
+            if any(baseline.info["BASE"] == "FN" for baseline in baseline_vcf.fetch(call.chrom, call.pos)):
+                call.info["CALL"] = "FP"
+            else:
+                call.info["CALL"] = "TP"
+        new_calls_vcf.write(call)
+    calls_vcf.close()
+    baseline_vcf.close()
+    new_calls_vcf.close()
+    rename_vcf(vcfeval_dir / "calls.homref.vcf.gz", vcfeval_dir / "calls.vcf.gz")
 
-rule add_homref_calls:
+rule classify_homref_calls:
     input:
         eval_dir = "eval/{label}.octopus.ann.{sample}.{kind}.vcfeval",
         calls_vcf = "calls/{label}.octopus.ann.{kind}.vcf.gz"
@@ -432,9 +431,9 @@ rule add_homref_calls:
     params:
         regions = lambda wildcards: examples[wildcards.label].confident[wildcards.sample]
     run:
-        add_vcfeval_missing_homrefs(Path(input[0]), Path(input[1]), wildcards.sample, params.regions)
+        classify_vcfeval_ignored_calls(Path(input[0]), Path(input[1]), wildcards.sample, params.regions)
         open(output[0], 'w')
-localrules: add_homref_calls
+localrules: classify_homref_calls
 
 def get_annotation(field, rec, sample=None):
     if field == 'QUAL':
@@ -466,37 +465,46 @@ def to_str(x):
 def annotation_to_string(x, missing_value):
     return to_str(missing_value) if is_missing(x) else to_str(x)
 
+def encode_classification(classifcation):
+    if classifcation == "TP":
+        return 1
+    elif classifcation == "FP":
+        return 0
+    else:
+        return 2
+
 def make_ranger_data(vcf_filename, out_filename, sample, classifcation, measures, missing_value=-1, fraction=1):
     vcf = ps.VariantFile(vcf_filename)
     with out_filename.open(mode='w') as ranger_data:
         datawriter = csv.writer(ranger_data, delimiter=' ')
+        encoded_classification = encode_classification(classifcation)
         for rec in vcf:
-            if fraction >= 1 or random.random() <= fraction:
+            if rec.info["CALL"] == classifcation and fraction >= 1 or random.random() <= fraction:
                 row = [annotation_to_string(get_annotation(measure, rec, sample=sample), missing_value) for measure in measures]
-                row.append(str(int(classifcation)))
+                row.append(encoded_classification)
                 datawriter.writerow(row)
 
 rule extract_annotations:
     input:
         rules.vcfeval.output,
-        rules.add_homref_calls.output
+        rules.classify_homref_calls.output
     output:
         "dat/{label}.octopus.ann.{sample}.{kind}.{classification}.dat"
     params:
-        vcf = lambda wildcards, input: str(Path(input[0]) / (wildcards.classification + ".vcf.gz")),
+        vcf = lambda _, input: Path(input[0]) / "calls.vcf.gz",
         measures = measures,
-        fraction = lambda wildcards: examples[wildcards.label].tp_fraction if wildcards.kind == "tp" else  examples[wildcards.label].fp_fraction
+        fraction = lambda wildcards: examples[wildcards.label].tp_fraction if wildcards.kind.startswith("tp") else  examples[wildcards.label].fp_fraction
     wildcard_constraints:
         kind = "|".join([re.escape(s) for s in ["germline", "somatic"]]),
-        classification = "|".join([re.escape(s) for s in ["tp", "fp"]])
+        classification = "|".join([re.escape(s) for s in ["TP", "FP_CA", "FP"]])
     run:
-        make_ranger_data(Path(params.vcf), Path(output[0]), wildcards.sample, wildcards.classification == "tp", params.measures, fraction=params.fraction) 
+        make_ranger_data(params.vcf, Path(output[0]), wildcards.sample, wildcards.classification, params.measures, fraction=params.fraction) 
 localrules: extract_annotations
 
 rule cat_annotations:
     input:
-        "dat/{label}.octopus.ann.{sample}.{kind}.tp.dat",
-        "dat/{label}.octopus.ann.{sample}.{kind}.fp.dat"
+        expand("dat/{{label}}.octopus.ann.{{sample}}.{{kind}}.{classification}.dat",
+               classification=["TP", "FP_CA", "FP"])
     output:
         "dat/{label}.octopus.ann.{sample}.{kind}.dat"
     wildcard_constraints:
