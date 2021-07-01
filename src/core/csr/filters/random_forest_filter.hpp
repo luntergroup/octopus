@@ -92,6 +92,7 @@ private:
     mutable std::deque<std::size_t> hard_filtered_record_indices_;
     mutable std::vector<bool> hard_filtered_;
     
+    const static std::string allele_quality_name_;
     const static std::string genotype_quality_name_;
     const static std::string call_quality_name_;
     
@@ -112,6 +113,7 @@ private:
                                   const MeasureVector& measures, std::vector<std::string>& reasons) const override;
     
     std::unique_ptr<ranger::Forest> make_forest() const;
+    boost::optional<std::string> allele_quality_name() const override;
     boost::optional<std::string> genotype_quality_name() const override;
     std::int8_t choose_forest(const MeasureVector& measures) const;
     void prepare_for_registration(const SampleList& samples) const override;

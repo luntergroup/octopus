@@ -81,7 +81,7 @@ protected:
     {
         enum class Category { hard_filtered, soft_filtered, unfiltered } category;
         std::vector<std::string> reasons = {};
-        boost::optional<Phred<double>> quality = boost::none;
+        boost::optional<Phred<double>> quality = boost::none, genotype_quality = boost::none;
     };
     using ClassificationList = std::vector<Classification>;
     
@@ -121,6 +121,7 @@ private:
     virtual void annotate(VcfHeader::Builder& header) const = 0;
     virtual void filter(const VcfReader& source, VcfWriter& dest, const VcfHeader& dest_header) const = 0;
     virtual boost::optional<std::string> call_quality_name() const { return boost::none; }
+    virtual boost::optional<std::string> allele_quality_name() const { return boost::none; }
     virtual boost::optional<std::string> genotype_quality_name() const { return boost::none; }
     virtual boost::optional<Phred<double>> compute_joint_quality(const ClassificationList& sample_classifications, const MeasureVector& measures) const;
     virtual bool is_soft_filtered(const ClassificationList& sample_classifications, boost::optional<Phred<double>> joint_quality,
