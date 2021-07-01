@@ -138,9 +138,6 @@ VariantCallFilter::Classification
 VariantCallFilter::merge(const ClassificationList& sample_classifications, const MeasureVector& measures) const
 {
     assert(!sample_classifications.empty());
-    if (sample_classifications.size() == 1) {
-        return sample_classifications.front();
-    }
     Classification result {};
     result.quality = compute_joint_quality(sample_classifications, measures);
     if (!result.quality && all_equal(sample_classifications, [] (const auto& lhs, const auto& rhs) { return lhs.category == rhs.category; })) {

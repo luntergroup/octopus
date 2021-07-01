@@ -474,8 +474,14 @@ bool RandomForestFilter::is_soft_filtered(const ClassificationList& sample_class
     if (joint_quality) {
         result = *joint_quality < min_soft_call_quality();
     } else {
-        result = std::any_of(std::cbegin(sample_classifications), std::cend(sample_classifications),
-                             [] (const auto& c) { return c.category != Classification::Category::unfiltered; });
+        const auto is_bad_sample = [this] (const Classification& classification) {
+            if (classification.quality) {
+                return *classification.quality < min_soft_call_quality();
+            } else {
+                return classification.category != Classification::Category::unfiltered;
+            }
+        };
+        result = std::any_of(std::cbegin(sample_classifications), std::cend(sample_classifications), is_bad_sample);
     }
     if (result) reasons.push_back("RF");
     return result;
