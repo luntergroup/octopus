@@ -479,7 +479,7 @@ def make_ranger_data(vcf_filename, out_filename, sample, classifcation, measures
         datawriter = csv.writer(ranger_data, delimiter=' ')
         encoded_classification = encode_classification(classifcation)
         for rec in vcf:
-            if rec.info["CALL"] == classifcation and fraction >= 1 or random.random() <= fraction:
+            if rec.info["CALL"] == classifcation and (fraction >= 1 or random.random() <= fraction):
                 row = [annotation_to_string(get_annotation(measure, rec, sample=sample), missing_value) for measure in measures]
                 row.append(encoded_classification)
                 datawriter.writerow(row)
