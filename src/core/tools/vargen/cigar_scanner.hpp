@@ -85,11 +85,17 @@ private:
     std::unique_ptr<VariantGenerator> do_clone() const override;
     bool do_requires_reads() const noexcept override;
     void do_add_read(const SampleName& sample, const AlignedRead& read) override;
+    void do_add_template(const SampleName& sample, const AlignedTemplate& reads) override;
     void add_read(const SampleName& sample, const AlignedRead& read,
                   CoverageTracker<GenomicRegion>& coverage_tracker,
                   CoverageTracker<GenomicRegion>& forward_strand_coverage_tracker);
+    void add_template(const SampleName& sample, const AlignedTemplate& reads,
+                      CoverageTracker<GenomicRegion>& coverage_tracker,
+                      CoverageTracker<GenomicRegion>& forward_strand_coverage_tracker);
     void do_add_reads(const SampleName& sample, ReadVectorIterator first, ReadVectorIterator last) override;
     void do_add_reads(const SampleName& sample, ReadFlatSetIterator first, ReadFlatSetIterator last) override;
+    void do_add_reads(const SampleName& sample, TemplateVectorIterator first, TemplateVectorIterator last) override;
+    void do_add_reads(const SampleName& sample, TemplateFlatSetIterator first, TemplateFlatSetIterator last) override;
     std::vector<Variant> do_generate(const RegionSet& regions) const override;
     void do_clear() noexcept override;
     std::string name() const override;
@@ -123,6 +129,7 @@ private:
     Variant::MappingDomain::Size max_seen_candidate_size_;
     CoverageTracker<GenomicRegion> combined_read_coverage_tracker_, misaligned_read_coverage_tracker_;
     SampleCoverageTrackerMap sample_read_coverage_tracker_, sample_forward_strand_coverage_tracker_;
+    std::deque<AlignedRead> artificial_read_buffer_;
     
     using CandidateIterator = OverlapIterator<decltype(candidates_)::const_iterator>;
     
