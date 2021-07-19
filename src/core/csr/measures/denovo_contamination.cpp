@@ -142,7 +142,10 @@ Measure::ResultType DeNovoContamination::do_evaluate(const VcfRecord& call, cons
         const auto& samples = get_value<Samples>(facets.at("Samples"));
         const auto& alleles = get_value<Alleles>(facets.at("Alleles"));
         const auto& pedigree = get_value<Pedigree>(facets.at("Pedigree"));
-        assert(is_trio(samples, pedigree)); // TODO: Implement for general pedigree
+        if (!is_trio(samples, pedigree)) {
+            // TODO: Implement for general pedigree
+            return result;
+        }
         const auto trio = *make_trio(samples[find_child_idx(samples, pedigree)], pedigree);
         const auto& genotypes = get_value<Genotypes>(facets.at("Genotypes"));
         const auto denovo_haplotypes = get_denovo_haplotypes(call, genotypes, trio, alleles);
