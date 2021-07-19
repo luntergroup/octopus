@@ -706,7 +706,7 @@ FamilyCaller::Latents::Latents(const std::vector<SampleName>& samples,
     genotype_posteriors_ = std::make_shared<GenotypeProbabilityMap>(std::move(genotype_posteriors));
 
     // haplotype posteriors
-    const auto inverse_genotypes = make_inverse_genotype_table(genotypes, haplotypes_.size());
+    const auto inverse_genotypes = make_inverse_genotype_table(genotypes_, haplotypes_.size());
     std::vector<double> haplotype_posteriors(haplotypes_.size());
     auto itr = std::cbegin(inverse_genotypes);
     std::vector<std::size_t> genotype_indices(genotypes_.size());
