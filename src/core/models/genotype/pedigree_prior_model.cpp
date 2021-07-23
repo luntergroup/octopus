@@ -110,7 +110,7 @@ PedigreePriorModel::evaluate(const std::vector<Genotype<IndexedHaplotype<>>>& ge
     for (const auto& p : twins_with_one_parent_) {
         result += inheritance_model().evaluate_twins(genotypes[p.first.first], genotypes[p.first.second], genotypes[p.second]);
     }
-    return 0;
+    return result;
 }
 
 } // namespace octopus
