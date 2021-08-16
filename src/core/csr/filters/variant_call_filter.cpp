@@ -138,9 +138,6 @@ VariantCallFilter::Classification
 VariantCallFilter::merge(const ClassificationList& sample_classifications, const MeasureVector& measures) const
 {
     assert(!sample_classifications.empty());
-    if (sample_classifications.size() == 1) {
-        return sample_classifications.front();
-    }
     Classification result {};
     result.quality = compute_joint_quality(sample_classifications, measures);
     if (!result.quality && all_equal(sample_classifications, [] (const auto& lhs, const auto& rhs) { return lhs.category == rhs.category; })) {
@@ -454,9 +451,9 @@ void VariantCallFilter::annotate(VcfRecord::Builder& call, const SampleList& sam
 {
     assert(samples.size() == sample_classifications.size());
     bool all_hard_filtered {true};
-    auto quality_name = this->genotype_quality_name();
-    if (quality_name) {
-        call.add_format(std::move(*quality_name));
+    auto allele_quality_name = this->allele_quality_name();
+    if (allele_quality_name) {
+        call.add_format(std::move(*allele_quality_name));
     }
     for (auto p : boost::combine(samples, sample_classifications)) {
         const SampleName& sample {p.get<0>()};
@@ -467,6 +464,10 @@ void VariantCallFilter::annotate(VcfRecord::Builder& call, const SampleList& sam
         } else {
             call.clear_format(sample);
         }
+    }
+    auto genotype_quality_name = this->genotype_quality_name();
+    if (genotype_quality_name) {
+        call.add_format(std::move(*genotype_quality_name));
     }
     if (all_hard_filtered) {
         call.clear_format();
@@ -482,12 +483,20 @@ void VariantCallFilter::annotate(VcfRecord::Builder& call, const SampleName& sam
     } else {
         fail(sample, call, std::move(status.reasons));
     }
-    const auto quality_name = this->genotype_quality_name();
-    if (quality_name) {
+    const auto allele_quality_name = this->allele_quality_name();
+    if (allele_quality_name) {
         if (status.quality) {
-            call.set_format(sample, *quality_name, utils::to_string(status.quality->score(), 2));
+            call.set_format(sample, *allele_quality_name, utils::to_string(status.quality->score(), 2));
         } else {
-            call.set_format_missing(sample, *quality_name);
+            call.set_format_missing(sample, *allele_quality_name);
+        }
+    }
+    const auto genotype_quality_name = this->genotype_quality_name();
+    if (genotype_quality_name) {
+        if (status.genotype_quality) {
+            call.set_format(sample, *genotype_quality_name, utils::to_string(status.genotype_quality->score(), 2));
+        } else {
+            call.set_format_missing(sample, *genotype_quality_name);
         }
     }
 }
