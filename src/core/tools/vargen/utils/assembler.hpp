@@ -39,7 +39,8 @@ public:
     using NucleotideSequence = std::string;
     using BaseQualityVector = std::vector<std::uint8_t>;
     enum class Direction { forward, reverse };
-    
+    using SampleID = std::size_t;
+
     struct Variant;
     class NonCanonicalReferenceSequence;
     class NonUniqueReferenceSequence {};
@@ -58,7 +59,7 @@ public:
     Assembler(Parameters params);
     Assembler(Parameters params, const NucleotideSequence& reference);
     
-    Assembler(const Assembler&)            = delete;
+    Assembler(const Assembler&);
     Assembler& operator=(const Assembler&) = delete;
     Assembler(Assembler&&)                 = default;
     Assembler& operator=(Assembler&&)      = default;
@@ -75,7 +76,8 @@ public:
     // Threads the given read sequence into the graph
     void insert_read(const NucleotideSequence& sequence,
                      const BaseQualityVector& base_qualities,
-                     Direction strand);
+                     Direction strand,
+                     SampleID sample);
     
     // Returns the current number of unique kmers in the graph
     std::size_t num_kmers() const noexcept;
@@ -83,6 +85,7 @@ public:
     bool is_empty() const noexcept;
     
     bool is_acyclic() const;
+    std::vector<SampleID> find_cyclic_samples(unsigned min_weight = 0) const;
     void remove_nonreference_cycles(bool break_chains = true);
     
     // Returns true if all the kmers in the graph are in the reference sequence
@@ -96,6 +99,7 @@ public:
     
     void cleanup();
     
+    void clear(const std::vector<SampleID>& samples);
     void clear();
     
     std::deque<Variant> extract_variants(unsigned max_bubbles, BubbleScoreSetter min_bubble_scorer);
@@ -109,7 +113,7 @@ private:
         using NucleotideSequence = Assembler::NucleotideSequence;
         using SequenceIterator   = NucleotideSequence::const_iterator;
         
-        Kmer() = delete;
+        Kmer() = default;
         Kmer(SequenceIterator first, SequenceIterator last) noexcept;
         
         Kmer(const Kmer&)            = default;
@@ -148,9 +152,15 @@ private:
     {
         using WeightType = unsigned;
         using ScoreType  = double;
+        struct Data
+        {
+            WeightType weight, forward_strand_weight;
+            int base_quality_sum = 0;
+        };
+        std::map<SampleID, Data> samples;
         WeightType weight, forward_strand_weight;
         int base_quality_sum = 0;
-        bool is_reference = false, is_artificial = false;
+        bool is_reference = false;
         ScoreType transition_score = 0;
     };
     struct GraphNode
@@ -217,11 +227,12 @@ private:
     Edge add_edge(Vertex u, Vertex v,
                   GraphEdge::WeightType weight, GraphEdge::WeightType forward_weight,
                   int base_quality_sum,
-                  bool is_reference = false, bool is_artificial = false);
+                  bool is_reference = false, 
+                  boost::optional<SampleID> sample = boost::none);
     Edge add_reference_edge(Vertex u, Vertex v);
     void remove_edge(Vertex u, Vertex v);
     void remove_edge(Edge e);
-    void increment_weight(Edge e, bool is_forward, int base_quality);
+    void increment_weight(Edge e, bool is_forward, int base_quality, SampleID sample);
     void set_vertex_reference(Vertex v);
     void set_vertex_reference(const Kmer& kmer);
     void set_edge_reference(Edge e);

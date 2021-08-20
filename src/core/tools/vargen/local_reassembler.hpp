@@ -93,6 +93,7 @@ private:
         {
             std::reference_wrapper<const NucleotideSequence> sequence;
             std::reference_wrapper<const AlignedRead::BaseQualityVector> base_qualities;
+            std::size_t sample_index;
         };
         using ReadDataStash = std::deque<ReadData>;
         
@@ -100,8 +101,8 @@ private:
         
         const GenomicRegion& mapped_region() const noexcept;
         
-        void add(const AlignedRead& read);
-        void add(const AlignedRead& read, const NucleotideSequence& masked_sequence);
+        void add(const AlignedRead& read, std::size_t sample_index);
+        void add(const AlignedRead& read, const NucleotideSequence& masked_sequence, std::size_t sample_index);
         
         void clear() noexcept;
         std::size_t size() const noexcept;
