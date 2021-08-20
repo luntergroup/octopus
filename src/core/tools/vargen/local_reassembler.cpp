@@ -584,6 +584,17 @@ LocalReassembler::assemble_bin(const unsigned kmer_size, const Bin& bin, std::de
     Assembler assembler {assembler_params, reference_sequence};
     if (assembler.is_unique_reference()) {
         load(bin, assembler);
+        const auto num_samples = read_buffer_.size();
+        if (num_samples > 1) {
+            for (std::size_t sample_idx {0}; sample_idx < num_samples; ++sample_idx) {
+                Assembler sample_assembler {assembler};
+                std::vector<std::size_t> sample_indices(num_samples - 1);
+                std::iota(sample_indices.begin(), sample_indices.begin() + sample_idx, 0);
+                std::iota(sample_indices.begin() + sample_idx, sample_indices.end(), sample_idx + 1);
+                sample_assembler.clear(sample_indices);
+                try_assemble_region(sample_assembler, reference_sequence, assemble_region, result);
+            }
+        }
         return try_assemble_region(assembler, reference_sequence, assemble_region, result);
     } else {
         return AssemblerStatus::failed;
