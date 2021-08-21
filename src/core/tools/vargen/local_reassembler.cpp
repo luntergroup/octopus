@@ -923,7 +923,7 @@ std::vector<Assembler::Variant>
 decompose_complex(Assembler::Variant v, const std::vector<Repeat>& reference_repeats, const VariantDecompositionConfig config)
 {
     auto result = try_to_split_repeats(v, reference_repeats);
-    if (!is_fully_decomposed(v)) {
+    if (result.empty() || !is_fully_decomposed(v)) {
         utils::append(decompose_with_aligner(std::move(v), config), result);
     }
     return result;
@@ -997,7 +997,10 @@ void decompose(std::deque<Assembler::Variant>& variants, const ReferenceGenome::
     auto reference_repeats = find_repeats(tmp);
     const auto first_decomposable = partition_decomposable(variants);
     if (first_decomposable != std::end(variants)) {
-        merge(decompose(first_decomposable, std::end(variants), reference_repeats, config), variants, first_decomposable);
+        auto decomposed = decompose(first_decomposable, std::end(variants), reference_repeats, config);
+        if (!decomposed.empty()) {
+            merge(std::move(decomposed), variants, first_decomposable);
+        }
     }
 }
 
