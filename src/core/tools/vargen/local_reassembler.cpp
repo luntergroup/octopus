@@ -571,6 +571,20 @@ void LocalReassembler::load(const Bin& bin, Assembler& assembler) const
     }
 }
 
+void LocalReassembler::load(const Bin& bin, const std::size_t sample_idx, Assembler& assembler) const
+{
+    for (const auto& read : bin.forward_read_sequences) {
+        if (read.sample_index == sample_idx) {
+            assembler.insert_read(read.sequence, read.base_qualities, Assembler::Direction::forward, read.sample_index);
+        }
+    }
+    for (const auto& read : bin.reverse_read_sequences) {
+        if (read.sample_index == sample_idx) {
+            assembler.insert_read(read.sequence, read.base_qualities, Assembler::Direction::reverse, read.sample_index);
+        }
+    }
+}
+
 LocalReassembler::AssemblerStatus
 LocalReassembler::assemble_bin(const unsigned kmer_size, const Bin& bin, std::deque<Variant>& result) const
 {
@@ -584,18 +598,16 @@ LocalReassembler::assemble_bin(const unsigned kmer_size, const Bin& bin, std::de
     Assembler assembler {assembler_params, reference_sequence};
     if (assembler.is_unique_reference()) {
         load(bin, assembler);
+        auto status = try_assemble_region(assembler, reference_sequence, assemble_region, result);
         const auto num_samples = read_buffer_.size();
-        if (num_samples > 1) {
+        if (num_samples > 1 && status != AssemblerStatus::success) {
             for (std::size_t sample_idx {0}; sample_idx < num_samples; ++sample_idx) {
-                Assembler sample_assembler {assembler};
-                std::vector<std::size_t> sample_indices(num_samples - 1);
-                std::iota(sample_indices.begin(), sample_indices.begin() + sample_idx, 0);
-                std::iota(sample_indices.begin() + sample_idx, sample_indices.end(), sample_idx + 1);
-                sample_assembler.clear(sample_indices);
+                Assembler sample_assembler {assembler_params, reference_sequence};
+                load(bin, sample_idx, sample_assembler);
                 try_assemble_region(sample_assembler, reference_sequence, assemble_region, result);
             }
         }
-        return try_assemble_region(assembler, reference_sequence, assemble_region, result);
+        return status;
     } else {
         return AssemblerStatus::failed;
     }
@@ -1038,7 +1050,11 @@ LocalReassembler::try_assemble_region(Assembler& assembler, const NucleotideSequ
                 } else {
                     assembler.clear(cyclic_samples);
                     assembler.prune(min_kmer_observations_);
-                    status = AssemblerStatus::partial_success;
+                    if (assembler.is_acyclic()) {
+                        status = AssemblerStatus::partial_success;
+                    } else {
+                        return AssemblerStatus::failed;
+                    }
                 }
             } else {
                 return AssemblerStatus::failed;

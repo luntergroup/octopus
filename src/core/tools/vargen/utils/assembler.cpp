@@ -310,7 +310,7 @@ std::vector<Assembler::SampleID> Assembler::find_cyclic_samples(const unsigned m
     boost::depth_first_search(graph_, boost::visitor(vis).root_vertex(reference_head()).vertex_index_map(index_map));
     std::set<SampleID> cyclic_samples {};
     for (const Edge& e : cyclic_edges) {
-        if (!(is_reference(e) || is_simple_deletion(e))) {
+        if (!is_reference(e)) {
             for (const auto& p : graph_[e].samples) {
                 if (p.second.weight >= min_weight) {
                     cyclic_samples.insert(p.first);

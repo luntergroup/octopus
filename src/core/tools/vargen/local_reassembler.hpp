@@ -137,6 +137,7 @@ private:
     void try_assemble_with_fallbacks(const Bin& bin, std::deque<Variant>& result) const;
     GenomicRegion propose_assembler_region(const GenomicRegion& input_region, unsigned kmer_size) const;
     void load(const Bin& bin, Assembler& assembler) const;
+    void load(const Bin& bin, std::size_t sample_idx, Assembler& assembler) const;
     AssemblerStatus assemble_bin(unsigned kmer_size, const Bin& bin, std::deque<Variant>& result) const;
     AssemblerStatus try_assemble_region(Assembler& assembler, const NucleotideSequence& reference_sequence,
                                         const GenomicRegion& reference_region, std::deque<Variant>& result) const;
