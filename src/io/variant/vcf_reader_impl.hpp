@@ -29,8 +29,8 @@ public:
         using iterator_category = std::input_iterator_tag;
         using value_type        = VcfRecord;
         using difference_type   = std::ptrdiff_t;
-        using pointer           = const VcfRecord*;
-        using reference         = const VcfRecord&;
+        using pointer           = VcfRecord*;
+        using reference         = VcfRecord&;
         
         virtual ~RecordIterator() = default;
         
