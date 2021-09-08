@@ -200,6 +200,17 @@ std::vector<T> copy_each_first(const std::vector<std::pair<T, _>>& items)
     return result;
 }
 
+template<typename T, typename _>
+std::vector<T> copy_each_first(std::deque<std::pair<T, _>>&& items)
+{
+    std::vector<T> result {};
+    result.reserve(items.size());
+    for (auto&& p : items) {
+        result.push_back(std::move(p.first));
+    }
+    return result;
+}
+
 template <typename Range>
 bool can_add_to_phase_block(const VcfRecord& call, const GenomicRegion& call_phase_region, const Range& block)
 {
@@ -213,16 +224,16 @@ bool can_add_to_phase_block(const VcfRecord& call, const GenomicRegion& call_pha
 VariantCallFilter::CallBlock
 VariantCallFilter::read_next_block(VcfIterator& first, const VcfIterator& last, const SampleList& samples) const
 {
-    std::vector<std::pair<VcfRecord, GenomicRegion>> block {};
+    std::deque<std::pair<VcfRecord, GenomicRegion>> block {};
     for (; first != last; ++first) {
-        const VcfRecord& call {*first};
+        VcfRecord& call {*first};
         auto call_phase_region = get_phase_region(call, samples);
         if (!can_add_to_phase_block(call, call_phase_region, block)) {
-            return copy_each_first(block);
+            return copy_each_first(std::move(block));
         }
-        block.emplace_back(call, std::move(call_phase_region));
+        block.emplace_back(std::move(call), std::move(call_phase_region));
     }
-    return copy_each_first(block);
+    return copy_each_first(std::move(block));
 }
 
 std::vector<VariantCallFilter::CallBlock>
@@ -295,12 +306,33 @@ std::vector<VariantCallFilter::MeasureBlock> VariantCallFilter::measure(const st
     return result;
 }
 
+void VariantCallFilter::write(VcfRecord::Builder&& call, const Classification& classification, VcfWriter& dest) const
+{
+    if (!is_hard_filtered(classification)) {
+        configure(call);
+        annotate(call, classification);
+        dest << call.build_once();
+    }
+}
+
 void VariantCallFilter::write(const VcfRecord& call, const Classification& classification, VcfWriter& dest) const
 {
     if (!is_hard_filtered(classification)) {
         auto filtered_call = construct_template(call);
         annotate(filtered_call, classification);
         dest << filtered_call.build_once();
+    }
+}
+
+void VariantCallFilter::write(VcfRecord::Builder&& call, const Classification& classification,
+                              const SampleList& samples, const ClassificationList& sample_classifications,
+                              VcfWriter& dest) const
+{
+    if (!is_hard_filtered(classification)) {
+        configure(call);
+        annotate(call, classification);
+        annotate(call, samples, sample_classifications);
+        dest << call.build_once();
     }
 }
 
@@ -427,14 +459,19 @@ VcfHeader VariantCallFilter::make_header(const VcfReader& source) const
 VcfRecord::Builder VariantCallFilter::construct_template(const VcfRecord& call) const
 {
     VcfRecord::Builder result {call};
+    configure(result);
+    return result;
+}
+
+void VariantCallFilter::configure(VcfRecord::Builder& call) const
+{
     if (output_config_.emit_sites_only) {
-        result.clear_format();
+        call.clear_format();
     }
     if (output_config_.clear_existing_filters) {
-        result.clear_filter();
-        result.clear_all_sample_filters();
+        call.clear_filter();
+        call.clear_all_sample_filters();
     }
-    return result;
 }
 
 bool VariantCallFilter::is_requested_annotation(const MeasureWrapper& measure) const noexcept

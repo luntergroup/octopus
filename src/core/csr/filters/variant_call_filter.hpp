@@ -98,7 +98,11 @@ protected:
     MeasureVector measure(const VcfRecord& call) const;
     MeasureBlock measure(const CallBlock& block) const;
     std::vector<MeasureBlock> measure(const std::vector<CallBlock>& blocks) const;
+    void write(VcfRecord::Builder&& call, const Classification& classification, VcfWriter& dest) const;
     void write(const VcfRecord& call, const Classification& classification, VcfWriter& dest) const;
+    void write(VcfRecord::Builder&& call, const Classification& classification,
+               const SampleList& samples, const ClassificationList& sample_classifications,
+               VcfWriter& dest) const;
     void write(const VcfRecord& call, const Classification& classification,
                const SampleList& samples, const ClassificationList& sample_classifications,
                VcfWriter& dest) const;
@@ -134,6 +138,7 @@ private:
     MeasureBlock measure(const CallBlock& block, const Measure::FacetMap& facets) const;
     MeasureVector measure(const VcfRecord& call, const Measure::FacetMap& facets) const;
     VcfRecord::Builder construct_template(const VcfRecord& call) const;
+    void configure(VcfRecord::Builder& call) const;
     bool is_requested_annotation(const MeasureWrapper& measure) const noexcept;
     bool is_hard_filtered(const Classification& classification) const noexcept;
     void annotate(VcfRecord::Builder& call, const SampleList& samples, const ClassificationList& sample_classifications) const;

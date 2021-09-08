@@ -81,7 +81,7 @@ void SinglePassVariantCallFilter::filter(const VcfRecord& call, const MeasureVec
     if (measure_annotations_requested()) {
         VcfRecord::Builder annotation_builder {call};
         annotate(annotation_builder, measures, dest_header);
-        write(annotation_builder.build_once(), call_classification, samples, sample_classifications, dest);
+        write(std::move(annotation_builder), call_classification, samples, sample_classifications, dest);
     } else {
         write(call, call_classification, samples, sample_classifications, dest);
     }
