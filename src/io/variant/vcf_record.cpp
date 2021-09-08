@@ -150,10 +150,7 @@ bool VcfRecord::is_homozygous_ref(const SampleName& sample) const
 
 bool VcfRecord::is_refcall() const
 {
-    const auto is_ref = [] (const auto& allele) { return allele == 0; };
-    const auto is_hom_ref = [&] (const auto& p) {
-        return std::all_of(std::cbegin(p.second.genotype->indices), std::cend(p.second.genotype->indices), is_ref); };
-    return std::all_of(std::cbegin(samples_), std::cend(samples_), is_hom_ref);
+    return alt_.size() == 1 && alt_.front() == vcfspec::allele::nonref;
 }
 
 bool VcfRecord::is_homozygous_non_ref(const SampleName& sample) const
@@ -807,9 +804,12 @@ GenomicRegion::Position VcfRecord::Builder::pos() const noexcept
 
 void VcfRecord::Builder::collapse_spanning_deletions()
 {
-    for (auto& alt : alt_) {
-        if (alt.size() > 1 && std::find(std::cbegin(alt), std::cend(alt), vcfspec::deleteMaskAllele[0]) != std::cend(alt)) {
-            alt = vcfspec::deleteMaskAllele;
+    const static std::vector<VcfRecord::NucleotideSequence> refcall_alts {vcfspec::allele::nonref};
+    if (alt_ != refcall_alts) {
+        for (auto& alt : alt_) {
+            if (alt.size() > 1 && std::find(std::cbegin(alt), std::cend(alt), vcfspec::deleteMaskAllele[0]) != std::cend(alt)) {
+                alt = vcfspec::deleteMaskAllele;
+            }
         }
     }
 }

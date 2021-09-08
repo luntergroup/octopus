@@ -77,7 +77,7 @@ public:
     const GenomicRegion& mapped_region() const noexcept;
     
     //
-    // Methods that corrospond to fields in the VCF format, hence the poor naming
+    // Methods that correspond to fields in the VCF format, hence the poor naming
     //
     const GenomicRegion::ContigName& chrom() const noexcept;
     GenomicRegion::Position pos() const noexcept; // One based!
@@ -93,7 +93,7 @@ public:
     const std::vector<ValueType>& info_value(const KeyType& key) const;
     
     //
-    // Sample releated functions
+    // Sample related functions
     //
     bool has_format(const KeyType& key) const noexcept;
     boost::optional<unsigned> format_cardinality(const KeyType& key) const noexcept;
