@@ -71,6 +71,7 @@ void SinglePassVariantCallFilter::filter(const CallBlock& block, const MeasureBl
     for (auto tup : boost::combine(block, measures)) {
         filter(tup.get<0>(), tup.get<1>(), dest, dest_header, samples);
     }
+    log_progress(closed_region(block.front(), block.back()));
 }
 
 void SinglePassVariantCallFilter::filter(const VcfRecord& call, const MeasureVector& measures, VcfWriter& dest,
@@ -85,7 +86,9 @@ void SinglePassVariantCallFilter::filter(const VcfRecord& call, const MeasureVec
     } else {
         write(call, call_classification, samples, sample_classifications, dest);
     }
-    log_progress(mapped_region(call));
+    if (can_measure_single_call()) {
+        log_progress(mapped_region(call));
+    }
 }
 
 VariantCallFilter::ClassificationList
