@@ -55,7 +55,7 @@ public:
             SomaticModelConcentrations somatic;
         };
         
-        Phred<double> min_variant_posterior, min_somatic_posterior, min_refcall_posterior;
+        Phred<double> min_variant_posterior, min_somatic_posterior;
         unsigned ploidy;
         boost::optional<SampleName> normal_sample;
         boost::optional<CoalescentModel::Parameters> germline_prior_model_params;

@@ -552,8 +552,7 @@ auto compute_homozygous_posterior(const Allele& allele,
 auto call_reference(const std::vector<Allele>& reference_alleles,
                     const GenotypeProbabilityMap& genotype_posteriors,
                     const GenotypeProbabilityMap& genotype_log_posteriors,
-                    const ReadPileups& pileups,
-                    const Phred<double> min_call_posterior)
+                    const ReadPileups& pileups)
 {
     assert(std::is_sorted(std::cbegin(reference_alleles), std::cend(reference_alleles)));
     std::vector<RefCall> result {};
@@ -562,9 +561,7 @@ auto call_reference(const std::vector<Allele>& reference_alleles,
     for (const auto& allele : reference_alleles) {
         const auto active_pileups = contained_range(active_pileup_itr, std::cend(pileups), contig_region(allele));
         const auto posterior = compute_homozygous_posterior(allele, genotype_posteriors, genotype_log_posteriors, active_pileups);
-        if (posterior >= min_call_posterior) {
-            result.push_back({allele, posterior});
-        }
+        result.push_back({allele, posterior});
         active_pileup_itr = active_pileups.end().base();
     }
     return result;
@@ -601,7 +598,7 @@ IndividualCaller::call_reference(const std::vector<Allele>& alleles,
     const auto& genotype_posteriors = (*latents.genotype_posteriors())[sample()];
     const auto& genotype_log_posteriors = (*latents.genotype_log_posteriors())[sample()];
     auto calls = octopus::call_reference(alleles, genotype_posteriors, genotype_log_posteriors,
-                                         pileups.at(sample()),parameters_.min_refcall_posterior);
+                                         pileups.at(sample()));
     return transform_calls(std::move(calls), sample(), parameters_.ploidy);
 }
 

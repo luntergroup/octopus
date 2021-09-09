@@ -35,7 +35,7 @@ public:
     
     struct Parameters
     {
-        Phred<double> min_variant_posterior, min_refcall_posterior;
+        Phred<double> min_variant_posterior;
         std::vector<unsigned> ploidies;
         boost::optional<CoalescentModel::Parameters> prior_model_params;
         boost::optional<std::size_t> max_genotype_combinations;

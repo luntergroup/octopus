@@ -519,11 +519,7 @@ OptionMap parse_options(const int argc, const char** argv)
     ("refcall-block-merge-quality",
      po::value<Phred<double>>()->default_value(Phred<double> {10.0}),
      "Threshold to merge adjacent refcall positions when using blocked refcalling")
-     
-    ("min-refcall-posterior",
-     po::value<Phred<double>>()->default_value(Phred<double> {0}),
-     "Report reference alleles with posterior probability (QUAL) greater than this")
-
+    
     ("max-refcall-posterior",
      po::value<Phred<double>>(),
      "Maximum allowed posterior probability (QUAL) for reference calls")

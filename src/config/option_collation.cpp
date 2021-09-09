@@ -2153,8 +2153,6 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
                 vc_builder.set_refcall_merge_block_threshold(block_merge_threshold);
             }
         }
-        auto min_refcall_posterior = options.at("min-refcall-posterior").as<Phred<double>>();
-        vc_builder.set_min_refcall_posterior(min_refcall_posterior);
         if (is_set("max-refcall-posterior", options)) {
             vc_builder.set_max_refcall_posterior(options.at("max-refcall-posterior").as<Phred<double>>());
         }
