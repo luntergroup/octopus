@@ -11,6 +11,7 @@
 #include <cassert>
 #include <iostream>
 #include <limits>
+#include <queue>
 
 #include "concepts/mappable.hpp"
 #include "basics/aligned_template.hpp"
@@ -1441,15 +1442,10 @@ Caller::ReadPileupMap Caller::make_pileups(const ReadMap& reads, const Latents& 
 
 namespace {
 
-auto get_min_quality(const std::vector<std::unique_ptr<ReferenceCall>>& refcalls)
-{
-    auto itr = std::min_element(std::cbegin(refcalls), std::cend(refcalls),
-                                [] (const auto& lhs, const auto& rhs) { return lhs->quality() < rhs->quality(); });
-    return (*itr)->quality();
-}
-
 std::unique_ptr<ReferenceCall>
-concat(const std::vector<std::unique_ptr<ReferenceCall>>& refcalls, const std::vector<SampleName>& samples)
+squash(const std::vector<std::unique_ptr<ReferenceCall>>& refcalls, 
+       const std::vector<SampleName>& samples,
+       const Phred<double> quality)
 {
     assert(!refcalls.empty());
     auto region = encompassing_region(refcalls.front()->mapped_region(), refcalls.back()->mapped_region());
@@ -1459,7 +1455,6 @@ concat(const std::vector<std::unique_ptr<ReferenceCall>>& refcalls, const std::v
         sequence.insert(std::cend(sequence), std::cbegin(refcall->reference().sequence()), std::cend(refcall->reference().sequence()));
     }
     Allele reference {std::move(region), std::move(sequence)};
-    const auto quality = get_min_quality(refcalls);
     std::map<SampleName, ReferenceCall::GenotypeCall> genotypes {};
     for (const auto& sample : samples) {
         const auto& genotype_call = refcalls.front()->get_genotype_call(sample);
@@ -1468,32 +1463,89 @@ concat(const std::vector<std::unique_ptr<ReferenceCall>>& refcalls, const std::v
     return std::make_unique<ReferenceCall>(std::move(reference), quality, std::move(genotypes));
 }
 
-bool are_similar_quality(const ReferenceCall& lhs, const ReferenceCall& rhs, const Phred<double> threshold) noexcept
-{
-    return std::abs(lhs.quality().score() - rhs.quality().score()) < threshold.score();
-}
-
 } // namespace
 
 std::vector<std::unique_ptr<ReferenceCall>>
 Caller::squash_reference_calls(std::vector<std::unique_ptr<ReferenceCall>> refcalls) const
 {
     assert(parameters_.refcall_block_merge_threshold);
-    std::vector<std::unique_ptr<ReferenceCall>> result {}, buffer {};
-    if (refcalls.empty()) return result;
-    result.reserve(refcalls.size());
-    buffer.reserve(refcalls.size());
-    for (auto& refcall : refcalls) {
-        if (buffer.empty() || (are_adjacent(*buffer.back(), *refcall)
-                && are_similar_quality(*buffer.front(), *refcall, *parameters_.refcall_block_merge_threshold))) {
-            buffer.push_back(std::move(refcall));
-        } else {
-            result.push_back(concat(buffer, samples_));
-            buffer.clear();
-            buffer.push_back(std::move(refcall));
+    if (refcalls.size() < 2) return refcalls;
+    // Implements a simple greedy hierarchal clustering algorithm, with the
+    // restriction only adjacent clusters (i.e. contiguous runs of refcalls) can be joined.
+    using ClusterID = std::size_t;
+    std::vector<ClusterID> position_cluster_assignments(refcalls.size());
+    // Initialise assignments
+    std::iota(std::begin(position_cluster_assignments), std::end(position_cluster_assignments), ClusterID {0});
+    using IndexRangePair = std::pair<std::size_t, std::size_t>; 
+    std::unordered_map<ClusterID, std::pair<IndexRangePair, double>> clusters {};
+    clusters.reserve(refcalls.size() + 1);
+    // Initialise clusters
+    for (ClusterID id {0}; id < refcalls.size(); ++id) {
+        clusters.emplace(id, std::make_pair(std::make_pair(id, id), refcalls[id]->quality().score()));
+    }
+    std::priority_queue<std::pair<double, std::pair<ClusterID, ClusterID>>> candidates {};
+    // Initialise candidates
+    for (ClusterID lhs_id {0}; lhs_id < (refcalls.size() - 1); ++lhs_id) {
+        if (are_adjacent(*refcalls[lhs_id], *refcalls[lhs_id + 1])) {
+            const auto qual_diff = std::abs(refcalls[lhs_id]->quality().score() - refcalls[lhs_id + 1]->quality().score());
+            if (qual_diff <= parameters_.refcall_block_merge_threshold->score()) {
+                candidates.emplace(qual_diff, std::make_pair(lhs_id, lhs_id + 1));
+            }
         }
     }
-    result.push_back(concat(buffer, samples_));
+    std::size_t next_cluster_id = refcalls.size();
+    while (!candidates.empty()) {
+        const auto candidate = candidates.top();
+        candidates.pop();
+        const auto lhs_cluster_itr = clusters.find(candidate.second.first);
+        const auto rhs_cluster_itr = clusters.find(candidate.second.second);
+        // If we don't find a cluster then it must have already been merged into another cluster
+        if (lhs_cluster_itr != std::cend(clusters) && rhs_cluster_itr != std::cend(clusters)) {
+            auto new_cluster_range = std::make_pair(lhs_cluster_itr->second.first.first, rhs_cluster_itr->second.first.second);
+            std::vector<double> qualities(new_cluster_range.second - new_cluster_range.first + 1);
+            std::transform(std::next(std::cbegin(refcalls), new_cluster_range.first),
+                           std::next(std::cbegin(refcalls), new_cluster_range.second + 1),
+                           std::begin(qualities),
+                           [] (const auto& call) { return call->quality().score(); });
+            const auto new_cluster_quality = maths::median(qualities);
+            clusters.emplace(next_cluster_id, std::make_pair(new_cluster_range, new_cluster_quality));
+            std::fill(std::next(std::begin(position_cluster_assignments), new_cluster_range.first),
+                      std::next(std::begin(position_cluster_assignments), new_cluster_range.second + 1),
+                      next_cluster_id);
+            if (new_cluster_range.first > 0
+             && are_adjacent(*refcalls[new_cluster_range.first - 1], *refcalls[new_cluster_range.first])) {
+                const auto lhs_cluster_id = position_cluster_assignments[new_cluster_range.first - 1];
+                const auto lhs_cluster_qual = clusters.at(lhs_cluster_id).second;
+                const auto lhs_qual_diff = std::abs(new_cluster_quality - lhs_cluster_qual);
+                if (lhs_qual_diff <= parameters_.refcall_block_merge_threshold->score()) {
+                    candidates.emplace(lhs_qual_diff, std::make_pair(lhs_cluster_id, next_cluster_id));
+                }
+            }
+            if (new_cluster_range.second < (refcalls.size() - 1)
+             && are_adjacent(*refcalls[new_cluster_range.second], *refcalls[new_cluster_range.second + 1])) {
+                const auto rhs_cluster_id = position_cluster_assignments[new_cluster_range.second + 1];
+                const auto rhs_cluster_qual = clusters.at(rhs_cluster_id).second;
+                const auto rhs_qual_diff = std::abs(new_cluster_quality - rhs_cluster_qual);
+                if (rhs_qual_diff <= parameters_.refcall_block_merge_threshold->score()) {
+                    candidates.emplace(rhs_qual_diff, std::make_pair(next_cluster_id, rhs_cluster_id));
+                }
+            }
+            ++next_cluster_id;
+            clusters.erase(lhs_cluster_itr);
+            clusters.erase(rhs_cluster_itr);
+        }
+    }
+    std::vector<std::unique_ptr<ReferenceCall>> result {};
+    result.reserve(clusters.size());
+    for (const auto& p : clusters) {
+        std::size_t lhs_idx {p.second.first.first}, rhs_idx {p.second.first.second};
+        std::vector<std::unique_ptr<ReferenceCall>> cluster(rhs_idx - lhs_idx + 1);
+        std::move(std::next(std::begin(refcalls), lhs_idx),
+                  std::next(std::begin(refcalls), rhs_idx + 1),
+                  std::begin(cluster));
+        result.push_back(squash(cluster, samples_, Phred<> {p.second.second}));
+    }
+    std::sort(std::begin(result), std::end(result), [] (const auto& lhs, const auto& rhs) { return *lhs < *rhs; });
     return result;
 }
 
