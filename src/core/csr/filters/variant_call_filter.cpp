@@ -216,7 +216,8 @@ bool can_add_to_phase_block(const VcfRecord& call, const GenomicRegion& call_pha
 {
     if (block.empty()) return true;
     if (overlaps(block.back().second, call_phase_region)) return true;
-    return is_refcall(call) && is_same_contig(call, block.back().first);
+    if (overlaps(block.back().first, call)) return true;
+    return is_refcall(call) && are_adjacent(call, block.back().first);
 }
 
 } // namespace
