@@ -527,16 +527,22 @@ auto compute_homozygous_posterior(const Allele& allele,
             pileup.summaries([&] (const auto& sequence, const auto& summaries) {
                 if (sequence == reference_sequence) {
                     for (const auto& summary : summaries) {
-                        utils::append(summary.base_qualities, reference_qualities);
+                        for (const auto base_quality : summary.base_qualities) {
+                            reference_qualities.push_back(std::min(base_quality, summary.mapping_quality));
+                        }
                     }
                 } else if (sequence.size() != reference_sequence.size()) {
                     // indel
                     constexpr ReadPileup::BaseQuality indel_base_quality {30};
-                    non_reference_qualities.insert(std::end(non_reference_qualities), summaries.size(), indel_base_quality);
+                    for (const auto& summary : summaries) {
+                        non_reference_qualities.push_back(std::min(indel_base_quality, summary.mapping_quality));
+                    }
                 } else {
                     // snv/mnv
                     for (const auto& summary : summaries) {
-                        utils::append(summary.base_qualities, non_reference_qualities);
+                        for (const auto base_quality : summary.base_qualities) {
+                            non_reference_qualities.push_back(std::min(base_quality, summary.mapping_quality));
+                        }
                     }
                 }
             });
