@@ -8,6 +8,7 @@
 
 #include "io/variant/vcf_record.hpp"
 #include "io/variant/vcf_spec.hpp"
+#include "utils/mappable_algorithms.hpp"
 #include "../facets/samples.hpp"
 #include "../facets/overlapping_reads.hpp"
 
@@ -38,7 +39,11 @@ Measure::ResultType Depth::do_evaluate(const VcfRecord& call, const FacetMap& fa
         ValueType result {};
         if (recalculate_) {
             const auto& reads = get_value<OverlappingReads>(facets.at("OverlappingReads"));
-            result = static_cast<std::size_t>(count_overlapped(reads, call));
+            std::size_t depth {0};
+            for (const auto& p : reads) {
+                depth += max_coverage(p.second, mapped_region(call));
+            }
+            result = depth;
         } else {
             result = boost::lexical_cast<std::size_t>(call.info_value(vcfspec::info::combinedReadDepth).front());
         }
@@ -50,7 +55,7 @@ Measure::ResultType Depth::do_evaluate(const VcfRecord& call, const FacetMap& fa
         if (recalculate_) {
             const auto& reads = get_value<OverlappingReads>(facets.at("OverlappingReads"));
             for (const auto& sample : samples) {
-                result.emplace_back(static_cast<std::size_t>(count_overlapped(reads.at(sample), call)));
+                result.emplace_back(static_cast<std::size_t>(max_coverage(reads.at(sample), mapped_region(call))));
             }
         } else {
             for (const auto& sample : samples) {
@@ -92,6 +97,30 @@ bool Depth::is_equal(const Measure& other) const noexcept
 {
     const auto& other_depth = static_cast<const Depth&>(other);
     return recalculate_ == other_depth.recalculate_ && aggregate_ == other_depth.aggregate_;
+}
+
+void Depth::do_set_parameters(std::vector<std::string> params)
+{
+    if (params.size() > 2) {
+        throw BadMeasureParameters {this->name(), "only has one parameter (raw)"};
+    }
+    try {
+        recalculate_ = boost::lexical_cast<bool>(params.front());
+    } catch (const boost::bad_lexical_cast&) {
+        throw BadMeasureParameters {this->name(), "given parameter \"" + params.front() + "\" cannot be parsed"};
+    }
+    if (params.size() == 2) {
+        try {
+            aggregate_ = boost::lexical_cast<bool>(params.back());
+        } catch (const boost::bad_lexical_cast&) {
+            throw BadMeasureParameters {this->name(), "given parameter \"" + params.back() + "\" cannot be parsed"};
+        }
+    }
+}
+
+std::vector<std::string> Depth::do_parameters() const
+{
+    return {std::to_string(recalculate_), std::to_string(aggregate_)};
 }
 
 } // namespace csr
