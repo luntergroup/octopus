@@ -15,6 +15,7 @@ namespace octopus {
 class GenomicRegion;
 class VcfHeader;
 class VcfRecord;
+class ReferenceGenome;
 
 class IVcfReaderImpl
 {
@@ -45,6 +46,8 @@ public:
     using RecordIteratorPtr     = std::unique_ptr<RecordIterator>;
     using RecordIteratorPtrPair = std::pair<RecordIteratorPtr, RecordIteratorPtr>;
     
+    virtual void set_reference(const ReferenceGenome& reference) {};
+
     virtual bool is_header_written() const noexcept = 0;
     
     virtual VcfHeader fetch_header() const = 0;

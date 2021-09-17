@@ -1406,7 +1406,7 @@ void run_csr(GenomeCallingComponents& components)
         } else {
             buffered_rp.hint(flatten(components.search_regions()));
         }
-        const VcfReader in {std::move(*input_path)};
+        const VcfReader in {std::move(*input_path), components.reference()};
         const auto filter = filter_factory.make(components.reference(), std::move(buffered_rp), in.fetch_header(),
                                                 components.ploidies(),
                                                 make_filtering_haplotype_likelihood_model(components),

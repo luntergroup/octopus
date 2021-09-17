@@ -23,6 +23,7 @@ namespace octopus {
 class VcfHeader;
 class VcfRecord;
 class GenomicRegion;
+class ReferenceGenome;
 
 class VcfReader
 {
@@ -37,6 +38,7 @@ public:
     VcfReader() = default;
     
     VcfReader(Path file_path);
+    VcfReader(Path file_path, const ReferenceGenome& reference);
     
     VcfReader(const VcfReader&)            = delete;
     VcfReader& operator=(const VcfReader&) = delete;

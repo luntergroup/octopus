@@ -102,6 +102,12 @@ VcfReader::VcfReader(Path file_path)
 , reader_ {make_vcf_reader(file_path_)}
 {}
 
+VcfReader::VcfReader(Path file_path, const ReferenceGenome& reference)
+: VcfReader {std::move(file_path)}
+{
+    reader_->set_reference(reference);
+}
+
 VcfReader::VcfReader(VcfReader&& other)
 {
     std::lock_guard<std::mutex> lock {other.mutex_};

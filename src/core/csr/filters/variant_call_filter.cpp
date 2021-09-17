@@ -312,6 +312,7 @@ void VariantCallFilter::write(VcfRecord::Builder&& call, const Classification& c
     if (!is_hard_filtered(classification)) {
         configure(call);
         annotate(call, classification);
+        call.squash_reference_if_blocked();
         dest << call.build_once();
     }
 }
@@ -321,6 +322,7 @@ void VariantCallFilter::write(const VcfRecord& call, const Classification& class
     if (!is_hard_filtered(classification)) {
         auto filtered_call = construct_template(call);
         annotate(filtered_call, classification);
+        filtered_call.squash_reference_if_blocked();
         dest << filtered_call.build_once();
     }
 }
@@ -333,6 +335,7 @@ void VariantCallFilter::write(VcfRecord::Builder&& call, const Classification& c
         configure(call);
         annotate(call, classification);
         annotate(call, samples, sample_classifications);
+        call.squash_reference_if_blocked();
         dest << call.build_once();
     }
 }
@@ -345,6 +348,7 @@ void VariantCallFilter::write(const VcfRecord& call, const Classification& class
         auto filtered_call = construct_template(call);
         annotate(filtered_call, classification);
         annotate(filtered_call, samples, sample_classifications);
+        filtered_call.squash_reference_if_blocked();
         dest << filtered_call.build_once();
     }
 }

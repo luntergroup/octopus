@@ -24,6 +24,8 @@
 
 namespace octopus {
 
+class ReferenceGenome;
+
 // TODO: consider using boosts small_vector for INFO and genotype fields
 
 class VcfRecord : public Comparable<VcfRecord>, public Mappable<VcfRecord>
@@ -189,8 +191,9 @@ public:
     
     Builder() = default;
     
+    Builder(const ReferenceGenome& reference);
     Builder(const VcfRecord& call);
-    
+            
     Builder& set_chrom(std::string name);
     Builder& set_pos(GenomicRegion::Position pos);
     
@@ -251,6 +254,7 @@ public:
     Builder& set_reference_reversion();
     
     Builder& set_blocked_reference();
+    Builder& squash_reference_if_blocked();
     
     GenomicRegion::Position pos() const noexcept;
     
@@ -271,6 +275,7 @@ private:
     decltype(VcfRecord::format_) format_ = {};
     decltype(VcfRecord::samples_) samples_ = {};
     boost::optional<GenomicRegion::Position> end_;
+    const ReferenceGenome* reference_;
 };
 
 template <typename String1, typename String2, typename Sequence1, typename Sequence2,
