@@ -409,10 +409,10 @@ def rename_vcf(old_name, new_name, index=True):
 def classify_vcfeval_ignored_calls(vcfeval_dir, octopus_vcf, sample, regions=None):
     calls_vcf = ps.VariantFile(vcfeval_dir / "calls.vcf.gz")
     baseline_vcf = ps.VariantFile(vcfeval_dir / "baseline.vcf.gz")
-    new_calls_vcf = ps.VariantFile(vcfeval_dir / "calls.homref.vcf.gz", 'w', header=calls_vcf.header)
+    new_calls_vcf = ps.VariantFile(vcfeval_dir / "calls.homref.vcf.gz", 'wz', header=calls_vcf.header)
     for call in calls_vcf:
         if call.info["CALL"] == "IGN":
-            if any(baseline.info["BASE"] == "FN" for baseline in baseline_vcf.fetch(call.chrom, call.pos)):
+            if any(baseline.info["BASE"] == "FN" for baseline in baseline_vcf.fetch(call.contig, call.start, call.stop)):
                 call.info["CALL"] = "FP"
             else:
                 call.info["CALL"] = "TP"
