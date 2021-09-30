@@ -882,12 +882,26 @@ bool is_good_alignment(const CigarString& cigar, const Assembler::Variant& v) no
     return !is_complex_alignment(cigar, v);
 }
 
+bool is_unaligned(const CigarString& cigar) noexcept
+{
+    return cigar.size() == 2 && (is_deletion(cigar.front()) && is_insertion(cigar.back()));
+}
+
 std::vector<Assembler::Variant>
 decompose_with_aligner(Assembler::Variant v, const Model& model, const VariantDecompositionConfig config)
 {
     const auto cigar = align(v, model);
     if (is_good_alignment(cigar, v)) {
-        return extract_variants(v.ref, v.alt, cigar, v.begin_pos);
+        auto result = extract_variants(v.ref, v.alt, cigar, v.begin_pos);
+        if (is_unaligned(cigar)) {
+            // If the sequences don't align then the insertion (variant sequence)
+            // could be before or after the deletion (reference).
+            assert(result.size() == 2);
+            Assembler::Variant insertion {result.back()};
+            insertion.begin_pos = result.front().begin_pos;
+            result.push_back(std::move(insertion));
+        }
+        return result;
     } else if (config.complex == VariantDecompositionConfig::ComplexAction::mnv) {
         return {std::move(v)};
     } else {

@@ -209,6 +209,11 @@ auto score(const DPMatrix& matrix) noexcept
     return std::max({last.match, last.insertion, last.deletion});
 }
 
+Cell::ScoreType calculate_unaligned_score(const std::size_t target_length, const std::size_t query_length, Model& model) noexcept
+{
+    return 2 * model.gap_open + (target_length + query_length - 2) * model.gap_extend; 
+}
+
 } // namespace
 
 Alignment align(const std::string& target, const std::string& query, Model model)
@@ -225,7 +230,15 @@ Alignment align(const std::string& target, const std::string& query, Model model
                 model.gap_open + static_cast<int>(target.size() - 1) * model.gap_extend};
     }
     const auto matrix = build_dp_matrix(target, query, model);
-    return {extract_alignment(target, query, matrix, model), score(matrix)};
+    auto alignment_score = score(matrix);
+    const auto unaligned_score = calculate_unaligned_score(target.size(), query.size(), model);
+    if (alignment_score > unaligned_score) {
+        return {extract_alignment(target, query, matrix, model), alignment_score};
+    } else {
+        return {CigarString {CigarOperation {static_cast<Size>(target.size()), Flag::deletion},
+                             CigarOperation {static_cast<Size>(query.size()), Flag::insertion}},
+                unaligned_score};
+    }
 }
 
 } // namespace coretools
