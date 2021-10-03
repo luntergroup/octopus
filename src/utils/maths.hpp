@@ -283,7 +283,7 @@ template <typename RealType,
 inline RealType log_sum_exp(const RealType a, const RealType b)
 {
     const auto r = std::minmax(a, b);
-    return r.second + std::log(RealType {1} + std::exp(r.first - r.second));
+    return r.second + std::log1p(std::exp(r.first - r.second));
 }
 
 template <typename RealType,
