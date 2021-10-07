@@ -2141,17 +2141,14 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
         stream(log) << "The " << caller << " calling model is still in development. Do not use for production work!";
     }
     
-    if (is_set("refcall", options)) {
+    if (options.at("refcall").as<bool>()) {
         emit_in_development_warning("refcall");
-        const auto refcall_type = options.at("refcall").as<RefCallType>();
-        if (refcall_type == RefCallType::positional) {
+        const auto refcall_merge_threshold = options.at("refcall-block-merge-quality").as<Phred<double>>();
+        if (refcall_merge_threshold.score() == 0) {
             vc_builder.set_refcall_type(CallerBuilder::RefCallType::positional);
         } else {
             vc_builder.set_refcall_type(CallerBuilder::RefCallType::blocked);
-            auto block_merge_threshold = options.at("refcall-block-merge-quality").as<Phred<double>>();
-            if (block_merge_threshold.score() > 0) {
-                vc_builder.set_refcall_merge_block_threshold(block_merge_threshold);
-            }
+            vc_builder.set_refcall_merge_block_threshold(refcall_merge_threshold);
         }
         if (is_set("max-refcall-posterior", options)) {
             vc_builder.set_max_refcall_posterior(options.at("max-refcall-posterior").as<Phred<double>>());

@@ -512,13 +512,12 @@ OptionMap parse_options(const int argc, const char** argv)
      "Report variant alleles with posterior probability (phred scale) greater than this")
     
     ("refcall",
-     po::value<RefCallType>()->implicit_value(RefCallType::blocked),
-     "Caller will report reference confidence calls for each position [POSITIONAL],"
-     " or in automatically sized blocks [BLOCKED]")
+     po::bool_switch()->default_value(false),
+     "Caller will report reference confidence calls for non-variant positions")
      
     ("refcall-block-merge-quality",
      po::value<Phred<double>>()->default_value(Phred<double> {10.0}),
-     "Threshold to merge adjacent refcall positions when using blocked refcalling")
+     "Threshold to merge adjacent refcall positions, set to 0 for positional records")
     
     ("max-refcall-posterior",
      po::value<Phred<double>>(),
@@ -1229,31 +1228,6 @@ std::ostream& operator<<(std::ostream& out, const ContigPloidy& plodies)
     return out;
 }
 
-std::istream& operator>>(std::istream& in, RefCallType& type)
-{
-    std::string token;
-    in >> token;
-    if (token == "POSITIONAL")
-        type = RefCallType::positional;
-    else if (token == "BLOCKED")
-        type = RefCallType::blocked;
-    else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token, "refcalls"};
-    return in;
-}
-
-std::ostream& operator<<(std::ostream& out, const RefCallType& type)
-{
-    switch (type) {
-        case RefCallType::positional:
-            out << "POSITIONAL";
-            break;
-        case RefCallType::blocked:
-            out << "BLOCKED";
-            break;
-    }
-    return out;
-}
-
 std::istream& operator>>(std::istream& in, ContigOutputOrder& order)
 {
     std::string token;
@@ -1759,8 +1733,6 @@ std::ostream& operator<<(std::ostream& os, const OptionMap& options)
             os << options[label].as<ContigPloidy>();
         } else if (is_vector_type<ContigPloidy>(value)) {
             write_vector<ContigPloidy>(options, label, os, bullet);
-        } else if (is_type<RefCallType>(value)) {
-            os << options[label].as<RefCallType>();
         } else if (is_type<ExtensionLevel>(value)) {
             os << options[label].as<ExtensionLevel>();
         } else if (is_type<LaggingLevel>(value)) {
