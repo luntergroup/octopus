@@ -783,7 +783,9 @@ OptionMap parse_options(const int argc, const char** argv)
     .add(cancer).add(trio).add(polyclone).add(cell).add(call_filtering);
     
     po::options_description conditional_help_options("Octopus help command line options");
-    conditional_help_options.add(general).add(call_filtering);
+    // Add call_filtering for optional annotation help.
+    // Add general_variant_calling to ensure --refcall is resolved correctly.  
+    conditional_help_options.add(general).add(general_variant_calling).add(call_filtering);
     OptionMap vm_init;
     po::store(run(po::command_line_parser(argc, argv).options(conditional_help_options).allow_unregistered()), vm_init);
     
