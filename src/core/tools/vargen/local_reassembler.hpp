@@ -93,6 +93,7 @@ private:
         {
             std::reference_wrapper<const NucleotideSequence> sequence;
             std::reference_wrapper<const AlignedRead::BaseQualityVector> base_qualities;
+            std::size_t sample_index;
         };
         using ReadDataStash = std::deque<ReadData>;
         
@@ -100,8 +101,8 @@ private:
         
         const GenomicRegion& mapped_region() const noexcept;
         
-        void add(const AlignedRead& read);
-        void add(const AlignedRead& read, const NucleotideSequence& masked_sequence);
+        void add(const AlignedRead& read, std::size_t sample_index);
+        void add(const AlignedRead& read, const NucleotideSequence& masked_sequence, std::size_t sample_index);
         
         void clear() noexcept;
         std::size_t size() const noexcept;
@@ -136,6 +137,7 @@ private:
     void try_assemble_with_fallbacks(const Bin& bin, std::deque<Variant>& result) const;
     GenomicRegion propose_assembler_region(const GenomicRegion& input_region, unsigned kmer_size) const;
     void load(const Bin& bin, Assembler& assembler) const;
+    void load(const Bin& bin, std::size_t sample_idx, Assembler& assembler) const;
     AssemblerStatus assemble_bin(unsigned kmer_size, const Bin& bin, std::deque<Variant>& result) const;
     AssemblerStatus try_assemble_region(Assembler& assembler, const NucleotideSequence& reference_sequence,
                                         const GenomicRegion& reference_region, std::deque<Variant>& result) const;

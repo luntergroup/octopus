@@ -96,7 +96,7 @@ const GenomicRegion& LocalReassembler::Bin::mapped_region() const noexcept
     return region;
 }
 
-void LocalReassembler::Bin::add(const AlignedRead& read)
+void LocalReassembler::Bin::add(const AlignedRead& read, const std::size_t sample_index)
 {
     if (read_region) {
         read_region = encompassing_region(*read_region, contig_region(read));
@@ -104,13 +104,13 @@ void LocalReassembler::Bin::add(const AlignedRead& read)
         read_region = contig_region(read);
     }
     if (is_forward_strand(read)) {
-        forward_read_sequences.push_back({read.sequence(), read.base_qualities()});
+        forward_read_sequences.push_back({read.sequence(), read.base_qualities(), sample_index});
     } else {
-        reverse_read_sequences.push_back({read.sequence(), read.base_qualities()});
+        reverse_read_sequences.push_back({read.sequence(), read.base_qualities(), sample_index});
     }
 }
 
-void LocalReassembler::Bin::add(const AlignedRead& read, const NucleotideSequence& masked_sequence)
+void LocalReassembler::Bin::add(const AlignedRead& read, const NucleotideSequence& masked_sequence, const std::size_t sample_index)
 {
     if (read_region) {
         read_region = encompassing_region(*read_region, contig_region(read));
@@ -118,9 +118,9 @@ void LocalReassembler::Bin::add(const AlignedRead& read, const NucleotideSequenc
         read_region = contig_region(read);
     }
     if (is_forward_strand(read)) {
-        forward_read_sequences.push_back({masked_sequence, read.base_qualities()});
+        forward_read_sequences.push_back({masked_sequence, read.base_qualities(), sample_index});
     } else {
-        reverse_read_sequences.push_back({masked_sequence, read.base_qualities()});
+        reverse_read_sequences.push_back({masked_sequence, read.base_qualities(), sample_index});
     }
 }
 
@@ -332,6 +332,7 @@ std::vector<Variant> LocalReassembler::do_generate(const RegionSet& regions) con
     }
     for (const auto& region : regions) {
         prepare_bins(region, bins);
+        std::size_t sample_idx {0};
         for (const auto& p : read_buffer_) {
             for (const auto& read : overlap_range(p.second, region)) {
                 auto active_bins = overlapped_bins(bins, read);
@@ -341,13 +342,14 @@ std::vector<Variant> LocalReassembler::do_generate(const RegionSet& regions) con
                     if (masked_sequence) {
                         masked_sequence_buffer.emplace_back(std::move(*masked_sequence));
                         for (auto& bin : active_bins) {
-                            bin.add(read, std::cref(masked_sequence_buffer.back()));
+                            bin.add(read, std::cref(masked_sequence_buffer.back()), sample_idx);
                         }
                     }
                 } else {
-                    for (auto& bin : active_bins) bin.add(read);
+                    for (auto& bin : active_bins) bin.add(read, sample_idx);
                 }
             }
+            ++sample_idx;
         }
     }
     finalise_bins(bins, regions);
@@ -562,10 +564,24 @@ GenomicRegion LocalReassembler::propose_assembler_region(const GenomicRegion& in
 void LocalReassembler::load(const Bin& bin, Assembler& assembler) const
 {
     for (const auto& read : bin.forward_read_sequences) {
-        assembler.insert_read(read.sequence, read.base_qualities, Assembler::Direction::forward);
+        assembler.insert_read(read.sequence, read.base_qualities, Assembler::Direction::forward, read.sample_index);
     }
     for (const auto& read : bin.reverse_read_sequences) {
-        assembler.insert_read(read.sequence, read.base_qualities, Assembler::Direction::reverse);
+        assembler.insert_read(read.sequence, read.base_qualities, Assembler::Direction::reverse, read.sample_index);
+    }
+}
+
+void LocalReassembler::load(const Bin& bin, const std::size_t sample_idx, Assembler& assembler) const
+{
+    for (const auto& read : bin.forward_read_sequences) {
+        if (read.sample_index == sample_idx) {
+            assembler.insert_read(read.sequence, read.base_qualities, Assembler::Direction::forward, read.sample_index);
+        }
+    }
+    for (const auto& read : bin.reverse_read_sequences) {
+        if (read.sample_index == sample_idx) {
+            assembler.insert_read(read.sequence, read.base_qualities, Assembler::Direction::reverse, read.sample_index);
+        }
     }
 }
 
@@ -582,7 +598,16 @@ LocalReassembler::assemble_bin(const unsigned kmer_size, const Bin& bin, std::de
     Assembler assembler {assembler_params, reference_sequence};
     if (assembler.is_unique_reference()) {
         load(bin, assembler);
-        return try_assemble_region(assembler, reference_sequence, assemble_region, result);
+        auto status = try_assemble_region(assembler, reference_sequence, assemble_region, result);
+        const auto num_samples = read_buffer_.size();
+        if (num_samples > 1 && status != AssemblerStatus::success) {
+            for (std::size_t sample_idx {0}; sample_idx < num_samples; ++sample_idx) {
+                Assembler sample_assembler {assembler_params, reference_sequence};
+                load(bin, sample_idx, sample_assembler);
+                try_assemble_region(sample_assembler, reference_sequence, assemble_region, result);
+            }
+        }
+        return status;
     } else {
         return AssemblerStatus::failed;
     }
@@ -924,7 +949,7 @@ std::vector<Assembler::Variant>
 decompose_complex(Assembler::Variant v, const std::vector<Repeat>& reference_repeats, const VariantDecompositionConfig config)
 {
     auto result = try_to_split_repeats(v, reference_repeats);
-    if (!is_fully_decomposed(v)) {
+    if (result.empty() || !is_fully_decomposed(v)) {
         utils::append(decompose_with_aligner(std::move(v), config), result);
     }
     return result;
@@ -998,7 +1023,10 @@ void decompose(std::deque<Assembler::Variant>& variants, const ReferenceGenome::
     auto reference_repeats = find_repeats(tmp);
     const auto first_decomposable = partition_decomposable(variants);
     if (first_decomposable != std::end(variants)) {
-        merge(decompose(first_decomposable, std::end(variants), reference_repeats, config), variants, first_decomposable);
+        auto decomposed = decompose(first_decomposable, std::end(variants), reference_repeats, config);
+        if (!decomposed.empty()) {
+            merge(std::move(decomposed), variants, first_decomposable);
+        }
     }
 }
 
@@ -1028,10 +1056,27 @@ LocalReassembler::try_assemble_region(Assembler& assembler, const NucleotideSequ
     auto status = AssemblerStatus::success;
     if (!assembler.is_acyclic()) {
         if (cycle_tolerance_ == Options::CyclicGraphTolerance::none) {
-            return AssemblerStatus::failed;
+            const auto num_samples = read_buffer_.size();
+            if (num_samples > 1) {
+                const auto cyclic_samples = assembler.find_cyclic_samples();
+                if (num_samples == cyclic_samples.size()) {
+                    return AssemblerStatus::failed;
+                } else {
+                    assembler.clear(cyclic_samples);
+                    assembler.prune(min_kmer_observations_);
+                    if (assembler.is_acyclic()) {
+                        status = AssemblerStatus::partial_success;
+                    } else {
+                        return AssemblerStatus::failed;
+                    }
+                }
+            } else {
+                return AssemblerStatus::failed;
+            }
+        } else {
+            assembler.remove_nonreference_cycles();
+            status = AssemblerStatus::partial_success;
         }
-        assembler.remove_nonreference_cycles();
-        status = AssemblerStatus::partial_success;
     }
     assembler.cleanup();
     if (assembler.is_empty() || assembler.is_all_reference()) {

@@ -24,6 +24,7 @@
 #include <boost/graph/graph_utility.hpp>
 #include <boost/graph/exception.hpp>
 #include <boost/graph/graphviz.hpp>
+#include <boost/graph/copy.hpp>
 
 #include "ksp/yen_ksp.hpp"
 
@@ -79,6 +80,39 @@ Assembler::Assembler(const Parameters params, const NucleotideSequence& referenc
     insert_reference_into_empty_graph(reference);
 }
 
+Assembler::Assembler(const Assembler& other)
+: params_ {other.params_}
+, reference_kmers_ {other.reference_kmers_}
+, reference_head_position_ {other.reference_head_position_}
+{
+    std::unordered_map<Vertex, std::size_t> index_map {};
+    index_map.reserve(boost::num_vertices(other.graph_));
+    const auto p = boost::vertices(other.graph_);
+    std::size_t i {0};
+    std::for_each(p.first, p.second, [&i, &index_map] (const Vertex& v) { index_map.emplace(v, i++); });
+    std::unordered_map<Vertex, Vertex> vertex_copy_map {};
+    vertex_copy_map.reserve(boost::num_vertices(other.graph_));
+    boost::copy_graph(other.graph_, this->graph_,
+                      boost::vertex_index_map(boost::make_assoc_property_map(index_map))
+                      .orig_to_copy(boost::make_assoc_property_map(vertex_copy_map)));
+    vertex_cache_ = other.vertex_cache_;
+    for (auto& p : vertex_cache_) {
+        p.second = vertex_copy_map.at(p.second);
+    }
+    reference_vertices_ = other.reference_vertices_;
+    for (auto& v : reference_vertices_) {
+        v = vertex_copy_map.at(v);
+    }
+    for (const auto& other_edge : other.reference_edges_) {
+        Edge e; bool e_in_graph;
+        const auto u = vertex_copy_map.at(boost::source(other_edge, other.graph_));
+        const auto v = vertex_copy_map.at(boost::target(other_edge, other.graph_));
+        std::tie(e, e_in_graph) = boost::edge(u, v, graph_);
+        assert(e_in_graph);
+        reference_edges_.push_back(e);
+    }
+}
+
 unsigned Assembler::kmer_size() const noexcept
 {
     return params_.kmer_size;
@@ -106,7 +140,8 @@ void Assembler::insert_reference(const NucleotideSequence& sequence)
 
 void Assembler::insert_read(const NucleotideSequence& sequence,
                             const BaseQualityVector& base_qualities,
-                            const Direction strand)
+                            const Direction strand,
+                            const SampleID sample)
 {
     if (sequence.size() >= kmer_size()) {
         const bool is_forward_strand {strand == Direction::forward};
@@ -133,7 +168,7 @@ void Assembler::insert_read(const NucleotideSequence& sequence,
                    ++next_kmer_begin, ++next_kmer_end, ++ref_kmer_itr, ++ref_vertex_itr, ++ref_edge_itr, ++base_quality_itr) {
                 if (std::equal(next_kmer_begin, next_kmer_end, std::cbegin(*ref_kmer_itr))) {
                     assert(ref_edge_itr != std::cend(reference_edges_));
-                    increment_weight(*ref_edge_itr, is_forward_strand, *base_quality_itr);
+                    increment_weight(*ref_edge_itr, is_forward_strand, *base_quality_itr, sample);
                 } else {
                     break;
                 }
@@ -157,7 +192,7 @@ void Assembler::insert_read(const NucleotideSequence& sequence,
                     if (prev_kmer_good) {
                         assert(vertex_cache_.count(prev_kmer) == 1);
                         const auto u = vertex_cache_.at(prev_kmer);
-                        add_edge(u, *v, 1, is_forward_strand, *base_quality_itr);
+                        add_edge(u, *v, 1, is_forward_strand, *base_quality_itr, false, sample);
                     }
                     prev_kmer_good = true;
                 } else {
@@ -170,9 +205,9 @@ void Assembler::insert_read(const NucleotideSequence& sequence,
                     Edge e; bool e_in_graph;
                     std::tie(e, e_in_graph) = boost::edge(u, v, graph_);
                     if (e_in_graph) {
-                        increment_weight(e, is_forward_strand, *base_quality_itr);
+                        increment_weight(e, is_forward_strand, *base_quality_itr, sample);
                     } else {
-                        add_edge(u, v, 1, is_forward_strand, *base_quality_itr);
+                        add_edge(u, v, 1, is_forward_strand, *base_quality_itr, false, sample);
                     }
                 }
                 if (is_reference(kmer_itr->second)) {
@@ -188,7 +223,7 @@ void Assembler::insert_read(const NucleotideSequence& sequence,
                                ++next_kmer_begin, ++next_kmer_end, ++ref_kmer_itr, ++ref_vertex_itr, ++ref_edge_itr) {
                             if (std::equal(next_kmer_begin, next_kmer_end, std::cbegin(*ref_kmer_itr))) {
                                 assert(ref_edge_itr != std::cend(reference_edges_));
-                                increment_weight(*ref_edge_itr, is_forward_strand, *base_quality_itr);
+                                increment_weight(*ref_edge_itr, is_forward_strand, *base_quality_itr, sample);
                             } else {
                                 break;
                             }
@@ -229,6 +264,63 @@ void Assembler::remove_nonreference_cycles(bool break_chains)
     remove_all_nonreference_cycles(break_chains);
 }
 
+namespace {
+
+struct CycleDetector : public boost::default_dfs_visitor
+{
+    struct CycleDetectedException {};
+    explicit CycleDetector(bool allow_self_edges = true) : allow_self_edges_ {allow_self_edges} {}
+    
+    template <typename Graph>
+    void back_edge(typename boost::graph_traits<Graph>::edge_descriptor e, const Graph& g)
+    {
+        if (boost::source(e, g) != boost::target(e, g) || !allow_self_edges_) {
+            throw CycleDetectedException {};
+        }
+    }
+protected:
+    const bool allow_self_edges_;
+};
+
+template <typename Container>
+struct CyclicEdgeDetector : public boost::default_dfs_visitor
+{
+    CyclicEdgeDetector(Container& result, bool include_self_edges = true)
+    : include_self_edges_ {include_self_edges}, result_ {result} {}
+    
+    template <typename Graph>
+    void back_edge(typename boost::graph_traits<Graph>::edge_descriptor e, const Graph& g)
+    {
+        if (boost::source(e, g) != boost::target(e, g) || include_self_edges_) {
+            result_.push_back(e);
+        }
+    }
+protected:
+    const bool include_self_edges_;
+    Container& result_;
+};
+
+} // namespace
+
+std::vector<Assembler::SampleID> Assembler::find_cyclic_samples(const unsigned min_weight) const
+{
+    const auto index_map = boost::get(&GraphNode::index, graph_);
+    std::deque<Edge> cyclic_edges {};
+    CyclicEdgeDetector<decltype(cyclic_edges)> vis {cyclic_edges};
+    boost::depth_first_search(graph_, boost::visitor(vis).root_vertex(reference_head()).vertex_index_map(index_map));
+    std::set<SampleID> cyclic_samples {};
+    for (const Edge& e : cyclic_edges) {
+        if (!is_reference(e)) {
+            for (const auto& p : graph_[e].samples) {
+                if (p.second.weight >= min_weight) {
+                    cyclic_samples.insert(p.first);
+                }
+            } 
+        }
+    }
+    return {std::begin(cyclic_samples), std::end(cyclic_samples)};
+}
+
 bool Assembler::is_all_reference() const
 {
     const auto p = boost::edges(graph_);
@@ -247,7 +339,7 @@ void Assembler::try_recover_dangling_branches()
         if (is_dangling_branch(v)) {
             const auto joining_kmer = find_joining_kmer(v);
             if (joining_kmer) {
-                add_edge(v, *joining_kmer, 1, 0, false, false);
+                add_edge(v, *joining_kmer, 1, 0, false);
             }
         }
     });
@@ -311,6 +403,33 @@ void Assembler::cleanup()
     if (new_size != old_size) {
         regenerate_vertex_indices();
     }
+}
+
+void Assembler::clear(const std::vector<SampleID>& samples)
+{
+    const auto can_remove_edge = [&] (const Edge& e) {
+        if (is_reference(e)) return false;
+        if (is_artificial(e)) return false;
+        if (graph_[e].samples.size() > samples.size()) return false;
+        const auto includes_sample = [&] (const auto& p) {
+            return std::find(std::cbegin(samples), std::cend(samples), p.first) != std::cend(samples);
+        };
+        return std::all_of(std::cbegin(graph_[e].samples), std::cend(graph_[e].samples), includes_sample);
+    };
+    boost::remove_edge_if(can_remove_edge, graph_);
+    const auto p = boost::edges(graph_);
+    std::for_each(p.first, p.second, [&] (const Edge& e) {
+        auto& edge = graph_[e];
+        for (const auto& sample : samples) {
+            const auto sample_itr = edge.samples.find(sample);
+            if (sample_itr != std::cend(edge.samples)) {
+                edge.weight -= sample_itr->second.weight;
+                edge.forward_strand_weight -= sample_itr->second.forward_strand_weight;
+                edge.base_quality_sum -= sample_itr->second.base_quality_sum;
+                edge.samples.erase(sample_itr);
+            }
+        }
+    });
 }
 
 void Assembler::clear()
@@ -604,12 +723,19 @@ void Assembler::clear_and_remove_all(const std::unordered_set<Vertex>& vertices)
     }
 }
 
-Assembler::Edge Assembler::add_edge(const Vertex u, const Vertex v,
-                                    const GraphEdge::WeightType weight, GraphEdge::WeightType forward_weight,
-                                    const int base_quality_sum,
-                                    const bool is_reference, const bool is_artificial)
+Assembler::Edge 
+Assembler::add_edge(const Vertex u, const Vertex v,
+                    const GraphEdge::WeightType weight, 
+                    GraphEdge::WeightType forward_weight,
+                    const int base_quality_sum,
+                    const bool is_reference,
+                    const boost::optional<Assembler::SampleID> sample)
 {
-    return boost::add_edge(u, v, {weight, forward_weight, base_quality_sum, is_reference, is_artificial}, graph_).first;
+    decltype(GraphEdge::samples) samples {};
+    if (sample) {
+        samples[*sample] = {weight, forward_weight, base_quality_sum};
+    }
+    return boost::add_edge(u, v, {std::move(samples), weight, forward_weight, base_quality_sum, is_reference}, graph_).first;
 }
 
 Assembler::Edge Assembler::add_reference_edge(const Vertex u, const Vertex v)
@@ -627,9 +753,17 @@ void Assembler::remove_edge(const Edge e)
     boost::remove_edge(e, graph_);
 }
 
-void Assembler::increment_weight(const Edge e, const bool is_forward, const int base_quality)
+void Assembler::increment_weight(const Edge e, const bool is_forward, const int base_quality, const SampleID sample)
 {
     auto& edge = graph_[e];
+    auto sample_itr = edge.samples.find(sample);
+    if (sample_itr != std::cend(edge.samples)) {
+        ++sample_itr->second.weight;
+        sample_itr->second.base_quality_sum += base_quality;
+        if (is_forward) ++sample_itr->second.base_quality_sum;
+    } else {
+        edge.samples[sample] = {1, is_forward, base_quality};
+    }
     ++edge.weight;
     edge.base_quality_sum += base_quality;
     if (is_forward) ++edge.forward_strand_weight;
@@ -697,7 +831,7 @@ bool Assembler::is_reference(const Edge e) const
 
 bool Assembler::is_artificial(const Edge e) const
 {
-    return graph_[e].is_artificial;
+    return graph_[e].samples.empty();
 }
 
 bool Assembler::is_reference_empty() const noexcept
@@ -873,44 +1007,6 @@ bool Assembler::joins_reference_only(Path::const_iterator first, Path::const_ite
     const auto itr = std::find_if(first, last, [this] (Vertex v) { return is_reference(v) || boost::out_degree(v, graph_) != 1; });
     return itr == last || is_reference(*itr);
 }
-
-namespace {
-
-struct CycleDetector : public boost::default_dfs_visitor
-{
-    struct CycleDetectedException {};
-    explicit CycleDetector(bool allow_self_edges = true) : allow_self_edges_ {allow_self_edges} {}
-    
-    template <typename Graph>
-    void back_edge(typename boost::graph_traits<Graph>::edge_descriptor e, const Graph& g)
-    {
-        if (boost::source(e, g) != boost::target(e, g) || !allow_self_edges_) {
-            throw CycleDetectedException {};
-        }
-    }
-protected:
-    const bool allow_self_edges_;
-};
-
-template <typename Container>
-struct CyclicEdgeDetector : public boost::default_dfs_visitor
-{
-    CyclicEdgeDetector(Container& result, bool include_self_edges = true)
-    : include_self_edges_ {include_self_edges}, result_ {result} {}
-    
-    template <typename Graph>
-    void back_edge(typename boost::graph_traits<Graph>::edge_descriptor e, const Graph& g)
-    {
-        if (boost::source(e, g) != boost::target(e, g) || include_self_edges_) {
-            result_.push_back(e);
-        }
-    }
-protected:
-    const bool include_self_edges_;
-    Container& result_;
-};
-    
-} // namespace
 
 bool Assembler::is_trivial_cycle(const Edge e) const
 {
