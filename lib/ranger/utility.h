@@ -80,8 +80,8 @@ inline void saveVector1D(const std::vector<bool>& vector, std::ofstream& file) {
  * @param result Result vector with elements of type T.
  * @param file ifstream object to read from.
  */
-template<typename T>
-inline void readVector1D(std::vector<T>& result, std::ifstream& file) {
+template<typename T, typename FileStream>
+inline void readVector1D(std::vector<T>& result, FileStream& file) {
   // Read length
   size_t length;
   file.read((char*) &length, sizeof(length));
@@ -89,8 +89,8 @@ inline void readVector1D(std::vector<T>& result, std::ifstream& file) {
   file.read((char*) result.data(), length * sizeof(T));
 }
 
-template<>
-inline void readVector1D(std::vector<bool>& result, std::ifstream& file) {
+template<typename FileStream>
+inline void readVector1D(std::vector<bool>& result, FileStream& file) {
   // Read length
   size_t length;
   file.read((char*) &length, sizeof(length));
@@ -126,8 +126,8 @@ inline void saveVector2D(const std::vector<std::vector<T>>& vector, std::ofstrea
  * @param result Result vector of vectors with elements of type T.
  * @param file ifstream object to read from.
  */
-template<typename T>
-inline void readVector2D(std::vector<std::vector<T>>& result, std::ifstream& file) {
+template<typename T, typename FileStream>
+inline void readVector2D(std::vector<std::vector<T>>& result, FileStream& file) {
   // Read length of first dim
   size_t length;
   file.read((char*) &length, sizeof(length));

@@ -209,7 +209,7 @@ void ForestRegression::saveToFileInternal(std::ofstream& outfile) const {
   outfile.write((char*) &treetype, sizeof(treetype));
 }
 
-void ForestRegression::loadFromFileInternal(std::ifstream& infile) {
+void ForestRegression::loadFromFileInternal(boost::iostreams::filtering_istream& infile) {
 
 // Read treetype
   TreeType treetype;

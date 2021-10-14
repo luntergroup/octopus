@@ -17,6 +17,8 @@
 #include <utility>
 #include <vector>
 
+#include <boost/iostreams/filtering_stream.hpp>
+
 #include "globals.h"
 #include "Forest.h"
 
@@ -64,7 +66,7 @@ private:
   void writeConfusionFile() const override;
   void writePredictionFile() const override;
   void saveToFileInternal(std::ofstream& outfile) const override;
-  void loadFromFileInternal(std::ifstream& infile) override;
+  void loadFromFileInternal(boost::iostreams::filtering_istream& infile) override;
 
   double getTreePrediction(size_t tree_idx, size_t sample_idx) const;
   size_t getTreePredictionTerminalNodeID(size_t tree_idx, size_t sample_idx) const;
