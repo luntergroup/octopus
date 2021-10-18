@@ -981,6 +981,7 @@ struct TaskWriterSyncPacket
     std::mutex mutex;
     std::deque<CompletedTask> tasks = {};
     bool done = false;
+    bool completed = false;
 };
 
 void write(std::deque<CompletedTask>& tasks, TempVcfWriterMap& writers)
@@ -998,6 +999,7 @@ void write(std::deque<CompletedTask>& tasks, TempVcfWriterMap& writers)
 
 void write_temp_vcf_helper(TempVcfWriterMap& writers, TaskWriterSyncPacket& sync)
 {
+    static auto debug_log = get_debug_log();
     try {
         std::unique_lock<std::mutex> lock {sync.mutex, std::defer_lock};
         std::deque<CompletedTask> buffer {};
@@ -1010,8 +1012,10 @@ void write_temp_vcf_helper(TempVcfWriterMap& writers, TaskWriterSyncPacket& sync
             sync.cv.notify_one();
             write(buffer, writers);
         }
-        logging::DebugLogger debug_log {};
-        debug_log << "Task writer finished";
+        if (debug_log) *debug_log << "Task writer finished";
+        lock.lock();
+        sync.completed = true;
+        sync.cv.notify_all();
     } catch (const Error& e) {
         log_error(e);
         logging::FatalLogger fatal_log {};
@@ -1082,6 +1086,8 @@ void wait_until_finished(TaskWriterSyncPacket& sync)
     sync.done = true;
     lock.unlock();
     sync.cv.notify_one();
+    lock.lock();
+    sync.cv.wait(lock, [&] () { return sync.completed; });
 }
 
 using FutureCompletedTasks = std::vector<std::future<CompletedTask>>;
