@@ -72,6 +72,16 @@ bool GenotypeQualityByDepth::is_equal(const Measure& other) const noexcept
 {
     return depth_ == static_cast<const GenotypeQualityByDepth&>(other).depth_;
 }
-    
+
+void GenotypeQualityByDepth::do_set_parameters(std::vector<std::string> params)
+{
+    depth_.set_parameters(std::move(params));
+}
+
+std::vector<std::string> GenotypeQualityByDepth::do_parameters() const
+{
+    return depth_.parameters();
+}
+
 } // namespace csr
 } // namespace octopus
