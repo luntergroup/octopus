@@ -92,9 +92,19 @@ void Call::set_model_posterior(Phred<double> p) noexcept
     model_posterior_ = p;
 }
 
+void Call::set_model_posterior(const SampleName& sample, const Phred<double> p) noexcept
+{
+    genotype_calls_.at(sample).model_posterior = p;
+}
+
 boost::optional<Phred<double>> Call::model_posterior() const noexcept
 {
     return model_posterior_;
+}
+
+boost::optional<Phred<double>> Call::model_posterior(const SampleName& sample) const noexcept
+{
+    return genotype_calls_.at(sample).model_posterior;
 }
 
 void Call::reorder_genotype(const SampleName& sample, const std::vector<unsigned>& order)

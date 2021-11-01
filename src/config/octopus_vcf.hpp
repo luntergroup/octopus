@@ -13,12 +13,6 @@ namespace octopus { namespace vcf {
 
 namespace spec {
 
-namespace allele {
-
-
-
-} // namespace info
-
 namespace info {
 
 VCF_SPEC_CONSTANT modelPosterior {"MP"};
@@ -70,6 +64,12 @@ VCF_SPEC_CONSTANT highErrorRate {"ER"};
 VCF_SPEC_CONSTANT highErrorRateStdev {"ERS"};
 
 } // namespace filter
+
+namespace format {
+
+VCF_SPEC_CONSTANT modelPosterior {"MP"};
+
+} // namespace info
 
 } // namespace spec
 

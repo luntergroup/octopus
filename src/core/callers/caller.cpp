@@ -973,7 +973,16 @@ void Caller::set_model_posteriors(std::vector<CallWrapper>& calls, const Latents
         const auto mp = calculate_model_posterior(haplotypes, haplotype_likelihoods, latents);
         if (mp) {
             for (auto& call : calls) {
-                call->set_model_posterior(probability_false_to_phred(1 - *mp));
+                if (mp->joint) {
+                    call->set_model_posterior(probability_false_to_phred(1 - *mp->joint));
+                }
+                if (!mp->samples.empty()) {
+                    for (std::size_t sample_idx {0}; sample_idx < samples_.size(); ++sample_idx) {
+                        if (mp->samples[sample_idx]) {
+                            call->set_model_posterior(samples_[sample_idx], probability_false_to_phred(1 - *mp->samples[sample_idx]));
+                        }
+                    }
+                }
             }
         }
     }

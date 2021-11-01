@@ -154,7 +154,7 @@ IndividualCaller::infer_latents(const HaplotypeBlock& haplotypes,
     return std::make_unique<Latents>(sample(), indexed_haplotypes, std::move(genotypes), std::move(inferences));
 }
 
-boost::optional<double>
+boost::optional<Caller::ModelPosterior>
 IndividualCaller::calculate_model_posterior(const HaplotypeBlock& haplotypes,
                                             const HaplotypeLikelihoodArray& haplotype_likelihoods,
                                             const Caller::Latents& latents) const
@@ -173,7 +173,7 @@ static auto calculate_model_posterior(const double normal_model_log_evidence,
     return std::exp(normal_model_ljp - norm);
 }
 
-boost::optional<double>
+boost::optional<Caller::ModelPosterior>
 IndividualCaller::calculate_model_posterior(const HaplotypeBlock& haplotypes,
                                             const HaplotypeLikelihoodArray& haplotype_likelihoods,
                                             const Latents& latents) const
@@ -185,7 +185,9 @@ IndividualCaller::calculate_model_posterior(const HaplotypeBlock& haplotypes,
     const model::IndividualModel model {*prior_model, debug_log_};
     haplotype_likelihoods.prime(sample());
     const auto inferences = model.evaluate(genotypes, haplotype_likelihoods);
-    return octopus::calculate_model_posterior(latents.latents_.log_evidence, inferences.log_evidence);
+    ModelPosterior result {};
+    result.samples = {octopus::calculate_model_posterior(latents.latents_.log_evidence, inferences.log_evidence)};
+    return result;
 }
 
 namespace {
@@ -752,7 +754,7 @@ IndividualCaller::GenotypeBlock
 IndividualCaller::propose_model_check_genotypes(const HaplotypeBlock& haplotypes,
                                                 const IndexedHaplotypeBlock& indexed_haplotypes,
                                                 const Latents& latents) const
-{   
+{
     auto current_genotypes = latents.genotypes_;
     sort_by_other(current_genotypes, latents.latents_.posteriors.genotype_log_probabilities);
     const auto num_seeds = std::min(std::size_t {3}, current_genotypes.size());

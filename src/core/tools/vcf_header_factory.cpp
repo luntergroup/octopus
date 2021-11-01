@@ -15,19 +15,23 @@ VcfHeaderFactory::AnnotatorMap VcfHeaderFactory::annotators_ =
 {
     {std::type_index(typeid(GermlineVariantCall)), [] (auto& hb) {
         hb.add_info("MP", "1", "Float", "Model posterior");
+        hb.add_format("MP", "1", "Float", "Model posterior");
     }},
     {std::type_index(typeid(ReferenceCall)), [] (auto& hb) {
         hb.add_info("MP", "1", "Float", "Model posterior");
+        hb.add_format("MP", "1", "Float", "Model posterior");
     }},
     {std::type_index(typeid(CNVCall)), [] (auto& hb) {
         hb.add_info("PP", "1", "Float", "Posterior probability for assertions made in ALT and FORMAT (Phred scale)");
         hb.add_info("MP", "1", "Float", "Model posterior");
+        hb.add_format("MP", "1", "Float", "Model posterior");
         hb.add_format("HSS", ".", "Integer", "Somatic status for each haplotype");
     }},
     {std::type_index(typeid(SomaticCall)), [] (auto& hb) {
         hb.add_info("SOMATIC", "0", "Flag", "Indicates that the record is a somatic mutation, for cancer genomics");
         hb.add_info("PP", "1", "Float", "Posterior probability for assertions made in ALT and FORMAT (Phred scale)");
         hb.add_info("MP", "1", "Float", "Model posterior");
+        hb.add_format("MP", "1", "Float", "Model posterior");
         hb.add_format("HPC", ".", "Float", "Posterior pseudo counts for each haplotype");
         hb.add_format("MAP_HF", ".", "Float", "Maximum a posteriori haplotype frequencies");
         hb.add_format("HF_CR", ".", "Float", "Haplotype frequency credible regions");
@@ -37,6 +41,7 @@ VcfHeaderFactory::AnnotatorMap VcfHeaderFactory::annotators_ =
         hb.add_info("DENOVO", "0", "Flag", "Indicates that the record is a de novo mutation");
         hb.add_info("PP", "1", "Float", "Posterior probability for assertions made in ALT and FORMAT (Phred scale)");
         hb.add_info("MP", "1", "Float", "Model posterior");
+        hb.add_format("MP", "1", "Float", "Model posterior");
     }},
     {std::type_index(typeid(DenovoReferenceReversionCall)), [] (auto& hb) {
         hb.add_info("REVERSION", "0", "Flag", "Indicates that the record contains a reference reversion");
@@ -49,7 +54,6 @@ VcfHeaderFactory::AnnotatorMap VcfHeaderFactory::annotators_ =
         hb.add_format("PNAP", ".", "Float", "Posterior probability of the sample being assigned to each node in the MAP phylogeny");
     }},
     {std::type_index(typeid(PolycloneVariantCall)), [] (auto& hb) {
-        hb.add_info("MP", "1", "Float", "Model posterior");
         hb.add_format("HPC", ".", "Float", "Posterior pseudo counts for each haplotype");
         hb.add_format("MAP_HF", ".", "Float", "Maximum a posteriori haplotype frequencies");
     }},
