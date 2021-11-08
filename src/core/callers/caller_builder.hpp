@@ -59,7 +59,6 @@ public:
     CallerBuilder& set_bad_region_detector(BadRegionDetector detector) noexcept;
     
     CallerBuilder& set_min_variant_posterior(Phred<double> posterior) noexcept;
-    CallerBuilder& set_min_refcall_posterior(Phred<double> posterior) noexcept;
     CallerBuilder& set_max_haplotypes(unsigned n) noexcept;
     CallerBuilder& set_haplotype_extension_threshold(double p) noexcept;
     CallerBuilder& set_model_posterior_policy(Caller::ModelPosteriorPolicy policy) noexcept;
@@ -128,7 +127,7 @@ private:
         // common
         Caller::Parameters general;
         PloidyMap ploidies;
-        Phred<double> min_variant_posterior, min_refcall_posterior;
+        Phred<double> min_variant_posterior;
         boost::optional<double> snp_heterozygosity, indel_heterozygosity;
         Phred<double> min_phase_score;
         boost::optional<std::size_t> max_genotypes, max_genotype_combinations;

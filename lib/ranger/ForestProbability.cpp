@@ -272,7 +272,7 @@ void ForestProbability::saveToFileInternal(std::ofstream& outfile) const {
   saveVector1D(class_values, outfile);
 }
 
-void ForestProbability::loadFromFileInternal(std::ifstream& infile) {
+void ForestProbability::loadFromFileInternal(boost::iostreams::filtering_istream& infile) {
 
 // Read treetype
   TreeType treetype;

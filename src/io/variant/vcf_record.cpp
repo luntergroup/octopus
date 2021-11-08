@@ -8,6 +8,7 @@
 
 #include <boost/lexical_cast.hpp>
 
+#include "io/reference/reference_genome.hpp"
 #include "vcf_spec.hpp"
 
 namespace octopus {
@@ -150,10 +151,7 @@ bool VcfRecord::is_homozygous_ref(const SampleName& sample) const
 
 bool VcfRecord::is_refcall() const
 {
-    const auto is_ref = [] (const auto& allele) { return allele == 0; };
-    const auto is_hom_ref = [&] (const auto& p) {
-        return std::all_of(std::cbegin(p.second.genotype->indices), std::cend(p.second.genotype->indices), is_ref); };
-    return std::all_of(std::cbegin(samples_), std::cend(samples_), is_hom_ref);
+    return alt_.size() == 1 && alt_.front() == vcfspec::allele::nonref;
 }
 
 bool VcfRecord::is_homozygous_non_ref(const SampleName& sample) const
@@ -450,6 +448,20 @@ std::ostream& operator<<(std::ostream& os, const VcfRecord& record)
 
 // VcfRecord::Builder
 
+VcfRecord::Builder::Builder(const ReferenceGenome& reference)
+: chrom_ {}
+, pos_ {}
+, id_ {}
+, ref_ {}
+, alt_ {}
+, qual_ {}
+, filter_ {}
+, info_ {}
+, format_ {}
+, samples_ {}
+, reference_ {std::addressof(reference)}
+{}
+
 VcfRecord::Builder::Builder(const VcfRecord& call)
 : chrom_ {call.chrom()}
 , pos_ {call.pos()}
@@ -461,6 +473,7 @@ VcfRecord::Builder::Builder(const VcfRecord& call)
 , info_ {call.info_}
 , format_ {call.format()}
 , samples_ {call.samples_}
+, reference_ {}
 {}
 
 VcfRecord::Builder& VcfRecord::Builder::set_chrom(std::string name)
@@ -800,6 +813,14 @@ VcfRecord::Builder& VcfRecord::Builder::set_blocked_reference()
     return *this;
 }
 
+VcfRecord::Builder& VcfRecord::Builder::squash_reference_if_blocked()
+{
+    if (info_.count("END") > 0) {
+        ref_.resize(1);
+    }
+    return *this;
+}
+
 GenomicRegion::Position VcfRecord::Builder::pos() const noexcept
 {
     return pos_;
@@ -807,9 +828,12 @@ GenomicRegion::Position VcfRecord::Builder::pos() const noexcept
 
 void VcfRecord::Builder::collapse_spanning_deletions()
 {
-    for (auto& alt : alt_) {
-        if (alt.size() > 1 && std::find(std::cbegin(alt), std::cend(alt), vcfspec::deleteMaskAllele[0]) != std::cend(alt)) {
-            alt = vcfspec::deleteMaskAllele;
+    const static std::vector<VcfRecord::NucleotideSequence> refcall_alts {vcfspec::allele::nonref};
+    if (alt_ != refcall_alts) {
+        for (auto& alt : alt_) {
+            if (alt.size() > 1 && std::find(std::cbegin(alt), std::cend(alt), vcfspec::deleteMaskAllele[0]) != std::cend(alt)) {
+                alt = vcfspec::deleteMaskAllele;
+            }
         }
     }
 }
@@ -840,6 +864,9 @@ VcfRecord VcfRecord::Builder::build_once() noexcept
     if (format_.empty()) {
         if (end_) {
             GenomicRegion region {std::move(chrom_), pos_ - 1, *end_ - 1};
+            if (reference_) {
+                ref_ = reference_->fetch_sequence(region);
+            }
             return VcfRecord {std::move(region), std::move(id_), std::move(ref_),
                               std::move(alt_), qual_, std::move(filter_), std::move(info_)};
         } else {
@@ -849,6 +876,9 @@ VcfRecord VcfRecord::Builder::build_once() noexcept
     } else {
         if (end_) {
             GenomicRegion region {std::move(chrom_), pos_ - 1, *end_ - 1};
+            if (reference_) {
+                ref_ = reference_->fetch_sequence(region);
+            }
             return VcfRecord {std::move(region), std::move(id_), std::move(ref_),
                               std::move(alt_), qual_, std::move(filter_), std::move(info_),
                               std::move(format_), std::move(samples_)};

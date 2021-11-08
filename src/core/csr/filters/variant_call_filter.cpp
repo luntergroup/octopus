@@ -138,9 +138,6 @@ VariantCallFilter::Classification
 VariantCallFilter::merge(const ClassificationList& sample_classifications, const MeasureVector& measures) const
 {
     assert(!sample_classifications.empty());
-    if (sample_classifications.size() == 1) {
-        return sample_classifications.front();
-    }
     Classification result {};
     result.quality = compute_joint_quality(sample_classifications, measures);
     if (!result.quality && all_equal(sample_classifications, [] (const auto& lhs, const auto& rhs) { return lhs.category == rhs.category; })) {
@@ -203,12 +200,24 @@ std::vector<T> copy_each_first(const std::vector<std::pair<T, _>>& items)
     return result;
 }
 
+template<typename T, typename _>
+std::vector<T> copy_each_first(std::deque<std::pair<T, _>>&& items)
+{
+    std::vector<T> result {};
+    result.reserve(items.size());
+    for (auto&& p : items) {
+        result.push_back(std::move(p.first));
+    }
+    return result;
+}
+
 template <typename Range>
 bool can_add_to_phase_block(const VcfRecord& call, const GenomicRegion& call_phase_region, const Range& block)
 {
     if (block.empty()) return true;
     if (overlaps(block.back().second, call_phase_region)) return true;
-    return is_refcall(call) && is_same_contig(call, block.back().first);
+    if (overlaps(block.back().first, call)) return true;
+    return is_refcall(call) && are_adjacent(call, block.back().first);
 }
 
 } // namespace
@@ -216,16 +225,16 @@ bool can_add_to_phase_block(const VcfRecord& call, const GenomicRegion& call_pha
 VariantCallFilter::CallBlock
 VariantCallFilter::read_next_block(VcfIterator& first, const VcfIterator& last, const SampleList& samples) const
 {
-    std::vector<std::pair<VcfRecord, GenomicRegion>> block {};
+    std::deque<std::pair<VcfRecord, GenomicRegion>> block {};
     for (; first != last; ++first) {
-        const VcfRecord& call {*first};
+        VcfRecord& call {*first};
         auto call_phase_region = get_phase_region(call, samples);
         if (!can_add_to_phase_block(call, call_phase_region, block)) {
-            return copy_each_first(block);
+            return copy_each_first(std::move(block));
         }
-        block.emplace_back(call, std::move(call_phase_region));
+        block.emplace_back(std::move(call), std::move(call_phase_region));
     }
-    return copy_each_first(block);
+    return copy_each_first(std::move(block));
 }
 
 std::vector<VariantCallFilter::CallBlock>
@@ -298,12 +307,36 @@ std::vector<VariantCallFilter::MeasureBlock> VariantCallFilter::measure(const st
     return result;
 }
 
+void VariantCallFilter::write(VcfRecord::Builder&& call, const Classification& classification, VcfWriter& dest) const
+{
+    if (!is_hard_filtered(classification)) {
+        configure(call);
+        annotate(call, classification);
+        call.squash_reference_if_blocked();
+        dest << call.build_once();
+    }
+}
+
 void VariantCallFilter::write(const VcfRecord& call, const Classification& classification, VcfWriter& dest) const
 {
     if (!is_hard_filtered(classification)) {
         auto filtered_call = construct_template(call);
         annotate(filtered_call, classification);
+        filtered_call.squash_reference_if_blocked();
         dest << filtered_call.build_once();
+    }
+}
+
+void VariantCallFilter::write(VcfRecord::Builder&& call, const Classification& classification,
+                              const SampleList& samples, const ClassificationList& sample_classifications,
+                              VcfWriter& dest) const
+{
+    if (!is_hard_filtered(classification)) {
+        configure(call);
+        annotate(call, classification);
+        annotate(call, samples, sample_classifications);
+        call.squash_reference_if_blocked();
+        dest << call.build_once();
     }
 }
 
@@ -315,6 +348,7 @@ void VariantCallFilter::write(const VcfRecord& call, const Classification& class
         auto filtered_call = construct_template(call);
         annotate(filtered_call, classification);
         annotate(filtered_call, samples, sample_classifications);
+        filtered_call.squash_reference_if_blocked();
         dest << filtered_call.build_once();
     }
 }
@@ -430,14 +464,19 @@ VcfHeader VariantCallFilter::make_header(const VcfReader& source) const
 VcfRecord::Builder VariantCallFilter::construct_template(const VcfRecord& call) const
 {
     VcfRecord::Builder result {call};
+    configure(result);
+    return result;
+}
+
+void VariantCallFilter::configure(VcfRecord::Builder& call) const
+{
     if (output_config_.emit_sites_only) {
-        result.clear_format();
+        call.clear_format();
     }
     if (output_config_.clear_existing_filters) {
-        result.clear_filter();
-        result.clear_all_sample_filters();
+        call.clear_filter();
+        call.clear_all_sample_filters();
     }
-    return result;
 }
 
 bool VariantCallFilter::is_requested_annotation(const MeasureWrapper& measure) const noexcept
@@ -454,9 +493,9 @@ void VariantCallFilter::annotate(VcfRecord::Builder& call, const SampleList& sam
 {
     assert(samples.size() == sample_classifications.size());
     bool all_hard_filtered {true};
-    auto quality_name = this->genotype_quality_name();
-    if (quality_name) {
-        call.add_format(std::move(*quality_name));
+    auto allele_quality_name = this->allele_quality_name();
+    if (allele_quality_name) {
+        call.add_format(std::move(*allele_quality_name));
     }
     for (auto p : boost::combine(samples, sample_classifications)) {
         const SampleName& sample {p.get<0>()};
@@ -467,6 +506,10 @@ void VariantCallFilter::annotate(VcfRecord::Builder& call, const SampleList& sam
         } else {
             call.clear_format(sample);
         }
+    }
+    auto genotype_quality_name = this->genotype_quality_name();
+    if (genotype_quality_name) {
+        call.add_format(std::move(*genotype_quality_name));
     }
     if (all_hard_filtered) {
         call.clear_format();
@@ -482,12 +525,20 @@ void VariantCallFilter::annotate(VcfRecord::Builder& call, const SampleName& sam
     } else {
         fail(sample, call, std::move(status.reasons));
     }
-    const auto quality_name = this->genotype_quality_name();
-    if (quality_name) {
+    const auto allele_quality_name = this->allele_quality_name();
+    if (allele_quality_name) {
         if (status.quality) {
-            call.set_format(sample, *quality_name, utils::to_string(status.quality->score(), 2));
+            call.set_format(sample, *allele_quality_name, utils::to_string(status.quality->score(), 2));
         } else {
-            call.set_format_missing(sample, *quality_name);
+            call.set_format_missing(sample, *allele_quality_name);
+        }
+    }
+    const auto genotype_quality_name = this->genotype_quality_name();
+    if (genotype_quality_name) {
+        if (status.genotype_quality) {
+            call.set_format(sample, *genotype_quality_name, utils::to_string(status.genotype_quality->score(), 2));
+        } else {
+            call.set_format_missing(sample, *genotype_quality_name);
         }
     }
 }

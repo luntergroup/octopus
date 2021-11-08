@@ -30,6 +30,7 @@ std::int8_t probability_to_penalty(const double probability) noexcept
 
 DeNovoModel::DeNovoModel(Parameters parameters, std::size_t num_haplotypes_hint, CachingStrategy caching)
 : params_ {parameters}
+, snv_log_prior_ {std::log(params_.snv_prior)}
 , pad_penalty_ {60}
 , snv_penalty_ {probability_to_penalty(params_.snv_prior)}
 , indel_model_ {{params_.indel_prior}}
@@ -150,8 +151,10 @@ auto sequence_length_distance(const Haplotype& lhs, const Haplotype& rhs) noexce
     return p.second - p.first;
 }
 
-double calculate_log_probability(const Variant& variant, const Haplotype& context,
-                                 const double snv_penalty, const IndelMutationModel::ContextIndelModel& indel_model)
+DeNovoModel::LogProbability
+calculate_log_probability(const Variant& variant, const Haplotype& context,
+                          const DeNovoModel::LogProbability snv_log_prior, 
+                          const IndelMutationModel::ContextIndelModel& indel_model)
 {
     if (is_indel(variant)) {
         assert(contains(context, variant));
@@ -162,19 +165,20 @@ double calculate_log_probability(const Variant& variant, const Haplotype& contex
             return std::log(calculate_indel_probability(indel_model, offset, ref_sequence_size(variant) + alt_sequence_size(variant)));
         }
     } else {
-        return snv_penalty * -maths::constants::ln10Div10<>;
+        return snv_log_prior;
     }
 }
 
-double calculate_approx_log_probability(const Haplotype& target, const Haplotype& given,
-                                        const double snv_penalty, const IndelMutationModel::ContextIndelModel& indel_model)
+auto calculate_approx_log_probability(const Haplotype& target, const Haplotype& given,
+                                      const DeNovoModel::LogProbability snv_log_prior, 
+                                      const IndelMutationModel::ContextIndelModel& indel_model)
 {
-    double score {0};
+    DeNovoModel::LogProbability result {0};
     const auto variants = target.difference(given);
     for (const auto& variant : variants) {
-        score += calculate_log_probability(variant, given, snv_penalty, indel_model);
+        result += calculate_log_probability(variant, given, snv_log_prior, indel_model);
     }
-    return score ;
+    return result;
 }
 
 void set_penalties(const IndelMutationModel::ContextIndelModel& indel_model,
@@ -192,16 +196,16 @@ void set_penalties(const IndelMutationModel::ContextIndelModel& indel_model,
                    [] (const auto& probs) noexcept { return probability_to_penalty(probs[1]); });
 }
 
-auto recalculate_log_probability(const CigarString& alignment, const double snv_probability,
+auto recalculate_log_probability(const CigarString& alignment, 
+                                 const DeNovoModel::LogProbability snv_log_prior,
                                  const IndelMutationModel::ContextIndelModel& indel_model)
 {
-    assert(reference_size(alignment) == indel_model.gap_open.size());
-    const auto snv_log_probability = std::log(snv_probability);
-    double result {0};
+    assert(reference_size(alignment) <= indel_model.gap_open.size());
+    DeNovoModel::LogProbability result {0};
     std::size_t pos {0};
     for (const auto& op : alignment) {
         if (op.flag() == CigarOperation::Flag::substitution) {
-            result += op.size() * snv_log_probability;
+            result += op.size() * snv_log_prior;
             pos += op.size();
         } else if (is_indel(op)) {
             result += std::log(calculate_indel_probability(indel_model, pos, op.size()));
@@ -274,15 +278,15 @@ DeNovoModel::evaluate_uncached(const Haplotype& target, const Haplotype& given, 
         try {
             align_with_hmm(target, given);
             if (is_valid_alignment(alignment_, hmm_.band_size())) {
-                result = recalculate_log_probability(alignment_.cigar, params_.snv_prior, local_indel_model_->indel);
+                result = recalculate_log_probability(alignment_.cigar, snv_log_prior_, local_indel_model_->indel);
             } else {
-                result = calculate_approx_log_probability(target, given, params_.snv_prior, local_indel_model_->indel);
+                result = calculate_approx_log_probability(target, given, snv_log_prior_, local_indel_model_->indel);
             }
         } catch (const hmm::HMMOverflow&) {
-            result = calculate_approx_log_probability(target, given, params_.snv_prior, local_indel_model_->indel);
+            result = calculate_approx_log_probability(target, given, snv_log_prior_, local_indel_model_->indel);
         }
     } else {
-        result = calculate_approx_log_probability(target, given, params_.snv_prior, local_indel_model_->indel);
+        result = calculate_approx_log_probability(target, given, snv_log_prior_, local_indel_model_->indel);
     }
     return min_ln_probability_ ? std::max(result, *min_ln_probability_) : result;
 }

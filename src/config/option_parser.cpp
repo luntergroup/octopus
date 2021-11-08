@@ -431,6 +431,10 @@ OptionMap parse_options(const int argc, const char** argv)
     ("min-bubble-score",
      po::value<double>()->default_value(2.0),
      "Minimum bubble score that will be extracted from the assembly graph")
+
+    ("allow-strand-biased-candidates",
+     po::bool_switch()->default_value(false),
+     "Do not account for strand bias when evaluating whether to include a candidate variant")
     
     ("min-candidate-credible-vaf-probability",
      po::value<float>()->default_value(0.75),
@@ -508,18 +512,13 @@ OptionMap parse_options(const int argc, const char** argv)
      "Report variant alleles with posterior probability (phred scale) greater than this")
     
     ("refcall",
-     po::value<RefCallType>()->implicit_value(RefCallType::blocked),
-     "Caller will report reference confidence calls for each position [POSITIONAL],"
-     " or in automatically sized blocks [BLOCKED]")
+     po::bool_switch()->default_value(false),
+     "Caller will report reference confidence calls for non-variant positions")
      
     ("refcall-block-merge-quality",
      po::value<Phred<double>>()->default_value(Phred<double> {10.0}),
-     "Threshold to merge adjacent refcall positions when using blocked refcalling")
-     
-    ("min-refcall-posterior",
-     po::value<Phred<double>>()->default_value(Phred<double> {0}),
-     "Report reference alleles with posterior probability (QUAL) greater than this")
-
+     "Threshold to merge adjacent refcall positions, set to 0 for positional records")
+    
     ("max-refcall-posterior",
      po::value<Phred<double>>(),
      "Maximum allowed posterior probability (QUAL) for reference calls")
@@ -783,7 +782,9 @@ OptionMap parse_options(const int argc, const char** argv)
     .add(cancer).add(trio).add(polyclone).add(cell).add(call_filtering);
     
     po::options_description conditional_help_options("Octopus help command line options");
-    conditional_help_options.add(general).add(call_filtering);
+    // Add call_filtering for optional annotation help.
+    // Add general_variant_calling to ensure --refcall is resolved correctly.  
+    conditional_help_options.add(general).add(general_variant_calling).add(call_filtering);
     OptionMap vm_init;
     po::store(run(po::command_line_parser(argc, argv).options(conditional_help_options).allow_unregistered()), vm_init);
     
@@ -1224,31 +1225,6 @@ std::ostream& operator<<(std::ostream& out, const ContigPloidy& plodies)
 {
     if (plodies.sample) out << *plodies.sample << ':';
     out << plodies.contig << "=" << plodies.ploidy;
-    return out;
-}
-
-std::istream& operator>>(std::istream& in, RefCallType& type)
-{
-    std::string token;
-    in >> token;
-    if (token == "POSITIONAL")
-        type = RefCallType::positional;
-    else if (token == "BLOCKED")
-        type = RefCallType::blocked;
-    else throw po::validation_error {po::validation_error::kind_t::invalid_option_value, token, "refcalls"};
-    return in;
-}
-
-std::ostream& operator<<(std::ostream& out, const RefCallType& type)
-{
-    switch (type) {
-        case RefCallType::positional:
-            out << "POSITIONAL";
-            break;
-        case RefCallType::blocked:
-            out << "BLOCKED";
-            break;
-    }
     return out;
 }
 
@@ -1757,8 +1733,6 @@ std::ostream& operator<<(std::ostream& os, const OptionMap& options)
             os << options[label].as<ContigPloidy>();
         } else if (is_vector_type<ContigPloidy>(value)) {
             write_vector<ContigPloidy>(options, label, os, bullet);
-        } else if (is_type<RefCallType>(value)) {
-            os << options[label].as<RefCallType>();
         } else if (is_type<ExtensionLevel>(value)) {
             os << options[label].as<ExtensionLevel>();
         } else if (is_type<LaggingLevel>(value)) {

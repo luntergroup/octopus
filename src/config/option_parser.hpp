@@ -31,7 +31,6 @@ struct ContigPloidy
     int ploidy;
 };
 
-enum class RefCallType { positional, blocked };
 enum class ExtensionLevel { minimal, conservative, moderate, aggressive, unlimited };
 enum class LaggingLevel { none, conservative, moderate, optimistic, aggressive };
 enum class BacktrackLevel { none, moderate, aggressive };
@@ -54,8 +53,6 @@ std::istream& operator>>(std::istream& in, ContigOutputOrder& order);
 std::ostream& operator<<(std::ostream& os, const ContigOutputOrder& order);
 std::istream& operator>>(std::istream& in, ContigPloidy& plodies);
 std::ostream& operator<<(std::ostream& os, const ContigPloidy& plodies);
-std::istream& operator>>(std::istream& in, RefCallType& type);
-std::ostream& operator<<(std::ostream& os, const RefCallType& type);
 std::istream& operator>>(std::istream& in, ExtensionLevel& level);
 std::ostream& operator<<(std::ostream& os, const ExtensionLevel& level);
 std::istream& operator>>(std::istream& in, BacktrackLevel& level);

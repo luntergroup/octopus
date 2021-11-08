@@ -12,6 +12,7 @@
 
 #include "config/common.hpp"
 #include "basics/aligned_read.hpp"
+#include "basics/aligned_template.hpp"
 #include "utils/coverage_tracker.hpp"
 #include "utils/input_reads_profiler.hpp"
 #include "io/reference/reference_genome.hpp"
@@ -52,7 +53,7 @@ public:
     ~AssemblerActiveRegionGenerator() = default;
     
     void add(const SampleName& sample, const AlignedRead& read);
-    
+    void add(const SampleName& sample, const AlignedTemplate& reads);
     template <typename ForwardIterator>
     void add(const SampleName& sample, ForwardIterator first_read, ForwardIterator last_read);
     
@@ -71,11 +72,21 @@ private:
     CoverageTrackerMap coverage_tracker_, interesting_read_coverages_, clipped_coverage_tracker_;
     boost::optional<const ReadSetProfile&> read_profile_;
     
+    template <typename ForwardIterator>
+    void add(const SampleName& sample, ForwardIterator first_read, ForwardIterator last_read, AlignedRead);
+    template <typename ForwardIterator>
+    void add(const SampleName& sample, ForwardIterator first_read, ForwardIterator last_read, AlignedTemplate);
     bool is_interesting(const AlignedRead& read) const;
 };
 
 template <typename ForwardIterator>
 void AssemblerActiveRegionGenerator::add(const SampleName& sample, ForwardIterator first_read, ForwardIterator last_read)
+{
+    add(sample, first_read, last_read, typename std::iterator_traits<ForwardIterator>::value_type {});
+}
+
+template <typename ForwardIterator>
+void AssemblerActiveRegionGenerator::add(const SampleName& sample, ForwardIterator first_read, ForwardIterator last_read, AlignedRead)
 {
     auto& coverage_tracker = coverage_tracker_[sample];
     auto& interesting_coverage_tracker = interesting_read_coverages_[sample];
@@ -92,6 +103,33 @@ void AssemblerActiveRegionGenerator::add(const SampleName& sample, ForwardIterat
                 clipped_coverage_tracker.add(clipped_mapped_region(read));
             } else {
                 clipped_coverage_tracker.add(read);
+            }
+        });
+    }
+}
+
+template <typename ForwardIterator>
+void AssemblerActiveRegionGenerator::add(const SampleName& sample, ForwardIterator first_read, ForwardIterator last_read, AlignedTemplate)
+{
+    auto& coverage_tracker = coverage_tracker_[sample];
+    auto& interesting_coverage_tracker = interesting_read_coverages_[sample];
+    std::for_each(first_read, last_read, [&] (const AlignedTemplate& reads) {
+        for (const AlignedRead& read : reads) {
+            coverage_tracker.add(read);
+            if (is_interesting(read)) {
+                interesting_coverage_tracker.add(read);
+            }
+        }
+    });
+    if (structual_interesting_) {
+        auto& clipped_coverage_tracker = clipped_coverage_tracker_[sample];
+        std::for_each(first_read, last_read, [&] (const AlignedTemplate& reads) {
+            for (const AlignedRead& read : reads) {
+                if (is_soft_clipped(read)) {
+                    clipped_coverage_tracker.add(clipped_mapped_region(read));
+                } else {
+                    clipped_coverage_tracker.add(read);
+                }
             }
         });
     }

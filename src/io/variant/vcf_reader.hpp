@@ -23,6 +23,7 @@ namespace octopus {
 class VcfHeader;
 class VcfRecord;
 class GenomicRegion;
+class ReferenceGenome;
 
 class VcfReader
 {
@@ -37,6 +38,7 @@ public:
     VcfReader() = default;
     
     VcfReader(Path file_path);
+    VcfReader(Path file_path, const ReferenceGenome& reference);
     
     VcfReader(const VcfReader&)            = delete;
     VcfReader& operator=(const VcfReader&) = delete;
@@ -82,8 +84,8 @@ public:
     using iterator_category = std::input_iterator_tag;
     using value_type        = VcfRecord;
     using difference_type   = std::ptrdiff_t;
-    using pointer           = const VcfRecord*;
-    using reference         = const VcfRecord&;
+    using pointer           = VcfRecord*;
+    using reference         = VcfRecord&;
     
     RecordIterator(IVcfReaderImpl::RecordIteratorPtr itr);
     

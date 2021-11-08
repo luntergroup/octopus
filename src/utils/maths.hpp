@@ -28,6 +28,7 @@
 #include <boost/math/distributions/normal.hpp>
 
 #include "fmath.hpp"
+#include "htslib/kfunc.h"
 
 namespace octopus { namespace maths {
 
@@ -282,7 +283,7 @@ template <typename RealType,
 inline RealType log_sum_exp(const RealType a, const RealType b)
 {
     const auto r = std::minmax(a, b);
-    return r.second + std::log(RealType {1} + std::exp(r.first - r.second));
+    return r.second + std::log1p(std::exp(r.first - r.second));
 }
 
 template <typename RealType,
@@ -497,20 +498,12 @@ RealType log_binomial_coefficient(const IntegerType n, const IntegerType k)
 template <typename IntegerType, typename RealType = double,
           typename = std::enable_if_t<std::is_integral<IntegerType>::value>,
           typename = std::enable_if_t<std::is_floating_point<RealType>::value>>
-RealType log_fisher_exact_test(const IntegerType a, const IntegerType b, const IntegerType c, const IntegerType d)
-{
-    return log_binomial_coefficient<RealType>(a + b, b) + log_binomial_coefficient<RealType>(c + d, d)
-                - log_binomial_coefficient<RealType>(a + b + c + d, b + d);
-}
-
-template <typename IntegerType, typename RealType = double,
-          typename = std::enable_if_t<std::is_integral<IntegerType>::value>,
-          typename = std::enable_if_t<std::is_floating_point<RealType>::value>>
 RealType fisher_exact_test(const IntegerType a, const IntegerType b, const IntegerType c, const IntegerType d)
 {
-    return std::exp(log_fisher_exact_test<IntegerType, RealType>(a, b, c, d));
+    double fisher_left_p, fisher_right_p, fisher_twosided_p;
+    kt_fisher_exact(a, b, c, d, &fisher_left_p, &fisher_right_p, &fisher_twosided_p);
+    return fisher_twosided_p;
 }
-
 
 template <typename IntegerType, typename RealType,
           typename = std::enable_if_t<std::is_integral<IntegerType>::value>,

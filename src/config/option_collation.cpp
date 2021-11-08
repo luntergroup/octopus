@@ -1261,6 +1261,7 @@ auto make_variant_generator_builder(const OptionMap& options, const boost::optio
         } else {
             scanner_options.misalignment_parameters = boost::none;
         }
+        scanner_options.ignore_strand_bias = options.at("allow-strand-biased-candidates").as<bool>();
         result.set_cigar_scanner(std::move(scanner_options));
     }
     if (repeat_candidate_variant_generator_enabled(options)) {
@@ -1287,6 +1288,7 @@ auto make_variant_generator_builder(const OptionMap& options, const boost::optio
         reassembler_options.min_bubble_score = get_assembler_bubble_score_setter(options);
         reassembler_options.max_variant_size = as_unsigned("max-variant-size", options);
         reassembler_options.cycle_tolerance = get_assembler_cycle_tolerance(options);
+        reassembler_options.ignore_strand_bias = options.at("allow-strand-biased-candidates").as<bool>();
         result.set_local_reassembler(std::move(reassembler_options));
     }
     if (is_set("source-candidates", options) || is_set("source-candidates-file", options)) {
@@ -1601,7 +1603,9 @@ AlignedRead::MappingQuality calculate_mapping_quality_cap(const OptionMap& optio
 {
     constexpr AlignedRead::MappingQuality minimum {60u}; // BWA cap
     if (read_profile) {
-        if (read_profile->length_stats.median > 200) {
+        if (read_profile->length_stats.median > 1000) {
+            return 240;
+        } else if (read_profile->length_stats.median > 200) {
             return 2 * minimum;
         } else {
             return std::max(read_profile->mapping_quality_stats.max, minimum);
@@ -2137,20 +2141,15 @@ CallerFactory make_caller_factory(const ReferenceGenome& reference, ReadPipe& re
         stream(log) << "The " << caller << " calling model is still in development. Do not use for production work!";
     }
     
-    if (is_set("refcall", options)) {
+    if (options.at("refcall").as<bool>()) {
         emit_in_development_warning("refcall");
-        const auto refcall_type = options.at("refcall").as<RefCallType>();
-        if (refcall_type == RefCallType::positional) {
+        const auto refcall_merge_threshold = options.at("refcall-block-merge-quality").as<Phred<double>>();
+        if (refcall_merge_threshold.score() == 0) {
             vc_builder.set_refcall_type(CallerBuilder::RefCallType::positional);
         } else {
             vc_builder.set_refcall_type(CallerBuilder::RefCallType::blocked);
-            auto block_merge_threshold = options.at("refcall-block-merge-quality").as<Phred<double>>();
-            if (block_merge_threshold.score() > 0) {
-                vc_builder.set_refcall_merge_block_threshold(block_merge_threshold);
-            }
+            vc_builder.set_refcall_merge_block_threshold(refcall_merge_threshold);
         }
-        auto min_refcall_posterior = options.at("min-refcall-posterior").as<Phred<double>>();
-        vc_builder.set_min_refcall_posterior(min_refcall_posterior);
         if (is_set("max-refcall-posterior", options)) {
             vc_builder.set_max_refcall_posterior(options.at("max-refcall-posterior").as<Phred<double>>());
         }

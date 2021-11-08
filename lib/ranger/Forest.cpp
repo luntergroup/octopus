@@ -21,6 +21,8 @@
 #include <chrono>
 #endif
 
+#include <boost/iostreams/filter/gzip.hpp>
+
 #include "utility.h"
 #include "Forest.h"
 #include "DataChar.h"
@@ -867,7 +869,7 @@ void write_meta(std::ofstream& outfile, const Forest::MetaInfo& meta_info)
     saveVector1D(meta_info.ordered_variable_indicators, outfile);
 }
 
-void read_meta(std::ifstream& infile, Forest::MetaInfo& meta_info)
+void read_meta(boost::iostreams::filtering_istream& infile, Forest::MetaInfo& meta_info)
 {
     uint num_dependent_variables = 0;
     infile.read((char*) &num_dependent_variables, sizeof(num_dependent_variables));
@@ -899,11 +901,21 @@ void read_meta(std::ifstream& infile, Forest::MetaInfo& meta_info)
     readVector1D(meta_info.ordered_variable_indicators, infile);
 }
 
+bool is_gzipped(const std::string& file_name)
+{
+    return file_name.size() > 2 && file_name.substr(file_name.length() - 3) == ".gz"; 
+}
+
 Forest::MetaInfo read_meta(const std::string& forest_filename)
 {
-    std::ifstream forest {forest_filename, std::ios::binary};
+    std::ifstream forest_file {forest_filename, std::ios::binary};
+    boost::iostreams::filtering_istream forest_stream;
+    if (is_gzipped(forest_filename)) {
+      forest_stream.push(boost::iostreams::gzip_decompressor());
+    }
+    forest_stream.push(forest_file);
     ranger::Forest::MetaInfo result {};
-    ranger::read_meta(forest, result);
+    ranger::read_meta(forest_stream, result);
     return result;
 }
 
@@ -914,7 +926,7 @@ void Forest::saveMetaInformation(std::ofstream& outfile) const
   write_meta(outfile, meta);
 }
 
-void Forest::loadMetaInformation(std::ifstream& infile)
+void Forest::loadMetaInformation(boost::iostreams::filtering_istream& infile)
 {
   assert(infile.good());
   MetaInfo meta {};
@@ -925,7 +937,7 @@ void Forest::loadMetaInformation(std::ifstream& infile)
   num_independent_variables = meta.independent_variable_names.size();
 }
 
-void Forest::loadFromFile(std::ifstream& infile) {
+void Forest::loadFromFile(boost::iostreams::filtering_istream& infile) {
   if (!infile.good()) throw std::runtime_error("Could not read from input file.");
   loadMetaInformation(infile);
   loadFromFileInternal(infile);
@@ -933,19 +945,24 @@ void Forest::loadFromFile(std::ifstream& infile) {
   equalSplit(thread_ranges, 0, num_trees - 1, num_threads);
 }
 
-void Forest::loadFromFile(std::string filename) {
+void Forest::loadFromFile(std::string forest_filename) {
   if (verbose_out)
-    *verbose_out << "Loading forest from file " << filename << "." << std::endl;
+    *verbose_out << "Loading forest from file " << forest_filename << "." << std::endl;
   // Open file for reading
-  std::ifstream infile {filename, std::ios::binary};
+  std::ifstream forest_file {forest_filename, std::ios::binary};
+  boost::iostreams::filtering_istream forest_stream;
+  if (is_gzipped(forest_filename)) {
+    forest_stream.push(boost::iostreams::gzip_decompressor());
+  }
+  forest_stream.push(forest_file);
   try {
-      loadFromFile(infile);
+      loadFromFile(forest_stream);
   } catch (...) {
-      throw std::runtime_error("Could not read from input file: " + filename + ".");
+      throw std::runtime_error("Could not read from input file: " + forest_filename + ".");
   }  
 }
 
-void Forest::loadDependentVariablesFromFile(std::ifstream& infile) {
+void Forest::loadDependentVariablesFromFile(boost::iostreams::filtering_istream& infile) {
   assert(infile.good());
   uint num_dependent_variables = 0;
   infile.read((char*) &num_dependent_variables, sizeof(num_dependent_variables));
@@ -960,12 +977,17 @@ void Forest::loadDependentVariablesFromFile(std::ifstream& infile) {
   }
 }
 
-void Forest::loadDependentVariableNamesFromFile(std::string filename) {
-  std::ifstream infile {filename, std::ios::binary};
-  if (!infile.good()) {
-    throw std::runtime_error("Could not read from input file: " + filename + ".");
+void Forest::loadDependentVariableNamesFromFile(std::string forest_filename) {
+  std::ifstream forest_file {forest_filename, std::ios::binary};
+  if (!forest_file.good()) {
+    throw std::runtime_error("Could not read from input file: " + forest_filename + ".");
   }
-  loadDependentVariablesFromFile(infile);
+  boost::iostreams::filtering_istream forest_stream;
+  if (is_gzipped(forest_filename)) {
+    forest_stream.push(boost::iostreams::gzip_decompressor());
+  }
+  forest_stream.push(forest_file);
+  loadDependentVariablesFromFile(forest_stream);
 }
 
 std::unique_ptr<Data> Forest::loadDataFromFile(const std::string& data_path) {

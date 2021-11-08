@@ -10,7 +10,6 @@ import argparse
 import shutil
 import multiprocessing
 import urllib.request
-import gzip
 
 google_cloud_octopus_base = "https://storage.googleapis.com/luntergroup/octopus"
 forest_url_base = google_cloud_octopus_base + "/forests"
@@ -303,13 +302,6 @@ def install_dependencies(build_dir):
     else:
         return None, None
 
-def unzip_gz(in_filename, out_filename=None):
-    with gzip.open(str(in_filename), 'rb') as gzipped_file:
-        if out_filename is None:
-            out_filename = in_filename.with_suffix('')
-        with out_filename.open(mode='wb') as file:
-            shutil.copyfileobj(gzipped_file, file)
-
 def download_forests(forest_dir, version):
     if not forest_dir.exists():
         print("No forest directory found, making one")
@@ -321,8 +313,6 @@ def download_forests(forest_dir, version):
         try:
             print("Downloading " + gzipped_forest_url + " to " + str(gzipped_forest_file))
             download_file(gzipped_forest_url, gzipped_forest_file)
-            unzip_gz(gzipped_forest_file)
-            gzipped_forest_file.unlink()
         except:
             print("Failed to download forest " + gzipped_forest_name)
 

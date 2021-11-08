@@ -278,7 +278,7 @@ void ForestClassification::saveToFileInternal(std::ofstream& outfile) const {
   saveVector1D(class_values, outfile);
 }
 
-void ForestClassification::loadFromFileInternal(std::ifstream& infile) {
+void ForestClassification::loadFromFileInternal(boost::iostreams::filtering_istream& infile) {
 
   // Read treetype
   TreeType treetype;

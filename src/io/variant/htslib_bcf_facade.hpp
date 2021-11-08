@@ -23,6 +23,7 @@ namespace octopus {
 
 class GenomicRegion;
 class VcfHeader;
+class ReferenceGenome;
 
 class HtslibBcfFacade : public IVcfReaderImpl
 {
@@ -45,6 +46,8 @@ public:
     
     ~HtslibBcfFacade() noexcept override = default;
     
+    void set_reference(const ReferenceGenome& reference) override;
+
     bool is_header_written() const noexcept override;
     
     VcfHeader fetch_header() const override;
@@ -89,6 +92,7 @@ private:
     std::unique_ptr<htsFile, HtsFileDeleter> file_;
     std::unique_ptr<bcf_hdr_t, HtsHeaderDeleter> header_;
     std::vector<std::string> samples_;
+    const ReferenceGenome* reference_;
     
     bool is_bcf() const noexcept;
     std::size_t count_records(HtsBcfSrPtr& sr) const;
@@ -104,8 +108,8 @@ public:
     using iterator_category = std::input_iterator_tag;
     using value_type        = VcfRecord;
     using difference_type   = std::ptrdiff_t;
-    using pointer           = const VcfRecord*;
-    using reference         = const VcfRecord&;
+    using pointer           = VcfRecord*;
+    using reference         = VcfRecord&;
     
     RecordIterator(const HtslibBcfFacade& facade);
     RecordIterator(const HtslibBcfFacade& facade, HtsBcfSrPtr hts_iterator, UnpackPolicy level);

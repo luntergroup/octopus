@@ -81,7 +81,7 @@ protected:
     {
         enum class Category { hard_filtered, soft_filtered, unfiltered } category;
         std::vector<std::string> reasons = {};
-        boost::optional<Phred<double>> quality = boost::none;
+        boost::optional<Phred<double>> quality = boost::none, genotype_quality = boost::none;
     };
     using ClassificationList = std::vector<Classification>;
     
@@ -98,7 +98,11 @@ protected:
     MeasureVector measure(const VcfRecord& call) const;
     MeasureBlock measure(const CallBlock& block) const;
     std::vector<MeasureBlock> measure(const std::vector<CallBlock>& blocks) const;
+    void write(VcfRecord::Builder&& call, const Classification& classification, VcfWriter& dest) const;
     void write(const VcfRecord& call, const Classification& classification, VcfWriter& dest) const;
+    void write(VcfRecord::Builder&& call, const Classification& classification,
+               const SampleList& samples, const ClassificationList& sample_classifications,
+               VcfWriter& dest) const;
     void write(const VcfRecord& call, const Classification& classification,
                const SampleList& samples, const ClassificationList& sample_classifications,
                VcfWriter& dest) const;
@@ -121,6 +125,7 @@ private:
     virtual void annotate(VcfHeader::Builder& header) const = 0;
     virtual void filter(const VcfReader& source, VcfWriter& dest, const VcfHeader& dest_header) const = 0;
     virtual boost::optional<std::string> call_quality_name() const { return boost::none; }
+    virtual boost::optional<std::string> allele_quality_name() const { return boost::none; }
     virtual boost::optional<std::string> genotype_quality_name() const { return boost::none; }
     virtual boost::optional<Phred<double>> compute_joint_quality(const ClassificationList& sample_classifications, const MeasureVector& measures) const;
     virtual bool is_soft_filtered(const ClassificationList& sample_classifications, boost::optional<Phred<double>> joint_quality,
@@ -133,6 +138,7 @@ private:
     MeasureBlock measure(const CallBlock& block, const Measure::FacetMap& facets) const;
     MeasureVector measure(const VcfRecord& call, const Measure::FacetMap& facets) const;
     VcfRecord::Builder construct_template(const VcfRecord& call) const;
+    void configure(VcfRecord::Builder& call) const;
     bool is_requested_annotation(const MeasureWrapper& measure) const noexcept;
     bool is_hard_filtered(const Classification& classification) const noexcept;
     void annotate(VcfRecord::Builder& call, const SampleList& samples, const ClassificationList& sample_classifications) const;

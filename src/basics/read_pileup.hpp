@@ -6,6 +6,7 @@
 
 #include <vector>
 #include <utility>
+#include <functional>
 
 #include "config/common.hpp"
 #include "concepts/mappable.hpp"
@@ -42,20 +43,9 @@ public:
     
     const ContigRegion& mapped_region() const noexcept;
     
-    unsigned depth() const noexcept;
-    unsigned depth(const NucleotideSequence& sequence) const noexcept;
-    
     void add(const AlignedRead& read);
-    
-    std::vector<NucleotideSequence> sequences() const;
-    
-    const ReadSummaries& summaries(const NucleotideSequence& sequence) const;
-    
-    std::vector<BaseQuality> base_qualities() const;
-    std::vector<BaseQuality> base_qualities(const NucleotideSequence& sequence) const;
-    std::vector<BaseQuality> base_qualities_not(const NucleotideSequence& sequence) const;
-    
-    unsigned sum_base_qualities(const NucleotideSequence& sequence) const;
+        
+    void summaries(std::function<void(const NucleotideSequence&, const ReadSummaries&)> func) const;
 
 private:
     std::vector<std::pair<NucleotideSequence, ReadSummaries>> summaries_;

@@ -14,6 +14,7 @@
 #include "config/common.hpp"
 #include "basics/genomic_region.hpp"
 #include "basics/aligned_read.hpp"
+#include "basics/aligned_template.hpp"
 #include "io/reference/reference_genome.hpp"
 #include "utils/assembler_active_region_generator.hpp"
 
@@ -42,6 +43,7 @@ public:
     void add_generator(const std::string& name);
     
     void add_read(const SampleName& sample, const AlignedRead& read);
+    void add_template(const SampleName& sample, const AlignedTemplate& reads);
     template <typename ForwardIterator>
     void add_reads(const SampleName& sample, ForwardIterator first, ForwardIterator last);
     
@@ -77,11 +79,29 @@ private:
     bool using_assembler() const noexcept;
 };
 
+namespace detail {
+
+inline auto sequence_size_helper(const AlignedRead& read)
+{
+    return sequence_size(read);
+}
+inline auto max_sequence_size(const AlignedTemplate& reads)
+{
+    const static auto sequence_size_less = [] (const auto& lhs, const auto& rhs) { return sequence_size(lhs) < sequence_size(rhs); };
+    return sequence_size(*std::max_element(std::cbegin(reads), std::cend(reads), sequence_size_less));
+}
+inline auto sequence_size_helper(const AlignedTemplate& reads)
+{
+    return max_sequence_size(reads);
+}
+
+} // namespace detail
+
 template <typename ForwardIterator>
 void ActiveRegionGenerator::add_reads(const SampleName& sample, ForwardIterator first, ForwardIterator last)
 {
     if (assembler_active_region_generator_) assembler_active_region_generator_->add(sample, first, last);
-    std::for_each(first, last, [this] (const auto& read) { max_read_length_ = std::max(max_read_length_, sequence_size(read)); });
+    std::for_each(first, last, [this] (const auto& read) { max_read_length_ = std::max(max_read_length_, detail::sequence_size_helper(read)); });
 }
 
 } // namespace coretools

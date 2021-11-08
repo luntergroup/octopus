@@ -88,6 +88,7 @@ HtslibBcfFacade::HtslibBcfFacade()
 , file_ {bcf_open("-", "[w]"), HtsFileDeleter {}}
 , header_ {bcf_hdr_init("w"), HtsHeaderDeleter {}}
 , samples_ {}
+, reference_ {}
 {
     if (file_ == nullptr) {
         throw std::runtime_error {"HtslibBcfFacade: could not open stdout writer"};
@@ -102,6 +103,7 @@ HtslibBcfFacade::HtslibBcfFacade(Path file_path, Mode mode)
 , file_ {nullptr, HtsFileDeleter {}}
 , header_ {nullptr, HtsHeaderDeleter {}}
 , samples_ {}
+, reference_ {}
 {
     const auto hts_mode = get_hts_mode(file_path_, mode);
     if (mode == Mode::read) {
@@ -145,6 +147,11 @@ HtslibBcfFacade::HtslibBcfFacade(Path file_path, Mode mode)
 }
 
 std::unordered_map<std::string, std::string> extract_format(const bcf_hrec_t* line);
+
+void HtslibBcfFacade::set_reference(const ReferenceGenome& reference)
+{
+    reference_ = std::addressof(reference);
+}
 
 bool HtslibBcfFacade::is_header_written() const noexcept
 {
@@ -977,6 +984,7 @@ VcfRecord HtslibBcfFacade::fetch_record(const bcf_srs_t* sr, UnpackPolicy level)
     auto hts_record = bcf_sr_get_line(sr, 0);
     bcf_unpack(hts_record, level == UnpackPolicy::all ? BCF_UN_ALL : BCF_UN_SHR);
     VcfRecord::Builder record_builder {};
+    if (reference_) record_builder = VcfRecord::Builder {*reference_};
     extract_chrom(header_.get(), hts_record, record_builder);
     extract_pos(hts_record, record_builder);
     extract_id(hts_record, record_builder);

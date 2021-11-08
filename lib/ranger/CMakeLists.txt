@@ -28,6 +28,12 @@ set(RANGER_SOURCES
     utility.h
     utility.cpp)
 
+set(REQUIRED_BOOST_LIBRARIES
+    iostreams
+)
+
+find_package (Boost 1.65 REQUIRED COMPONENTS ${REQUIRED_BOOST_LIBRARIES} REQUIRED)
+
 add_library(ranger STATIC ${RANGER_SOURCES})
 
 set(WarningIgnores
@@ -36,3 +42,4 @@ set(WarningIgnores
     -Wno-missing-braces)
 
 add_compile_options(-Wall -Wextra -Werror ${WarningIgnores})
+target_link_libraries (ranger ${Boost_LIBRARIES})

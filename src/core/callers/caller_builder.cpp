@@ -153,12 +153,6 @@ CallerBuilder& CallerBuilder::set_min_variant_posterior(Phred<double> posterior)
     return *this;
 }
 
-CallerBuilder& CallerBuilder::set_min_refcall_posterior(Phred<double> posterior) noexcept
-{
-    params_.min_refcall_posterior = posterior;
-    return *this;
-}
-
 CallerBuilder& CallerBuilder::set_max_haplotypes(unsigned n) noexcept
 {
     params_.general.max_haplotypes = n;
@@ -462,7 +456,6 @@ CallerBuilder::CallerFactoryMap CallerBuilder::generate_factory() const
                                                           params_.ploidies.of(samples.front(), *requested_contig_),
                                                           make_individual_prior_model(params_.snp_heterozygosity, params_.indel_heterozygosity),
                                                           params_.min_variant_posterior,
-                                                          params_.min_refcall_posterior,
                                                           params_.deduplicate_haplotypes_with_caller_model,
                                                           params_.max_genotypes
                                                       });
@@ -472,7 +465,6 @@ CallerBuilder::CallerFactoryMap CallerBuilder::generate_factory() const
                                                       params_.general,
                                                       PopulationCaller::Parameters {
                                                           params_.min_variant_posterior,
-                                                          params_.min_refcall_posterior,
                                                           get_ploidies(samples, *requested_contig_, params_.ploidies),
                                                           make_population_prior_model(params_.snp_heterozygosity, params_.indel_heterozygosity),
                                                           params_.max_genotype_combinations,
@@ -488,7 +480,6 @@ CallerBuilder::CallerFactoryMap CallerBuilder::generate_factory() const
             CancerCaller::Parameters cancer_params {
                 params_.min_variant_posterior,
                 params_.min_somatic_posterior,
-                params_.min_refcall_posterior,
                 params_.ploidies.of(samples.front(), *requested_contig_),
                 std::move(normal),
                 make_cancer_prior_model(params_.snp_heterozygosity, params_.indel_heterozygosity),
@@ -517,7 +508,6 @@ CallerBuilder::CallerFactoryMap CallerBuilder::generate_factory() const
                                                     {*params_.snv_denovo_prior, *params_.indel_denovo_prior},
                                                     params_.min_variant_posterior,
                                                     params_.min_denovo_posterior,
-                                                    params_.min_refcall_posterior,
                                                     params_.max_genotype_combinations,
                                                     params_.deduplicate_haplotypes_with_caller_model
                                                 });
@@ -528,7 +518,6 @@ CallerBuilder::CallerFactoryMap CallerBuilder::generate_factory() const
                                                      PolycloneCaller::Parameters {
                                                          make_individual_prior_model(params_.snp_heterozygosity, params_.indel_heterozygosity),
                                                          params_.min_variant_posterior,
-                                                         params_.min_refcall_posterior,
                                                          params_.deduplicate_haplotypes_with_caller_model,
                                                          params_.max_clones,
                                                          params_.max_genotypes,
@@ -544,7 +533,6 @@ CallerBuilder::CallerFactoryMap CallerBuilder::generate_factory() const
                                                     params_.ploidies.of(samples.front(), *requested_contig_),
                                                     make_individual_prior_model(params_.snp_heterozygosity, params_.indel_heterozygosity),
                                                     params_.min_variant_posterior,
-                                                    params_.min_refcall_posterior,
                                                     params_.deduplicate_haplotypes_with_caller_model,
                                                     params_.max_clones,
                                                     params_.max_copy_loss,

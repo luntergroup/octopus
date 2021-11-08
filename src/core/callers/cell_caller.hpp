@@ -37,7 +37,7 @@ public:
     {
         unsigned ploidy;
         boost::optional<CoalescentModel::Parameters> prior_model_params;
-        Phred<double> min_variant_posterior, min_refcall_posterior;
+        Phred<double> min_variant_posterior;
         bool deduplicate_haplotypes_with_prior_model = false;
         unsigned max_clones;
         unsigned max_copy_loss = 1, max_copy_gain = 0;

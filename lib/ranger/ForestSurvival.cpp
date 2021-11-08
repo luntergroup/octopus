@@ -263,7 +263,7 @@ void ForestSurvival::saveToFileInternal(std::ofstream& outfile) const {
   saveVector1D(unique_timepoints, outfile);
 }
 
-void ForestSurvival::loadFromFileInternal(std::ifstream& infile) {
+void ForestSurvival::loadFromFileInternal(boost::iostreams::filtering_istream& infile) {
 
   // Read treetype
   TreeType treetype;

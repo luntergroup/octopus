@@ -82,9 +82,7 @@ constexpr bool is_iterator = detail::IsIterator<T>::value;
 template <typename T, typename V = void>
 using enable_if_iterator = std::enable_if_t<is_iterator<T>, V>;
 
-namespace detail
-{
-    template <typename T, typename = void>
+template <typename T, typename = void>
     struct IsMap : std::false_type {};
     
     template <typename T>
@@ -94,10 +92,9 @@ namespace detail
                                             typename T::mapped_type>
                         >::value>
                 > : std::true_type {};
-}
 
 template <typename T>
-constexpr bool is_map = detail::IsMap<T>::value;
+constexpr bool is_map = IsMap<T>::value;
 
 namespace { template <bool> struct MapTagImpl {}; }
 using MapTag    = MapTagImpl<true>;

@@ -11,6 +11,7 @@
 #include <cassert>
 #include <cmath>
 #include <limits>
+#include <sstream>
 
 #include <boost/variant.hpp>
 #include <boost/lexical_cast.hpp>
@@ -21,6 +22,8 @@
 #include "utils/concat.hpp"
 #include "utils/append.hpp"
 #include "utils/maths.hpp"
+#include "utils/string_utils.hpp"
+#include "utils/reorder.hpp"
 #include "exceptions/missing_file_error.hpp"
 #include "exceptions/program_error.hpp"
 #include "exceptions/malformed_file_error.hpp"
@@ -148,12 +151,18 @@ std::string RandomForestFilter::do_name() const
     return "random forest";
 }
 
+const std::string RandomForestFilter::allele_quality_name_ = "RFAQ";
 const std::string RandomForestFilter::genotype_quality_name_ = "RFGQ";
-const std::string RandomForestFilter::call_quality_name_ = "RFGQ_ALL";
+const std::string RandomForestFilter::call_quality_name_ = "RFAQ_ALL";
 
 std::unique_ptr<ranger::Forest> RandomForestFilter::make_forest() const
 {
     return std::make_unique<ranger::ForestProbability>();
+}
+
+boost::optional<std::string> RandomForestFilter::allele_quality_name() const
+{
+    return allele_quality_name_;
 }
 
 boost::optional<std::string> RandomForestFilter::genotype_quality_name() const
@@ -168,7 +177,8 @@ boost::optional<std::string> RandomForestFilter::call_quality_name() const
 
 void RandomForestFilter::annotate(VcfHeader::Builder& header) const
 {
-    header.add_info(call_quality_name_, "1", "Float", "Empirical quality score (phred scaled) for the call - the geometric mean of all sample RFGQ probabilities");
+    header.add_info(call_quality_name_, "1", "Float", "Empirical quality score (phred scaled) for the call - the geometric mean of all sample RFAQ probabilities");
+    header.add_format(allele_quality_name_, "1", "Float", "Empirical quality score (phred scaled) of the sample ALT alleles from random forest classifier");
     header.add_format(genotype_quality_name_, "1", "Float", "Empirical quality score (phred scaled) of the sample genotype from random forest classifier");
     header.add_filter("RF", "Random Forest filtered");
 }
@@ -326,25 +336,13 @@ void RandomForestFilter::close_data_files() const
 
 namespace {
 
-bool read_header(std::ifstream& prediction_file)
+std::vector<std::string> read_header(std::ifstream& prediction_file)
 {
     skip_lines(prediction_file);
-    std::string order;
-    std::getline(prediction_file, order);
+    std::string line;
+    std::getline(prediction_file, line);
     skip_lines(prediction_file);
-    return order.front() == '1';
-}
-
-static double get_prob_false(std::string& prediction_line, const bool tp_first)
-{
-    using std::cbegin; using std::cend;
-    if (tp_first) {
-        prediction_line.erase(cbegin(prediction_line), std::next(std::find(cbegin(prediction_line), cend(prediction_line), ' ')));
-        prediction_line.erase(std::find(cbegin(prediction_line), cend(prediction_line), ' '), cend(prediction_line));
-    } else {
-        prediction_line.erase(std::find(cbegin(prediction_line), cend(prediction_line), ' '), cend(prediction_line));
-    }
-    return boost::lexical_cast<double>(prediction_line);
+    return utils::split(line, ' ');
 }
     
 } // namespace
@@ -367,10 +365,9 @@ void RandomForestFilter::prepare_for_classification(boost::optional<Log>& log) c
     if (num_records_ == 0) return;
     const Path ranger_prefix {temp_directory() / "octopus_ranger_temp"};
     const Path ranger_prediction_fname {ranger_prefix.string() + ".prediction"};
-    data_buffer_.resize(1);
-    auto& predictions = data_buffer_[0];
-    predictions.resize(num_records_);
     const auto num_samples = choices_.size();
+    auto& predictions = data_buffer_;
+    data_buffer_.resize(num_records_, std::vector<std::vector<double>>(num_samples));
     for (std::size_t forest_idx {0}; forest_idx < forest_paths_.size(); ++forest_idx) {
         for (std::size_t sample_idx {0}; sample_idx < num_samples; ++sample_idx) {
             auto forest_choice_itr = std::find(std::cbegin(choices_[sample_idx]), std::cend(choices_[sample_idx]), forest_idx);
@@ -393,12 +390,18 @@ void RandomForestFilter::prepare_for_classification(boost::optional<Log>& log) c
                 forest->run(false, false);
                 forest->writePredictionFile();
                 std::ifstream prediction_file {ranger_prediction_fname.string()};
-                const auto tp_first = read_header(prediction_file);
+                const auto header = read_header(prediction_file);
+                std::vector<std::size_t> order(header.size());
+                for (std::size_t idx {0}; idx < header.size(); ++idx) {
+                    order[std::stoi(header[idx])] = idx;
+                }
                 std::string line;
                 while (std::getline(prediction_file, line)) {
                     if (!line.empty()) {
                         const auto record_idx = std::distance(std::cbegin(choices_[sample_idx]), forest_choice_itr);
-                        predictions[record_idx].push_back(get_prob_false(line, tp_first));
+                        std::istringstream ss {line};
+                        predictions[record_idx][sample_idx].assign(std::istream_iterator<double>{ss}, std::istream_iterator<double>{});
+                        reorder(std::cbegin(order), std::cend(order), std::begin(predictions[record_idx][sample_idx]));
                         assert(forest_choice_itr != std::cend(choices_[sample_idx]));
                         forest_choice_itr = std::find(std::next(forest_choice_itr), std::cend(choices_[sample_idx]), forest_idx);
                     }
@@ -431,15 +434,30 @@ VariantCallFilter::Classification RandomForestFilter::classify(const std::size_t
 {
     Classification result {};
     if (hard_filtered_.empty() || !hard_filtered_[call_idx]) {
-        const auto& predictions = data_buffer_[0];
+        const auto& predictions = data_buffer_;
         assert(call_idx < predictions.size() && sample_idx < predictions[call_idx].size());
-        const auto prob_false = predictions[call_idx][sample_idx];
-        result.quality = probability_false_to_phred(std::max(prob_false, 1e-10));
-        if (*result.quality >= min_soft_genotype_quality()) {
-            result.category = Classification::Category::unfiltered;
+        const auto& probabilities = predictions[call_idx][sample_idx];
+        if (probabilities.size() == 3) {
+            const auto probability_allele_false = probabilities[0];
+            result.quality = probability_false_to_phred(std::max(probability_allele_false, 1e-10));
+            const auto probability_genotype_false = probabilities[0] + probabilities[2];
+            result.genotype_quality = probability_false_to_phred(std::max(probability_genotype_false, 1e-10));
+            if (*result.genotype_quality >= min_soft_genotype_quality()) {
+                result.category = Classification::Category::unfiltered;
+            } else {
+                result.category = Classification::Category::soft_filtered;
+                result.reasons.assign({"RF"});
+            }
         } else {
-            result.category = Classification::Category::soft_filtered;
-            result.reasons.assign({"RF"});
+            assert(probabilities.size() == 2);
+            const auto probability_allele_false = probabilities[0];
+            result.quality = probability_false_to_phred(std::max(probability_allele_false, 1e-10));
+            if (*result.quality >= min_soft_genotype_quality()) {
+                result.category = Classification::Category::unfiltered;
+            } else {
+                result.category = Classification::Category::soft_filtered;
+                result.reasons.assign({"RF"});
+            }
         }
     } else {
         result.category = Classification::Category::hard_filtered;
@@ -456,8 +474,14 @@ bool RandomForestFilter::is_soft_filtered(const ClassificationList& sample_class
     if (joint_quality) {
         result = *joint_quality < min_soft_call_quality();
     } else {
-        result = std::any_of(std::cbegin(sample_classifications), std::cend(sample_classifications),
-                             [] (const auto& c) { return c.category != Classification::Category::unfiltered; });
+        const auto is_bad_sample = [this] (const Classification& classification) {
+            if (classification.quality) {
+                return *classification.quality < min_soft_call_quality();
+            } else {
+                return classification.category != Classification::Category::unfiltered;
+            }
+        };
+        result = std::any_of(std::cbegin(sample_classifications), std::cend(sample_classifications), is_bad_sample);
     }
     if (result) reasons.push_back("RF");
     return result;

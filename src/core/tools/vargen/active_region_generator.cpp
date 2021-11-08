@@ -41,6 +41,12 @@ void ActiveRegionGenerator::add_read(const SampleName& sample, const AlignedRead
     if (assembler_active_region_generator_) assembler_active_region_generator_->add(sample, read);
 }
 
+void ActiveRegionGenerator::add_template(const SampleName& sample, const AlignedTemplate& reads)
+{
+    max_read_length_ = std::max(max_read_length_, detail::sequence_size_helper(reads));
+    if (assembler_active_region_generator_) assembler_active_region_generator_->add(sample, reads);
+}
+
 auto merge(std::vector<GenomicRegion> lhs, std::vector<GenomicRegion> rhs)
 {
     auto itr = utils::append(std::move(rhs), lhs);

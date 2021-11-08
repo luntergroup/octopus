@@ -704,21 +704,12 @@ bool HaplotypeTree::define_same_haplotype(Vertex leaf1, Vertex leaf2) const
 
 bool HaplotypeTree::is_branch_exact_haplotype(Vertex leaf, const Haplotype& haplotype) const
 {
-    if (leaf == root_ || !overlaps(tree_[leaf], contig_region(haplotype))) {
-        return false;
-    }
-    while (leaf != root_) {
-        if (!haplotype.includes(tree_[leaf])) {
-            return false;
-        }
-        leaf = get_previous_allele(leaf);
-    }
-    return true;
+    return leaf != root_ && overlaps(contig_region(haplotype), tree_[leaf])
+            && have_same_alleles(extract_haplotype(leaf, haplotype.mapped_region()), haplotype);
 }
 
 bool HaplotypeTree::is_branch_equal_haplotype(const Vertex leaf, const Haplotype& haplotype) const
 {
-    // TODO: check if this is quicker than calling Haplotype::contains for each ContigAllele
     return leaf != root_ && overlaps(contig_region(haplotype), tree_[leaf])
             && extract_haplotype(leaf, haplotype.mapped_region()) == haplotype;
 }

@@ -122,7 +122,9 @@ void DoublePassVariantCallFilter::record(const VcfRecord& call, const MeasureVec
         annotate(annotation_builder, measures, dest_header);
         *annotated_vcf << annotation_builder.build_once();
     }
-    log_progress(mapped_region(call));
+    if (can_measure_single_call()) {
+        log_progress(mapped_region(call));
+    }
 }
 
 void DoublePassVariantCallFilter::record(const CallBlock& block, const MeasureBlock& measures, std::size_t record_idx,
@@ -132,6 +134,7 @@ void DoublePassVariantCallFilter::record(const CallBlock& block, const MeasureBl
     for (auto tup : boost::combine(block, measures)) {
         record(tup.get<0>(), tup.get<1>(), record_idx++, dest_header, samples, annotated_vcf);
     }
+    log_progress(closed_region(block.front(), block.back()));
 }
 
 void DoublePassVariantCallFilter::log_filter_pass_start(Log& log) const

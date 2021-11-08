@@ -24,6 +24,8 @@
 #include <condition_variable>
 #endif
 
+#include <boost/iostreams/filtering_stream.hpp>
+
 #include "globals.h"
 #include "Tree.h"
 #include "Data.h"
@@ -257,18 +259,18 @@ private:
   virtual void writeOutputInternal() const = 0;
   virtual void writeConfusionFile() const = 0;
   virtual void saveToFileInternal(std::ofstream& outfile) const = 0;
-  virtual void loadFromFileInternal(std::ifstream& infile) = 0;
+  virtual void loadFromFileInternal(boost::iostreams::filtering_istream& infile) = 0;
   
-  void loadFromFile(std::ifstream& infile);
+  void loadFromFile(boost::iostreams::filtering_istream& infile);
   void loadFromFile(std::string filename);
-  void loadDependentVariablesFromFile(std::ifstream& infile);
+  void loadDependentVariablesFromFile(boost::iostreams::filtering_istream& infile);
   void loadDependentVariableNamesFromFile(std::string filename);
   void saveMetaInformation(std::ofstream& outfile) const; 
-  void loadMetaInformation(std::ifstream& infile);
+  void loadMetaInformation(boost::iostreams::filtering_istream& infile);
 };
 
 void write_meta(std::ofstream& outfile, const Forest::MetaInfo& meta_info);
-void read_meta(std::ifstream& infile, Forest::MetaInfo& meta_info);
+void read_meta(boost::iostreams::filtering_istream& infile, Forest::MetaInfo& meta_info);
 Forest::MetaInfo read_meta(const std::string& forest_filename);
 
 } // namespace ranger
