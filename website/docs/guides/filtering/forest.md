@@ -22,7 +22,7 @@ $ octopus -R hs37d5.fa -I NA12878.bam \
     --forest resources/forests/germline.forest
 ```
 
-All calls will be annotated with the `FORMAT` field `RFGQ`, which is the phred-scaled probability of the `GT` call being correct according to the forest model. Each record will also be annotated with an `INFO` field, `RFGQ_ALL`, which is the phred-scalled probability that all `GT` calls in the record are correct, this probability is used to filter calls (see [`--min-forest-quality`](https://github.com/luntergroup/octopus/wiki/Command-line-reference#option---min-forest-quality)) with the `RF` filter.
+All calls will be annotated with the `FORMAT` field `RFGQ`, which is the phred-scaled probability of the `GT` call being correct according to the forest model. Each record will also be annotated with an `INFO` field, `RFGQ_ALL`, which is the phred-scalled probability that all `GT` calls in the record are correct, this probability is used to filter calls (see [`--min-forest-quality`](cli.md#--min-forest-quality)) with the `RF` filter.
 
 ### Somatic variant random forest filtering
 

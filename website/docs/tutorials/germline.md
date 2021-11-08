@@ -17,7 +17,7 @@ $ snakemake --snakefile germline.smk -j 16 --use-singularity
 - [bcftools](https://github.com/samtools/bcftools)
 - [BWA](https://github.com/lh3/bwa)
 - [RTG Tools](https://github.com/RealTimeGenomics/rtg-tools)
-- [Octopus](https://github.com/luntergroup/octopus) (with [random forests](https://github.com/luntergroup/octopus/wiki/Variant-filtering:-Random-Forest) installed).
+- [Octopus](https://github.com/luntergroup/octopus) (with [random forests](guides/../../guides/filtering/forest.md) installed).
 
 This tutorial assumes a directory structure like
 

@@ -7,8 +7,8 @@ Octopus calls variants and genotypes using a Bayesian model. Like any model, the
 
 There are currently two approaches available in Octopus for filtering variants:
 
-1. [Hard coded thresholds](https://github.com/luntergroup/octopus/wiki/Variant-filtering:-thresholds)
-2. [Random forests](https://github.com/luntergroup/octopus/wiki/Variant-filtering:-Random-Forest)
+1. [Hard coded thresholds](guides/../thresholds.md)
+2. [Random forests](guides/../forest.md)
 
 Both methods use [annotations](#annotations) computed by Octopus.
 

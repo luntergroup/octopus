@@ -45,7 +45,7 @@ Boost: 1_70
 
 ### `--config`
 
-Option `--config` is used to specify [configuration files](https://github.com/luntergroup/octopus/wiki/How-to:-Use-configs).
+Option `--config` is used to specify [configuration files](guides/advanced/configs.md).
 
 ```shell
 $ octopus ---config myconfig.txt
@@ -87,7 +87,7 @@ $ octopus -R ref.fa -I reads.bam --resolve-symlinks
 
 ### `--threads`
 
-Option `--threads` is used to enable [multithreaded execution](https://github.com/luntergroup/octopus/wiki/How-to:-Use-multiple-threads). The option accepts a positive integer argument that specifies the maximum number of threads to use:
+Option `--threads` is used to enable [multithreaded execution](guides/advanced/threading.md). The option accepts a positive integer argument that specifies the maximum number of threads to use:
 
 ```shell
 $ octopus -R ref.fa -I reads.bam --threads 4 # use maximum of 4 threads
@@ -101,7 +101,7 @@ $ octopus -R ref.fa -I reads.bam --threads #automatic thread handling
 
 ### `--max-reference-cache-memory`
 
-Option `--max-reference-cache-memory` (short `-X`) controls the size of the buffer used for reference caching, and is therefore one way to [control memory use](https://github.com/luntergroup/octopus/wiki/How-to:-Adjust-memory-consumption). The option accepts a non-negative integer argument in bytes, and an optional unit specifier.
+Option `--max-reference-cache-memory` (short `-X`) controls the size of the buffer used for reference caching, and is therefore one way to [control memory use](guides/advanced/memory.md). The option accepts a non-negative integer argument in bytes, and an optional unit specifier.
 
 ```shell
 $ octopus -R ref.fa -I reads.bam -X 0 # disable reference caching
@@ -116,7 +116,7 @@ $ octopus -R ref.fa -I reads.bam -X 1g # reference cache is 1 gigabyte
 
 ### `--target-read-buffer-memory`
 
-Option `--target-read-buffer-memory` (short `-B`) controls the size of the memory buffer used for input sequencing reads, and is therefore one way to [control memory use](https://github.com/luntergroup/octopus/wiki/How-to:-Adjust-memory-consumption). The option accepts a positive integer argument in bytes, and an optional unit specifier.
+Option `--target-read-buffer-memory` (short `-B`) controls the size of the memory buffer used for input sequencing reads, and is therefore one way to [control memory use](guides/advanced/memory.md). The option accepts a positive integer argument in bytes, and an optional unit specifier.
 
 ```shell
 $ octopus -R ref.fa -I reads.bam -B 20G # reference cache is 20 gigabyte
@@ -129,7 +129,7 @@ $ octopus -R ref.fa -I reads.bam -B 20G # reference cache is 20 gigabyte
 
 ### `--target-working-memory`
 
-Option `--target-working-memory` sets the target amount of working memory for computation, and is therefore one way to [control memory use](https://github.com/luntergroup/octopus/wiki/How-to:-Adjust-memory-consumption). The option accepts a positive integer argument in bytes, and an optional unit specifier. The option is not strictly enforced, but is sometimes used to decide whether to switch to lower-memory versions of some methods (possibly at the cost of additional runtime).
+Option `--target-working-memory` sets the target amount of working memory for computation, and is therefore one way to [control memory use](guides/advanced/memory.md). The option accepts a positive integer argument in bytes, and an optional unit specifier. The option is not strictly enforced, but is sometimes used to decide whether to switch to lower-memory versions of some methods (possibly at the cost of additional runtime).
 
 ```shell
 $ octopus -R ref.fa -I reads.bam --target-working-memory 40Gb
@@ -191,7 +191,7 @@ $ octopus -R ref.fa -i bams.txt
 
 ### `--regions`
 
-Option `--regions` (short `-T`) specifies a list of genomic [regions to call](https://github.com/luntergroup/octopus/wiki/How-to:-Call-targeted-regions).
+Option `--regions` (short `-T`) specifies a list of genomic [regions to call](guides/advanced/targeted.md).
 
 ```shell
 $ octopus -R ref.fa -I reads.bam -T chr1 # all of chr1
@@ -317,7 +317,7 @@ $ octopus -R ref.fa -I reads.bam --sites-only
 
 ### `--bamout`
 
-Option `--bamout` is used to produce [realigned evidence BAMs](https://github.com/luntergroup/octopus/wiki/How-to:-Make-evidence-BAMs). The option input is a file prefix where the BAMs should be written.
+Option `--bamout` is used to produce [realigned evidence BAMs](guides/bamout.md). The option input is a file prefix where the BAMs should be written.
 
 ```shell
 $ octopus -R ref.fa -I reads.bam -o calls.vcf --bamout reads.realigned.bam # if 'reads.bam' contains one sample
@@ -381,7 +381,7 @@ $ octopus -R ref.fa -I reads.bam --very-fast
 
 ### `--data-profile`
 
-Option `--data-profile` is used to generate a profile of the input read data, which may be used to make new [sequence error models](https://github.com/luntergroup/octopus/wiki/How-to:-Use-error-models).
+Option `--data-profile` is used to generate a profile of the input read data, which may be used to make new [sequence error models](guides/errorModels.md).
 
 ```shell
 $ octopus -R ref.fa -I reads.bam -o calls.bcf --data-profile reads.profile.csv
@@ -591,7 +591,7 @@ $ octopus -R ref.fa -I reads.bam --allow-octopus-duplicates
 
 ### `--duplicate-read-detection-policy`
 
-Option `--duplicate-read-detection-policy` specifies approach to use for detecting [duplicate reads](https://github.com/luntergroup/octopus/wiki/Frequently-Asked-Questions#should-i-deduplicate-my-input-bams). Possible arguments are:
+Option `--duplicate-read-detection-policy` specifies approach to use for detecting [duplicate reads](guides/preprocessing.md). Possible arguments are:
 
 * `RELAXED` Require 5' mapping co-ordinate matches **and** identical cigar strings.
 * `AGGRESSIVE` Require 5' mapping co-ordinate matches only.
@@ -1013,7 +1013,7 @@ $ octopus -R ref.fa -I reads.bam --bad-region-tolerance LOW
 
 ### `--caller`
 
-Option `--caller` (short '-C') specifies the [calling model](https://github.com/luntergroup/octopus/wiki/Calling-models) to be used. The option must only be set if the calling model is not automatically determined from other options.
+Option `--caller` (short '-C') specifies the calling model to be used. The option must only be set if the calling model is not automatically determined from other options.
 
 ```shell
 $ octopus -R ref.fa -I reads.bam --caller cancer # e.g. for tumour-only
@@ -1188,7 +1188,7 @@ $ octopus -R ref.fa -I reads.bam --dont-model-mapping-quality
 
 ### `--sequence-error-model`
 
-Option `--sequence-error-model` specifies the [sequence error model](https://github.com/luntergroup/octopus/wiki/How-to:-Use-error-models) to use.
+Option `--sequence-error-model` specifies the [sequence error model](guides/errorModels.md) to use.
 
 ```shell
 $ octopus -R ref.fa -I reads.bam --sequence-error-model PCR.NOVASEQ # built-in error model
@@ -1237,7 +1237,7 @@ $ octopus -R ref.fa -I reads.bam --read-linkage LINKED
 
 ### `--min-phase-score`
 
-Option `--min-phase-score` specifies the minimum phase score (`PQ` in VCF) required to emit adjacent variant calls in the same [phase set](https://github.com/luntergroup/octopus/wiki/VCF-format#phasing). Increasing this value results in less sites being phased, but reduces the phase false positive rate.
+Option `--min-phase-score` specifies the minimum phase score (`PQ` in VCF) required to emit adjacent variant calls in the same [phase set](guides/advanced/vcf.md#Haplotypes). Increasing this value results in less sites being phased, but reduces the phase false positive rate.
 
 ```shell
 $ octopus -R ref.fa -I reads.bam --min-phase-score 5
@@ -1574,7 +1574,7 @@ $ octopus -R ref.fa -I reads.bam --filter-vcf calls.bcf
 
 ### `--forest-model`
 
-Option `--forest-model` enables [random forest variant filtering](https://github.com/luntergroup/octopus/wiki/Variant-filtering:-Random-Forest). The argument to the option is a ranger forest file.
+Option `--forest-model` enables [random forest variant filtering](guides/filtering/forest.md). The argument to the option is a ranger forest file.
 
 ```shell
 $ octopus -R ref.fa -I reads.bam \
@@ -1583,7 +1583,7 @@ $ octopus -R ref.fa -I reads.bam \
 
 ### `--somatic-forest-model`
 
-Option `--somatic-forest-model` enables [random forest variant filtering](https://github.com/luntergroup/octopus/wiki/Variant-filtering:-Random-Forest) for somatic variants. The argument to the option is a ranger forest file.
+Option `--somatic-forest-model` enables [random forest variant filtering](guides/filtering/forest.md) for somatic variants. The argument to the option is a ranger forest file.
 
 ```shell
 $ octopus -R ref.fa -I reads.bam -N NORMAL \
