@@ -344,9 +344,6 @@ void RepeatScanner::generate(const GenomicRegion& region, std::vector<Variant>& 
                 for (const auto& repeat_pair : overlap_range(segment_repeat_pairs, mnv)) {
                     if (can_try_splitting(mnv, repeat_pair)) {
                         if (are_adjacent(repeat_pair.lhs, mnv) && contains(repeat_pair.rhs, mnv)) {
-                            if (is_snv(mnv)) {
-                                std::cout << mnv << std::endl;
-                            }
                             // insertion of lhs repeat, deletion of rhs repeat
                             const auto num_deleted_periods = count_whole_repeats(region_size(mnv), repeat_pair.rhs.period());
                             auto deleted_region = head_region(repeat_pair.rhs, repeat_pair.rhs.period() * num_deleted_periods);
@@ -372,9 +369,6 @@ void RepeatScanner::generate(const GenomicRegion& region, std::vector<Variant>& 
                             result.emplace_back(std::move(deleted_region), std::move(deleted_sequence), "");
                             result.emplace_back(std::move(insertion_region), "", std::move(inserted_sequence));
                         } else if (are_adjacent(mnv, repeat_pair.rhs) && contains(repeat_pair.lhs, mnv)) {
-                            if (is_snv(mnv)) {
-                                std::cout << mnv << std::endl;
-                            }
                             // insertion of rhs repeat, deletion of lhs repeat
                             const auto num_deleted_periods = count_whole_repeats(region_size(mnv), repeat_pair.lhs.period());
                             auto deleted_region = head_region(repeat_pair.lhs, repeat_pair.lhs.period() * num_deleted_periods);
