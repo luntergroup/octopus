@@ -50,6 +50,9 @@ PopulationCaller::PopulationCaller(Caller::Components&& components,
     unique_ploidies_ = parameters_.ploidies;
     std::sort(std::begin(unique_ploidies_), std::end(unique_ploidies_));
     unique_ploidies_.erase(std::unique(std::begin(unique_ploidies_), std::end(unique_ploidies_)), std::end(unique_ploidies_));
+    if (unique_ploidies_.size() == 1 && unique_ploidies_[0] == 0) {
+        throw std::logic_error {"PopulationCaller: at least one sample must have ploidy > 0"};
+    }
 }
 
 std::string PopulationCaller::do_name() const
