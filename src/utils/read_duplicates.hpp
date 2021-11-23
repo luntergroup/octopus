@@ -125,14 +125,15 @@ remove_duplicate_reads(ForwardIt first, ForwardIt last,
                     if (read_itr != first) *first = std::move(read);
                     candidate_duplicates.emplace_back(first++);
                 } else { // read is a duplicate
-					const ForwardIt curr_best_duplicate_itr {*duplicate_itr};					
+					const ForwardIt curr_best_duplicate_itr {*duplicate_itr};
 					if (duplicate_compare(*curr_best_duplicate_itr, read)) {
 						// swap duplicates
-						if (read.has_other_segment()) {							
+						if (read.has_other_segment()) {
 							assert(curr_best_duplicate_itr->has_other_segment());
 							const auto replace_itr = working_paired_duplicates.find(curr_best_duplicate_itr);
 							if (replace_itr != std::cend(working_paired_duplicates)) {
-								auto worse_duplicates = std::move(replace_itr->second);							
+								assert(replace_itr->first == curr_best_duplicate_itr);
+								auto worse_duplicates = std::move(replace_itr->second);
 								worse_duplicates.push_back(std::move(*replace_itr->first));
 								working_paired_duplicates.erase(replace_itr);
 								*curr_best_duplicate_itr = std::move(read);
