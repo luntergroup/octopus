@@ -1496,14 +1496,14 @@ std::ostream& operator<<(std::ostream& os, const Genotype<MappableType>& genotyp
 {
     if (genotype.ploidy() == 0) {
         os << "empty genotype";
-        return os;
+    } else {
+        const auto element_counts = make_element_count_map(genotype);
+        std::vector<std::pair<MappableType, unsigned>> p {element_counts.begin(), element_counts.end()};
+        for (unsigned i {0}; i < p.size() - 1; ++i) {
+            os << p[i].first << "(" << p[i].second << "),";
+        }
+        os << p.back().first << "(" << p.back().second << ")";
     }
-    const auto element_counts = make_element_count_map(genotype);
-    std::vector<std::pair<MappableType, unsigned>> p {element_counts.begin(), element_counts.end()};
-    for (unsigned i {0}; i < p.size() - 1; ++i) {
-        os << p[i].first << "(" << p[i].second << "),";
-    }
-    os << p.back().first << "(" << p.back().second << ")";
     return os;
 }
 
@@ -1514,16 +1514,17 @@ void print_alleles(S&& stream, const Genotype<MappableType>& genotype)
 {
     if (genotype.ploidy() == 0) {
         stream << "[]";
+    } else {
+        const auto haplotype_counts = make_element_count_map(genotype);
+        std::vector<std::pair<MappableType, unsigned>> p {haplotype_counts.begin(), haplotype_counts.end()};
+        stream << "[";
+        for (unsigned i {0}; i < p.size(); ++i) {
+            print_alleles(stream, p[i].first);
+            stream << "(" << p[i].second << ")";
+            if (i < p.size() - 1) stream << ",";
+        }
+        stream << "]";
     }
-    const auto haplotype_counts = make_element_count_map(genotype);
-    std::vector<std::pair<MappableType, unsigned>> p {haplotype_counts.begin(), haplotype_counts.end()};
-    stream << "[";
-    for (unsigned i {0}; i < p.size(); ++i) {
-        print_alleles(stream, p[i].first);
-        stream << "(" << p[i].second << ")";
-        if (i < p.size() - 1) stream << ",";
-    }
-    stream << "]";
 }
 
 template <typename S, typename MappableType>
@@ -1531,15 +1532,16 @@ void print_variant_alleles(S&& stream, const Genotype<MappableType>& genotype)
 {
     if (genotype.ploidy() == 0) {
         stream << "[]";
+    } else {
+        const auto simplified = collapse(genotype);
+        stream << "[";
+        for (unsigned i {0}; i < simplified.ploidy(); ++i) {
+            print_variant_alleles(stream, simplified[i]);
+            stream << "(" << count(genotype, simplified[i]) << ")";
+            if (i < simplified.ploidy() - 1) stream << ",";
+        }
+        stream << "]";
     }
-    const auto simplified = collapse(genotype);
-    stream << "[";
-    for (unsigned i {0}; i < simplified.ploidy(); ++i) {
-        print_variant_alleles(stream, simplified[i]);
-        stream << "(" << count(genotype, simplified[i]) << ")";
-        if (i < simplified.ploidy() - 1) stream << ",";
-    }
-    stream << "]";
 }
 
 template <typename MappableType>

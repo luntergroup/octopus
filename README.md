@@ -1,12 +1,12 @@
 ![Octopus Logo](logo.png)
 
-![Website](https://img.shields.io/website?url=https%3A%2F%2Fluntergroup.github.io%2Foctopus%2F)
+[![Website](https://img.shields.io/website?url=https%3A%2F%2Fluntergroup.github.io%2Foctopus%2F)](https://luntergroup.github.io/octopus/)
 [![Build Status](https://travis-ci.org/luntergroup/octopus.svg?branch=master)](https://travis-ci.org/luntergroup/octopus)
 [![MIT license](http://img.shields.io/badge/license-MIT-brightgreen.svg)](http://opensource.org/licenses/MIT)
 [![Gitter](https://badges.gitter.im/octopus-caller/Lobby.svg)](https://gitter.im/octopus-caller/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 ![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/luntergroup/octopus)
 [![Anaconda-Server Badge](https://anaconda.org/bioconda/octopus/badges/installer/conda.svg)](https://conda.anaconda.org/bioconda)
-![Docker Image Version (latest semver)](https://img.shields.io/docker/v/dancooke/octopus?label=docker)
+[![Docker Image Version (latest semver)](https://img.shields.io/docker/v/dancooke/octopus?label=docker)](https://hub.docker.com/r/dancooke/octopus)
 
 Octopus is a mapping-based variant caller that implements several calling models within a unified haplotype-aware framework. Octopus takes inspiration from particle filtering by constructing a tree of haplotypes and dynamically pruning and extending the tree based on haplotype posterior probabilities in a sequential manner. This allows octopus to implicitly consider all possible haplotypes at a given loci in reasonable time.
 
