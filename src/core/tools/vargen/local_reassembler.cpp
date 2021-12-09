@@ -1026,6 +1026,8 @@ void decompose(std::deque<Assembler::Variant>& variants, const ReferenceGenome::
         auto decomposed = decompose(first_decomposable, std::end(variants), reference_repeats, config);
         if (!decomposed.empty()) {
             merge(std::move(decomposed), variants, first_decomposable);
+        } else {
+            variants.erase(first_decomposable, std::end(variants));
         }
     }
 }

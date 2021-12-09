@@ -392,7 +392,9 @@ TrioCaller::infer_latents(const HaplotypeBlock& haplotypes,
         using GI = TrioModel::Latents::JointProbability::GenotypeIndex;
         for (GI idx {0}; idx < parent_genotypes.size(); ++idx) {
             const auto log_posterior = sample_latents.posteriors.genotype_log_probabilities[idx];
-            trio_latents.posteriors.joint_genotype_probabilities[idx] = {std::exp(log_posterior), log_posterior, idx, idx, idx};
+            auto maternal_idx = parameters_.maternal_ploidy > 0 ? idx : GI {0};
+            auto paternal_idx = parameters_.paternal_ploidy > 0 ? idx : GI {0};
+            trio_latents.posteriors.joint_genotype_probabilities[idx] = {log_posterior, std::exp(log_posterior), maternal_idx, paternal_idx, 0};
         }
         if (parameters_.maternal_ploidy == 0) std::swap(parent_genotypes, empty_genotypes);
         return std::make_unique<Latents>(std::move(indexed_haplotypes), std::move(parent_genotypes), std::move(empty_genotypes),
@@ -1079,7 +1081,9 @@ TrioCaller::call_variants(const std::vector<Variant>& candidates, const Latents&
 {
     const auto alleles = decompose(candidates);
     const auto& trio_posteriors = latents.model_latents.posteriors.joint_genotype_probabilities;
-    debug::log(latents.maternal_genotypes, latents.paternal_genotypes, trio_posteriors, debug_log_, trace_log_);
+    if (latents.concatenated_genotypes_.empty()) {
+        debug::log(latents.maternal_genotypes, latents.paternal_genotypes, trio_posteriors, debug_log_, trace_log_);
+    }
     const TrioGenotypeInfo info {latents.concatenated_genotypes_.empty() ? latents.maternal_genotypes : latents.concatenated_genotypes_, latents.haplotypes};
     const auto allele_posteriors = compute_segregation_posteriors(alleles, trio_posteriors, info);
     debug::log(allele_posteriors, debug_log_, trace_log_, parameters_.min_variant_posterior);

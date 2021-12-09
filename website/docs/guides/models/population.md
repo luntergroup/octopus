@@ -33,7 +33,7 @@ Octopus sets the organism ploidy to 2 by default and also sets chromosome Y to p
 
 ## Performance considerations
 
-For joint calling, the single most important parameter which will determine performance is [`--max-genotype-combinations`](https://github.com/luntergroup/octopus/wiki/Command-line-reference#option---max-genotype-combinations). This parameter determines the maximum number of joint genotype combinations that octopus can consider. The number of possibl genotype combinations at a given site is exponential in the number of samples, so this value will usually be significantly lower than the number of possible joint genotypes. Octopus will select the 'best' `--max-genotype-combinations` genotype combinations using approximation. Increasing this value may improve accuracy, but result in longer runtimes and memory use.
+For joint calling, the single most important parameter which will determine performance is [`--max-genotype-combinations`](cli.md#--max-genotype-combinations). This parameter determines the maximum number of joint genotype combinations that octopus can consider. The number of possibl genotype combinations at a given site is exponential in the number of samples, so this value will usually be significantly lower than the number of possible joint genotypes. Octopus will select the 'best' `--max-genotype-combinations` genotype combinations using approximation. Increasing this value may improve accuracy, but result in longer runtimes and memory use.
 
 ## Calling large cohorts, and the n + 1 problem
 

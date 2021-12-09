@@ -386,7 +386,6 @@ BAMRealigner::realign(ReadReader& src, VcfReader& variants, ReadWriter& dst,
             move_merge(to_annotated(std::move(sample.reads)), realigned_reads);
             writer << realigned_reads;
         }
-        batch_region = encompassing_region(batch.front().genotypes);
     }
     return report;
 }

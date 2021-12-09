@@ -28,6 +28,8 @@ class GenotypeQualityByDepth : public Measure
     std::string do_describe() const override;
     std::vector<std::string> do_requirements() const override;
     bool is_equal(const Measure& other) const noexcept override;
+    void do_set_parameters(std::vector<std::string> params) override;
+    std::vector<std::string> do_parameters() const override;
 public:
     GenotypeQualityByDepth(bool recalculate = false);
 };
