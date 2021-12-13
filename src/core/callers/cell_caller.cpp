@@ -489,22 +489,6 @@ CellCaller::infer_latents(const HaplotypeBlock& haplotypes, const HaplotypeLikel
     return std::make_unique<Latents>(*this, std::move(indexed_haplotypes), std::move(genotypes), std::move(flat_inferences));
 }
 
-boost::optional<double>
-CellCaller::calculate_model_posterior(const HaplotypeBlock& haplotypes,
-                                      const HaplotypeLikelihoodArray& haplotype_likelihoods,
-                                      const Caller::Latents& latents) const
-{
-    return calculate_model_posterior(haplotypes, haplotype_likelihoods, dynamic_cast<const Latents&>(latents));
-}
-
-boost::optional<double>
-CellCaller::calculate_model_posterior(const HaplotypeBlock& haplotypes,
-                                      const HaplotypeLikelihoodArray& haplotype_likelihoods,
-                                      const Latents& latents) const
-{
-    return boost::none;
-}
-
 std::vector<std::unique_ptr<octopus::VariantCall>>
 CellCaller::call_variants(const std::vector<Variant>& candidates, const Caller::Latents& latents) const
 {

@@ -146,6 +146,13 @@ private:
 protected:
     virtual std::size_t do_remove_duplicates(HaplotypeBlock& haplotypes) const;
     
+    struct ModelPosterior
+    {
+        using Probability = double;
+        std::vector<boost::optional<Probability>> samples;
+        boost::optional<Probability> joint;
+    };
+
     using ReadPileupMap = std::unordered_map<SampleName, ReadPileups>;
     
     boost::optional<MemoryFootprint> target_max_memory() const noexcept;
@@ -158,7 +165,7 @@ private:
     
     virtual Genotype<IndexedHaplotype<>> call_genotype(const Latents& latents, const SampleName& sample) const;
     
-    virtual boost::optional<double>
+    virtual boost::optional<ModelPosterior>
     calculate_model_posterior(const HaplotypeBlock& haplotypes,
                               const HaplotypeLikelihoodArray& haplotype_likelihoods,
                               const Latents& latents) const { return boost::none; }

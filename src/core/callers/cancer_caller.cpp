@@ -154,7 +154,7 @@ CancerCaller::infer_latents(const HaplotypeBlock& haplotypes,
     return result;
 }
 
-boost::optional<double>
+boost::optional<Caller::ModelPosterior>
 CancerCaller::calculate_model_posterior(const HaplotypeBlock& haplotypes,
                                         const HaplotypeLikelihoodArray& haplotype_likelihoods,
                                         const Caller::Latents& latents) const
@@ -242,7 +242,7 @@ auto demote_each(const MappableBlock<CancerGenotype<IndexedHaplotype<>>>& genoty
 
 } // namespace
 
-boost::optional<double>
+boost::optional<Caller::ModelPosterior>
 CancerCaller::calculate_model_posterior(const HaplotypeBlock& haplotypes,
                                         const HaplotypeLikelihoodArray& haplotype_likelihoods,
                                         const Latents& latents) const
@@ -259,14 +259,16 @@ CancerCaller::calculate_model_posterior(const HaplotypeBlock& haplotypes,
         }
         const auto dummy_genotypes = demote_each(latents.cancer_genotypes_[latents.max_evidence_somatic_model_index_]);
         const auto dummy_inferences = germline_model.evaluate(dummy_genotypes, haplotype_likelihoods);
+        ModelPosterior result {};
         if (latents.noise_model_inferences_) {
-            return octopus::calculate_model_posterior(normal_inferences.log_evidence,
-                                                      dummy_inferences.log_evidence,
-                                                      latents.noise_model_inferences_->approx_log_evidence);
+            result.joint = octopus::calculate_model_posterior(normal_inferences.log_evidence,
+                                                              dummy_inferences.log_evidence,
+                                                              latents.noise_model_inferences_->approx_log_evidence);
         } else {
-            return octopus::calculate_model_posterior(normal_inferences.log_evidence,
-                                                      dummy_inferences.log_evidence);
+            result.joint = octopus::calculate_model_posterior(normal_inferences.log_evidence,
+                                                              dummy_inferences.log_evidence);
         }
+        return result;
     } else {
         // TODO
         return boost::none;

@@ -52,6 +52,7 @@ public:
         Genotype<Allele> genotype;
         Phred<double> posterior;
         boost::optional<PhaseCall> phase;
+        boost::optional<Phred<double>> model_posterior;
     };
     
     Call() = delete;
@@ -98,8 +99,10 @@ public:
     virtual bool requires_model_evaluation() const noexcept { return false; };
     
     void set_model_posterior(Phred<double> p) noexcept;
+    void set_model_posterior(const SampleName& sample, Phred<double> p) noexcept;
     
     boost::optional<Phred<double>> model_posterior() const noexcept;
+    boost::optional<Phred<double>> model_posterior(const SampleName& sample) const noexcept;
     
     void reorder_genotype(const SampleName& sample, const std::vector<unsigned>& order);
     

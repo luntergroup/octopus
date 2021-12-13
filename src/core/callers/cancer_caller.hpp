@@ -113,12 +113,12 @@ private:
     infer_latents(const HaplotypeBlock& haplotypes,
                   const HaplotypeLikelihoodArray& haplotype_likelihoods) const override;
     
-    boost::optional<double>
+    boost::optional<ModelPosterior>
     calculate_model_posterior(const HaplotypeBlock& haplotypes,
                               const HaplotypeLikelihoodArray& haplotype_likelihoods,
                               const Caller::Latents& latents) const override;
     
-    boost::optional<double>
+    boost::optional<ModelPosterior>
     calculate_model_posterior(const HaplotypeBlock& haplotypes,
                               const HaplotypeLikelihoodArray& haplotype_likelihoods,
                               const Latents& latents) const;

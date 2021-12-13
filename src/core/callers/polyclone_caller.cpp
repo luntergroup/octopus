@@ -181,22 +181,6 @@ PolycloneCaller::infer_latents(const HaplotypeBlock& haplotypes, const Haplotype
                                      sample(), parameters_.clonality_prior);
 }
 
-boost::optional<double>
-PolycloneCaller::calculate_model_posterior(const HaplotypeBlock& haplotypes,
-                                           const HaplotypeLikelihoodArray& haplotype_likelihoods,
-                                           const Caller::Latents& latents) const
-{
-    return calculate_model_posterior(haplotypes, haplotype_likelihoods, dynamic_cast<const Latents&>(latents));
-}
-
-boost::optional<double>
-PolycloneCaller::calculate_model_posterior(const HaplotypeBlock& haplotypes,
-                                           const HaplotypeLikelihoodArray& haplotype_likelihoods,
-                                           const Latents& latents) const
-{
-    return boost::none;
-}
-
 std::vector<std::unique_ptr<octopus::VariantCall>>
 PolycloneCaller::call_variants(const std::vector<Variant>& candidates, const Caller::Latents& latents) const
 {
