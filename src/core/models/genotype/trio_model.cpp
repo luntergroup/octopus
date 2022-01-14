@@ -6,7 +6,6 @@
 #include <iterator>
 #include <algorithm>
 #include <cmath>
-#include <random>
 #include <utility>
 #include <cassert>
 #include <string>
@@ -206,8 +205,6 @@ reduce(std::vector<T>& zipped, std::size_t max_joint,
 {
     max_joint = std::min(max_joint, zipped.size());
     if (all_equal(zipped)) {
-        static std::default_random_engine gen {};
-        std::shuffle(std::begin(zipped), std::end(zipped), gen);
         const auto min_joint = static_cast<std::size_t>(std::floor(zipped.size() * (1 - std::exp(max_log_probability_loss))));
         lost_log_mass = boost::none;
         return std::next(std::begin(zipped), std::min(max_joint, min_joint));
