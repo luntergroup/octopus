@@ -411,7 +411,7 @@ def classify_vcfeval_ignored_calls(vcfeval_dir, octopus_vcf, sample, regions=Non
     baseline_vcf = ps.VariantFile(vcfeval_dir / "baseline.vcf.gz")
     new_calls_vcf = ps.VariantFile(vcfeval_dir / "calls.homref.vcf.gz", 'wz', header=calls_vcf.header)
     for call in calls_vcf:
-        if call.info["CALL"] == "IGN":
+        if call.info["CALL"] == "IGN" and call.contig in baseline_vcf.header.contigs:
             if any(baseline.info["BASE"] == "FN" for baseline in baseline_vcf.fetch(call.contig, call.start, call.stop)):
                 call.info["CALL"] = "FP"
             else:
