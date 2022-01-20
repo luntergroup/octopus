@@ -391,11 +391,11 @@ std::vector<VcfRecord> VcfRecordFactory::make(std::vector<CallWrapper>&& calls) 
             prev_represented.emplace_back(ploidy, nullptr);
             for (auto itr = block_begin_itr; itr != block_head_end_itr; ++itr) {
                 const auto& gt = itr->call->get_genotype_call(sample).genotype;
+                if (gt.ploidy() != ploidy) {
+                    throw InconsistentPloidyError {sample, genotype, gt};
+                }
                 for (unsigned i {0}; i < gt.ploidy(); ++i) {
                     if (itr->call->is_represented(gt[i])) {
-                        if (prev_represented.back().size() < i) {
-                            throw InconsistentPloidyError {sample, genotype, gt};
-                        }
                         prev_represented.back()[i] = std::addressof(*itr->call);
                     }
                 }
