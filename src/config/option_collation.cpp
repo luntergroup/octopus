@@ -1128,7 +1128,7 @@ get_assembler_bubble_score_setter(const OptionMap& options) noexcept
                                            options.at("min-expected-somatic-frequency").as<float>()};
     } else if (is_polyclone_calling(options)) {
         return DepthBasedBubbleScoreSetter {options.at("min-bubble-score").as<double>(),
-                                            options.at("min-clone-frequency").as<float>() / 2};
+                                            options.at("min-clone-frequency").as<float>()};
     } else if (is_single_cell_calling(options)) {
         return DepthBasedBubbleScoreSetter {options.at("min-bubble-score").as<double>(), 0.25};
     } else {
@@ -1141,9 +1141,9 @@ boost::optional<double> get_repeat_scanner_min_vaf(const OptionMap& options)
 {
     using namespace octopus::coretools;
     if (is_cancer_calling(options)) {
-        return options.at("min-credible-somatic-frequency").as<float>() / 4;
+        return options.at("min-credible-somatic-frequency").as<float>() / 2;
     } else if (is_polyclone_calling(options)) {
-        return options.at("min-clone-frequency").as<float>() / 4;
+        return options.at("min-clone-frequency").as<float>() / 2;
     } else if (is_single_cell_calling(options)) {
         return 0.005;
     } else {
@@ -2060,7 +2060,7 @@ boost::optional<std::size_t> get_max_genotypes(const OptionMap& options, const s
     } else if (caller == "cancer") {
         return 5'000;
     } else if (caller == "polyclone") {
-        return 100'000;
+        return 10'000;
     } else if (as_unsigned("organism-ploidy", options) > 2) {
         return 20'000;
     } else if (is_fast_mode(options)) {
