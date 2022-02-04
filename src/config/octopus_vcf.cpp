@@ -17,7 +17,7 @@ VcfHeader::Builder make_header_template()
     result.add_info("AC", "A", "Integer", "Allele count in genotypes, for each ALT allele, in the same order as listed");
     result.add_info("AN", "1", "Integer", "Total number of alleles in called genotypes");
     result.add_info("DP", "1", "Integer", "Combined depth across samples");
-    result.add_info("MQ", "1", "Integer", "RMS mapping quality");
+    result.add_info("MQ", "1", "Float", "RMS mapping quality");
     result.add_info("MQ0", "1", "Integer", "Number of MAPQ == 0 reads covering this record");
     result.add_info("NS", "1", "Integer", "Number of samples with data");
     result.add_info("END", "1", "Integer", "End position on CHROM");
