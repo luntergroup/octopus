@@ -155,57 +155,40 @@ PopulationCaller::Latents::Latents(const std::vector<SampleName>& samples,
                                    const IndexedHaplotypeBlock& haplotypes,
                                    GenotypeBlock genotypes,
                                    IndependenceModelInferences&& inferences)
+: genotypes_ {std::move(genotypes)}
 {
     auto& genotype_marginal_posteriors = inferences.posteriors.genotype_probabilities;
-    auto haplotype_posteriors = calculate_haplotype_posteriors(haplotypes, genotypes, genotype_marginal_posteriors);
+    auto haplotype_posteriors = calculate_haplotype_posteriors(haplotypes, genotypes_, genotype_marginal_posteriors);
     haplotype_posteriors_ = std::make_shared<HaplotypeProbabilityMap>();
     haplotype_posteriors_->reserve(haplotypes.size());
     for (const auto& haplotype : haplotypes) {
         haplotype_posteriors_->emplace(haplotype, haplotype_posteriors[index_of(haplotype)]);
     }
-    GenotypeProbabilityMap genotype_posteriors {std::begin(genotypes), std::end(genotypes)};
+    GenotypeProbabilityMap genotype_posteriors {std::begin(genotypes_), std::end(genotypes_)};
     for (std::size_t s {0}; s < samples.size(); ++s) {
         insert_sample(samples[s], std::move(genotype_marginal_posteriors[s]), genotype_posteriors);
     }
     genotype_posteriors_ = std::make_shared<GenotypeProbabilityMap>(std::move(genotype_posteriors));
-    genotypes_.emplace(genotypes.front().ploidy(), std::move(genotypes));
-}
-
-PopulationCaller::Latents::Latents(const std::vector<SampleName>& samples,
-                                   const IndexedHaplotypeBlock& haplotypes,
-                                   std::map<unsigned, GenotypeBlock> genotypes,
-                                   IndependenceModelInferences&& inferences)
-: genotypes_ {std::move(genotypes)}
-{
 }
 
 PopulationCaller::Latents::Latents(const std::vector<SampleName>& samples,
                                    const IndexedHaplotypeBlock& haplotypes,
                                    GenotypeBlock genotypes,
                                    ModelInferences&& inferences)
-: model_latents_ {std::move(inferences)}
+: genotypes_ {std::move(genotypes)}
+, model_latents_ {std::move(inferences)}
 {
     auto& genotype_marginal_posteriors = model_latents_.posteriors.marginal_genotype_probabilities;
-    auto haplotype_posteriors = calculate_haplotype_posteriors(haplotypes, genotypes, genotype_marginal_posteriors);
+    auto haplotype_posteriors = calculate_haplotype_posteriors(haplotypes, genotypes_, genotype_marginal_posteriors);
     haplotype_posteriors_ = std::make_shared<HaplotypeProbabilityMap>();
     for (const auto& haplotype : haplotypes) {
         haplotype_posteriors_->emplace(haplotype, haplotype_posteriors[index_of(haplotype)]);
     }
-    GenotypeProbabilityMap genotype_posteriors {std::begin(genotypes), std::end(genotypes)};
+    GenotypeProbabilityMap genotype_posteriors {std::begin(genotypes_), std::end(genotypes_)};
     for (std::size_t s {0}; s < samples.size(); ++s) {
         insert_sample(samples[s], genotype_marginal_posteriors[s], genotype_posteriors);
     }
     genotype_posteriors_ = std::make_shared<GenotypeProbabilityMap>(std::move(genotype_posteriors));
-    genotypes_.emplace(genotypes.front().ploidy(), std::move(genotypes));
-}
-
-PopulationCaller::Latents::Latents(const std::vector<SampleName>& samples,
-                                   const IndexedHaplotypeBlock& haplotypes,
-                                   std::map<unsigned, GenotypeBlock> genotypes,
-                                   ModelInferences&& inferences)
-: genotypes_ {std::move(genotypes)}
-, model_latents_ {std::move(inferences)}
-{
 }
 
 std::shared_ptr<PopulationCaller::Latents::HaplotypeProbabilityMap>
@@ -864,7 +847,7 @@ PopulationCaller::propose_model_check_genotypes(std::size_t sample_idx,
                                                 const Latents& latents) const
 {
     constexpr std::size_t max_model_check_genotypes {5};
-    const auto& genotypes = latents.genotypes_.at(parameters_.ploidies[sample_idx]);
+    const auto& genotypes = latents.genotypes_;
     const auto& marginal_genotype_posteriors = latents.model_latents_.posteriors.marginal_genotype_probabilities[sample_idx];
     const auto num_model_check_genotypes = std::min(max_model_check_genotypes, genotypes.size());
     const auto best_indices = select_top_k_indices(marginal_genotype_posteriors, num_model_check_genotypes, false);

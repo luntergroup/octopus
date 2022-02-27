@@ -133,22 +133,14 @@ public:
             IndependenceModelInferences&&);
     Latents(const std::vector<SampleName>& samples,
             const IndexedHaplotypeBlock&,
-            std::map<unsigned, GenotypeBlock> genotypes,
-            IndependenceModelInferences&&);
-    Latents(const std::vector<SampleName>& samples,
-            const IndexedHaplotypeBlock&,
             GenotypeBlock,
-            ModelInferences&&);
-    Latents(const std::vector<SampleName>& samples,
-            const IndexedHaplotypeBlock&,
-            std::map<unsigned, GenotypeBlock>,
             ModelInferences&&);
     
     std::shared_ptr<HaplotypeProbabilityMap> haplotype_posteriors() const noexcept override;
     std::shared_ptr<GenotypeProbabilityMap> genotype_posteriors() const noexcept override;
 
 private:
-    std::map<unsigned, GenotypeBlock> genotypes_;
+    GenotypeBlock genotypes_;
     ModelInferences model_latents_;
     std::shared_ptr<GenotypeProbabilityMap> genotype_posteriors_;
     std::shared_ptr<HaplotypeProbabilityMap> haplotype_posteriors_;
