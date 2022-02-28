@@ -78,6 +78,7 @@ private:
         Variant variant;
         unsigned sample_index;
         const GenomicRegion& mapped_region() const noexcept { return variant.mapped_region(); }
+        friend bool operator<(const Candidate& lhs, const Candidate& rhs) { return lhs.variant < rhs.variant; }
     };
     
     std::reference_wrapper<const ReferenceGenome> reference_;
