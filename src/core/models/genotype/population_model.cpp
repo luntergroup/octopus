@@ -81,7 +81,7 @@ double calculate_frequency_update_norm(const std::size_t num_samples, const unsi
 
 double calculate_frequency_update_norm(const std::vector<unsigned>& sample_ploidies) noexcept
 {
-    return std::accumulate(std::cbegin(sample_ploidies), std::cend(sample_ploidies), 0.0, std::multiplies<> {});
+    return std::accumulate(std::cbegin(sample_ploidies), std::cend(sample_ploidies), 1.0, std::multiplies<> {});
 }
 
 struct EMOptions
