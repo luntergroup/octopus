@@ -12,6 +12,8 @@
 #include <iostream>
 #include <future>
 
+#include <boost/random/uniform_int_distribution.hpp>
+
 #include "mappable_algorithms.hpp"
 #include "maths.hpp"
 #include "append.hpp"
@@ -33,7 +35,7 @@ auto draw_sample(const InputRegionMap& regions, std::discrete_distribution<>& co
 auto choose_sample_window(const GenomicRegion& target)
 {
     thread_local std::mt19937 generator {42};
-    std::uniform_int_distribution<GenomicRegion::Position> dist {target.begin(), target.end()};
+    boost::random::uniform_int_distribution<GenomicRegion::Position> dist {target.begin(), target.end()};
     return GenomicRegion {target.contig_name(), dist(generator), target.end()};
 }
 
