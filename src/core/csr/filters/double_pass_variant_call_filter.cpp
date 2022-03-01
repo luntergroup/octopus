@@ -148,6 +148,7 @@ void DoublePassVariantCallFilter::make_filter_pass(const VcfReader& source, cons
     if (progress_) {
         progress_->reset();
         progress_->set_max_tick_size(10);
+        progress_->set_buffer_size(3);
         progress_->start();
     }
     auto p = source.iterate();
