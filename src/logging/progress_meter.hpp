@@ -34,6 +34,7 @@ public:
     ~ProgressMeter();
     
     void set_max_tick_size(double percent);
+    void set_buffer_size(std::size_t n);
     
     void start();
     void resume();
@@ -62,7 +63,12 @@ private:
     mutable std::deque<DurationUnits> block_compute_times_;
     mutable std::mutex mutex_;
     logging::InfoLogger log_;
+    std::size_t buffer_size_;
+    std::vector<GenomicRegion> buffer_;
     
+    void buffer(const GenomicRegion& region);
+    void spill_buffer();
+    void do_log_completed(const GenomicRegion& region);
     RegionSizeType merge(const GenomicRegion& region);
     
     void write_header();

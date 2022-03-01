@@ -75,6 +75,8 @@ ProgressMeter::ProgressMeter(InputRegionMap regions)
 , position_tab_length_ {}
 , block_compute_times_ {}
 , log_ {}
+, buffer_size_ {}
+, buffer_ {}
 {
     for (auto& p : target_regions_) {
         auto covered_regions = extract_covered_regions(p.second);
@@ -112,6 +114,8 @@ ProgressMeter::ProgressMeter(ProgressMeter&& other)
     position_tab_length_  = move(other.position_tab_length_);
     block_compute_times_  = move(other.block_compute_times_);
     log_                  = move(other.log_);
+    buffer_size_          = move(other.buffer_size_);
+    buffer_               = move(other.buffer_);
 }
 
 ProgressMeter& ProgressMeter::operator=(ProgressMeter&& other)
@@ -135,6 +139,8 @@ ProgressMeter& ProgressMeter::operator=(ProgressMeter&& other)
         position_tab_length_  = move(other.position_tab_length_);
         block_compute_times_  = move(other.block_compute_times_);
         log_                  = move(other.log_);
+        buffer_size_          = move(other.buffer_size_);
+        buffer_               = move(other.buffer_);
     }
     return *this;
 }
@@ -242,6 +248,11 @@ void ProgressMeter::set_max_tick_size(double percent)
     curr_tick_size_ = std::min(max_tick_size_, curr_tick_size_);
 }
 
+void ProgressMeter::set_buffer_size(const std::size_t n)
+{
+    buffer_size_ = n;
+}
+
 void ProgressMeter::start()
 {
     if (!target_regions_.empty()) {
@@ -264,6 +275,7 @@ void ProgressMeter::pause()
 
 void ProgressMeter::stop()
 {
+    spill_buffer();
     if (!done_ && !target_regions_.empty()) {
         const TimeInterval duration {start_, std::chrono::system_clock::now()};
         const auto time_taken = to_string(duration);
@@ -291,17 +303,18 @@ void ProgressMeter::reset()
     done_ = false;
     block_compute_times_.clear();
     block_compute_times_.shrink_to_fit();
-    
+    buffer_.clear();
+    buffer_.shrink_to_fit();
 }
 
 void ProgressMeter::log_completed(const GenomicRegion& region)
 {
     std::lock_guard<std::mutex> lock {mutex_};
-    const auto new_bp_processed = merge(region);
-    const auto new_percent_done = percent_completed(new_bp_processed, num_bp_to_search_);
-    num_bp_completed_ += new_bp_processed;
-    percent_until_tick_ -= new_percent_done;
-    if (percent_until_tick_ <= 0) output_log(region);
+    if (buffer_size_ > 0) {
+        buffer(region);
+    } else {
+        do_log_completed(region);
+    }
 }
 
 void ProgressMeter::log_completed(const GenomicRegion::ContigName& contig)
@@ -316,6 +329,34 @@ void ProgressMeter::log_completed(const GenomicRegion::ContigName& contig)
 }
 
 // private methods
+
+void ProgressMeter::buffer(const GenomicRegion& region)
+{
+    if (!buffer_.empty() && (are_adjacent(buffer_.back(), region) || overlaps(buffer_.back(), region))) {
+        buffer_.back() = encompassing_region(buffer_.back(), region);
+    } else if (buffer_.size() == buffer_size_) {
+        spill_buffer();
+        buffer_.assign({region});
+    } else {
+        buffer_.push_back(region);
+    }
+}
+
+void ProgressMeter::spill_buffer()
+{
+    for (const auto& region : buffer_) {
+        do_log_completed(region);
+    }
+}
+
+void ProgressMeter::do_log_completed(const GenomicRegion& region)
+{
+    const auto new_bp_processed = merge(region);
+    const auto new_percent_done = percent_completed(new_bp_processed, num_bp_to_search_);
+    num_bp_completed_ += new_bp_processed;
+    percent_until_tick_ -= new_percent_done;
+    if (percent_until_tick_ <= 0) output_log(region);
+}
 
 ProgressMeter::RegionSizeType ProgressMeter::merge(const GenomicRegion& region)
 {
