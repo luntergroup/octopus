@@ -378,9 +378,6 @@ auto propose_call_subregion(const ContigCallingComponents& components,
         return remaining_call_region;
     }
     if (config.min_size && size(max_window) < *config.min_size) {
-        if (size(remaining_call_region) < *config.min_size) {
-            return remaining_call_region;
-        }
         return expand_rhs(head_region(max_window), *config.min_size);
     }
     return max_window;
