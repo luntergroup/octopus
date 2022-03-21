@@ -12,6 +12,7 @@ RUN apt-get -y update \
         cmake \
         libhts-dev \
         python3-pip \
+        git \
     && pip3 install distro
 
 # Install Octopus
@@ -21,6 +22,12 @@ COPY . /opt/octopus
 RUN /opt/octopus/scripts/install.py \
     --threads $threads \
     --architecture $architecture
+
+# Cleanup git - only needed during install for commit info
+RUN apt-get purge -y git \
+    && rm -r /opt/octopus/.git \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 ENV PATH="/opt/octopus/bin:${PATH}"
 
