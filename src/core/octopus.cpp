@@ -366,6 +366,9 @@ auto propose_call_subregion(const ContigCallingComponents& components,
     if (is_empty(remaining_call_region)) {
         return remaining_call_region;
     }
+    if (config.min_size && size(remaining_call_region) <= *config.min_size) {
+        return remaining_call_region;
+    }
     auto target = remaining_call_region;
     if (config.max_size && size(target) > *config.max_size) {
         target = head_region(target, *config.max_size);
