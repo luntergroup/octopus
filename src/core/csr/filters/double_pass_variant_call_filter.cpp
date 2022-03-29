@@ -185,14 +185,16 @@ void DoublePassVariantCallFilter::log_progress(const GenomicRegion& region) cons
 {
     if (progress_) {
         if (current_contig_) {
-            if (*current_contig_ != region.contig_name()) {
+            if (*current_contig_ == region.contig_name()) {
+                progress_->log_completed(region);
+            } else {
                 progress_->log_completed(*current_contig_);
                 current_contig_ = region.contig_name();
             }
         } else {
+            progress_->log_completed(expand_lhs_to_zero(region));
             current_contig_ = region.contig_name();
         }
-        progress_->log_completed(expand_lhs_to_zero(region));
     }
 }
 
