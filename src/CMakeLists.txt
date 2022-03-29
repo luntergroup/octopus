@@ -332,6 +332,8 @@ set(CORE_SOURCES
     core/csr/measures/mean_mapping_quality.cpp
     core/csr/measures/model_posterior.hpp
     core/csr/measures/model_posterior.cpp
+    core/csr/measures/model_posterior_by_depth.hpp
+    core/csr/measures/model_posterior_by_depth.cpp
     core/csr/measures/allele_depth.hpp
     core/csr/measures/allele_depth.cpp
     core/csr/measures/allele_frequency.hpp
