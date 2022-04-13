@@ -922,12 +922,15 @@ void Caller::call_variants(const GenomicRegion& active_region,
         }
     }
     if (refcalls_requested()) {
-        const auto refcall_region = right_overhang_region(uncalled_region, completed_region);
-        const auto pileups = make_pileups(reads, latents, refcall_region);
-        auto alleles = generate_reference_alleles(refcall_region, calls);
-        auto reference_calls = call_reference_helper(alleles, latents, pileups);
-        const auto itr = utils::append(std::move(reference_calls), calls);
-        std::inplace_merge(std::begin(calls), itr, std::end(calls));
+        const auto reportable_uncalled_region = overlapped_region(call_region, uncalled_region); // uncalled_region is padded
+        if (reportable_uncalled_region) {
+            const auto refcall_region = right_overhang_region(*reportable_uncalled_region, completed_region);
+            const auto pileups = make_pileups(reads, latents, refcall_region);
+            auto alleles = generate_reference_alleles(refcall_region, calls);
+            auto reference_calls = call_reference_helper(alleles, latents, pileups);
+            const auto itr = utils::append(std::move(reference_calls), calls);
+            std::inplace_merge(std::begin(calls), itr, std::end(calls));
+        }
     }
     utils::append(std::move(calls), result);
     prev_called_region = uncalled_region;
@@ -1361,7 +1364,7 @@ auto extract_uncalled_reference_regions(const GenomicRegion& region,
                                         const std::vector<CallWrapper>& calls)
 {
     auto called_regions = extract_called_regions(calls);
-    return extract_intervening_regions(called_regions, region);
+    return extract_intervening_regions(overlap_range(called_regions, region), region);
 }
 
 auto make_positional_reference_alleles(const std::vector<GenomicRegion>& regions, const ReferenceGenome& reference)
