@@ -950,8 +950,10 @@ void resolve_connecting_calls(CompletedTask& lhs, CompletedTask& rhs,
 {
     static auto debug_log = get_debug_log();
     if (lhs.calls.empty() || rhs.calls.empty()) return;
-    const auto first_lhs_connecting = find_first_lhs_connecting(lhs.calls, encompassing_region(rhs.calls));
-    const auto last_rhs_connecting  = find_last_rhs_connecting(encompassing_region(lhs.calls), rhs.calls);
+    const auto lhs_region = encompassing_region(lhs.calls);
+    const auto rhs_region = encompassing_region(rhs.calls);
+    const auto first_lhs_connecting = find_first_lhs_connecting(lhs.calls, rhs_region);
+    const auto last_rhs_connecting  = find_last_rhs_connecting(lhs_region, rhs.calls);
     if (debug_log) {
         const auto num_lhs_conflicting = std::distance(first_lhs_connecting, std::cend(lhs.calls));
         const auto num_rhs_conflicting = std::distance(std::cbegin(rhs.calls), last_rhs_connecting);
@@ -961,8 +963,34 @@ void resolve_connecting_calls(CompletedTask& lhs, CompletedTask& rhs,
                            << " & " << rhs << "(" << num_rhs_conflicting << " conflicting)";
         }
     }
-    // Keep RHS calls otherwise we might mess up phase sets of downstream calls
-    lhs.calls.erase(first_lhs_connecting, std::cend(lhs.calls));
+    // The general stratergy is to keep RHS variant calls otherwise we might mess up phase sets of downstream calls.
+    // However, we don't need to keep RHS reference call before the first variant call, so
+    // we should prefer to keep LHS variant calls in this region.
+    const static auto is_refcall = [] (const VcfRecord& call) { return call.is_refcall(); };
+    const auto first_rhs_variant = std::find_if_not(std::cbegin(rhs.calls), last_rhs_connecting, is_refcall);
+    auto first_lhs_remove = first_lhs_connecting;
+    if (first_rhs_variant != std::cbegin(rhs.calls)) {
+        const auto rhs_ref_region = closed_region(rhs.calls.front(), *first_rhs_variant);
+        const auto rhs_keep_region = right_overhang_region(rhs_region, rhs_ref_region);
+        first_lhs_remove = std::find_if(first_lhs_connecting, std::cend(lhs.calls),
+                 [&] (const auto& call) { return overlaps(call, rhs_keep_region); });
+        if (first_lhs_remove != std::cbegin(lhs.calls)) {
+            const auto lhs_keep_region = encompassing_region(std::cbegin(lhs.calls), first_lhs_remove);
+            const auto last_rhs_remove = std::find_if_not(std::cbegin(rhs.calls), first_rhs_variant,
+                    [&] (const auto& call) { return overlaps(call, lhs_keep_region); });
+            if (last_rhs_remove != std::cbegin(rhs.calls)) {
+                const auto last_overlapping_rhs_ref = *std::prev(last_rhs_remove);
+                rhs.calls.erase(std::cbegin(rhs.calls), last_rhs_remove);
+                if (!contains(lhs_keep_region, last_overlapping_rhs_ref)) {
+                    // If the last RHS refcall overlapping with a LHS call we'll keep is a partial
+                    // overlap then we should still keep the non-overlapping positions.
+                    auto squashed_refcall = VcfRecord::Builder(last_overlapping_rhs_ref).set_pos(mapped_end(lhs_keep_region)).build_once();
+                    rhs.calls.push_front(std::move(squashed_refcall));
+                }
+            }
+        }
+    }
+    lhs.calls.erase(first_lhs_remove, std::cend(lhs.calls));
 }
 
 void resolve_connecting_calls(std::deque<CompletedTask>& adjacent_tasks,
