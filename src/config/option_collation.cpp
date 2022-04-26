@@ -2398,7 +2398,7 @@ bool keep_unfiltered_calls(const OptionMap& options) noexcept
     return options.at("keep-unfiltered-calls").as<bool>();
 }
 
-ReadPipe make_default_filter_read_pipe(ReadManager& read_manager, std::vector<SampleName> samples)
+ReadPipe make_default_filter_read_pipe(ReadManager& read_manager, std::vector<SampleName> samples, const OptionMap& options)
 {
     using std::make_unique;
     using namespace readpipe;
@@ -2409,6 +2409,9 @@ ReadPipe make_default_filter_read_pipe(ReadManager& read_manager, std::vector<Sa
     filterer.add(make_unique<HasWellFormedCigar>());
     filterer.add(make_unique<IsMapped>());
     filterer.add(make_unique<IsLong>(1));
+    if (!options.at("allow-qc-fails").as<bool>()) {
+        filterer.add(make_unique<IsNotMarkedQcFail>());
+    }
     return ReadPipe {read_manager, std::move(transformer), std::move(filterer), boost::none, std::move(samples)};
 }
 
@@ -2417,7 +2420,7 @@ ReadPipe make_call_filter_read_pipe(ReadManager& read_manager, const ReferenceGe
     if (use_calling_read_pipe_for_call_filtering(options)) {
         return make_read_pipe(read_manager, reference, std::move(samples), options);
     } else {
-        return make_default_filter_read_pipe(read_manager, std::move(samples));
+        return make_default_filter_read_pipe(read_manager, std::move(samples), options);
     }
 }
 
