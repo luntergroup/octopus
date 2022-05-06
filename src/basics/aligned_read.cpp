@@ -54,7 +54,8 @@ const std::string& AlignedRead::name() const noexcept
 
 const std::string& AlignedRead::read_group() const noexcept
 {
-    return read_group_;
+    constexpr static Tag readgroup_tag {'R','G'};
+    return *this->annotation(readgroup_tag); // RG is required so will always be present
 }
 
 const GenomicRegion& AlignedRead::mapped_region() const noexcept
@@ -121,24 +122,62 @@ AlignedRead::Flags AlignedRead::flags() const noexcept
     return decompress(flags_);
 }
 
+void AlignedRead::add_annotation(Tag name, Annotation value)
+{
+    annoations_.emplace(std::move(name), std::move(value));
+}
+
+boost::optional<const AlignedRead::Annotation&> AlignedRead::annotation(const Tag& name) const noexcept
+{
+    auto itr = annoations_.find(name);
+    if (itr != std::cend(annoations_)) {
+        return itr->second;
+    } else {
+        return boost::none;
+    }
+}
+
+std::vector<AlignedRead::Tag> AlignedRead::tags() const
+{
+    std::vector<AlignedRead::Tag> result(annoations_.size());
+    std::transform(std::cbegin(annoations_), std::cend(annoations_), std::begin(result), 
+                   [] (const auto& p) { return p.first; });
+    return result;
+}
+
 const AlignedRead::NucleotideSequence& AlignedRead::barcode() const noexcept
 {
-    return barcode_sequence_;
+    const static NucleotideSequence empty_barcode {};
+    constexpr static Tag barcode_tag {'B','X'};
+    auto barcode = this->annotation(barcode_tag);
+    return barcode ? *barcode : empty_barcode;
 }
 
-void AlignedRead::set_barcode(NucleotideSequence barcode) noexcept
+void AlignedRead::set_barcode(NucleotideSequence barcode)
 {
-    barcode_sequence_ = std::move(barcode);
+    constexpr static Tag barcode_tag {'B','X'};
+    add_annotation(barcode_tag, std::move(barcode));
 }
 
-const std::vector<AlignedRead::SupplementaryAlignment>& AlignedRead::supplementary_alignments() const noexcept
+std::vector<AlignedRead::SupplementaryAlignment> 
+AlignedRead::supplementary_alignments() const
 {
-    return supplementary_alignments_;
-}
-
-void AlignedRead::add_supplementary_alignment(SupplementaryAlignment alignment)
-{
-    supplementary_alignments_.push_back(std::move(alignment));
+    constexpr static Tag supplementary_alignment_tag {'S','A'};
+    std::vector<AlignedRead::SupplementaryAlignment> result {};
+    const auto supplementary_alignments = this->annotation(supplementary_alignment_tag);
+    if (supplementary_alignments) {
+        for (auto tuple : utils::split(*supplementary_alignments, ';')) {
+            auto fields = utils::split(tuple, ',');
+            auto cigar = parse_cigar(fields[3]);
+            auto begin_pos = boost::lexical_cast<GenomicRegion::Position>(fields[1]);
+            if (begin_pos > 0) --begin_pos;
+            GenomicRegion region {std::move(fields[0]), begin_pos, begin_pos + reference_size(cigar)};
+            auto strand = fields[2] == "+" ? AlignedRead::Direction::forward : AlignedRead::Direction::reverse;
+            auto mapping_quality = boost::numeric_cast<AlignedRead::MappingQuality>(boost::lexical_cast<int>(fields[4]));
+            result.emplace_back(std::move(region), std::move(cigar), strand, mapping_quality);
+        }
+    }
+    return result;
 }
 
 void AlignedRead::realign(GenomicRegion new_region, CigarString new_cigar) noexcept
@@ -447,9 +486,13 @@ AlignedRead copy(const AlignedRead& read, const GenomicRegion& region)
     const auto subqualities_begin_itr = next(cbegin(read.base_qualities()), copy_offset);
     const auto subqualities_end_itr   = next(subqualities_begin_itr, copy_length);
     AlignedRead::BaseQualityVector sub_qualities {subqualities_begin_itr, subqualities_end_itr};
+    std::vector<std::pair<AlignedRead::Tag, AlignedRead::Annotation>> annotations {};
+    for (const auto& tag : read.tags()) {
+        annotations.emplace_back(tag, *read.annotation(tag));
+    }
     return AlignedRead {read.name(), copy_region, std::move(sub_sequence), std::move(sub_qualities),
                         std::move(contained_cigar_copy), read.mapping_quality(), read.flags(), read.read_group(),
-                        read.barcode()};
+                        std::move(annotations)};
 }
 
 template <typename T>
@@ -532,17 +575,21 @@ std::vector<AlignedRead> split(const AlignedRead& read, const GenomicRegion::Siz
         auto chunk_name = read.name();
         if (append_index_to_read_name) chunk_name += "_" + std::to_string(idx);
         GenomicRegion chunk_region {contig_name(read), chunk_reference_start, chunk_reference_start + chunk_reference_length};
+        std::vector<std::pair<AlignedRead::Tag, AlignedRead::Annotation>> annotations {};
+        for (auto tag : read.tags()) {
+            annotations.emplace_back(tag, *read.annotation(tag));
+        }
         if (read.has_other_segment()) {
             result.emplace_back(std::move(chunk_name), std::move(chunk_region), std::move(chunk_sequence),
                                 std::move(chunk_base_quals), std::move(chunk_cigar),
-                                read.mapping_quality(), read.flags(), read.read_group(), read.barcode(),
+                                read.mapping_quality(), read.flags(), read.read_group(),
                                 read.next_segment().contig_name(), read.next_segment().begin(),
                                 read.next_segment().inferred_template_length(),
-                                read.next_segment().flags());
+                                read.next_segment().flags(), std::move(annotations));
         } else {
             result.emplace_back(std::move(chunk_name), std::move(chunk_region), std::move(chunk_sequence),
                                 std::move(chunk_base_quals), std::move(chunk_cigar),
-                                read.mapping_quality(), read.flags(), read.read_group(), read.barcode());
+                                read.mapping_quality(), read.flags(), read.read_group(), std::move(annotations));
         }
         chunk_reference_start += chunk_reference_length;
     }

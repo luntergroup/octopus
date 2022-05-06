@@ -214,12 +214,13 @@ NoUnlocalizedSupplementaryAlignments::NoUnlocalizedSupplementaryAlignments(std::
 
 bool NoUnlocalizedSupplementaryAlignments::passes(const AlignedRead& read) const noexcept
 {
+    const auto supplementary_alignments = read.supplementary_alignments();
     if (min_mapping_quality_) {
         const auto is_good_unlocalized = [mq = *min_mapping_quality_] (const auto& alignment) noexcept {
             return alignment.mapping_quality() >= mq && is_unlocalized(alignment);};
-        return std::none_of(std::cbegin(read.supplementary_alignments()), std::cend(read.supplementary_alignments()), is_good_unlocalized);
+        return std::none_of(std::cbegin(supplementary_alignments), std::cend(supplementary_alignments), is_good_unlocalized);
     } else {
-        return std::none_of(std::cbegin(read.supplementary_alignments()), std::cend(read.supplementary_alignments()), is_unlocalized);
+        return std::none_of(std::cbegin(supplementary_alignments), std::cend(supplementary_alignments), is_unlocalized);
     }
 }
 
@@ -232,12 +233,13 @@ NoUnplacedSupplementaryAlignments::NoUnplacedSupplementaryAlignments(std::string
 
 bool NoUnplacedSupplementaryAlignments::passes(const AlignedRead& read) const noexcept
 {
+    const auto supplementary_alignments = read.supplementary_alignments();
     if (min_mapping_quality_) {
         const auto is_good_unplaced = [mq = *min_mapping_quality_] (const auto& alignment) noexcept {
             return alignment.mapping_quality() >= mq && is_unplaced(alignment);};
-        return std::none_of(std::cbegin(read.supplementary_alignments()), std::cend(read.supplementary_alignments()), is_good_unplaced);
+        return std::none_of(std::cbegin(supplementary_alignments), std::cend(supplementary_alignments), is_good_unplaced);
     } else {
-        return std::none_of(std::cbegin(read.supplementary_alignments()), std::cend(read.supplementary_alignments()), is_unplaced);
+        return std::none_of(std::cbegin(supplementary_alignments), std::cend(supplementary_alignments), is_unplaced);
     }
 }
 
@@ -250,12 +252,13 @@ NoDecoySupplementaryAlignments::NoDecoySupplementaryAlignments(std::string name,
 
 bool NoDecoySupplementaryAlignments::passes(const AlignedRead& read) const noexcept
 {
+    const auto supplementary_alignments = read.supplementary_alignments();
     if (min_mapping_quality_) {
         const auto is_good_decoy = [mq = *min_mapping_quality_] (const auto& alignment) noexcept {
             return alignment.mapping_quality() >= mq && is_decoy(alignment);};
-        return std::none_of(std::cbegin(read.supplementary_alignments()), std::cend(read.supplementary_alignments()), is_good_decoy);
+        return std::none_of(std::cbegin(supplementary_alignments), std::cend(supplementary_alignments), is_good_decoy);
     } else {
-        return std::none_of(std::cbegin(read.supplementary_alignments()), std::cend(read.supplementary_alignments()), is_decoy);
+        return std::none_of(std::cbegin(supplementary_alignments), std::cend(supplementary_alignments), is_decoy);
     }
 }
 

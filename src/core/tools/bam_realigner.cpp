@@ -19,7 +19,6 @@
 #include "io/variant/vcf_record.hpp"
 #include "io/variant/vcf_header.hpp"
 #include "io/read/buffered_read_writer.hpp"
-#include "io/read/annotated_aligned_read.hpp"
 #include "utils/genotype_reader.hpp"
 #include "utils/append.hpp"
 #include "utils/read_stats.hpp"
@@ -171,7 +170,7 @@ auto realign_and_annotate(const std::vector<AlignedRead>& reads,
                           const HaplotypeLikelihoodModel& alignment_model,
                           std::vector<int> haplotype_ids = {})
 {
-    std::vector<AnnotatedAlignedRead> result {};
+    std::vector<AlignedRead> result {};
     if (reads.empty()) return result;
     const auto expanded_haplotype = expand_for_realignment(haplotype, reads, alignment_model);
     std::vector<HaplotypeLikelihoodModel::LogProbability> log_likelihoods {};
@@ -181,17 +180,17 @@ auto realign_and_annotate(const std::vector<AlignedRead>& reads,
     result.reserve(realignments.size());
     for (std::size_t n {0}; n < realignments.size(); ++n) {
         result.emplace_back(std::move(realignments[n]));
-        const auto& read = result.back().read();
+        auto& read = result.back();
         const Haplotype reference_haplotype {mapped_region(read), reference};
-        result.back().annotate("MD", to_md_string(read.cigar(), reference_haplotype));
-        result.back().annotate("hc", to_string(inferred_alignments[n].cigar));
+        result.back().add_annotation({'M','D'}, to_md_string(read.cigar(), reference_haplotype));
+        result.back().add_annotation({'h','c'}, to_string(inferred_alignments[n].cigar));
         const auto inferred_haplotype = get_aligned_part(expanded_haplotype, read, inferred_alignments[n], reference);
-        result.back().annotate("md", to_md_string(inferred_alignments[n].cigar, inferred_haplotype));
+        result.back().add_annotation({'m','d'}, to_md_string(inferred_alignments[n].cigar, inferred_haplotype));
         if (!haplotype_ids.empty()) {
-            result.back().annotate("HP", to_string(haplotype_ids));
+            result.back().add_annotation({'H','P'}, to_string(haplotype_ids));
         }
-        result.back().annotate("PS", to_string(mapped_region(haplotype)));
-        result.back().annotate("LK", std::to_string(static_cast<unsigned>(std::abs(log_likelihoods[n] / maths::constants::ln10Div10<>)))); // std::abs to avoid -0.0
+        result.back().add_annotation({'P','S'}, to_string(mapped_region(haplotype)));
+        result.back().add_annotation({'L','K'}, std::to_string(static_cast<unsigned>(std::abs(log_likelihoods[n] / maths::constants::ln10Div10<>)))); // std::abs to avoid -0.0
     }
     return result;
 }
@@ -279,7 +278,7 @@ auto assign_and_realign(const std::vector<AlignedRead>& reads,
                         const ReadLinkageConfig& read_linkage,
                         BAMRealigner::Report& report)
 {
-    std::vector<AnnotatedAlignedRead> result {};
+    std::vector<AlignedRead> result {};
     if (!reads.empty()) {
         result.reserve(reads.size());
         if (is_homozygous(genotype)) {
@@ -338,7 +337,7 @@ auto assign_and_realign(const std::vector<AlignedRead>& reads,
 
 auto to_annotated(std::vector<AlignedRead> reads)
 {
-    std::vector<AnnotatedAlignedRead> result {};
+    std::vector<AlignedRead> result {};
     result.reserve(reads.size());
     for (auto& read : reads) result.emplace_back(std::move(read));
     return result;
@@ -359,9 +358,9 @@ BAMRealigner::Report
 BAMRealigner::realign(ReadReader& src, VcfReader& variants, ReadWriter& dst,
                       const ReferenceGenome& reference, SampleList samples) const
 {
-    io::BufferedReadWriter<AnnotatedAlignedRead>::Config writer_config {};
+    io::BufferedReadWriter<AlignedRead>::Config writer_config {};
     writer_config.max_buffer_footprint = config_.max_buffer;
-    io::BufferedReadWriter<AnnotatedAlignedRead> writer {dst, writer_config};
+    io::BufferedReadWriter<AlignedRead> writer {dst, writer_config};
     Report report {};
     BatchList batch {};
     boost::optional<GenomicRegion> batch_region {};
@@ -369,7 +368,7 @@ BAMRealigner::realign(ReadReader& src, VcfReader& variants, ReadWriter& dst,
         std::tie(batch, batch_region) = read_next_batch(p.first, p.second, src, reference, samples, batch_region);
         for (auto& sample : batch) {
             std::vector<AlignedRead> genotype_reads {};
-            std::vector<AnnotatedAlignedRead> realigned_reads {};
+            std::vector<AlignedRead> realigned_reads {};
             auto sample_reads_itr = std::begin(sample.reads);
             for (const auto& genotype : sample.genotypes) {
                 const auto padded_genotype_region = expand(mapped_region(genotype), 1);

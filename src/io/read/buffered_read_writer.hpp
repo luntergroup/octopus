@@ -17,7 +17,6 @@
 #include "basics/aligned_read.hpp"
 #include "utils/memory_footprint.hpp"
 #include "utils/append.hpp"
-#include "annotated_aligned_read.hpp"
 #include "read_writer.hpp"
 
 namespace octopus { namespace io {
@@ -169,10 +168,6 @@ struct BAMLess
     bool operator()(const AlignedRead& lhs, const AlignedRead& rhs) const noexcept
     {
         return clipped_mapped_region(lhs) < clipped_mapped_region(rhs);
-    }
-    bool operator()(const AnnotatedAlignedRead& lhs, const AnnotatedAlignedRead& rhs) const noexcept
-    {
-        return clipped_mapped_region(lhs.read()) < clipped_mapped_region(rhs.read());
     }
 };
 
