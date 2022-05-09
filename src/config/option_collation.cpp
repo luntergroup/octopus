@@ -854,6 +854,7 @@ auto make_read_transformers(const ReferenceGenome& reference, const OptionMap& o
         if (options.at("mask-3prime-shifted-soft-clipped-heads").as<bool>()) {
             prefilter_transformer.add(Mask3PrimeShiftedSoftClippedHeads {reference, 10, 500});
         }
+        postfilter_transformer.add(ClearAnnotations {});
         prefilter_transformer.shrink_to_fit();
         postfilter_transformer.shrink_to_fit();
     }

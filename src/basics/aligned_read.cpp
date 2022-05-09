@@ -15,6 +15,9 @@ namespace octopus {
 
 // AlignedRead::Segment public
 
+constexpr AlignedRead::Tag AlignedRead::read_group_tag_;
+constexpr AlignedRead::Tag AlignedRead::barcode_tag_;
+
 const GenomicRegion::ContigName& AlignedRead::Segment::contig_name() const
 {
     return contig_name_;
@@ -54,8 +57,7 @@ const std::string& AlignedRead::name() const noexcept
 
 const std::string& AlignedRead::read_group() const noexcept
 {
-    constexpr static Tag readgroup_tag {'R','G'};
-    return *this->annotation(readgroup_tag); // RG is required so will always be present
+    return *this->annotation(read_group_tag_); // RG is required so will always be present
 }
 
 const GenomicRegion& AlignedRead::mapped_region() const noexcept
@@ -124,13 +126,34 @@ AlignedRead::Flags AlignedRead::flags() const noexcept
 
 void AlignedRead::add_annotation(Tag name, Annotation value)
 {
-    annoations_.emplace(std::move(name), std::move(value));
+    annotations_.emplace(std::move(name), std::move(value));
+}
+
+void AlignedRead::remove_annotation(const Tag& name)
+{
+    annotations_.erase(name);
+}
+
+void AlignedRead::clear_annotations(const bool force)
+{
+    if (force) {
+        annotations_.clear();
+    } else {
+        auto rg = std::move(annotations_.at(read_group_tag_));
+        auto bc_itr = annotations_.find(barcode_tag_);
+        boost::optional<Annotation> bc {};
+        if (bc_itr != std::cend(annotations_)) bc = std::move(bc_itr->second);
+        annotations_.clear();
+        annotations_.emplace(read_group_tag_, std::move(rg));
+        if (bc) annotations_.emplace(barcode_tag_, std::move(*bc));
+    }
+    annotations_.shrink_to_fit();
 }
 
 boost::optional<const AlignedRead::Annotation&> AlignedRead::annotation(const Tag& name) const noexcept
 {
-    auto itr = annoations_.find(name);
-    if (itr != std::cend(annoations_)) {
+    auto itr = annotations_.find(name);
+    if (itr != std::cend(annotations_)) {
         return itr->second;
     } else {
         return boost::none;
@@ -139,8 +162,8 @@ boost::optional<const AlignedRead::Annotation&> AlignedRead::annotation(const Ta
 
 std::vector<AlignedRead::Tag> AlignedRead::tags() const
 {
-    std::vector<AlignedRead::Tag> result(annoations_.size());
-    std::transform(std::cbegin(annoations_), std::cend(annoations_), std::begin(result), 
+    std::vector<AlignedRead::Tag> result(annotations_.size());
+    std::transform(std::cbegin(annotations_), std::cend(annotations_), std::begin(result), 
                    [] (const auto& p) { return p.first; });
     return result;
 }
@@ -148,15 +171,13 @@ std::vector<AlignedRead::Tag> AlignedRead::tags() const
 const AlignedRead::NucleotideSequence& AlignedRead::barcode() const noexcept
 {
     const static NucleotideSequence empty_barcode {};
-    constexpr static Tag barcode_tag {'B','X'};
-    auto barcode = this->annotation(barcode_tag);
+    auto barcode = this->annotation(barcode_tag_);
     return barcode ? *barcode : empty_barcode;
 }
 
 void AlignedRead::set_barcode(NucleotideSequence barcode)
 {
-    constexpr static Tag barcode_tag {'B','X'};
-    add_annotation(barcode_tag, std::move(barcode));
+    add_annotation(barcode_tag_, std::move(barcode));
 }
 
 std::vector<AlignedRead::SupplementaryAlignment> 

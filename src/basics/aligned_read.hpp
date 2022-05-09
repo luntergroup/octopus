@@ -129,6 +129,8 @@ public:
     const Segment& next_segment() const;
     Flags flags() const noexcept;
     void add_annotation(Tag name, Annotation value);
+    void remove_annotation(const Tag& tag);
+    void clear_annotations(bool force = false);
     boost::optional<const Annotation&> annotation(const Tag& tag) const noexcept;
     std::vector<Tag> tags() const;
     const NucleotideSequence& barcode() const noexcept;
@@ -156,6 +158,9 @@ public:
 private:
     static constexpr std::size_t numFlags_ = 10;
     using FlagBits = std::bitset<numFlags_>;
+
+    static constexpr Tag read_group_tag_ {'R','G'};
+    static constexpr Tag barcode_tag_ {'B','X'};
     
     // should be ordered by sizeof
     GenomicRegion region_;
@@ -164,7 +169,7 @@ private:
     BaseQualityVector base_qualities_;
     CigarString cigar_;
     boost::optional<Segment> next_segment_;
-    boost::container::flat_map<Tag, Annotation> annoations_;
+    boost::container::flat_map<Tag, Annotation> annotations_;
     FlagBits flags_;
     MappingQuality mapping_quality_;
     
@@ -230,14 +235,13 @@ AlignedRead::AlignedRead(String_&& name, GenomicRegion_&& reference_region, Seq&
 , base_qualities_ {std::forward<Qualities_>(qualities)}
 , cigar_ {std::forward<CigarString_>(cigar)}
 , next_segment_ {}
-, annoations_ {}
+, annotations_ {}
 , flags_ {compress(flags)}
 , mapping_quality_ {mapping_quality}
 {
-    constexpr static Tag readgroup_tag {'R','G'};
-    annoations_.emplace(readgroup_tag, std::forward<String2_>(read_group));
+    annotations_.emplace(read_group_tag_, std::forward<String2_>(read_group));
     for (auto&& annotation : annotations) {
-        annoations_.emplace(annotation.first, std::move(annotation.second));
+        annotations_.emplace(annotation.first, std::move(annotation.second));
     }
 }
 
@@ -257,14 +261,13 @@ AlignedRead::AlignedRead(String1_&& name, GenomicRegion_&& reference_region, Seq
     Segment {std::forward<String3_>(next_segment_contig_name), next_segment_begin,
     inferred_template_length, next_segment_flags}
   }
-, annoations_ {}
+, annotations_ {}
 , flags_ {compress(flags)}
 , mapping_quality_ {mapping_quality}
 {
-    constexpr static Tag readgroup_tag {'R','G'};
-    annoations_.emplace(readgroup_tag, std::forward<String2_>(read_group));
+    annotations_.emplace(read_group_tag_, std::forward<String2_>(read_group));
     for (auto&& annotation : annotations) {
-        annoations_.emplace(annotation.first, std::move(annotation.second));
+        annotations_.emplace(annotation.first, std::move(annotation.second));
     }
 }
 
