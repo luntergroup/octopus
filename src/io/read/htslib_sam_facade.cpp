@@ -969,14 +969,98 @@ auto extract_next_segment_flags(const bam1_core_t& c) noexcept
     return result;
 }
 
-auto get_annotations(const bam1_t* record)
+auto get_annotations(const bam1_t* record, const std::vector<AlignedRead::Tag>& tags)
 {
-    const static std::vector<AlignedRead::Tag> tags {{'S','A'}, {'B','X'}};
     std::vector<std::pair<AlignedRead::Tag, AlignedRead::Annotation>> result {};
     result.reserve(tags.size());
     for (const auto& tag : tags) {
         const auto ptr = bam_aux_get(record, tag.data());
         if (ptr) result.emplace_back(tag, bam_aux2Z(ptr));
+    }
+    return result;
+}
+
+static inline int aux_type2size(const std::uint8_t type)
+{
+    switch (type) {
+    case 'A': case 'c': case 'C':
+        return 1;
+    case 's': case 'S':
+        return 2;
+    case 'i': case 'I': case 'f':
+        return 4;
+    case 'd':
+        return 8;
+    case 'Z': case 'H': case 'B':
+        return type;
+    default:
+        return 0;
+    }
+}
+
+auto get_annotations(const bam1_t* record)
+{
+    auto s = bam_get_aux(record);
+    const auto end = record->data + record->l_data;
+    std::vector<std::pair<AlignedRead::Tag, AlignedRead::Annotation>> result {};
+    AlignedRead::Tag tag {};
+    AlignedRead::Annotation annotation {};
+    while (s != nullptr && end - s >= 3) {
+        std::copy_n(s, tag.size(), std::begin(tag));
+        s += tag.size();
+        const auto tagtype = static_cast<char>(*s);
+        switch (tagtype) {
+            case 'c':
+                // fall through
+            case 'C':
+                annotation = std::to_string(static_cast<int>(bam_aux2i(s)));
+                s += 1;
+                break;
+            case 's':
+                // fall through
+            case 'S':
+                annotation = std::to_string(static_cast<int>(bam_aux2i(s)));
+                s += 2;
+                break;
+            case 'i':
+                // fall through
+            case 'I':
+                annotation = std::to_string(static_cast<int>(bam_aux2i(s)));
+                s += 4;
+                break;
+            case 'f':
+                annotation = std::to_string(static_cast<float>(bam_aux2f(s)));
+                s += 4;
+                break;
+            case 'd':
+                annotation = std::to_string(static_cast<double>(bam_aux2f(s)));
+                s += 8;
+                break;
+            case 'a':
+                // fall through
+            case 'A':
+                annotation = std::to_string(static_cast<char>(bam_aux2A(s)));
+                s += 1;
+                break;
+            case 'Z':
+                // fall through
+            case 'H':
+                annotation = std::string {bam_aux2Z(s)};
+                s += (annotation.length() + 1);
+                break;
+            case 'B': {
+                const auto size = aux_type2size(*s);
+                ++s;
+                const auto n = le_to_u32(s);
+                s += 4;
+                s += (n * size);
+                break;
+            }
+            default:
+                throw std::runtime_error {"Unknown BAM tag type"};
+        }
+        result.emplace_back(tag, annotation);
+        s += 1;
     }
     return result;
 }
