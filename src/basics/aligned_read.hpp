@@ -327,6 +327,7 @@ bool is_decoy(const AlignedRead::SupplementaryAlignment& alignment) noexcept;
 std::vector<AlignedRead> split(const AlignedRead& read, GenomicRegion::Size chunk_length, bool append_index_to_read_name = true);
 
 MemoryFootprint footprint(const AlignedRead& read) noexcept;
+boost::optional<AlignedRead::Tag> check_read_tag(const std::string& tag);
 
 template <typename Range>
 MemoryFootprint footprint(const Range& reads) noexcept

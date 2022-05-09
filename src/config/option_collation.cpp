@@ -879,6 +879,26 @@ bool use_same_read_profile_for_all_samples(const OptionMap& options)
     return options.at("use-same-read-profile-for-all-samples").as<bool>();
 }
 
+class BadSamTag : public UserError
+{
+    std::string name_;
+    
+    std::string do_where() const override
+    {
+        return "make_read_filterer";
+    }
+    std::string do_why() const override
+    {
+        return "The tag specified in no-reads-with-tag " + name_ + " is invalid";
+    }
+    std::string do_help() const override
+    {
+        return "Check the SAM specification (https://samtools.github.io/hts-specs/SAMv1.pdf)";
+    }
+public:
+    BadSamTag(std::string name) : name_ {std::move(name)} {}
+};
+
 auto make_read_filterer(const OptionMap& options)
 {
     using std::make_unique;
@@ -939,6 +959,16 @@ auto make_read_filterer(const OptionMap& options)
     }
     if (!options.at("allow-qc-fails").as<bool>()) {
         result.add(make_unique<IsNotMarkedQcFail>());
+    }
+    if (is_set("no-reads-with-tag", options)) {
+        const auto filter_tags = options.at("no-reads-with-tag").as<std::vector<SamTag>>();
+        for (const auto& filter_tag : filter_tags) {
+            const auto tag = check_read_tag(filter_tag.tag);
+            if (!tag) throw BadSamTag {filter_tag.tag};
+            boost::optional<AlignedRead::Annotation> annotation {};
+            if (filter_tag.value) annotation = *filter_tag.value;
+            result.add(make_unique<NotHasTag>(*tag, std::move(annotation)));
+        }
     }
     if (!options.at("allow-secondary-alignments").as<bool>()) {
         result.add(make_unique<IsNotSecondaryAlignment>());
@@ -2411,6 +2441,16 @@ ReadPipe make_default_filter_read_pipe(ReadManager& read_manager, std::vector<Sa
     filterer.add(make_unique<IsLong>(1));
     if (!options.at("allow-qc-fails").as<bool>()) {
         filterer.add(make_unique<IsNotMarkedQcFail>());
+    }
+    if (is_set("no-reads-with-tag", options)) {
+        const auto filter_tags = options.at("no-reads-with-tag").as<std::vector<SamTag>>();
+        for (const auto& filter_tag : filter_tags) {
+            const auto tag = check_read_tag(filter_tag.tag);
+            if (!tag) throw BadSamTag {filter_tag.tag};
+            boost::optional<AlignedRead::Annotation> annotation {};
+            if (filter_tag.value) annotation = *filter_tag.value;
+            filterer.add(make_unique<NotHasTag>(*tag, std::move(annotation)));
+        }
     }
     return ReadPipe {read_manager, std::move(transformer), std::move(filterer), boost::none, std::move(samples)};
 }

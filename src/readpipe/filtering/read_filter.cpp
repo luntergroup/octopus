@@ -262,5 +262,35 @@ bool NoDecoySupplementaryAlignments::passes(const AlignedRead& read) const noexc
     }
 }
 
+HasTag::HasTag(AlignedRead::Tag tag, boost::optional<AlignedRead::Annotation> annotation)
+: HasTag {"HasTag", tag, std::move(annotation)} {}
+HasTag::HasTag(std::string name, AlignedRead::Tag tag, boost::optional<AlignedRead::Annotation> annotation)
+: BasicReadFilter {std::move(name)}
+, tag_ {tag}
+, annotation_ {std::move(annotation)}
+{}
+
+bool HasTag::passes(const AlignedRead& read) const noexcept
+{
+    const auto annotation = read.annotation(tag_);
+    if (!annotation) return false;
+    return !annotation_ || *annotation == *annotation_;
+}
+
+NotHasTag::NotHasTag(AlignedRead::Tag tag, boost::optional<AlignedRead::Annotation> annotation)
+: NotHasTag {"NotHasTag", tag, std::move(annotation)} {}
+NotHasTag::NotHasTag(std::string name, AlignedRead::Tag tag, boost::optional<AlignedRead::Annotation> annotation)
+: BasicReadFilter {std::move(name)}
+, tag_ {tag}
+, annotation_ {std::move(annotation)}
+{}
+
+bool NotHasTag::passes(const AlignedRead& read) const noexcept
+{
+    const auto annotation = read.annotation(tag_);
+    if (!annotation) return true;
+    return annotation_ && *annotation != *annotation_;
+}
+
 } // namespace readpipe
 } // namespace octopus

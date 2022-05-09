@@ -598,33 +598,27 @@ std::vector<AlignedRead> split(const AlignedRead& read, const GenomicRegion::Siz
 
 namespace {
 
-auto calculate_dynamic_bytes(const AlignedRead::Segment& segment)
+auto calculate_dynamic_bytes(const AlignedRead::Segment& segment) noexcept
 {
     return segment.contig_name().size() * sizeof(char);
 }
 
-auto calculate_dynamic_bytes(const AlignedRead::SupplementaryAlignment& alignment)
+auto calculate_dynamic_bytes(const AlignedRead::Annotation& annotation) noexcept
 {
-    return contig_name(alignment).size() * sizeof(char) + alignment.cigar().size() * sizeof(CigarOperation);
-}
-
-auto calculate_dynamic_bytes(const std::vector<AlignedRead::SupplementaryAlignment>& alignments)
-{
-    const static auto add_bytes = [] (auto total, const auto& alignment) { return total + calculate_dynamic_bytes(alignment); };
-    return std::accumulate(std::cbegin(alignments), std::cend(alignments), std::size_t {0}, add_bytes);
+    return sizeof(AlignedRead::Annotation) + annotation.size() * sizeof(char);
 }
 
 auto calculate_dynamic_bytes(const AlignedRead& read) noexcept
 {
+    const auto tags = read.tags();
     return read.name().size() * sizeof(char)
-           + read.read_group().size() * sizeof(char)
            + sequence_size(read) * sizeof(char)
            + sequence_size(read) * sizeof(AlignedRead::BaseQuality)
            + read.cigar().size() * sizeof(CigarOperation)
            + contig_name(read).size() * sizeof(char)
-           + read.barcode().size() * sizeof(char)
            + (read.has_other_segment() ? sizeof(AlignedRead::Segment) + calculate_dynamic_bytes(read.next_segment()) : 0)
-           + calculate_dynamic_bytes(read.supplementary_alignments());
+           + std::accumulate(std::cbegin(tags), std::cend(tags), std::size_t {0}, [&] (auto curr, const auto& tag) { 
+                    return curr + sizeof(AlignedRead::Tag) + calculate_dynamic_bytes(*read.annotation(tag)); });
 }
 
 } // namespace
@@ -632,6 +626,17 @@ auto calculate_dynamic_bytes(const AlignedRead& read) noexcept
 MemoryFootprint footprint(const AlignedRead& read) noexcept
 {
     return sizeof(AlignedRead) + calculate_dynamic_bytes(read);
+}
+
+boost::optional<AlignedRead::Tag> check_read_tag(const std::string& tag)
+{
+    if (tag.size() == 2) {
+        AlignedRead::Tag result {};
+        std::copy(std::cbegin(tag), std::cend(tag), std::begin(result));
+        return result;
+    } else {
+        return boost::none;
+    }
 }
 
 bool operator==(const AlignedRead::Segment& lhs, const AlignedRead::Segment& rhs) noexcept
