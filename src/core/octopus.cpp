@@ -970,7 +970,8 @@ void resolve_connecting_calls(CompletedTask& lhs, CompletedTask& rhs,
     const auto first_rhs_variant = std::find_if_not(std::cbegin(rhs.calls), last_rhs_connecting, is_refcall);
     auto first_lhs_remove = first_lhs_connecting;
     if (first_rhs_variant != std::cbegin(rhs.calls)) {
-        const auto rhs_ref_region = closed_region(rhs.calls.front(), *first_rhs_variant);
+        const auto rhs_ref_region = first_rhs_variant != std::cend(rhs.calls) ?
+             closed_region(rhs.calls.front(), *first_rhs_variant) : rhs_region;
         const auto rhs_keep_region = right_overhang_region(rhs_region, rhs_ref_region);
         first_lhs_remove = std::find_if(first_lhs_connecting, std::cend(lhs.calls),
                  [&] (const auto& call) { return overlaps(call, rhs_keep_region); });
