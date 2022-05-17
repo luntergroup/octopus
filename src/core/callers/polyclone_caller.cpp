@@ -143,7 +143,7 @@ PolycloneCaller::Latents::genotype_posteriors() const noexcept
     if (genotype_posteriors_ == nullptr) {
         auto genotypes = concat(haploid_genotypes_, polyploid_genotypes_);
         auto posteriors = concat(haploid_model_inferences_.posteriors.genotype_probabilities,
-                                 subclone_model_inferences_.max_evidence_params.genotype_probabilities);
+                                 subclone_model_inferences_.weighted_genotype_posteriors);
         const ModelProbabilities model_posterior {std::exp( model_log_posteriors_.clonal), std::exp( model_log_posteriors_.subclonal)};
         std::for_each(std::begin(posteriors), std::next(std::begin(posteriors), haploid_genotypes_.size()),
                       [&] (auto& p) { p *= model_posterior.clonal; });
