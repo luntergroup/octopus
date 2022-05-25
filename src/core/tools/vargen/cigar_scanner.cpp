@@ -543,7 +543,7 @@ double compute_strand_bias(const StrandSupportStats& strand_depths)
 bool only_observed_on_one_strand(const StrandSupportStats& strand_depths) noexcept
 {
     const auto support = strand_depths.forward_support + strand_depths.reverse_support;
-    return support > 0 && (strand_depths.forward_support == 0 || strand_depths.reverse_support == support);
+    return support > 0 && (strand_depths.forward_support == 0 || strand_depths.reverse_support == 0);
 }
 
 bool is_likely_runthrough_artifact(const StrandSupportStats& strand_depths, std::vector<unsigned>& observed_qualities)
