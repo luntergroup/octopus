@@ -198,6 +198,15 @@ private:
         unsigned total, total_forward, total_reverse, min, max;
         double mean, median, stdev;
     };
+
+    struct EdgeHash
+    {
+        std::size_t operator()(const Edge&) const;
+        EdgeHash(const Assembler& assembler) : assembler_ {assembler} {}
+    private:
+        const Assembler& assembler_;
+    };
+    using EdgeSet = std::unordered_set<Edge, EdgeHash>;
     
     Parameters params_;
     
@@ -277,11 +286,13 @@ private:
     bool connects_to_path(Edge e, const Path& path) const;
     bool is_dependent_on_path(Edge e, const Path& path) const;
     GraphEdge::WeightType weight(const Path& path) const;
-    GraphEdge::WeightType max_weight(const Path& path) const;
+    GraphEdge::WeightType max_weight(const Path& path, const EdgeSet& scored_edges) const;
     unsigned count_low_weights(const Path& path, unsigned low_weight) const;
     bool has_low_weight_flanks(const Path& path, unsigned low_weight) const;
     unsigned count_low_weight_flanks(const Path& path, unsigned low_weight) const;
-    PathWeightStats compute_weight_stats(const Path& path) const;
+    template <typename UnaryFunction>
+    void for_each_edge(const Path& path, UnaryFunction f) const;
+    PathWeightStats compute_weight_stats(const Path& path, const EdgeSet& scored_edges) const;
     GraphEdge::WeightType sum_source_in_edge_weight(Edge e) const;
     GraphEdge::WeightType sum_target_out_edge_weight(Edge e) const;
     bool all_in_edges_low_weight(Vertex v, unsigned min_weight) const;
@@ -321,10 +332,10 @@ private:
     int head_mean_base_quality(const Path& path) const;
     int tail_mean_base_quality(const Path& path) const;
     double get_min_bubble_score(Vertex ref_head, Vertex ref_tail, BubbleScoreSetter min_bubble_scorer) const;
-    double bubble_score(const Path& path) const;
+    double bubble_score(const Path& path, const EdgeSet& exclude) const;
     std::deque<Variant> extract_bubble_paths(unsigned max_bubbles, BubbleScoreSetter min_bubble_scorer);
     std::deque<SubGraph> find_independent_subgraphs() const;
-    std::deque<Variant> extract_bubble_paths_with_ksp(unsigned k, BubbleScoreSetter min_bubble_scorer);
+    std::deque<Variant> extract_bubble_paths_with_ksp(unsigned k, BubbleScoreSetter min_bubble_scorer, EdgeSet& scored_edges);
     
     // for debug
     
@@ -371,6 +382,17 @@ Assembler::Variant::Variant(std::size_t pos, S1&& ref, S2&& alt)
 {}
 
 bool operator==(const Assembler::Variant& lhs, const Assembler::Variant& rhs) noexcept;
+
+template <typename UnaryFunction>
+void Assembler::for_each_edge(const Path& path, UnaryFunction f) const
+{
+    for (std::size_t u {0}, v {1}; v < path.size(); ++u, ++v) {
+        Edge e; bool good;
+        std::tie(e, good) = boost::edge(path[u], path[v], graph_);
+        assert(good);
+        f(e);
+    }
+}
 
 } // namespace coretools
 } // namespace octopus
