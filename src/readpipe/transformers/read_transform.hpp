@@ -162,6 +162,11 @@ private:
     GenomicRegion::Size max_flank_search_;
 };
 
+struct ClearAnnotations
+{
+    void operator()(AlignedRead& read) const noexcept;
+};
+
 using ReadReferenceVector = std::vector<std::reference_wrapper<AlignedRead>>;
 
 struct MaskTemplateAdapters

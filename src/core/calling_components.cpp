@@ -467,7 +467,7 @@ static const AlignedRead typical_illumina_read {
     60,
     AlignedRead::Flags {},
     "None",
-    ""
+    std::vector<std::pair<AlignedRead::Tag, AlignedRead::Annotation>> {}
 };
 
 } // namespace

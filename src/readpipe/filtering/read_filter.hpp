@@ -271,6 +271,32 @@ private:
     boost::optional<MappingQuality> min_mapping_quality_;
 };
 
+struct HasTag : BasicReadFilter
+{    
+    HasTag() = delete;
+    HasTag(AlignedRead::Tag tag, boost::optional<AlignedRead::Annotation> annotation = boost::none);
+    HasTag(std::string name, AlignedRead::Tag tag, boost::optional<AlignedRead::Annotation> annotation = boost::none);
+    
+    bool passes(const AlignedRead& read) const noexcept override;
+
+private:
+    AlignedRead::Tag tag_;
+    boost::optional<AlignedRead::Annotation> annotation_;
+};
+
+struct NotHasTag : BasicReadFilter
+{    
+    NotHasTag() = delete;
+    NotHasTag(AlignedRead::Tag tag, boost::optional<AlignedRead::Annotation> annotation = boost::none);
+    NotHasTag(std::string name, AlignedRead::Tag tag, boost::optional<AlignedRead::Annotation> annotation = boost::none);
+    
+    bool passes(const AlignedRead& read) const noexcept override;
+
+private:
+    AlignedRead::Tag tag_;
+    boost::optional<AlignedRead::Annotation> annotation_;
+};
+
 // Context filters
 
 template <typename BidirIt>

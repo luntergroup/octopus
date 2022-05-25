@@ -6,7 +6,6 @@
 #include <utility>
 
 #include "basics/aligned_read.hpp"
-#include "annotated_aligned_read.hpp"
 
 namespace octopus { namespace io {
 
@@ -43,19 +42,7 @@ void ReadWriter::write(const AlignedRead& read)
     impl_->write(read);
 }
 
-void ReadWriter::write(const AnnotatedAlignedRead& read)
-{
-    std::lock_guard<std::mutex> lock {mutex_};
-    impl_->write(read);
-}
-
 ReadWriter& operator<<(ReadWriter& dst, const AlignedRead& read)
-{
-    dst.write(read);
-    return dst;
-}
-
-ReadWriter& operator<<(ReadWriter& dst, const AnnotatedAlignedRead& read)
 {
     dst.write(read);
     return dst;
