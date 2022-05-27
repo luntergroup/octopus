@@ -491,7 +491,7 @@ Caller::call_variants(const GenomicRegion& call_region,
         }
         auto has_removal_impact = filter_haplotypes(haplotypes, haplotype_generator, haplotype_likelihoods, protected_haplotypes);
         if (haplotypes.empty()) continue;
-        const auto caller_latents = infer_latents(haplotypes, haplotype_likelihoods);
+        const auto caller_latents = infer_latents(haplotypes, haplotype_likelihoods, workers);
         if (trace_log_) {
             debug::print_haplotype_posteriors(stream(*trace_log_), *caller_latents->haplotype_posteriors());
         } else if (debug_log_) {
