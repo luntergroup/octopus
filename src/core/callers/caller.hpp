@@ -40,6 +40,7 @@ class Call;
 struct CallWrapper;
 class VariantCall;
 class ReferenceCall;
+class ThreadPool;
 
 class Caller
 {
@@ -76,6 +77,8 @@ public:
     };
     
     using ReadMap = octopus::ReadMap;
+
+    using OptionalThreadPool = boost::optional<ThreadPool&>;
     
     Caller() = delete;
     
@@ -95,9 +98,14 @@ public:
     unsigned min_callable_ploidy() const;
     unsigned max_callable_ploidy() const;
     
-    std::deque<VcfRecord> call(const GenomicRegion& call_region, ProgressMeter& progress_meter) const;
+    std::deque<VcfRecord> 
+    call(const GenomicRegion& call_region, 
+        ProgressMeter& progress_meter,
+        OptionalThreadPool workers = boost::none) const;
     
-    std::vector<VcfRecord> regenotype(const std::vector<Variant>& variants, ProgressMeter& progress_meter) const;
+    std::vector<VcfRecord> 
+    regenotype(const std::vector<Variant>& variants, 
+               ProgressMeter& progress_meter) const;
     
 protected:
     using HaplotypeBlock = HaplotypeGenerator::HaplotypeBlock;
@@ -161,7 +169,8 @@ protected:
 private:
     virtual std::unique_ptr<Latents>
     infer_latents(const HaplotypeBlock& haplotypes,
-                  const HaplotypeLikelihoodArray& haplotype_likelihoods) const = 0;
+                  const HaplotypeLikelihoodArray& haplotype_likelihoods,
+                  OptionalThreadPool workers = boost::none) const = 0;
     
     virtual Genotype<IndexedHaplotype<>> call_genotype(const Latents& latents, const SampleName& sample) const;
     
@@ -171,7 +180,9 @@ private:
                               const Latents& latents) const { return boost::none; }
     
     virtual std::vector<std::unique_ptr<VariantCall>>
-    call_variants(const std::vector<Variant>& candidates, const Latents& latents) const = 0;
+    call_variants(const std::vector<Variant>& candidates, 
+                  const Latents& latents,
+                  OptionalThreadPool workers = boost::none) const = 0;
     
     virtual std::vector<std::unique_ptr<ReferenceCall>>
     call_reference(const std::vector<Allele>& alleles, const Latents& latents,
@@ -186,9 +197,11 @@ private:
                   const ReadMap& reads,
                   const boost::optional<TemplateMap>& read_templates,
                   HaplotypeGenerator& haplotype_generator,
-                  ProgressMeter& progress_meter) const;
+                  ProgressMeter& progress_meter,
+                  OptionalThreadPool workers) const;
     bool refcalls_requested() const noexcept;
-    MappableFlatSet<Variant> generate_candidate_variants(const GenomicRegion& region) const;
+    MappableFlatSet<Variant> 
+    generate_candidate_variants(const GenomicRegion& region, OptionalThreadPool workers) const;
     HaplotypeGenerator 
     make_haplotype_generator(const MappableFlatSet<Variant>& candidates,
                              const ReadMap& reads,
@@ -200,7 +213,8 @@ private:
            const std::deque<Haplotype>& protected_haplotypes) const;
     bool compute_haplotype_likelihoods(HaplotypeLikelihoodArray& haplotype_likelihoods, const GenomicRegion& active_region,
                                        const HaplotypeBlock& haplotypes, const MappableFlatSet<Variant>& candidates,
-                                       const boost::variant<ReadMap, TemplateMap>& active_reads) const;
+                                       const boost::variant<ReadMap, TemplateMap>& active_reads,
+                                       OptionalThreadPool workers) const;
     std::vector<std::reference_wrapper<const Haplotype>>
     get_removable_haplotypes(const HaplotypeBlock& haplotypes, const HaplotypeLikelihoodArray& haplotype_likelihoods,
                              const Latents::HaplotypeProbabilityMap& haplotype_posteriors,

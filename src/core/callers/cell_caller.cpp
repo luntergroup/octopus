@@ -330,7 +330,9 @@ bool includes(const std::vector<SampleName>& samples, const SampleName& sample)
 } // namespace
 
 std::unique_ptr<CellCaller::Caller::Latents>
-CellCaller::infer_latents(const HaplotypeBlock& haplotypes, const HaplotypeLikelihoodArray& haplotype_likelihoods) const
+CellCaller::infer_latents(const HaplotypeBlock& haplotypes, 
+                          const HaplotypeLikelihoodArray& haplotype_likelihoods,
+                          OptionalThreadPool workers) const
 {
     const auto indexed_haplotypes = index(haplotypes);
     auto genotypes = generate_all_genotypes(indexed_haplotypes, parameters_.ploidy);
@@ -490,7 +492,7 @@ CellCaller::infer_latents(const HaplotypeBlock& haplotypes, const HaplotypeLikel
 }
 
 std::vector<std::unique_ptr<octopus::VariantCall>>
-CellCaller::call_variants(const std::vector<Variant>& candidates, const Caller::Latents& latents) const
+CellCaller::call_variants(const std::vector<Variant>& candidates, const Caller::Latents& latents, OptionalThreadPool workers) const
 {
     return call_variants(candidates, dynamic_cast<const Latents&>(latents));
 }

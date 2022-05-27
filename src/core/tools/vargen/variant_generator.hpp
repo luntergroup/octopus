@@ -22,13 +22,15 @@
 #include "core/types/variant.hpp"
 #include "containers/mappable_flat_multi_set.hpp"
 #include "utils/type_tricks.hpp"
+#include "utils/thread_pool.hpp"
 #include "active_region_generator.hpp"
 
 namespace octopus { namespace coretools {
-
 class VariantGenerator
 {
 public:
+    using OptionalThreadPool = boost::optional<ThreadPool&>;
+
     VariantGenerator();
     VariantGenerator(ActiveRegionGenerator region_generator);
     
@@ -46,7 +48,7 @@ public:
     
     std::unique_ptr<VariantGenerator> clone() const;
     
-    std::vector<Variant> generate(const GenomicRegion& region) const;
+    std::vector<Variant> generate(const GenomicRegion& region, OptionalThreadPool = boost::none) const;
     
     bool requires_reads() const noexcept;
     
@@ -73,7 +75,7 @@ private:
     boost::optional<ActiveRegionGenerator> active_region_generator_;
     
     virtual std::unique_ptr<VariantGenerator> do_clone() const;
-    virtual std::vector<Variant> do_generate(const RegionSet& regions) const { return {}; };
+    virtual std::vector<Variant> do_generate(const RegionSet& regions, OptionalThreadPool workers) const { return {}; };
     virtual bool do_requires_reads() const noexcept { return false; };
     virtual void do_add_read(const SampleName& sample, const AlignedRead& read) {};
     virtual void do_add_template(const SampleName& sample, const AlignedTemplate& reads);

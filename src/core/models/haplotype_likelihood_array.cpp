@@ -49,7 +49,8 @@ HaplotypeLikelihoodArray::TemplatePacket::TemplatePacket(Iterator first, Iterato
 
 void HaplotypeLikelihoodArray::populate(const ReadMap& reads,
                                         const MappableBlock<Haplotype>& haplotypes,
-                                        boost::optional<FlankState> flank_state)
+                                        boost::optional<FlankState> flank_state,
+                                        OptionalThreadPool workers)
 {
     // This code is not very pretty because it is a bottleneck for the entire application.
     // We want to try a minimise memory allocations for the mapping.
@@ -102,7 +103,8 @@ void HaplotypeLikelihoodArray::populate(const ReadMap& reads,
 
 void HaplotypeLikelihoodArray::populate(const TemplateMap& reads,
                                         const MappableBlock<Haplotype>& haplotypes,
-                                        boost::optional<FlankState> flank_state)
+                                        boost::optional<FlankState> flank_state,
+                                        OptionalThreadPool workers)
 {
     haplotype_indices_.clear();
     if (haplotype_indices_.bucket_count() < haplotypes.size()) {

@@ -209,7 +209,8 @@ using GenotypesMap = std::map<unsigned, GenotypeBlock>;
 
 std::unique_ptr<PopulationCaller::Caller::Latents>
 PopulationCaller::infer_latents(const HaplotypeBlock& haplotypes,
-                                const HaplotypeLikelihoodArray& haplotype_likelihoods) const
+                                const HaplotypeLikelihoodArray& haplotype_likelihoods,
+                                OptionalThreadPool workers) const
 {
     if (use_independence_model()) {
         return infer_latents_with_independence_model(haplotypes, haplotype_likelihoods);
@@ -275,7 +276,7 @@ PopulationCaller::calculate_model_posterior(const HaplotypeBlock& haplotypes,
 //} // namespace debug
 
 std::vector<std::unique_ptr<octopus::VariantCall>>
-PopulationCaller::call_variants(const std::vector<Variant>& candidates, const Caller::Latents& latents) const
+PopulationCaller::call_variants(const std::vector<Variant>& candidates, const Caller::Latents& latents, OptionalThreadPool workers) const
 {
     return call_variants(candidates, dynamic_cast<const Latents&>(latents));
 }

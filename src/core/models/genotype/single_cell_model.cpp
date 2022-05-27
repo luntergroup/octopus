@@ -746,7 +746,6 @@ SingleCellModel::evaluate(Inferences& result,
     }
     SubcloneModel::AlgorithmParameters algo_params {};
     algo_params.max_seeds = config_.max_seeds;
-    algo_params.execution_policy = config_.execution_policy;
     SubcloneModel helper_model {samples_, std::move(subclone_priors), algo_params};
     SubcloneModel::InferredLatents subclone_inferences;
     if (!config_.max_genotype_combinations || genotypes.size() <= *config_.max_genotype_combinations) {

@@ -137,7 +137,8 @@ std::size_t CancerCaller::do_remove_duplicates(HaplotypeBlock& haplotypes) const
 
 std::unique_ptr<CancerCaller::Caller::Latents>
 CancerCaller::infer_latents(const HaplotypeBlock& haplotypes,
-                            const HaplotypeLikelihoodArray& haplotype_likelihoods) const
+                            const HaplotypeLikelihoodArray& haplotype_likelihoods,
+                            OptionalThreadPool workers) const
 {
     // Store any intermediate results in Latents for reuse, so the order of model evaluation matters!
     auto result = std::make_unique<Latents>(haplotypes, samples_, parameters_);
@@ -541,7 +542,6 @@ void CancerCaller::evaluate_cnv_model(Latents& latents, const HaplotypeLikelihoo
     CNVModel::AlgorithmParameters params {};
     if (parameters_.max_vb_seeds) params.max_seeds = *parameters_.max_vb_seeds;
     params.target_max_memory = this->target_max_memory();
-    params.execution_policy = this->exucution_policy();
     CNVModel cnv_model {samples_, cnv_model_priors, params};
     cnv_model.prime(latents.haplotypes_);
     latents.cnv_model_inferences_ = cnv_model.evaluate(latents.germline_genotypes_,  haplotype_likelihoods);
@@ -555,7 +555,6 @@ void CancerCaller::evaluate_somatic_model(Latents& latents, const HaplotypeLikel
     SomaticModel::AlgorithmParameters params {};
     if (parameters_.max_vb_seeds) params.max_seeds = *parameters_.max_vb_seeds;
     params.target_max_memory = this->target_max_memory();
-    params.execution_policy = this->exucution_policy();
     SomaticModel model {samples_, somatic_model_priors, params};
     assert(latents.cancer_genotype_prior_model_->germline_model().is_primed());
     if (!latents.cancer_genotype_prior_model_->mutation_model().is_primed()) {
@@ -698,7 +697,8 @@ CancerCaller::get_normal_noise_model_priors(const GenotypePriorModel& prior_mode
 
 std::vector<std::unique_ptr<VariantCall>>
 CancerCaller::call_variants(const std::vector<Variant>& candidates,
-                                   const Caller::Latents& latents) const
+                            const Caller::Latents& latents,
+                            OptionalThreadPool workers) const
 {
     return call_variants(candidates, dynamic_cast<const Latents&>(latents));
 }

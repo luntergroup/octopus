@@ -22,6 +22,7 @@
 #include "core/types/haplotype.hpp"
 #include "core/types/indexed_haplotype.hpp"
 #include "utils/kmer_mapper.hpp"
+#include "utils/thread_pool.hpp"
 #include "haplotype_likelihood_model.hpp"
 
 namespace octopus {
@@ -43,6 +44,8 @@ public:
     using LikelihoodVectorRef  = std::reference_wrapper<const LikelihoodVector>;
     using HaplotypeRef         = std::reference_wrapper<const Haplotype>;
     using SampleLikelihoodMap  = std::unordered_map<HaplotypeRef, LikelihoodVectorRef>;
+
+    using OptionalThreadPool = boost::optional<ThreadPool&>;
     
     HaplotypeLikelihoodArray() = default;
     
@@ -61,10 +64,12 @@ public:
     
     void populate(const ReadMap& reads,
                   const MappableBlock<Haplotype>& haplotypes,
-                  boost::optional<FlankState> flank_state = boost::none);
+                  boost::optional<FlankState> flank_state = boost::none,
+                  OptionalThreadPool workers = boost::none);
     void populate(const TemplateMap& reads,
                   const MappableBlock<Haplotype>& haplotypes,
-                  boost::optional<FlankState> flank_state = boost::none);
+                  boost::optional<FlankState> flank_state = boost::none,
+                  OptionalThreadPool workers = boost::none);
     
     std::size_t num_likelihoods(const SampleName& sample) const;
     std::size_t num_likelihoods() const; // if prmed
