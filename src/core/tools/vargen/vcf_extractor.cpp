@@ -97,7 +97,7 @@ void extract_variants(const VcfRecord& record, Container& result, const bool spl
 
 } // namespace
 
-std::vector<Variant> VcfExtractor::do_generate(const RegionSet& regions) const
+std::vector<Variant> VcfExtractor::do_generate(const RegionSet& regions, OptionalThreadPool workers) const
 {
     reader_->open();
     std::vector<Variant> result {};

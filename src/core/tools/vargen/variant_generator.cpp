@@ -7,7 +7,7 @@
 #include <cassert>
 
 #include "utils/append.hpp"
-
+#include "utils/parallel_transform.hpp"
 namespace octopus { namespace coretools {
 
 VariantGenerator::VariantGenerator()
@@ -96,17 +96,31 @@ void log_candidates(const std::vector<Variant>& candidates, const std::string& g
 
 } // namespace debug
 
-std::vector<Variant> VariantGenerator::generate(const GenomicRegion& region) const
+std::vector<Variant> VariantGenerator::generate(const GenomicRegion& region, OptionalThreadPool workers) const
 {
     std::vector<Variant> result {};
-    for (auto& generator : variant_generators_) {
+    const auto generate_helper = [&] (const auto& generator) {
         const auto active_regions = generate_active_regions(region, *generator);
         debug::log_active_regions(active_regions, generator->name(), debug_log_);
-        auto generator_result = generator->do_generate(active_regions);
-        debug::log_candidates(generator_result, generator->name(), debug_log_);
-        assert(std::is_sorted(std::cbegin(generator_result), std::cend(generator_result)));
-        auto itr = utils::append(std::move(generator_result), result);
-        std::inplace_merge(std::begin(result), itr, std::end(result));
+        auto result = generator->do_generate(active_regions, workers);
+        debug::log_candidates(result, generator->name(), debug_log_);
+        assert(std::is_sorted(std::cbegin(result), std::cend(result)));
+        return result;
+    };
+    if (workers && variant_generators_.size() > 1) {
+        std::vector<std::vector<Variant>> generator_results(variant_generators_.size());
+        using octopus::transform;
+        transform(std::cbegin(variant_generators_), std::cend(variant_generators_), 
+                  std::begin(generator_results), generate_helper, *workers); 
+        for (auto& generator_result : generator_results) {
+            utils::append(std::move(generator_result), result);
+        }
+        std::sort(std::begin(result), std::end(result));
+    } else {
+        for (const auto& generator : variant_generators_) {
+            auto itr = utils::append(generate_helper(generator), result);
+            std::inplace_merge(std::begin(result), itr, std::end(result));
+        }
     }
     // Each generator is guaranteed to return unique variants, but two generators can still
     // propose the same variants independently.

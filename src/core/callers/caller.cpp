@@ -29,6 +29,7 @@
 #include "utils/append.hpp"
 #include "utils/erase_if.hpp"
 #include "utils/map_utils.hpp"
+#include "utils/thread_pool.hpp"
 
 namespace octopus {
 
@@ -146,7 +147,10 @@ auto convert_to_vcf(std::deque<CallWrapper>&& calls, const VcfRecordFactory& fac
 
 } // namespace
 
-std::deque<VcfRecord> Caller::call(const GenomicRegion& call_region, ProgressMeter& progress_meter) const
+std::deque<VcfRecord> 
+Caller::call(const GenomicRegion& call_region, 
+             ProgressMeter& progress_meter,
+             OptionalThreadPool workers) const
 {
     ReadPipe::Report reads_report {};
     ReadMap reads;
@@ -166,7 +170,7 @@ std::deque<VcfRecord> Caller::call(const GenomicRegion& call_region, ProgressMet
         if (debug_log_) stream(*debug_log_) << "Using " << count_reads(reads) << " reads in call region " << call_region;
     }
     const auto candidate_region = calculate_candidate_region(call_region, reads, reference_, candidate_generator_);
-    auto candidates = generate_candidate_variants(candidate_region);
+    auto candidates = generate_candidate_variants(candidate_region, workers);
     if (debug_log_) debug::print_final_candidates(stream(*debug_log_), candidates, candidate_region);
     if (!refcalls_requested() && candidates.empty()) {
         progress_meter.log_completed(call_region);
@@ -195,7 +199,7 @@ std::deque<VcfRecord> Caller::call(const GenomicRegion& call_region, ProgressMet
     }
     auto haplotype_generator = make_haplotype_generator(candidates, reads, read_templates);
     for (auto& region : likely_difficult_regions) haplotype_generator.add_lagging_exclusion_zone(region);
-    auto calls = call_variants(call_region, candidates, reads, read_templates, haplotype_generator, progress_meter);
+    auto calls = call_variants(call_region, candidates, reads, read_templates, haplotype_generator, progress_meter, workers);
     candidates.clear();
     candidates.shrink_to_fit();
     progress_meter.log_completed(call_region);
@@ -410,7 +414,8 @@ Caller::call_variants(const GenomicRegion& call_region,
                       const ReadMap& reads,
                       const boost::optional<TemplateMap>& read_templates,
                       HaplotypeGenerator& haplotype_generator,
-                      ProgressMeter& progress_meter) const
+                      ProgressMeter& progress_meter,
+                      OptionalThreadPool workers) const
 {
     auto haplotype_likelihoods = make_haplotype_likelihood_cache();
     std::deque<CallWrapper> result {};
@@ -467,7 +472,7 @@ Caller::call_variants(const GenomicRegion& call_region,
             continue;
         }
         if (debug_log_) stream(*debug_log_) << "There are " << count_reads(active_reads) << " active reads in " << active_region;
-        if (!compute_haplotype_likelihoods(haplotype_likelihoods, active_region, haplotypes, candidates, active_reads)) {
+        if (!compute_haplotype_likelihoods(haplotype_likelihoods, active_region, haplotypes, candidates, active_reads, workers)) {
             haplotype_generator.clear_progress();
             haplotype_likelihoods.clear();
             continue;
@@ -1078,7 +1083,8 @@ bool check_reference(const std::vector<Variant>& variants, const ReferenceGenome
     return std::all_of(std::cbegin(variants), std::cend(variants), [&] (const auto& v) { return check_reference(v, reference); });
 }
 
-MappableFlatSet<Variant> Caller::generate_candidate_variants(const GenomicRegion& region) const
+MappableFlatSet<Variant> 
+Caller::generate_candidate_variants(const GenomicRegion& region, OptionalThreadPool workers) const
 {
     if (debug_log_) stream(*debug_log_) << "Generating candidate variants in region " << region;
     auto raw_candidates = candidate_generator_.generate(region);
@@ -1154,7 +1160,8 @@ bool Caller::compute_haplotype_likelihoods(HaplotypeLikelihoodArray& haplotype_l
                                            const GenomicRegion& active_region,
                                            const HaplotypeBlock& haplotypes,
                                            const MappableFlatSet<Variant>& candidates,
-                                           const boost::variant<ReadMap, TemplateMap>& active_reads) const
+                                           const boost::variant<ReadMap, TemplateMap>& active_reads,
+                                           OptionalThreadPool workers) const
 {
     assert(haplotype_likelihoods.is_empty());
     boost::optional<HaplotypeLikelihoodArray::FlankState> flank_state {};
@@ -1171,7 +1178,7 @@ bool Caller::compute_haplotype_likelihoods(HaplotypeLikelihoodArray& haplotype_l
     }
     try {
         boost::apply_visitor([&] (const auto& reads) { 
-            haplotype_likelihoods.populate(reads, haplotypes, std::move(flank_state)); }, active_reads);
+            haplotype_likelihoods.populate(reads, haplotypes, std::move(flank_state), workers); }, active_reads);
     } catch(const HaplotypeLikelihoodModel::ShortHaplotypeError& e) {
         if (debug_log_) {
             stream(*debug_log_) << "Skipping " << active_region << " as a haplotype was too short by "

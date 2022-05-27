@@ -57,7 +57,7 @@ void RepeatScanner::do_add_reads(const SampleName& sample, ReadFlatSetIterator f
     std::for_each(first, last, [&] (const AlignedRead& read) { add_read(read, sample_index); });
 }
 
-std::vector<Variant> RepeatScanner::do_generate(const RegionSet& regions) const
+std::vector<Variant> RepeatScanner::do_generate(const RegionSet& regions, OptionalThreadPool workers) const
 {
     std::sort(std::begin(candidates_), std::end(candidates_));
     std::vector<Variant> result {};

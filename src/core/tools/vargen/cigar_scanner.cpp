@@ -328,7 +328,7 @@ void choose_push_back(Variant candidate, std::vector<Variant>& final_candidates,
     }
 }
 
-std::vector<Variant> CigarScanner::do_generate(const RegionSet& regions) const
+std::vector<Variant> CigarScanner::do_generate(const RegionSet& regions, OptionalThreadPool workers) const
 {
     std::sort(std::begin(candidates_), std::end(candidates_));
     std::sort(std::begin(likely_misaligned_candidates_), std::end(likely_misaligned_candidates_));

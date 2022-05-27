@@ -140,7 +140,8 @@ IndividualCaller::Latents::calculate_haplotype_posteriors(const IndexedHaplotype
 
 std::unique_ptr<IndividualCaller::Caller::Latents>
 IndividualCaller::infer_latents(const HaplotypeBlock& haplotypes,
-                                const HaplotypeLikelihoodArray& haplotype_likelihoods) const
+                                const HaplotypeLikelihoodArray& haplotype_likelihoods,
+                                OptionalThreadPool workers) const
 {
     const auto indexed_haplotypes = index(haplotypes);
     auto genotypes = propose_genotypes(haplotypes, indexed_haplotypes, haplotype_likelihoods);
@@ -374,7 +375,7 @@ auto transform_calls(const SampleName& sample, VariantList&& variant_calls,
 } // namespace
 
 std::vector<std::unique_ptr<octopus::VariantCall>>
-IndividualCaller::call_variants(const std::vector<Variant>& candidates, const Caller::Latents& latents) const
+IndividualCaller::call_variants(const std::vector<Variant>& candidates, const Caller::Latents& latents, OptionalThreadPool workers) const
 {
     return call_variants(candidates, dynamic_cast<const Latents&>(latents));
 }

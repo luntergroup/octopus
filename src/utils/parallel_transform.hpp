@@ -12,6 +12,8 @@
 #include <utility>
 #include <type_traits>
 
+#include <boost/optional.hpp>
+
 #include "thread_pool.hpp"
 
 namespace octopus {
@@ -107,8 +109,8 @@ OutputIt transform(InputIt first, InputIt last, OutputIt result, UnaryOp op, Thr
     using result_type = std::result_of_t<UnaryOp(value_type)>;
     std::vector<std::future<result_type>> results(std::distance(first, last));
     std::transform(first, last, std::begin(results),
-                   [&op, &pool](const auto& value) {
-                       return pool.push(op, std::cref(value));
+                   [&op, &pool] (const auto& value) {
+                       return pool.push([&] () { return op(value); });
                    });
     return std::transform(std::begin(results), std::end(results), result,
                           [](auto& f) { return f.get(); });
@@ -135,8 +137,8 @@ OutputIt transform(InputIt1 first1, InputIt1 last1, InputIt2 first2, OutputIt re
     using result_type = std::result_of_t<BinaryOp(value_type1, value_type2)>;
     std::vector<std::future<result_type>> results(std::distance(first1, last1));
     std::transform(first1, last1, first2, std::begin(results),
-                   [&op, &pool](const auto& a, const auto& b) {
-                       return pool.push(op, std::cref(a), std::cref(b));
+                   [&op, &pool] (const auto& a, const auto& b) {
+                       return pool.push([&] () { return op(a, b); });
                    });
     return std::transform(std::begin(results), std::end(results), result,
                           [](auto& f) { return f.get(); });
@@ -163,6 +165,18 @@ OutputIt transform(InputIt first, InputIt last, OutputIt result, UnaryOp op, Thr
                              typename std::iterator_traits<InputIt>::iterator_category {});
 }
 
+template <typename InputIt,
+          typename OutputIt,
+          typename UnaryOp>
+OutputIt transform(InputIt first, InputIt last, OutputIt result, UnaryOp op, boost::optional<ThreadPool&> pool)
+{
+    if (pool) {
+        return transform(first, last, result, std::move(op), *pool);
+    } else {
+        return std::transform(first, last, result, std::move(op));
+    }
+}
+
 template <typename InputIt1,
           typename InputIt2,
           typename OutputIt,
@@ -172,6 +186,19 @@ OutputIt transform(InputIt1 first1, InputIt1 last1, InputIt2 first2, OutputIt re
     return detail::transform(first1, last1, first2, result, std::move(op), pool,
                              typename std::iterator_traits<InputIt1>::iterator_category {},
                              typename std::iterator_traits<InputIt2>::iterator_category {});
+}
+
+template <typename InputIt1,
+          typename InputIt2,
+          typename OutputIt,
+          typename BinaryOp>
+OutputIt transform(InputIt1 first1, InputIt1 last1, InputIt2 first2, OutputIt result, BinaryOp op, boost::optional<ThreadPool&> pool)
+{
+    if (pool) {
+        return transform(first1, last1, first2, result, std::move(op), *pool);
+    } else {
+        return std::transform(first1, last1, first2, result, std::move(op));
+    }
 }
 
 } // namespace octopus

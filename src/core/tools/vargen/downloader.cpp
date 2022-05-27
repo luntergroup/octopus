@@ -19,7 +19,7 @@ std::unique_ptr<VariantGenerator> Downloader::do_clone() const
     return std::make_unique<Downloader>(*this);
 }
 
-std::vector<Variant> Downloader::do_generate(const RegionSet& regions) const
+std::vector<Variant> Downloader::do_generate(const RegionSet& regions, OptionalThreadPool workers) const
 {
     //namespace http = boost::network::http;
     
