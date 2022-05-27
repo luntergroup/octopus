@@ -1087,7 +1087,7 @@ MappableFlatSet<Variant>
 Caller::generate_candidate_variants(const GenomicRegion& region, OptionalThreadPool workers) const
 {
     if (debug_log_) stream(*debug_log_) << "Generating candidate variants in region " << region;
-    auto raw_candidates = candidate_generator_.generate(region);
+    auto raw_candidates = candidate_generator_.generate(region, workers);
     if (debug_log_) debug::print_left_aligned_candidates(stream(*debug_log_), raw_candidates, reference_);
     auto final_candidates = unique_left_align(std::move(raw_candidates), reference_);
     assert(check_reference(final_candidates, reference_));
