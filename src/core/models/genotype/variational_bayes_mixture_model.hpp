@@ -633,17 +633,10 @@ calculate_log_evidences(const std::vector<VBLatents<K>>& latents,
                         boost::optional<ThreadPool&> workers = boost::none)
 {
     std::vector<double> result(latents.size());
-    if (workers) {
-        transform(std::cbegin(latents), std::cend(latents), std::begin(result),
-                  [&] (const auto& seed_latents) { 
-                      return calculate_evidence_lower_bound(prior_alphas, genotype_log_priors, log_likelihoods, seed_latents);
-                   }, *workers);
-    } else {
-        std::transform(std::cbegin(latents), std::cend(latents), std::begin(result),
-                      [&] (const auto& seed_latents) { 
-                          return calculate_evidence_lower_bound(prior_alphas, genotype_log_priors, log_likelihoods, seed_latents);
-                       });
-    }
+    transform(std::cbegin(latents), std::cend(latents), std::begin(result),
+              [&] (const auto& seed_latents) { 
+                  return calculate_evidence_lower_bound(prior_alphas, genotype_log_priors, log_likelihoods, seed_latents);
+              }, workers);
     return result;
 }
 
