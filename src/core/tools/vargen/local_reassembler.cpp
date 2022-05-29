@@ -355,22 +355,11 @@ std::vector<Variant> LocalReassembler::do_generate(const RegionSet& regions, Opt
     finalise_bins(bins, regions);
     if (bins.empty()) return {};
     std::deque<Variant> candidates {};
-    if (!workers || bins.size() < 2) {
-        for (auto& bin : bins) {
-            if (debug_log_) {
-                stream(*debug_log_) << "Assembling " << bin.size() << " reads in bin " << mapped_region(bin);
-            }
-            const auto num_default_failures = try_assemble_with_defaults(bin, candidates);
-            if (num_default_failures == default_kmer_sizes_.size()) {
-                try_assemble_with_fallbacks(bin, candidates);
-            }
-            bin.clear();
-        }
-    } else {
+    if (workers && bins.size() > 1 && workers->size() > 1) {
         std::vector<std::future<std::deque<Variant>>> bin_futures {};
         bin_futures.reserve(bins.size());
         for (auto& bin : bins) {
-            bin_futures.push_back(workers->push([&] () {
+            bin_futures.push_back(workers->try_push([&] () {
                 if (debug_log_) {
                     stream(*debug_log_) << "Assembling " << bin.size() << " reads in bin " << mapped_region(bin);
                 }
@@ -385,6 +374,17 @@ std::vector<Variant> LocalReassembler::do_generate(const RegionSet& regions, Opt
         }
         for (auto&& f : bin_futures) {
             utils::append(f.get(), candidates);
+        }
+    } else {
+        for (auto& bin : bins) {
+            if (debug_log_) {
+                stream(*debug_log_) << "Assembling " << bin.size() << " reads in bin " << mapped_region(bin);
+            }
+            const auto num_default_failures = try_assemble_with_defaults(bin, candidates);
+            if (num_default_failures == default_kmer_sizes_.size()) {
+                try_assemble_with_fallbacks(bin, candidates);
+            }
+            bin.clear();
         }
     }
     remove_duplicates(candidates);

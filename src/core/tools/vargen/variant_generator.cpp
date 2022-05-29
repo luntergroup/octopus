@@ -107,7 +107,7 @@ std::vector<Variant> VariantGenerator::generate(const GenomicRegion& region, Opt
         assert(std::is_sorted(std::cbegin(result), std::cend(result)));
         return result;
     };
-    if (workers && variant_generators_.size() > 1) {
+    if (workers && variant_generators_.size() > 1 && workers->n_idle() > variant_generators_.size()) {
         std::vector<std::vector<Variant>> generator_results(variant_generators_.size());
         using octopus::transform;
         transform(std::cbegin(variant_generators_), std::cend(variant_generators_), 
