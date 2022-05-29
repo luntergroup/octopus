@@ -12,6 +12,7 @@
 #include <cassert>
 
 #include "exceptions/program_error.hpp"
+#include "utils/parallel_transform.hpp"
 #include "overlapping_reads.hpp"
 #include "read_assignments.hpp"
 #include "reference_context.hpp"
@@ -232,11 +233,11 @@ FacetFactory::make(const std::vector<std::string>& names,
                     data.reads = read_pipe_->fetch_reads(*data.region);
                 }
             }
-            futures.push_back(workers.push([this, &names, data {std::move(data)}, &block, fetch_genotypes] () mutable {
+            futures.push_back(workers.try_push([this, &names, data {std::move(data)}, &block, fetch_genotypes, &workers] () mutable {
                 if (fetch_genotypes) {
                     data.genotypes = extract_genotypes(block, samples_, *reference_);
                 }
-                return this->make(names, data);
+                return this->make(names, data, workers);
             }));
         }
         for (auto& fut : futures) {
@@ -255,26 +256,26 @@ FacetFactory::make(const std::vector<std::string>& names,
 
 void FacetFactory::setup_facet_makers()
 {
-    facet_makers_[name<OverlappingReads>()] = [] (const BlockData& block) -> FacetWrapper
+    facet_makers_[name<OverlappingReads>()] = [] (const BlockData& block, OptionalThreadPool workers) -> FacetWrapper
     {
         assert(block.reads);
         return {std::make_unique<OverlappingReads>(*block.reads)};
     };
-    facet_makers_[name<ReadsSummary>()] = [] (const BlockData& block) -> FacetWrapper
+    facet_makers_[name<ReadsSummary>()] = [] (const BlockData& block, OptionalThreadPool workers) -> FacetWrapper
     {
         assert(block.reads);
         return {std::make_unique<ReadsSummary>(*block.reads)};
     };
-    facet_makers_[name<ReadAssignments>()] = [this] (const BlockData& block) -> FacetWrapper
+    facet_makers_[name<ReadAssignments>()] = [this] (const BlockData& block, OptionalThreadPool workers) -> FacetWrapper
     {
         assert(block.reads && block.genotypes);
         if (likelihood_model_) {
-            return {std::make_unique<ReadAssignments>(*reference_, *block.genotypes, *block.reads, *block.calls, *likelihood_model_)};
+            return {std::make_unique<ReadAssignments>(*reference_, *block.genotypes, *block.reads, *block.calls, *likelihood_model_, workers)};
         } else {
-            return {std::make_unique<ReadAssignments>(*reference_, *block.genotypes, *block.reads, *block.calls)};
+            return {std::make_unique<ReadAssignments>(*reference_, *block.genotypes, *block.reads, *block.calls, workers)};
         }
     };
-    facet_makers_[name<ReferenceContext>()] = [this] (const BlockData& block) -> FacetWrapper
+    facet_makers_[name<ReferenceContext>()] = [this] (const BlockData& block, OptionalThreadPool workers) -> FacetWrapper
     {
         if (block.region) {
             constexpr GenomicRegion::Size context_size {50};
@@ -283,7 +284,7 @@ void FacetFactory::setup_facet_makers()
             return {nullptr};
         }
     };
-    facet_makers_[name<RepeatContext>()] = [this] (const BlockData& block) -> FacetWrapper
+    facet_makers_[name<RepeatContext>()] = [this] (const BlockData& block, OptionalThreadPool workers) -> FacetWrapper
     {
         if (block.region) {
             constexpr GenomicRegion::Size context_size {50};
@@ -292,25 +293,25 @@ void FacetFactory::setup_facet_makers()
             return {nullptr};
         }
     };
-    facet_makers_[name<Samples>()] = [this] (const BlockData& block) -> FacetWrapper
+    facet_makers_[name<Samples>()] = [this] (const BlockData& block, OptionalThreadPool workers) -> FacetWrapper
     {
         return {std::make_unique<Samples>(this->samples_)};
     };
-    facet_makers_[name<Genotypes>()] = [] (const BlockData& block) -> FacetWrapper
+    facet_makers_[name<Genotypes>()] = [] (const BlockData& block, OptionalThreadPool workers) -> FacetWrapper
     {
         assert(block.genotypes);
         return {std::make_unique<Genotypes>(*block.genotypes)};
     };
-    facet_makers_[name<Alleles>()] = [this] (const BlockData& block) -> FacetWrapper
+    facet_makers_[name<Alleles>()] = [this] (const BlockData& block, OptionalThreadPool workers) -> FacetWrapper
     {
         assert(block.calls);
         return {std::make_unique<Alleles>(this->samples_, *block.calls)};
     };
-    facet_makers_[name<Ploidies>()] = [this] (const BlockData& block) -> FacetWrapper
+    facet_makers_[name<Ploidies>()] = [this] (const BlockData& block, OptionalThreadPool workers) -> FacetWrapper
     {
         return {std::make_unique<Ploidies>(*ploidies_, *block.region, input_header_.samples())};
     };
-    facet_makers_[name<Pedigree>()] = [this] (const BlockData& block) -> FacetWrapper
+    facet_makers_[name<Pedigree>()] = [this] (const BlockData& block, OptionalThreadPool workers) -> FacetWrapper
     {
         return {std::make_unique<Pedigree>(*pedigree_)};
     };
@@ -339,41 +340,24 @@ void FacetFactory::check_requirements(const std::vector<std::string>& names) con
     }
 }
 
-FacetWrapper FacetFactory::make(const std::string& name, const BlockData& block) const
+FacetWrapper FacetFactory::make(const std::string& name, const BlockData& block, OptionalThreadPool workers) const
 {
     if (facet_makers_.count(name) == 1) {
-        return facet_makers_.at(name)(block);
+        return facet_makers_.at(name)(block, workers);
     } else {
         throw UnknownFacet {name};
     }
 }
 
-FacetFactory::FacetBlock 
-FacetFactory::make(const std::vector<std::string>& names, const BlockData& block) const
-{
-    FacetBlock result {};
-    result.reserve(names.size());
-    for (const auto& name : names) {
-        result.push_back(make(name, block));
-    }
-    return result;
-}
-
 FacetFactory::FacetBlock
 FacetFactory::make(const std::vector<std::string>& names, const BlockData& block,
-                   ThreadPool& workers) const
+                   OptionalThreadPool workers) const
 {
-    if (workers.empty() || names.size() < 2) return make(names, block);
-    std::vector<std::future<FacetWrapper>> futures {};
-    futures.reserve(names.size());
-    for (const auto& name : names) {
-        futures.push_back(workers.push([&] () mutable { return this->make(name, block); }));
-    }
-    FacetBlock result {};
-    result.reserve(names.size());
-    for (auto& fut : futures) {
-        result.push_back(fut.get());
-    }
+    FacetBlock result(names.size());
+    using octopus::transform;
+    transform(std::cbegin(names), std::cend(names), std::begin(result), 
+              [this, &block] (const auto& name) { return this-> make(name, block); }, 
+              workers);
     return result;
 }
 

@@ -77,14 +77,16 @@ void sort_together(std::vector<T1>& first, std::vector<T2>& second,
 ReadAssignments::ReadAssignments(const ReferenceGenome& reference,
                                  const GenotypeMap& genotypes,
                                  const ReadMap& reads,
-                                 const std::vector<VcfRecord>& calls)
-: ReadAssignments {reference, genotypes, reads, calls, {}} {}
+                                 const std::vector<VcfRecord>& calls,
+                                 OptionalThreadPool workers)
+: ReadAssignments {reference, genotypes, reads, calls, {}, workers} {}
 
 ReadAssignments::ReadAssignments(const ReferenceGenome& reference,
                                  const GenotypeMap& genotypes,
                                  const ReadMap& reads,
                                  const std::vector<VcfRecord>& calls,
-                                 HaplotypeLikelihoodModel model)
+                                 HaplotypeLikelihoodModel model,
+                                 OptionalThreadPool workers)
 : result_ {}
 , likelihood_model_ {std::move(model)}
 {
@@ -105,10 +107,11 @@ ReadAssignments::ReadAssignments(const ReferenceGenome& reference,
                 result_.haplotypes[sample].assigned_likelihoods[haplotype] = {};
             }
             if (!local_reads.empty()) {
+                const AssignmentConfig config {};
                 // Try to assign each read to a haplotype
                 HaplotypeSupportMap genotype_support {};
                 if (is_heterozygous(genotype)) {
-                    genotype_support = compute_haplotype_support(genotype, local_reads, result_.haplotypes[sample].ambiguous_wrt_haplotype, likelihood_model_);
+                    genotype_support = compute_haplotype_support(genotype, local_reads, result_.haplotypes[sample].ambiguous_wrt_haplotype, likelihood_model_, config, workers);
                 } else {
                     if (is_reference(genotype[0])) {
                         genotype_support[genotype[0]] = std::move(local_reads);
@@ -117,7 +120,7 @@ ReadAssignments::ReadAssignments(const ReferenceGenome& reference,
                         Haplotype ref {mapped_region(genotype), reference};
                         result_.haplotypes[sample].assigned_wrt_reference[ref] = {};
                         augmented_genotype.emplace(std::move(ref));
-                        genotype_support = compute_haplotype_support(augmented_genotype, local_reads, result_.haplotypes[sample].ambiguous_wrt_haplotype, likelihood_model_);
+                        genotype_support = compute_haplotype_support(augmented_genotype, local_reads, result_.haplotypes[sample].ambiguous_wrt_haplotype, likelihood_model_, config, workers);
                     }
                 }
                 // Realign assigned reads

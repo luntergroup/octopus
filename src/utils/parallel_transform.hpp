@@ -102,22 +102,26 @@ namespace detail {
 template <typename InputIt,
           typename OutputIt,
           typename UnaryOp>
-OutputIt transform(InputIt first, InputIt last, OutputIt result, UnaryOp op, ThreadPool& pool,
-                   std::random_access_iterator_tag)
+OutputIt 
+transform(InputIt first, InputIt last, OutputIt result, 
+          UnaryOp op, ThreadPool& pool,
+          std::random_access_iterator_tag)
 {
     using value_type  = typename std::iterator_traits<InputIt>::value_type;
     using result_type = std::result_of_t<UnaryOp(value_type)>;
-    std::vector<std::future<result_type>> results(std::distance(first, last));
+    const auto n = std::distance(first, last);
+    if (n < 2) {
+        return std::transform(first, last, result, std::move(op));
+    }
+    std::vector<std::future<result_type>> results(n);
     std::transform(first, std::prev(last), std::begin(results),
                    [&op, &pool] (const auto& value) {
                        return pool.try_push([&] () { return op(value); });
                    });
-    if (first != last) {
-        // run last input in calling thread
-        std::promise<result_type> last_result {};
-        results.back() = last_result.get_future();
-        last_result.set_value(op(*std::prev(last)));
-    }
+    // run last input in calling thread
+    std::promise<result_type> last_result {};
+    results.back() = last_result.get_future();
+    last_result.set_value(op(*std::prev(last)));
     return std::transform(std::begin(results), std::end(results), result,
                           [](auto& f) { return f.get(); });
 }
@@ -135,26 +139,29 @@ template <typename InputIt1,
           typename InputIt2,
           typename OutputIt,
           typename BinaryOp>
-OutputIt transform(InputIt1 first1, InputIt1 last1, InputIt2 first2, OutputIt result, BinaryOp op, ThreadPool& pool,
-                   std::random_access_iterator_tag, std::random_access_iterator_tag)
+OutputIt 
+transform(InputIt1 first1, InputIt1 last1, InputIt2 first2, OutputIt result, 
+          BinaryOp op, ThreadPool& pool,
+          std::random_access_iterator_tag, std::random_access_iterator_tag)
 {
     using value_type1 = typename std::iterator_traits<InputIt1>::value_type;
     using value_type2 = typename std::iterator_traits<InputIt2>::value_type;
     using result_type = std::result_of_t<BinaryOp(value_type1, value_type2)>;
     const auto n = std::distance(first1, last1);
+    if (n < 2) {
+        return std::transform(first1, last1, first2, result, std::move(op));
+    }
     std::vector<std::future<result_type>> results(n);
     std::transform(first1, std::prev(last1), first2, std::begin(results),
                    [&op, &pool] (const auto& a, const auto& b) {
                        return pool.try_push([&] () { return op(a, b); });
                    });
-    if (first1 != last1) {
-        // run last input in calling thread
-        std::promise<result_type> last_result {};
-        results.back() = last_result.get_future();
-        const auto& a = *std::prev(last1);
-        const auto& b = *std::next(first2, n - 1);
-        last_result.set_value(op(a, b));
-    }
+    // run last input in calling thread
+    std::promise<result_type> last_result {};
+    results.back() = last_result.get_future();
+    const auto& a = *std::prev(last1);
+    const auto& b = *std::next(first2, n - 1);
+    last_result.set_value(op(a, b));
     return std::transform(std::begin(results), std::end(results), result,
                           [](auto& f) { return f.get(); });
 }

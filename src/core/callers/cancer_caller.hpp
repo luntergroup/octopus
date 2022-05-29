@@ -153,15 +153,15 @@ private:
     bool has_high_normal_contamination_risk(const Latents& latents) const;
     
     void evaluate_germline_model(Latents& latents, const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
-    void evaluate_cnv_model(Latents& latents, const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
-    void evaluate_somatic_model(Latents& latents, const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
+    void evaluate_cnv_model(Latents& latents, const HaplotypeLikelihoodArray& haplotype_likelihoods, OptionalThreadPool workers) const;
+    void evaluate_somatic_model(Latents& latents, const HaplotypeLikelihoodArray& haplotype_likelihoods, OptionalThreadPool workers) const;
     void evaluate_noise_model(Latents& latents, const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
     
     void set_model_priors(Latents& latents) const;
     void set_model_posteriors(Latents& latents) const;
 
     void set_cancer_genotype_prior_model(Latents& latents) const;
-    void fit_somatic_model(Latents& latents, const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
+    void fit_somatic_model(Latents& latents, const HaplotypeLikelihoodArray& haplotype_likelihoods, OptionalThreadPool workers) const;
     
     std::unique_ptr<GenotypePriorModel> make_germline_prior_model(const HaplotypeBlock& haplotypes) const;
     CNVModel::Priors get_cnv_model_priors(const GenotypePriorModel& prior_model) const;
