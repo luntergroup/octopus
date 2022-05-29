@@ -183,8 +183,12 @@ template <typename InputIt,
           typename UnaryOp>
 OutputIt transform(InputIt first, InputIt last, OutputIt result, UnaryOp op, ThreadPool& pool)
 {
-    return detail::transform(first, last, result, std::move(op), pool,
-                             typename std::iterator_traits<InputIt>::iterator_category {});
+    if (pool.size() > 1) {
+        return detail::transform(first, last, result, std::move(op), pool,
+                                 typename std::iterator_traits<InputIt>::iterator_category {});
+    } else {
+        return std::transform(first, last, result, std::move(op));
+    }
 }
 
 template <typename InputIt,
@@ -205,9 +209,14 @@ template <typename InputIt1,
           typename BinaryOp>
 OutputIt transform(InputIt1 first1, InputIt1 last1, InputIt2 first2, OutputIt result, BinaryOp op, ThreadPool& pool)
 {
-    return detail::transform(first1, last1, first2, result, std::move(op), pool,
+    if (pool.size() > 1) {
+        return detail::transform(first1, last1, first2, result, std::move(op), pool,
                              typename std::iterator_traits<InputIt1>::iterator_category {},
                              typename std::iterator_traits<InputIt2>::iterator_category {});
+    } else {
+        return std::transform(first1, last1, first2, result, std::move(op));
+    }
+    
 }
 
 template <typename InputIt1,
@@ -220,6 +229,67 @@ OutputIt transform(InputIt1 first1, InputIt1 last1, InputIt2 first2, OutputIt re
         return transform(first1, last1, first2, result, std::move(op), *pool);
     } else {
         return std::transform(first1, last1, first2, result, std::move(op));
+    }
+}
+
+// for_each
+
+namespace detail {
+
+template <typename InputIt,
+          typename UnaryOp>
+void for_each(InputIt first, InputIt last, UnaryOp op, ThreadPool& pool, 
+              std::input_iterator_tag)
+{
+    if (first == last) return;
+    std::vector<std::future<void>> futures {};
+    std::transform(first, last, std::back_inserter(futures),
+                   [&op, &pool] (auto& value) {
+                       return pool.try_push([&] () { return op(value); });
+                   });
+    for (auto& f : futures) f.get();
+}
+
+template <typename InputIt,
+          typename UnaryOp>
+void for_each(InputIt first, InputIt last, UnaryOp op, ThreadPool& pool, 
+              std::bidirectional_iterator_tag)
+{
+    const auto n = std::distance(first, last);
+    if (n < 2) {
+        std::for_each(first, last, std::move(op));
+    }
+    std::vector<std::future<void>> futures(n - 1);
+    std::transform(first, std::prev(last), std::begin(futures),
+                   [&op, &pool] (auto& value) {
+                       return pool.try_push([&] () { return op(value); });
+                   });
+    // run last input in calling thread
+    op(*std::prev(last));
+    for (auto& f : futures) f.get();
+}
+
+} // namespace detail
+
+template <typename InputIt,
+          typename UnaryOp>
+void for_each(InputIt first, InputIt last, UnaryOp op, ThreadPool& pool)
+{
+    if (pool.size() > 1) {
+        detail::for_each(first, last, std::move(op), pool);
+    } else {
+        std::for_each(first, last, std::move(op));
+    }
+}
+
+template <typename InputIt,
+          typename UnaryOp>
+void for_each(InputIt first, InputIt last, UnaryOp op, boost::optional<ThreadPool&> pool)
+{
+    if (pool) {
+        for_each(first, last, std::move(op), *pool);
+    } else {
+        std::for_each(first, last, std::move(op));
     }
 }
 
