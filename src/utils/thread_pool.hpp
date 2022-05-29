@@ -43,6 +43,8 @@ public:
     
     template <typename F, typename... Args>
     auto push(F&& f, Args&&... args) -> std::future<std::result_of_t<F(Args...)>>;
+    template <typename F, typename... Args>
+    auto try_push(F&& f, Args&&... args) -> std::future<std::result_of_t<F(Args...)>>;
     
 private:
     std::mutex mutex_;
@@ -66,6 +68,29 @@ auto ThreadPool::push(F&& f, Args&&... args) -> std::future<std::result_of_t<F(A
         tasks_.emplace([task] () { (*task)(); });
     }
     cv_.notify_one();
+    return result;
+}
+
+template <typename F, typename... Args>
+auto ThreadPool::try_push(F&& f, Args&&... args) -> std::future<std::result_of_t<F(Args...)>>
+{
+    using f_result_type = std::result_of_t<F(Args...)>;
+    auto task = std::make_shared<std::packaged_task<f_result_type()>>(std::bind(std::forward<F>(f), std::forward<Args>(args)...));
+    auto result = task->get_future();
+    bool pushed {false};
+    {
+        std::lock_guard<std::mutex> lk {mutex_};
+        if (stop_) throw std::runtime_error {"ThreadPool: calling push on stopped pool"};
+        if (n_idle_ > 0) {
+            tasks_.emplace([task] () { (*task)(); });
+            pushed = true;
+        }
+    }
+    if (pushed) {
+        cv_.notify_one();
+    } else {
+        (*task)(); // run task in calling thread
+    }
     return result;
 }
 

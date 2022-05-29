@@ -8,6 +8,7 @@
 #include <deque>
 
 #include "utils/erase_if.hpp"
+#include "utils/parallel_transform.hpp"
 
 namespace octopus {
 
@@ -119,27 +120,28 @@ void HaplotypeLikelihoodArray::populate(const TemplateMap& reads,
     for (const auto& t : template_iterators_) {
         std::vector<std::vector<KmerPerfectHashes>> sample_read_hashes {};
         sample_read_hashes.reserve(t.num_templates);
-        std::transform(t.first, t.last, std::back_inserter(sample_read_hashes), [] (const AlignedTemplate& reads) {
+        using octopus::transform;
+        transform(t.first, t.last, std::back_inserter(sample_read_hashes), [] (const AlignedTemplate& reads) {
             std::vector<KmerPerfectHashes> result {};
             result.reserve(reads.size());
             for (const auto& read : reads) result.push_back(compute_kmer_hashes<mapperKmerSize>(read.sequence()));
             return result;
-        });
+        }, workers);
         template_hashes.emplace_back(std::move(sample_read_hashes));
     }
-    auto haplotype_hashes = init_kmer_hash_table<mapperKmerSize>();
-    thread_local std::vector<HaplotypeLikelihoodModel::MappingPositionVector> mapping_positions {};
-    likelihoods_.resize(haplotypes.size(), std::vector<LikelihoodVector>(num_samples));
-    for (std::size_t haplotype_idx {0}; haplotype_idx < haplotypes.size(); ++haplotype_idx) {
-        const auto& haplotype = haplotypes[haplotype_idx];
-        populate_kmer_hash_table<mapperKmerSize>(haplotype.sequence(), haplotype_hashes);
+    const auto populate_haplotype = [this, &template_hashes, &flank_state, num_samples] (
+           const Haplotype& haplotype, 
+           const auto& haplotype_hashes, 
+           std::vector<LikelihoodVector>& likelihoods,
+           HaplotypeLikelihoodModel& likelihood_model) {
+        thread_local std::vector<HaplotypeLikelihoodModel::MappingPositionVector> mapping_positions {};
         auto haplotype_mapping_counts = init_mapping_counts(haplotype_hashes);
-        likelihood_model_.reset(haplotype, flank_state);
+        likelihood_model.reset(haplotype, flank_state);
         for (std::size_t sample_idx {0}; sample_idx < num_samples; ++sample_idx) {
-            auto& likelihoods = likelihoods_[haplotype_idx][sample_idx];
+            auto& sample_likelihoods = likelihoods[sample_idx];
             const auto& t = template_iterators_[sample_idx];
-            likelihoods.resize(t.num_templates);
-            std::transform(t.first, t.last, std::cbegin(template_hashes[sample_idx]), std::begin(likelihoods),
+            sample_likelihoods.resize(t.num_templates);
+            std::transform(t.first, t.last, std::cbegin(template_hashes[sample_idx]), std::begin(sample_likelihoods),
                            [&] (const AlignedTemplate& read_template, const auto& template_hashes) {
                                mapping_positions.resize(read_template.size());
                                assert(read_template.size() == template_hashes.size());
@@ -152,11 +154,44 @@ void HaplotypeLikelihoodArray::populate(const TemplateMap& reads,
                                                               std::end(mapping_positions[i]));
                                    reset_mapping_counts(haplotype_mapping_counts);
                                }
-                               return likelihood_model_.evaluate(read_template, mapping_positions);
+                               return likelihood_model.evaluate(read_template, mapping_positions);
                            });
         }
-        clear_kmer_hash_table(haplotype_hashes);
-        haplotype_indices_.emplace(haplotype, haplotype_idx);
+    };
+    likelihoods_.resize(haplotypes.size(), std::vector<LikelihoodVector>(num_samples));
+    // We need to weigh up the cost of doing multithreading here - there is a small penalty for
+    // using the thread pool, but the bigger cost comes from the extra allocations for the kmer hash table
+    // and copying the likelihood model (one for each haplotype). If the thread pool doesn't have much
+    // capacity, either because there are few threads or the workload is already high, then it
+    // could be faster to run this section in a single thread (and also save some memory).
+    if (haplotypes.size() > 1 && workers && workers->size() > 2 && workers->n_idle() > 1) {
+        std::vector<std::future<void>> futures(haplotypes.size() - 1);
+        for (std::size_t haplotype_idx {0}; haplotype_idx < haplotypes.size(); ++haplotype_idx) {
+            auto task = [&haplotype = haplotypes[haplotype_idx], 
+                 &likelihoods = likelihoods_[haplotype_idx], 
+                 likelihood_model = likelihood_model_, 
+                 populate_haplotype] () mutable {
+                auto haplotype_hashes = make_kmer_hash_table<mapperKmerSize>(haplotype.sequence());
+                populate_haplotype(haplotype, haplotype_hashes, likelihoods, likelihood_model);
+            };
+            if (haplotype_idx < (haplotypes.size() - 1)) {
+                futures[haplotype_idx] = workers->try_push(std::move(task));
+            } else {
+                // run last haplotype in current thread
+                task();
+            }
+        }
+        for (auto& f : futures) f.get();
+    } else {
+        auto haplotype_hashes = init_kmer_hash_table<mapperKmerSize>();
+        for (std::size_t haplotype_idx {0}; haplotype_idx < haplotypes.size(); ++haplotype_idx) {
+            populate_kmer_hash_table<mapperKmerSize>(haplotypes[haplotype_idx].sequence(), haplotype_hashes);
+            populate_haplotype(haplotypes[haplotype_idx], haplotype_hashes, likelihoods_[haplotype_idx], likelihood_model_);
+            clear_kmer_hash_table(haplotype_hashes);
+        }
+    }
+    for (std::size_t haplotype_idx {0}; haplotype_idx < haplotypes.size(); ++haplotype_idx) {
+        haplotype_indices_.emplace(haplotypes[haplotype_idx], haplotype_idx);
     }
     likelihood_model_.clear();
     read_iterators_.clear();
