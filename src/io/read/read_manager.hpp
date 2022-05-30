@@ -96,6 +96,9 @@ public:
     ReadContainer fetch_reads(const SampleName& sample,  const GenomicRegion& region) const;
     SampleReadMap fetch_reads(const std::vector<SampleName>& samples, const GenomicRegion& region) const;
     SampleReadMap fetch_reads(const GenomicRegion& region) const;
+    ReadContainer fetch_reads(const SampleName& sample,  const std::vector<GenomicRegion>& regions) const;
+    SampleReadMap fetch_reads(const std::vector<SampleName>& samples, const std::vector<GenomicRegion>& regions) const;
+    SampleReadMap fetch_reads(const std::vector<GenomicRegion>& regions) const;
     
 private:
     using PathHash = octopus::utils::FilepathHash;
@@ -154,6 +157,9 @@ private:
     std::vector<Path> get_possible_reader_paths(const GenomicRegion& region) const;
     std::vector<Path> get_possible_reader_paths(const std::vector<SampleName>& samples,
                                                 const GenomicRegion& region) const;
+    std::vector<Path> get_possible_reader_paths(const std::vector<GenomicRegion>& regions) const;
+    std::vector<Path> get_possible_reader_paths(const std::vector<SampleName>& samples,
+                                                const std::vector<GenomicRegion>& regions) const;
 };
 
 template <typename Visitor>

@@ -45,6 +45,7 @@ public:
     void clear() noexcept;
     
     ReadMap fetch_reads(const GenomicRegion& region) const;
+    ReadMap fetch_reads(const std::vector<GenomicRegion>& regions) const;
     
     // Hints are regions that will likely be requested in the future. This does not affect the observable behaviour of
     // the object, but may allow improved performance through optimised read buffering. If the hints given are

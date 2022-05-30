@@ -128,10 +128,10 @@ ReadAssignments::ReadAssignments(const ReferenceGenome& reference,
                     const Haplotype& haplotype {s.first};
                     auto& assigned_reads = s.second;
                     auto& likelihoods = result_.haplotypes[sample].assigned_likelihoods[haplotype];
-                    safe_realign(assigned_reads, haplotype, likelihood_model_, likelihoods);
+                    safe_realign(assigned_reads, haplotype, likelihood_model_, likelihoods, workers);
                     sort_together(assigned_reads, likelihoods);
                     result_.haplotypes[sample].assigned_wrt_haplotype[haplotype] = assigned_reads;
-                    rebase(assigned_reads, haplotype);
+                    rebase(assigned_reads, haplotype, workers);
                     std::sort(std::begin(assigned_reads), std::end(assigned_reads));
                     result_.haplotypes[sample].assigned_wrt_reference[haplotype] = std::move(assigned_reads);
                 }
@@ -150,11 +150,11 @@ ReadAssignments::ReadAssignments(const ReferenceGenome& reference,
                     realigned.reserve(s.second.size());
                     for (auto idx : s.second) realigned.push_back(std::move(ambiguous_reads[idx].read));
                     auto& likelihoods = result_.haplotypes[sample].ambiguous_max_likelihoods;
-                    safe_realign(realigned, s.first, likelihood_model_, likelihoods);
+                    safe_realign(realigned, s.first, likelihood_model_, likelihoods, workers);
                     for (std::size_t j {0}; j < s.second.size(); ++j) {
                         result_.haplotypes[sample].ambiguous_wrt_haplotype[s.second[j]].read = realigned[j];
                     }
-                    rebase(realigned, s.first);
+                    rebase(realigned, s.first, workers);
                     for (std::size_t j {0}; j < s.second.size(); ++j) {
                         result_.haplotypes[sample].ambiguous_wrt_reference[s.second[j]].read = std::move(realigned[j]);
                     }

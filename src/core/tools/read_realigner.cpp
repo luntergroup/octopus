@@ -12,6 +12,7 @@
 #include "utils/maths.hpp"
 #include "utils/kmer_mapper.hpp"
 #include "utils/append.hpp"
+#include "utils/parallel_transform.hpp"
 #include "core/models/error/error_model_factory.hpp"
 
 namespace octopus {
@@ -77,13 +78,14 @@ Haplotype expand_for_realignment(const Haplotype& haplotype, const std::vector<A
 
 namespace {
 
-auto compute_read_hashes(const std::vector<AlignedRead>& reads)
+auto compute_read_hashes(const std::vector<AlignedRead>& reads, boost::optional<ThreadPool&> workers = boost::none)
 {
     static constexpr unsigned char mapperKmerSize {6};
-    std::vector<KmerPerfectHashes> result {};
-    result.reserve(reads.size());
-    std::transform(std::cbegin(reads), std::cend(reads), std::back_inserter(result),
-                   [=] (const AlignedRead& read) { return compute_kmer_hashes<mapperKmerSize>(read.sequence()); });
+    std::vector<KmerPerfectHashes> result(reads.size());
+    using octopus::transform;
+    transform(std::cbegin(reads), std::cend(reads), std::begin(result),
+              [=] (const AlignedRead& read) { return compute_kmer_hashes<mapperKmerSize>(read.sequence()); },
+              workers);
     return result;
 }
 
@@ -100,119 +102,144 @@ void realign(AlignedRead& read, const Haplotype& haplotype, HaplotypeLikelihoodM
     realign(read, haplotype, alignment.mapping_position, std::move(alignment.cigar));
 }
 
+void realign(std::vector<AlignedRead>& reads, const Haplotype& haplotype,
+             HaplotypeLikelihoodModel model,
+             boost::optional<std::vector<HaplotypeLikelihoodModel::LogProbability>&> log_likelihoods,
+             boost::optional<ThreadPool&> workers)
+{
+    if (!reads.empty()) {
+        const auto read_hashes = compute_read_hashes(reads, workers);
+        static constexpr unsigned char mapperKmerSize {6};
+        const auto haplotype_hashes = make_kmer_hash_table<mapperKmerSize>(haplotype.sequence());
+        model.reset(haplotype);
+        auto haplotype_mapping_counts = init_mapping_counts(haplotype_hashes);
+        if (workers && workers->size() > 1 && reads.size() > 1) {
+            std::vector<std::future<void>> futures(reads.size());
+            for (std::size_t i {0}; i < reads.size(); ++i) {
+                workers->try_push([
+                    &haplotype,
+                    &haplotype_hashes, 
+                    &read = reads[i], 
+                    &read_hashes = read_hashes[i], 
+                    haplotype_mapping_counts,
+                    &model,
+                    &log_likelihoods,
+                    i] () mutable {
+                    auto mapping_positions = map_query_to_target(read_hashes, haplotype_hashes, haplotype_mapping_counts);
+                    auto alignment = model.align(read, mapping_positions);
+                    if (log_likelihoods) (*log_likelihoods)[i] = alignment.likelihood;
+                    realign(read, haplotype, std::move(alignment));
+                });
+            }
+            for (auto& f : futures) f.get();
+        } else {
+            for (std::size_t i {0}; i < reads.size(); ++i) {
+                auto mapping_positions = map_query_to_target(read_hashes[i], haplotype_hashes, haplotype_mapping_counts);
+                reset_mapping_counts(haplotype_mapping_counts);
+                auto alignment = model.align(reads[i], mapping_positions);
+                if (log_likelihoods) (*log_likelihoods)[i] = alignment.likelihood;
+                realign(reads[i], haplotype, std::move(alignment));
+            }
+        }
+    }
+}
+
 } // namespace
 
 void realign(std::vector<AlignedRead>& reads, const Haplotype& haplotype,
              HaplotypeLikelihoodModel model,
-             std::vector<HaplotypeLikelihoodModel::LogProbability>& log_likelihoods)
+             std::vector<HaplotypeLikelihoodModel::LogProbability>& log_likelihoods,
+             boost::optional<ThreadPool&> workers)
 {
-    if (!reads.empty()) {
-        log_likelihoods.resize(reads.size());
-        const auto read_hashes = compute_read_hashes(reads);
-        static constexpr unsigned char mapperKmerSize {6};
-        auto haplotype_hashes = init_kmer_hash_table<mapperKmerSize>();
-        populate_kmer_hash_table<mapperKmerSize>(haplotype.sequence(), haplotype_hashes);
-        auto haplotype_mapping_counts = init_mapping_counts(haplotype_hashes);
-        model.reset(haplotype);
-        for (std::size_t i {0}; i < reads.size(); ++i) {
-            auto mapping_positions = map_query_to_target(read_hashes[i], haplotype_hashes, haplotype_mapping_counts);
-            reset_mapping_counts(haplotype_mapping_counts);
-            auto alignment = model.align(reads[i], mapping_positions);
-            log_likelihoods[i] = alignment.likelihood;
-            realign(reads[i], haplotype, std::move(alignment));
-        }
-    }
+    log_likelihoods.resize(reads.size());
+    boost::optional<std::vector<HaplotypeLikelihoodModel::LogProbability>&> ll {log_likelihoods};
+    realign(reads, haplotype, std::move(model), ll, workers);
 }
 
-void realign(std::vector<AlignedRead>& reads, const Haplotype& haplotype, HaplotypeLikelihoodModel model)
+void realign(std::vector<AlignedRead>& reads, const Haplotype& haplotype, 
+            HaplotypeLikelihoodModel model, 
+            boost::optional<ThreadPool&> workers)
 {
-    if (!reads.empty()) {
-        const auto read_hashes = compute_read_hashes(reads);
-        static constexpr unsigned char mapperKmerSize {6};
-        auto haplotype_hashes = init_kmer_hash_table<mapperKmerSize>();
-        populate_kmer_hash_table<mapperKmerSize>(haplotype.sequence(), haplotype_hashes);
-        auto haplotype_mapping_counts = init_mapping_counts(haplotype_hashes);
-        model.reset(haplotype);
-        for (std::size_t i {0}; i < reads.size(); ++i) {
-            auto mapping_positions = map_query_to_target(read_hashes[i], haplotype_hashes, haplotype_mapping_counts);
-            reset_mapping_counts(haplotype_mapping_counts);
-            realign(reads[i], haplotype, model.align(reads[i], mapping_positions));
-        }
-    }
+    realign(reads, haplotype, std::move(model), boost::none, workers);
 }
 
-void realign(std::vector<AlignedRead>& reads, const Haplotype& haplotype)
+void realign(std::vector<AlignedRead>& reads, const Haplotype& haplotype, boost::optional<ThreadPool&> workers)
 {
-    realign(reads, haplotype, make_default_haplotype_likelihood_model());
+    realign(reads, haplotype, make_default_haplotype_likelihood_model(), workers);
 }
 
-std::vector<AlignedRead> realign(const std::vector<AlignedRead>& reads, const Haplotype& haplotype,
-                                 HaplotypeLikelihoodModel model)
+std::vector<AlignedRead> 
+realign(const std::vector<AlignedRead>& reads, const Haplotype& haplotype,
+        HaplotypeLikelihoodModel model, boost::optional<ThreadPool&> workers)
 {
     auto result = reads;
-    realign(result, haplotype, model);
+    realign(result, haplotype, model, workers);
     return result;
 }
 
-std::vector<AlignedRead> realign(const std::vector<AlignedRead>& reads, const Haplotype& haplotype)
+std::vector<AlignedRead> realign(const std::vector<AlignedRead>& reads, const Haplotype& haplotype, boost::optional<ThreadPool&> workers)
 {
-    return realign(reads, haplotype, make_default_haplotype_likelihood_model());
+    return realign(reads, haplotype, make_default_haplotype_likelihood_model(), workers);
 }
 
 std::vector<AlignedRead>
 realign(const std::vector<AlignedRead>& reads, const Haplotype& haplotype,
         HaplotypeLikelihoodModel model,
-        std::vector<HaplotypeLikelihoodModel::LogProbability>& log_likelihoods)
+        std::vector<HaplotypeLikelihoodModel::LogProbability>& log_likelihoods,
+        boost::optional<ThreadPool&> workers)
 {
     auto result = reads;
-    realign(result, haplotype, model, log_likelihoods);
+    realign(result, haplotype, model, log_likelihoods, workers);
     return result;
 }
 
-void safe_realign(std::vector<AlignedRead>& reads, const Haplotype& haplotype, HaplotypeLikelihoodModel model)
+void safe_realign(std::vector<AlignedRead>& reads, const Haplotype& haplotype, HaplotypeLikelihoodModel model, boost::optional<ThreadPool&> workers)
 {
     if (!reads.empty()) {
         auto expanded_haplotype = expand_for_realignment(haplotype, reads, model);
         try {
-            realign(reads, expanded_haplotype, model);
+            realign(reads, expanded_haplotype, model, workers);
         } catch (const HaplotypeLikelihoodModel::ShortHaplotypeError& e) {
             expanded_haplotype = expand(expanded_haplotype, e.required_extension());
-            realign(reads, expanded_haplotype, model);
+            realign(reads, expanded_haplotype, model, workers);
         }
     }
 }
 
 void safe_realign(std::vector<AlignedRead>& reads, const Haplotype& haplotype, HaplotypeLikelihoodModel model,
-                  std::vector<HaplotypeLikelihoodModel::LogProbability>& log_likelihoods)
+                  std::vector<HaplotypeLikelihoodModel::LogProbability>& log_likelihoods,
+                  boost::optional<ThreadPool&> workers)
 {
     if (!reads.empty()) {
         auto expanded_haplotype = expand_for_realignment(haplotype, reads, model);
         try {
-            realign(reads, expanded_haplotype, model, log_likelihoods);
+            realign(reads, expanded_haplotype, model, log_likelihoods, workers);
         } catch (const HaplotypeLikelihoodModel::ShortHaplotypeError& e) {
             log_likelihoods.clear();
             expanded_haplotype = expand(expanded_haplotype, e.required_extension());
-            realign(reads, expanded_haplotype, model, log_likelihoods);
+            realign(reads, expanded_haplotype, model, log_likelihoods, workers);
         }
     }
 }
 
-void safe_realign(std::vector<AlignedRead>& reads, const Haplotype& haplotype)
+void safe_realign(std::vector<AlignedRead>& reads, const Haplotype& haplotype, boost::optional<ThreadPool&> workers)
 {
-    safe_realign(reads, haplotype, make_default_haplotype_likelihood_model());
+    safe_realign(reads, haplotype, make_default_haplotype_likelihood_model(), workers);
 }
 
 std::vector<AlignedRead>
-safe_realign(const std::vector<AlignedRead>& reads, const Haplotype& haplotype, HaplotypeLikelihoodModel model)
+safe_realign(const std::vector<AlignedRead>& reads, const Haplotype& haplotype, HaplotypeLikelihoodModel model,
+             boost::optional<ThreadPool&> workers)
 {
     auto result = reads;
-    safe_realign(result, haplotype, std::move(model));
+    safe_realign(result, haplotype, std::move(model), workers);
     return result;
 }
 
-std::vector<AlignedRead> safe_realign(const std::vector<AlignedRead>& reads, const Haplotype& haplotype)
+std::vector<AlignedRead> 
+safe_realign(const std::vector<AlignedRead>& reads, const Haplotype& haplotype, boost::optional<ThreadPool&> workers)
 {
-    return safe_realign(reads, haplotype, make_default_haplotype_likelihood_model());
+    return safe_realign(reads, haplotype, make_default_haplotype_likelihood_model(), workers);
 }
 
 namespace {
@@ -533,12 +560,13 @@ void rebase(AlignedRead& read, const GenomicRegion& haplotype_region, const Ciga
 
 } // namespace
 
-void rebase(std::vector<AlignedRead>& reads, const Haplotype& haplotype)
+void rebase(std::vector<AlignedRead>& reads, const Haplotype& haplotype, boost::optional<ThreadPool&> workers)
 {
     const auto haplotype_cigar = haplotype.cigar();
-    for (auto& read : reads) {
+    using octopus::for_each;
+    for_each(std::begin(reads), std::end(reads), [&] (auto& read) {
         rebase(read, haplotype.mapped_region(), haplotype_cigar);
-    }
+    });
 }
 
 void realign_to_reference(std::vector<AlignedRead>& reads, const Haplotype& haplotype,

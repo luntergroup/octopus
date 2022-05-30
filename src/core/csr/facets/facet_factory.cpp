@@ -219,30 +219,31 @@ FacetFactory::make(const std::vector<std::string>& names,
     std::vector<FacetBlock> result {};
     result.reserve(blocks.size());
     if (blocks.size() > 1 && !workers.empty()) {
-        std::vector<std::future<FacetBlock>> futures {};
-        futures.reserve(blocks.size());
-        const auto fetch_reads = requires_reads(names);
-        const auto fetch_genotypes = requires_genotypes(names);
-        for (const auto& block : blocks) {
-            // It's faster to fetch reads serially from left to right, so do this outside the thread pool
-            BlockData data {};
-            data.calls = std::addressof(block);
-            if (!block.empty()) {
-                data.region = encompassing_region(block);
-                if (fetch_reads) {
-                    data.reads = read_pipe_->fetch_reads(*data.region);
-                }
+        boost::optional<ReadMap> reads {};
+        if (requires_reads(names)) {
+            std::vector<GenomicRegion> block_regions {};
+            block_regions.reserve(blocks.size());
+            for (const auto& block : blocks) {
+                block_regions.push_back(encompassing_region(block));
             }
-            futures.push_back(workers.try_push([this, &names, data {std::move(data)}, &block, fetch_genotypes, &workers] () mutable {
-                if (fetch_genotypes) {
-                    data.genotypes = extract_genotypes(block, samples_, *reference_);
-                }
-                return this->make(names, data, workers);
-            }));
+            reads = read_pipe_->source().fetch_reads(block_regions);
         }
-        for (auto& fut : futures) {
-            result.push_back(fut.get());
-        }
+        const auto fetch_genotypes = requires_genotypes(names);
+        result.resize(blocks.size());
+        using octopus::transform;
+        transform(std::cbegin(blocks), std::cend(blocks), std::begin(result), 
+                  [this, &names, &reads, &workers, fetch_genotypes] (const auto& block) mutable {
+                      BlockData data {};
+                      data.calls = std::addressof(block);
+                      data.region = encompassing_region(block);
+                      if (fetch_genotypes) {
+                          data.genotypes = extract_genotypes(block, samples_, *reference_);
+                      }
+                      if (reads) {
+                          data.reads = copy_overlapped(*reads, *data.region);
+                      }
+                      return this->make(names, data, workers);
+                  }, workers);
     } else {
         for (const auto& block : blocks) {
             const auto data = make_block_data(names, block);
