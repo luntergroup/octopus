@@ -219,12 +219,12 @@ FacetFactory::make(const std::vector<std::string>& names,
     std::vector<FacetBlock> result {};
     result.reserve(blocks.size());
     if (blocks.size() > 1 && !workers.empty()) {
-        std::vector<std::future<FacetBlock>> futures {};
-        futures.reserve(blocks.size());
         const auto fetch_reads = requires_reads(names);
         const auto fetch_genotypes = requires_genotypes(names);
+        // It's faster to fetch reads sequentially from left to right, so do this outside the thread pool
+        std::vector<BlockData> block_data {};
+        block_data.reserve(blocks.size());
         for (const auto& block : blocks) {
-            // It's faster to fetch reads serially from left to right, so do this outside the thread pool
             BlockData data {};
             data.calls = std::addressof(block);
             if (!block.empty()) {
@@ -233,16 +233,17 @@ FacetFactory::make(const std::vector<std::string>& names,
                     data.reads = read_pipe_->fetch_reads(*data.region);
                 }
             }
-            futures.push_back(workers.try_push([this, &names, data {std::move(data)}, &block, fetch_genotypes, &workers] () mutable {
-                if (fetch_genotypes) {
-                    data.genotypes = extract_genotypes(block, samples_, *reference_);
-                }
-                return this->make(names, data, workers);
-            }));
+            block_data.push_back(std::move(data));
         }
-        for (auto& fut : futures) {
-            result.push_back(fut.get());
-        }
+        result.resize(blocks.size());
+        using octopus::transform;
+        transform(std::cbegin(blocks), std::cend(blocks), std::make_move_iterator(std::begin(block_data)), std::begin(result), 
+                  [this, &names, &workers, fetch_genotypes] (const auto& block, auto data) mutable {
+                      if (fetch_genotypes) {
+                          data.genotypes = extract_genotypes(block, samples_, *reference_);
+                      }
+                      return this->make(names, data, workers);
+                  }, workers);
     } else {
         for (const auto& block : blocks) {
             const auto data = make_block_data(names, block);
