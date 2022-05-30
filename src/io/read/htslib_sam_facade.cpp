@@ -699,7 +699,9 @@ auto to_hts_regions(const std::vector<GenomicRegion>& regions)
 {
     std::vector<hts_pair_pos_t> result(regions.size());
     std::transform(std::cbegin(regions), std::cend(regions), std::begin(result),
-                   [] (const auto& region) -> hts_pair_pos_t { return {region.begin(), region.end()}; });
+                   [] (const auto& region) -> hts_pair_pos_t { return {
+                           static_cast<hts_pos_t>(region.begin()), 
+                           static_cast<hts_pos_t>(region.end())}; });
     return result;
 }
 
