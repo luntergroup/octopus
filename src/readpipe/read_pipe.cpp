@@ -101,7 +101,8 @@ void sort_each(Map& reads)
     }
 }
 
-auto fetch_batch(const ReadManager& rm, const std::vector<SampleName>& samples, const GenomicRegion& region)
+template <typename Regions>
+auto fetch_batch(const ReadManager& rm, const std::vector<SampleName>& samples, const Regions& region)
 {
     auto result = rm.fetch_reads(samples, region);
     sort_each(result);
@@ -165,14 +166,24 @@ void erase_non_overlapped(std::vector<AlignedRead>& reads, const GenomicRegion& 
     reads.erase(std::remove_if(std::begin(reads), std::end(reads), not_overlapped), std::end(reads));
 }
 
-void fragment(std::vector<AlignedRead>& reads, const unsigned fragment_length, const GenomicRegion& region)
+void erase_non_overlapped(std::vector<AlignedRead>& reads, const std::vector<GenomicRegion>& regions)
+{
+    const auto not_overlapped = [&] (const auto& read) { 
+        return std::none_of(std::cbegin(regions), std::cend(regions), [&] (const auto& region) { 
+            return overlaps(read, region); }); };
+    reads.erase(std::remove_if(std::begin(reads), std::end(reads), not_overlapped), std::end(reads));
+}
+
+template <typename Region>
+void fragment(std::vector<AlignedRead>& reads, const unsigned fragment_length, const Region& region)
 {
     fragment(reads, fragment_length);
     std::sort(std::begin(reads), std::end(reads));
     erase_non_overlapped(reads, region);
 }
 
-void fragment(ReadManager::SampleReadMap& reads, const unsigned fragment_length, const GenomicRegion& region)
+template <typename Region>
+void fragment(ReadManager::SampleReadMap& reads, const unsigned fragment_length, const Region& region)
 {
     for (auto& p : reads) fragment(p.second, fragment_length, region);
 }
@@ -275,31 +286,82 @@ ReadMap ReadPipe::fetch_reads(const GenomicRegion& region, boost::optional<Repor
     return result;
 }
 
+auto sort_and_merge(std::vector<GenomicRegion> regions)
+{
+    std::sort(std::begin(regions), std::end(regions));
+    return extract_covered_regions(regions);
+}
+
 ReadMap ReadPipe::fetch_reads(const std::vector<GenomicRegion>& regions, boost::optional<Report&> report) const
 {
-    assert(std::is_sorted(std::cbegin(regions), std::cend(regions)));
-    const auto covered_regions = extract_covered_regions(regions);
-    const auto fetch_regions = join(covered_regions, 10000);
+    if (regions.size() == 1) { return fetch_reads(regions.front(), report); }
+    const auto covered_regions = sort_and_merge(regions);
+    if (covered_regions.size() == 1) { return fetch_reads(covered_regions.front(), report); }
+    using namespace readpipe;
     ReadMap result {samples_.size()};
-    const auto total_fetch_bp = sum_region_sizes(fetch_regions);
     for (const auto& sample : samples_) {
-        const auto p = result.emplace(std::piecewise_construct, std::forward_as_tuple(sample),
-                                      std::forward_as_tuple());
-        p.first->second.reserve(20 * total_fetch_bp); // TODO: use estimated coverage
+        result.emplace(std::piecewise_construct, std::forward_as_tuple(sample), std::forward_as_tuple());
     }
-    for (const auto& region : fetch_regions) {
-        auto reads = fetch_reads(region, report);
-        const auto request_regions = contained_range(covered_regions, region);
-        const auto removal_regions = extract_intervening_regions(request_regions, region);
-        std::for_each(std::crbegin(removal_regions), std::crend(removal_regions),
-                      [&reads] (const auto& region) {
-                          for (auto& p : reads) {
-                              p.second.erase_contained(region);
-                          }
-                      });
-        insert_each(std::move(reads), result);
+    if (regions.empty()) return result;
+    if (report) report->raw_depths.reserve(samples_.size());
+    for (const auto& batch : batch_samples(samples_)) {
+        auto batch_reads = fetch_batch(source_, batch, covered_regions);
+        // if (debug_log_) {
+        //     stream(*debug_log_) << "Fetched " << count_reads(batch_reads) << " unfiltered reads from " << region;
+        // }
+        if (report) {
+            for (const auto& p : batch_reads) {
+                report->raw_depths.emplace(p.first, make_coverage_tracker(p.second));
+                report->mapping_quality_zero_depths.emplace(p.first, make_coverage_tracker(p.second, IsMappingQualityZero {}));
+            }
+        }
+        transform_reads(batch_reads, prefilter_transformer_);
+        if (debug_log_) {
+            SampleFilterCountMap<SampleName, decltype(filterer_)> filter_counts {};
+            filter_counts.reserve(samples_.size());
+            for (const auto& sample : samples_) {
+                filter_counts[sample].reserve(filterer_.num_filters());
+            }
+            erase_filtered_reads(batch_reads, filter(batch_reads, filterer_, filter_counts));
+            if (filterer_.num_filters() > 0) {
+                for (const auto& p : filter_counts) {
+                    stream(*debug_log_) << "In sample " << p.first;
+                    if (!p.second.empty()) {
+                        for (const auto& c : p.second) {
+                            stream(*debug_log_) << c.second << " reads failed the " << c.first << " filter";
+                        }
+                    } else {
+                        *debug_log_ << "No reads were filtered";
+                    }
+                }
+            }
+        } else {
+            erase_filtered_reads(batch_reads, filter(batch_reads, filterer_));
+        }
+        if (postfilter_transformer_) {
+            transform_reads(batch_reads, *postfilter_transformer_);
+        }
+        // if (debug_log_) {
+        //     stream(*debug_log_) << "There are " << count_reads(batch_reads) << " reads in " << region
+        //                     << " after filtering";
+        // }
+        if (fragment_size_) {
+            fragment(batch_reads, *fragment_size_, covered_regions);
+            erase_filtered_reads(batch_reads, filter(batch_reads, filterer_));
+        }
+        if (downsampler_) {
+            auto reads = make_mappable_map(std::move(batch_reads));
+            auto downsample_reports = downsample(reads, *downsampler_);
+            // if (debug_log_) stream(*debug_log_) << "Downsampling removed " << count_downsampled_reads(downsample_reports) << " reads from " << region;
+            if (report) {
+                report->downsample_report = std::move(downsample_reports);
+            }
+            insert_each(std::move(reads), result);
+        } else {
+            insert_each(std::move(batch_reads), result);
+        }
     }
-    shrink_to_fit(result);
+    shrink_to_fit(result); // TODO: should we make this conditional on extra capacity?
     return result;
 }
 
