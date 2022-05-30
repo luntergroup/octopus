@@ -219,28 +219,28 @@ FacetFactory::make(const std::vector<std::string>& names,
     std::vector<FacetBlock> result {};
     result.reserve(blocks.size());
     if (blocks.size() > 1 && !workers.empty()) {
-        const auto fetch_reads = requires_reads(names);
-        const auto fetch_genotypes = requires_genotypes(names);
-        // It's faster to fetch reads sequentially from left to right, so do this outside the thread pool
-        std::vector<BlockData> block_data {};
-        block_data.reserve(blocks.size());
-        for (const auto& block : blocks) {
-            BlockData data {};
-            data.calls = std::addressof(block);
-            if (!block.empty()) {
-                data.region = encompassing_region(block);
-                if (fetch_reads) {
-                    data.reads = read_pipe_->fetch_reads(*data.region);
-                }
+        boost::optional<ReadMap> reads {};
+        if (requires_reads(names)) {
+            std::vector<GenomicRegion> block_regions {};
+            block_regions.reserve(blocks.size());
+            for (const auto& block : blocks) {
+                block_regions.push_back(encompassing_region(block));
             }
-            block_data.push_back(std::move(data));
+            reads = read_pipe_->source().fetch_reads(block_regions);
         }
+        const auto fetch_genotypes = requires_genotypes(names);
         result.resize(blocks.size());
         using octopus::transform;
-        transform(std::cbegin(blocks), std::cend(blocks), std::make_move_iterator(std::begin(block_data)), std::begin(result), 
-                  [this, &names, &workers, fetch_genotypes] (const auto& block, auto data) mutable {
+        transform(std::cbegin(blocks), std::cend(blocks), std::begin(result), 
+                  [this, &names, &reads, &workers, fetch_genotypes] (const auto& block) mutable {
+                      BlockData data {};
+                      data.calls = std::addressof(block);
+                      data.region = encompassing_region(block);
                       if (fetch_genotypes) {
                           data.genotypes = extract_genotypes(block, samples_, *reference_);
+                      }
+                      if (reads) {
+                          data.reads = copy_overlapped(*reads, *data.region);
                       }
                       return this->make(names, data, workers);
                   }, workers);
