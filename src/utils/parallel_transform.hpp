@@ -115,7 +115,7 @@ transform(InputIt first, InputIt last, OutputIt result,
     }
     std::vector<std::future<result_type>> results(n);
     std::transform(first, std::prev(last), std::begin(results),
-                   [&op, &pool] (const auto& value) {
+                   [&op, &pool] (auto&& value) {
                        return pool.try_push([&] () { return op(value); });
                    });
     // run last input in calling thread
@@ -153,15 +153,13 @@ transform(InputIt1 first1, InputIt1 last1, InputIt2 first2, OutputIt result,
     }
     std::vector<std::future<result_type>> results(n);
     std::transform(first1, std::prev(last1), first2, std::begin(results),
-                   [&op, &pool] (const auto& a, const auto& b) {
+                   [&op, &pool] (auto&& a, auto&& b) {
                        return pool.try_push([&] () { return op(a, b); });
                    });
     // run last input in calling thread
     std::promise<result_type> last_result {};
     results.back() = last_result.get_future();
-    const auto& a = *std::prev(last1);
-    const auto& b = *std::next(first2, n - 1);
-    last_result.set_value(op(a, b));
+    last_result.set_value(op(*std::prev(last1), *std::next(first2, n - 1)));
     return std::transform(std::begin(results), std::end(results), result,
                           [](auto& f) { return f.get(); });
 }
