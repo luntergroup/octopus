@@ -14,7 +14,7 @@ namespace octopus { namespace csr {
 
 const std::string ModelPosteriorByDepth::name_ = "MPD";
 
-ModelPosteriorByDepth::ModelPosteriorByDepth(bool recalculate) : depth_ {recalculate, true} {}
+ModelPosteriorByDepth::ModelPosteriorByDepth(bool recalculate) : depth_ {recalculate, false} {}
 
 std::unique_ptr<Measure> ModelPosteriorByDepth::do_clone() const
 {
