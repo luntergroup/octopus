@@ -15,6 +15,17 @@ FileOpenError::FileOpenError(Path file, std::string type)
 , type_ {std::move(type)}
 {}
 
+FileOpenError::FileOpenError(Path file, std::error_code error)
+: file_ {std::move(file)}
+, error_ {std::move(error)}
+{}
+
+FileOpenError::FileOpenError(Path file, std::string type, std::error_code error)
+: file_ {std::move(file)}
+, type_ {std::move(type)}
+, error_ {std::move(error)}
+{}
+
 std::string FileOpenError::do_why() const
 {
     std::ostringstream ss {};
@@ -22,13 +33,16 @@ std::string FileOpenError::do_why() const
     if (type_) {
         ss << *type_ << ' ';
     }
-    ss << "file " << file_ << " could not be opened. The OS open file limit (ulimit -n) may have been exceeded";
+    ss << "file " << file_ << " could not be opened";
+    if (error_) {
+        ss << ": " << error_->message();
+    }
     return ss.str();
 }
 
 std::string FileOpenError::do_help() const
 {
-    return "Increase the OS open file limit";
+    return "Check the output path is writable";
 }
 
 std::string FileOpenError::do_where() const
