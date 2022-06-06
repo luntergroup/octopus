@@ -14,8 +14,6 @@
 #include <cassert>
 #include <limits>
 #include <vector>
-#include <emmintrin.h>
-#include <immintrin.h>
 
 #include <boost/align/aligned_allocator.hpp>
 

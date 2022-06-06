@@ -81,6 +81,7 @@ if(NOT HTSlib_NO_SYSTEM_PATHS)
         ${HTSLIB_SEARCH_DIRS}
         /usr
         /usr/local
+        /opt/homebrew
         )
 endif()
 
@@ -121,7 +122,7 @@ find_library(HTSlib_LIBRARY
     NAMES ${HTSlib_LIBRARY_names}
     PATHS ${HTSlib_INCLUDE_DIR} ${HTSLIB_SEARCH_DIRS} ${HTSLIB_PKGCONF_LIBRARY_DIRS}
     NO_DEFAULT_PATH
-    PATH_SUFFIXES lib lib64 lib/x86_64-linux-gnu ${_htslib_ver_path}
+    PATH_SUFFIXES lib lib64 lib/x86_64-linux-gnu lib/aarch64-linux-gnu ${_htslib_ver_path}
     )
 
 # Set the include dir variables and the libraries and let libfind_process do the rest.

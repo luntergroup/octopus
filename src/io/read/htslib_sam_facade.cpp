@@ -17,6 +17,7 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/numeric/conversion/cast.hpp>
 #include <htslib/sam.h>
+#include <htslib/hts_endian.h>
 
 #include "basics/cigar_string.hpp"
 #include "basics/genomic_region.hpp"
