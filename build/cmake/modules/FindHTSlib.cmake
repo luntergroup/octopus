@@ -81,6 +81,7 @@ if(NOT HTSlib_NO_SYSTEM_PATHS)
         ${HTSLIB_SEARCH_DIRS}
         /usr
         /usr/local
+        /opt/homebrew
         )
 endif()
 

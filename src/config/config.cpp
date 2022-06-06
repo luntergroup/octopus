@@ -54,13 +54,15 @@ const VersionNumber Version {VERSION_MAJOR,
 
 static auto get_simd_extension()
 {
-    if (AVX512_AVAILABLE) {
+    #if defined(__AVX2__)
         return SystemInfo::SIMDExtension::avx512;
-    } else if (AVX2_AVAILABLE) {
+    #elsif defined(__AVX512F__) && defined(__AVX512BW__)
         return SystemInfo::SIMDExtension::avx2;
-    } else {
+    #elsif defined(__SSE2__)
         return SystemInfo::SIMDExtension::sse2;
-    }
+    #else
+        return SystemInfo::SIMDExtension::sse2;
+    #endif
 }
 
 const SystemInfo System {SYSTEM_PROCESSOR,
