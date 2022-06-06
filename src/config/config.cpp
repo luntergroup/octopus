@@ -56,12 +56,12 @@ static auto get_simd_extension()
 {
     #if defined(__AVX2__)
         return SystemInfo::SIMDExtension::avx512;
-    #elsif defined(__AVX512F__) && defined(__AVX512BW__)
+    #elif defined(__AVX512F__) && defined(__AVX512BW__)
         return SystemInfo::SIMDExtension::avx2;
-    #elsif defined(__SSE2__)
+    #elif defined(__SSE2__)
         return SystemInfo::SIMDExtension::sse2;
     #else
-        return SystemInfo::SIMDExtension::sse2;
+        return SystemInfo::SIMDExtension::neon;
     #endif
 }
 
@@ -99,6 +99,7 @@ std::ostream& operator<<(std::ostream& os, const SystemInfo::SIMDExtension simd)
         case SIMD::sse2: os << "SSE2"; break;
         case SIMD::avx2: os << "AVX2"; break;
         case SIMD::avx512: os << "AVX512"; break;
+        case SIMD::neon: os << "NEON"; break;
     }
     return os;
 }
