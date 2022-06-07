@@ -15,6 +15,7 @@
 #include "core/types/indexed_haplotype.hpp"
 #include "core/types/genotype.hpp"
 #include "core/types/cancer_genotype.hpp"
+#include "core/types/partitioned_genotype.hpp"
 #include "core/models/haplotype_likelihood_array.hpp"
 #include "containers/mappable_block.hpp"
 #include "exceptions/unimplemented_feature_error.hpp"
@@ -22,6 +23,7 @@
 #include "variational_bayes_mixture_model.hpp"
 #include "genotype_prior_model.hpp"
 #include "cancer_genotype_prior_model.hpp"
+#include "haplogroup_prior_model.hpp"
 
 namespace octopus { namespace model {
 
@@ -102,6 +104,8 @@ private:
 
 using SubcloneModel = SubcloneModelBase<Genotype<IndexedHaplotype<>>, GenotypePriorModel>;
 using SomaticSubcloneModel = SubcloneModelBase<CancerGenotype<IndexedHaplotype<>>, CancerGenotypePriorModel>;
+template <std::size_t K>
+using HaplogroupSubcloneModel = SubcloneModelBase<PartitionedGenotype<IndexedHaplotype<>, K>, HaplogroupGenotypePriorModel>;
 
 template <typename G, typename GPM>
 constexpr unsigned SubcloneModelBase<G, GPM>::max_ploidy;

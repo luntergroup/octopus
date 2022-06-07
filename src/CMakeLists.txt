@@ -467,6 +467,8 @@ set(CORE_SOURCES
     core/models/genotype/single_cell_prior_model.cpp
     core/models/genotype/single_cell_model.hpp
     core/models/genotype/single_cell_model.cpp
+    core/models/genotype/haplogroup_prior_model.hpp
+    core/models/genotype/haplogroup_prior_model.cpp
 
     core/models/pairhmm/pair_hmm.hpp
     core/models/pairhmm/simd_pair_hmm.hpp
