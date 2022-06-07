@@ -80,10 +80,15 @@ endif()
 message("-- Build type: " ${CMAKE_BUILD_TYPE})
 
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
-    SET(CMAKE_INSTALL_PREFIX "${octopus_SOURCE_DIR}/bin" CACHE PATH "Installing to ${octopus_SOURCE_DIR}$" FORCE)
+    set(CMAKE_INSTALL_PREFIX "${octopus_SOURCE_DIR}/bin" CACHE PATH "Installing to ${octopus_SOURCE_DIR}$" FORCE)
 endif(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
 
 message("-- Installation prefix: " ${CMAKE_INSTALL_PREFIX})
+
+if (NOT ${COMPILER_ARCHITECTURE} STREQUAL "native")
+    set(CMAKE_SYSTEM_PROCESSOR ${COMPILER_ARCHITECTURE})
+endif()
+message("-- Target architecture: " ${CMAKE_SYSTEM_PROCESSOR})
 
 # for the main octopus executable
 add_subdirectory(lib)

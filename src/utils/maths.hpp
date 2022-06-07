@@ -27,8 +27,11 @@
 #include <boost/math/distributions/binomial.hpp>
 #include <boost/math/distributions/normal.hpp>
 
-#include "fmath.hpp"
 #include "htslib/kfunc.h"
+
+#if defined(__SSE2__)
+#include "fmath.hpp"
+#endif // defined(__SSE2__)
 
 namespace octopus { namespace maths {
 
@@ -256,7 +259,11 @@ RealType rmq(const Container& values)
 
 inline float fast_exp(const float x) noexcept
 {
+    #if defined(__SSE2__)
     return fmath::exp(x);
+    #else
+    return std::exp(x);
+    #endif // defined(__SSE2__)
 }
 
 template <typename RealType,
@@ -268,7 +275,11 @@ inline RealType fast_exp(const RealType x) noexcept
 
 inline float fast_log(const float x) noexcept
 {
+    #if defined(__SSE2__)
     return fmath::log(x);
+    #else
+    return std::log(x);
+    #endif // defined(__SSE2__)
 }
 
 template <typename RealType,

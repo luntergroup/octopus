@@ -22,6 +22,8 @@ public:
     
     FileOpenError(Path file);
     FileOpenError(Path file, std::string type);
+    FileOpenError(Path file, std::error_code error);
+    FileOpenError(Path file, std::string type, std::error_code error);
     
     virtual ~FileOpenError() override = default;
 
@@ -32,6 +34,7 @@ private:
     
     Path file_;
     boost::optional<std::string> type_;
+    boost::optional<std::error_code> error_;
 };
     
 } // namespace octopus

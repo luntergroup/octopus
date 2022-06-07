@@ -23,7 +23,7 @@ struct VersionNumber
 
 struct SystemInfo
 {
-    enum class SIMDExtension { sse2, avx2, avx512 };
+    enum class SIMDExtension { sse2, avx2, avx512, neon };
     std::string system_processor, system_name, system_version;
     std::string compiler_name, compiler_version;
     std::string boost_version;

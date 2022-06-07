@@ -13,14 +13,15 @@
 #include <tuple>
 #include <type_traits>
 #include <cassert>
+#if defined(__AVX2__)
 #include <immintrin.h>
-
+#endif // defined(__AVX2__)
 #include "utils/array_tricks.hpp"
 #include "system.hpp"
 
 namespace octopus { namespace hmm { namespace simd {
 
-#if defined(__AVX2__) && AVX2_AVAILABLE
+#if defined(__AVX2__)
 
 #define AVX2_PHMM
 
@@ -373,7 +374,7 @@ protected:
     }
 };
 
-#endif // defined(__AVX2__) && AVX2_AVAILABLE
+#endif // defined(__AVX2__)
 
 } // namespace simd
 } // namespace hmm
