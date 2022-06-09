@@ -541,6 +541,16 @@ bool operator<(const Assembler::Kmer& lhs, const Assembler::Kmer& rhs) noexcept
 //
 // Assembler private methods
 //
+
+std::size_t Assembler::EdgeHash::operator()(const Edge& e) const
+{
+    std::size_t result {};
+    using boost::hash_combine;
+    hash_combine(result, assembler_.source_kmer_of(e).hash());
+    hash_combine(result, assembler_.target_kmer_of(e).hash());
+    return result;
+}
+
 void Assembler::insert_reference_into_empty_graph(const NucleotideSequence& sequence)
 {
     assert(sequence.size() >= kmer_size());
@@ -1206,15 +1216,14 @@ Assembler::GraphEdge::WeightType Assembler::weight(const Path& path) const
                               });
 }
 
-Assembler::GraphEdge::WeightType Assembler::max_weight(const Path& path) const
+Assembler::GraphEdge::WeightType Assembler::max_weight(const Path& path, const EdgeSet& scored_edges) const
 {
     GraphEdge::WeightType result {0};
-    for (std::size_t u {0}, v {1}; v < path.size(); ++u, ++v) {
-        Edge e; bool good;
-        std::tie(e, good) = boost::edge(path[u], path[v], graph_);
-        assert(good);
-        result = std::max(result, graph_[e].weight);
-    }
+    for_each_edge(path, [&] (const Edge e) {
+        if (scored_edges.count(e) == 0) {
+            result = std::max(result, graph_[e].weight);
+        }
+    });
     return result;
 }
 
@@ -1261,33 +1270,36 @@ unsigned Assembler::count_low_weight_flanks(const Path& path, unsigned low_weigh
     return static_cast<unsigned>(num_head_low_weight + num_tail_low_weight);
 }
 
-Assembler::PathWeightStats Assembler::compute_weight_stats(const Path& path) const
+Assembler::PathWeightStats 
+Assembler::compute_weight_stats(const Path& path, const EdgeSet& scored_edges) const
 {
     PathWeightStats result {};
     if (path.size() > 1) {
-        result.max = max_weight(path);
+        result.max = max_weight(path, scored_edges);
         result.min = result.max;
         result.distribution.resize(result.max + 1);
-        std::vector<GraphEdge::WeightType> weights(path.size() - 1);
-        for (std::size_t u {0}, v {1}; v < path.size(); ++u, ++v) {
-            Edge e; bool good;
-            std::tie(e, good) = boost::edge(path[u], path[v], graph_);
-            assert(good);
-            const auto weight = graph_[e].weight;
-            ++result.distribution[weight];
-            result.total += weight;
-            result.min = std::min(result.min, weight);
-            if (!is_artificial(e)) {
-                const auto forward_weight = graph_[e].forward_strand_weight;
-                result.total_forward += forward_weight;
-                result.total_reverse += weight - forward_weight;
+        std::vector<GraphEdge::WeightType> weights {};
+        weights.reserve(path.size() - 1);
+        for_each_edge(path, [&] (const Edge e) {
+            if (scored_edges.count(e) == 0) {
+                const auto weight = graph_[e].weight;
+                ++result.distribution[weight];
+                result.total += weight;
+                result.min = std::min(result.min, weight);
+                if (!is_artificial(e)) {
+                    const auto forward_weight = graph_[e].forward_strand_weight;
+                    result.total_forward += forward_weight;
+                    result.total_reverse += weight - forward_weight;
+                }
+                weights.push_back(weight);
             }
-            weights[u] = weight;
+        });
+        if (!weights.empty()) {
+            for (auto& w : result.distribution) w /= weights.size();
+            result.mean = static_cast<double>(result.total) / weights.size();
+            result.median = maths::median(weights);
+            result.stdev = maths::stdev(weights);
         }
-        for (auto& w : result.distribution) w /= weights.size();
-        result.mean = static_cast<double>(result.total) / weights.size();
-        result.median = maths::median(weights);
-        result.stdev = maths::stdev(weights);
     }
     return result;
 }
@@ -1844,10 +1856,10 @@ double base_quality_probability(const int base_quality)
 
 } // namespace
 
-double Assembler::bubble_score(const Path& path) const
+double Assembler::bubble_score(const Path& path, const EdgeSet& exclude) const
 {
     if (path.size() < 2) return 0;
-    const auto weight_stats = compute_weight_stats(path);
+    const auto weight_stats = compute_weight_stats(path, exclude);
     auto result = static_cast<double>(weight_stats.max);
     if (params_.use_strand_bias) {
         GraphEdge::WeightType context_forward_weight {0}, context_reverse_weight {0};
@@ -1919,6 +1931,7 @@ Assembler::extract_bubble_paths(unsigned k, const BubbleScoreSetter min_bubble_s
     std::deque<Variant> result {};
     boost::optional<DominatorMap> dominator_tree {};
     bool use_weights {false};
+    EdgeSet scored_edges {boost::num_edges(graph_), EdgeHash {*this}};
     while (k > 0 && num_remaining_alt_kmers > 0) {
         auto predecessors = find_shortest_scoring_paths(reference_head(), use_weights);
         assert(count_unreachables(predecessors) == 1);
@@ -1928,7 +1941,7 @@ Assembler::extract_bubble_paths(unsigned k, const BubbleScoreSetter min_bubble_s
             // complete reference path is shortest path
             if (dominator_tree) {
                 if (use_weights) {
-                    utils::append(extract_bubble_paths_with_ksp(k, min_bubble_scorer), result);
+                    utils::append(extract_bubble_paths_with_ksp(k, min_bubble_scorer, scored_edges), result);
                     return result;
                 } else {
                     use_weights = true;
@@ -1952,7 +1965,7 @@ Assembler::extract_bubble_paths(unsigned k, const BubbleScoreSetter min_bubble_s
             auto ref_seq = make_reference(ref_before_bubble, ref);
             alt_path.push_front(ref_before_bubble);
             const auto min_bubble_score = get_min_bubble_score(ref_before_bubble, ref, min_bubble_scorer);
-            const auto score = bubble_score(alt_path);
+            const auto score = bubble_score(alt_path, scored_edges);
             const bool is_extractable {score >= min_bubble_score};
             auto alt_seq = make_sequence(alt_path);
             alt_path.pop_front();
@@ -1961,6 +1974,7 @@ Assembler::extract_bubble_paths(unsigned k, const BubbleScoreSetter min_bubble_s
                 const auto pos = reference_head_position_ + reference_size() - sequence_length(rhs_kmer_count, kmer_size());
                 result.emplace_front(pos, std::move(ref_seq), std::move(alt_seq));
             }
+            for_each_edge(alt_path, [&] (const Edge e) { scored_edges.insert(e); });
             --rhs_kmer_count; // because we padded one reference kmer to make ref_seq
             Edge edge_to_alt; bool good;
             std::tie(edge_to_alt, good) = boost::edge(alt, ref, graph_);
@@ -2087,7 +2101,7 @@ Assembler::extract_bubble_paths(unsigned k, const BubbleScoreSetter min_bubble_s
                 prune_reference_flanks();
                 regenerate_vertex_indices();
             }
-            utils::append(extract_bubble_paths_with_ksp(k, min_bubble_scorer), result);
+            utils::append(extract_bubble_paths_with_ksp(k, min_bubble_scorer, scored_edges), result);
             return result;
         } else if (!removed_bubble) {
             use_weights = true;
@@ -2134,7 +2148,8 @@ std::deque<Assembler::SubGraph> Assembler::find_independent_subgraphs() const
     }
 }
 
-std::deque<Assembler::Variant> Assembler::extract_bubble_paths_with_ksp(const unsigned k, const BubbleScoreSetter min_bubble_scorer)
+std::deque<Assembler::Variant> 
+Assembler::extract_bubble_paths_with_ksp(const unsigned k, const BubbleScoreSetter min_bubble_scorer, EdgeSet& scored_edges)
 {
     const auto subgraphs = find_independent_subgraphs();
     std::deque<Variant> result {};
@@ -2159,12 +2174,13 @@ std::deque<Assembler::Variant> Assembler::extract_bubble_paths_with_ksp(const un
                                [this] (Edge e) { return boost::source(e, graph_); });
                 const auto num_ref_kmers = count_kmers(ref_seq, kmer_size());
                 const auto min_bubble_score = get_min_bubble_score(ref_before_bubble, ref_after_bubble, min_bubble_scorer);
-                const auto score = bubble_score(alt_path);
+                const auto score = bubble_score(alt_path, scored_edges);
                 if (score >= min_bubble_score) {
                     auto alt_seq = make_sequence(alt_path);
                     const auto pos = reference_head_position_ + subgraph.reference_offset + lhs_kmer_count;
                     result.emplace_front(pos, std::move(ref_seq), std::move(alt_seq));
                 }
+                for_each_edge(alt_path, [&] (const Edge e) { scored_edges.insert(e); });
                 alt_head_itr = std::find_if(std::next(alt_tail_itr), std::cend(path), is_alt_edge);
                 lhs_kmer_count += num_ref_kmers + std::distance(alt_tail_itr, alt_head_itr) - 1;
             }

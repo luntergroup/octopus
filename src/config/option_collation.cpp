@@ -1159,7 +1159,7 @@ get_assembler_bubble_score_setter(const OptionMap& options) noexcept
                                            options.at("min-expected-somatic-frequency").as<float>()};
     } else if (is_polyclone_calling(options)) {
         return DepthBasedBubbleScoreSetter {options.at("min-bubble-score").as<double>(),
-                                            options.at("min-clone-frequency").as<float>()};
+                                            options.at("min-clone-frequency").as<float>() / 2};
     } else if (is_single_cell_calling(options)) {
         return DepthBasedBubbleScoreSetter {options.at("min-bubble-score").as<double>(), 0.25};
     } else {
@@ -1298,7 +1298,7 @@ auto make_variant_generator_builder(const OptionMap& options, const boost::optio
     if (repeat_candidate_variant_generator_enabled(options)) {
         RepeatScanner::Options repeat_scanner_options {};
         repeat_scanner_options.min_snvs = 1;
-        repeat_scanner_options.min_base_quality = 10;
+        repeat_scanner_options.min_base_quality = 15;
         repeat_scanner_options.min_vaf = get_repeat_scanner_min_vaf(options);
         result.set_repeat_scanner(repeat_scanner_options);
     }

@@ -441,7 +441,7 @@ OptionMap parse_options(const int argc, const char** argv)
      "Do not account for strand bias when evaluating whether to include a candidate variant")
     
     ("min-candidate-credible-vaf-probability",
-     po::value<float>()->default_value(0.75),
+     po::value<float>()->default_value(0.5),
      "Minimum probability that pileup candidate variant has frequency above '--min-credible-somatic-frequency'")
     ;
     
@@ -678,7 +678,7 @@ OptionMap parse_options(const int argc, const char** argv)
     po::options_description polyclone("Polyclone calling model");
     polyclone.add_options()
     ("max-clones",
-     po::value<int>()->default_value(4),
+     po::value<int>()->default_value(5),
      "Maximum number of unique clones to consider")
     
     ("min-clone-frequency",
@@ -686,7 +686,7 @@ OptionMap parse_options(const int argc, const char** argv)
      "Minimum expected clone frequency in the sample")
     
     ("clone-prior",
-     po::value<float>()->default_value(0.01, "0.01"),
+     po::value<float>()->default_value(0.1, "0.1"),
      "Prior probability of each clone in the sample")
     
     ("clone-concentration",
