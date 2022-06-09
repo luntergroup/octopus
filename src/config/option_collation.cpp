@@ -2066,7 +2066,7 @@ auto get_target_working_memory(const OptionMap& options)
 
 bool is_experimental_caller(const std::string& caller) noexcept
 {
-    return caller == "population" || caller == "polyclone" || caller == "cell";
+    return caller == "polyclone" || caller == "cell";
 }
 
 ReadLinkageType get_read_linkage_type(const OptionMap& options)
