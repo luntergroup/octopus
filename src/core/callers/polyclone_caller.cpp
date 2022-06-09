@@ -159,7 +159,9 @@ PolycloneCaller::Latents::genotype_posteriors() const noexcept
 // PolycloneCaller::Latents private methods
 
 std::unique_ptr<PolycloneCaller::Caller::Latents>
-PolycloneCaller::infer_latents(const HaplotypeBlock& haplotypes, const HaplotypeLikelihoodArray& haplotype_likelihoods) const
+PolycloneCaller::infer_latents(const HaplotypeBlock& haplotypes, 
+                               const HaplotypeLikelihoodArray& haplotype_likelihoods,
+                               OptionalThreadPool workers) const
 {
     const auto indexed_haplotypes = index(haplotypes);
     auto haploid_genotypes = generate_all_genotypes(indexed_haplotypes, 1);
@@ -173,7 +175,7 @@ PolycloneCaller::infer_latents(const HaplotypeBlock& haplotypes, const Haplotype
     GenotypeBlock polyploid_genotypes {};
     model::SubcloneModel::InferredLatents sublonal_inferences;
     fit_sublone_model(haplotypes, indexed_haplotypes, haplotype_likelihoods, *genotype_prior_model, haploid_inferences,
-                      polyploid_genotypes, sublonal_inferences);
+                      polyploid_genotypes, sublonal_inferences, workers);
     if (debug_log_) stream(*debug_log_) << "There are " << polyploid_genotypes.size() << " candidate polyploid genotypes";
     using std::move;
     return std::make_unique<Latents>(move(haploid_genotypes), move(polyploid_genotypes),
@@ -182,7 +184,7 @@ PolycloneCaller::infer_latents(const HaplotypeBlock& haplotypes, const Haplotype
 }
 
 std::vector<std::unique_ptr<octopus::VariantCall>>
-PolycloneCaller::call_variants(const std::vector<Variant>& candidates, const Caller::Latents& latents) const
+PolycloneCaller::call_variants(const std::vector<Variant>& candidates, const Caller::Latents& latents, OptionalThreadPool workers) const
 {
     return call_variants(candidates, dynamic_cast<const Latents&>(latents));
 }
@@ -569,12 +571,12 @@ PolycloneCaller::fit_sublone_model(const HaplotypeBlock& haplotypes,
                                    GenotypePriorModel& genotype_prior_model,
                                    const model::IndividualModel::InferredLatents& haploid_latents,
                                    GenotypeBlock& prev_genotypes,
-                                   model::SubcloneModel::InferredLatents& sublonal_inferences) const
+                                   model::SubcloneModel::InferredLatents& sublonal_inferences,
+                                   OptionalThreadPool workers) const
 {
     model::SubcloneModel::AlgorithmParameters model_params {};
     if (parameters_.max_vb_seeds) model_params.max_seeds = *parameters_.max_vb_seeds;
     model_params.target_max_memory = this->target_max_memory();
-    model_params.execution_policy = this->exucution_policy();
     GenotypeBlock curr_genotypes {};
     const auto haploid_log_prior = std::log(parameters_.clonality_prior(1));
     const auto max_clones = std::min(parameters_.max_clones, static_cast<unsigned>(haplotypes.size()));
@@ -610,7 +612,7 @@ PolycloneCaller::fit_sublone_model(const HaplotypeBlock& haplotypes,
         } else {
             hints = propose_subclone_model_hints(curr_genotypes, prev_genotypes, sublonal_inferences, indexed_haplotypes, haploid_latents, model_params.max_seeds / 2);
         }
-        auto inferences = model.evaluate(curr_genotypes, haplotype_likelihoods, std::move(hints));
+        auto inferences = model.evaluate(curr_genotypes, haplotype_likelihoods, std::move(hints), workers);
         if (debug_log_) {
             stream(*debug_log_) << "Evidence for model with clonality " << clonality << " is " << inferences.approx_log_evidence;
             const auto max_genotype_posterior_itr = std::max_element(std::cbegin(inferences.weighted_genotype_posteriors), std::cend(inferences.weighted_genotype_posteriors));

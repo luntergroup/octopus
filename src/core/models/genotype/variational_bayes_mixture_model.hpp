@@ -22,6 +22,7 @@
 #include "utils/maths.hpp"
 #include "utils/memory_footprint.hpp"
 #include "utils/parallel_transform.hpp"
+#include "utils/thread_pool.hpp"
 
 
 /**
@@ -40,7 +41,6 @@ struct VariationalBayesParameters
     double epsilon = 0.05;
     unsigned max_iterations = 1000;
     bool save_memory = false;
-    bool parallel_execution = false;
 };
 
 using ProbabilityVector    = std::vector<double>;
@@ -516,7 +516,8 @@ run_variational_bayes(const VBAlphaVector<K>& prior_alphas,
                       const LogProbabilityVector& genotype_log_priors,
                       const VBReadLikelihoodMatrix<K>& log_likelihoods,
                       const VariationalBayesParameters& params,
-                      std::vector<LogProbabilityVector>&& seeds)
+                      std::vector<LogProbabilityVector>&& seeds,
+                      boost::optional<ThreadPool&> workers = boost::none)
 {
     std::vector<VBLatents<K>> result {};
     result.reserve(seeds.size());
@@ -524,18 +525,18 @@ run_variational_bayes(const VBAlphaVector<K>& prior_alphas,
         const auto inverted_log_likelihoods = invert(log_likelihoods);
         const auto func = [&] (auto&& seed) { return detail::run_variational_bayes(prior_alphas, genotype_log_priors, log_likelihoods,
                                                                                    inverted_log_likelihoods, std::move(seed), params); };
-        if (params.parallel_execution) {
-            parallel_transform(std::make_move_iterator(std::begin(seeds)), std::make_move_iterator(std::end(seeds)),
-                               std::back_inserter(result), func);
+        if (workers) {
+            transform(std::make_move_iterator(std::begin(seeds)), std::make_move_iterator(std::end(seeds)),
+                      std::back_inserter(result), func, *workers);
         } else {
             for (auto& seed : seeds) result.push_back(func(std::move(seed)));
         }
     } else {
         const auto func = [&] (auto&& seed) { return detail::run_variational_bayes(prior_alphas, genotype_log_priors, log_likelihoods,
                                                                                    std::move(seed), params); };
-        if (params.parallel_execution) {
-            parallel_transform(std::make_move_iterator(std::begin(seeds)), std::make_move_iterator(std::end(seeds)),
-                               std::back_inserter(result), func);
+        if (workers) {
+            transform(std::make_move_iterator(std::begin(seeds)), std::make_move_iterator(std::end(seeds)),
+                      std::back_inserter(result), func, *workers);
         } else {
             for (auto& seed : seeds) result.push_back(func(std::move(seed)));
         }
@@ -628,13 +629,14 @@ std::vector<double>
 calculate_log_evidences(const std::vector<VBLatents<K>>& latents,
                         const VBAlphaVector<K>& prior_alphas,
                         const LogProbabilityVector& genotype_log_priors,
-                        const VBReadLikelihoodMatrix<K>& log_likelihoods)
+                        const VBReadLikelihoodMatrix<K>& log_likelihoods,
+                        boost::optional<ThreadPool&> workers = boost::none)
 {
     std::vector<double> result(latents.size());
-    std::transform(std::cbegin(latents), std::cend(latents), std::begin(result),
-                   [&] (const auto& seed_latents) {
-                       return calculate_evidence_lower_bound(prior_alphas, genotype_log_priors, log_likelihoods, seed_latents);
-                   });
+    transform(std::cbegin(latents), std::cend(latents), std::begin(result),
+              [&] (const auto& seed_latents) { 
+                  return calculate_evidence_lower_bound(prior_alphas, genotype_log_priors, log_likelihoods, seed_latents);
+              }, workers);
     return result;
 }
 
@@ -654,11 +656,12 @@ run_variational_bayes(const VBAlphaVector<K>& prior_alphas,
                       const LogProbabilityVector& genotype_log_priors,
                       const VBReadLikelihoodMatrix<K>& log_likelihoods,
                       const VariationalBayesParameters& params,
-                      std::vector<LogProbabilityVector> seeds)
+                      std::vector<LogProbabilityVector> seeds,
+                      boost::optional<ThreadPool&> workers = boost::none)
 {
     assert(!seeds.empty());
-    auto latents = detail::run_variational_bayes(prior_alphas, genotype_log_priors, log_likelihoods, params, std::move(seeds));
-    const auto log_evidences = detail::calculate_log_evidences(latents, prior_alphas, genotype_log_priors, log_likelihoods);
+    auto latents = detail::run_variational_bayes(prior_alphas, genotype_log_priors, log_likelihoods, params, std::move(seeds), workers);
+    const auto log_evidences = detail::calculate_log_evidences(latents, prior_alphas, genotype_log_priors, log_likelihoods, workers);
     auto weighted_genotype_posteriors = detail::compute_evidence_weighted_genotype_posteriors(latents, log_evidences);
     auto max_evidence_idx = detail::max_element_index(log_evidences);
     detail::check_normalisation(latents[max_evidence_idx]);

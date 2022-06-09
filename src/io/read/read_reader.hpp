@@ -111,6 +111,11 @@ public:
                               const GenomicRegion& region) const;
     SampleReadMap fetch_reads(const std::vector<SampleName>& samples,
                               const GenomicRegion& region) const;
+    SampleReadMap fetch_reads(const std::vector<GenomicRegion>& regions) const;
+    ReadContainer fetch_reads(const SampleName& sample,
+                              const std::vector<GenomicRegion>& regions) const;
+    SampleReadMap fetch_reads(const std::vector<SampleName>& samples,
+                              const std::vector<GenomicRegion>& regions) const;
     
 private:
     Path file_path_;

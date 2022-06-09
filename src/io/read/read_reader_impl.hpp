@@ -81,6 +81,11 @@ public:
                                       const GenomicRegion& region) const = 0;
     virtual SampleReadMap fetch_reads(const std::vector<SampleName>& samples,
                                       const GenomicRegion& region) const = 0;
+    virtual SampleReadMap fetch_reads(const std::vector<GenomicRegion>& regions) const = 0;
+    virtual ReadContainer fetch_reads(const SampleName& sample,
+                                      const std::vector<GenomicRegion>& regions) const = 0;
+    virtual SampleReadMap fetch_reads(const std::vector<SampleName>& samples,
+                                      const std::vector<GenomicRegion>& regions) const = 0;
     
     virtual std::vector<GenomicRegion::ContigName> reference_contigs() const = 0;
     virtual GenomicRegion::Size reference_size(const GenomicRegion::ContigName& contig) const = 0;

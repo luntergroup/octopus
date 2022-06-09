@@ -59,6 +59,7 @@
 #include "readpipe/buffered_read_pipe.hpp"
 #include "core/tools/bam_realigner.hpp"
 #include "core/tools/indel_profiler.hpp"
+#include "utils/thread_pool.hpp"
 
 #include "timers.hpp" // BENCHMARK
 
@@ -862,15 +863,15 @@ bool is_ready(const std::future<R>& f)
     return f.valid() && f.wait_for(std::chrono::seconds(0)) == std::future_status::ready;
 }
 
-auto run(Task task, ContigCallingComponents components, CallerSyncPacket& sync)
+auto run(Task task, ContigCallingComponents components, CallerSyncPacket& sync, ThreadPool& workers)
 {
     static auto debug_log = get_debug_log();
     if (debug_log) stream(*debug_log) << "Spawning task " << task;
-    return std::async(std::launch::async, [task = std::move(task), components = std::move(components), &sync] () {
+    return workers.push([task = std::move(task), components = std::move(components), &sync, &workers] () {
         try {
             CompletedTask result {task};
             result.runtime.start = std::chrono::system_clock::now();
-            result.calls = components.caller->call(task.region, components.progress_meter);
+            result.calls = components.caller->call(task.region, components.progress_meter, workers);
             result.runtime.end = std::chrono::system_clock::now();
             std::unique_lock<std::mutex> lock {sync.mutex};
             ++sync.num_finished;
@@ -1219,6 +1220,7 @@ void run_octopus_multi_threaded(GenomeCallingComponents& components)
     static auto debug_log = get_debug_log();
     
     const auto num_task_threads = calculate_num_task_threads(components);
+    ThreadPool workers {num_task_threads};
     
     TaskMap pending_tasks {components.contigs()};
     TaskMakerSyncPacket task_maker_sync {};
@@ -1300,7 +1302,7 @@ void run_octopus_multi_threaded(GenomeCallingComponents& components)
                 if (task_maker_sync.num_tasks > 0) {
                     pending_task_lock.unlock(); // As pop will need to lock the mutex too == deadlock
                     auto task = pop(pending_tasks, task_maker_sync);
-                    future = run(task, calling_components.at(contig_name(task))(), caller_sync);
+                    future = run(task, calling_components.at(contig_name(task))(), caller_sync, workers);
                     running_tasks.at(contig_name(task)).push(std::move(task));
                 } else {
                     pending_task_lock.unlock();

@@ -6,10 +6,13 @@
 
 #include <vector>
 
+#include <boost/optional.hpp>
+
 #include "basics/aligned_read.hpp"
 #include "basics/cigar_string.hpp"
 #include "core/types/haplotype.hpp"
 #include "core/models/haplotype_likelihood_model.hpp"
+#include "utils/thread_pool.hpp"
 
 namespace octopus {
 
@@ -18,35 +21,42 @@ Haplotype expand_for_realignment(const Haplotype& haplotype, const std::vector<A
 Haplotype expand_for_realignment(const Haplotype& haplotype, const std::vector<AlignedRead>& reads);
 
 void realign(std::vector<AlignedRead>& reads, const Haplotype& haplotype,
-             HaplotypeLikelihoodModel model);
-void realign(std::vector<AlignedRead>& reads, const Haplotype& haplotype);
-
+             HaplotypeLikelihoodModel model, boost::optional<ThreadPool&> workers = boost::none);
+void realign(std::vector<AlignedRead>& reads, const Haplotype& haplotype,
+             boost::optional<ThreadPool&> workers = boost::none);
 void realign(std::vector<AlignedRead>& reads, const Haplotype& haplotype,
              HaplotypeLikelihoodModel model,
-             std::vector<HaplotypeLikelihoodModel::LogProbability>& log_likelihoods);
+             std::vector<HaplotypeLikelihoodModel::LogProbability>& log_likelihoods,
+             boost::optional<ThreadPool&> workers = boost::none);
 
 std::vector<AlignedRead>
-realign(const std::vector<AlignedRead>& reads, const Haplotype& haplotype, HaplotypeLikelihoodModel model);
+realign(const std::vector<AlignedRead>& reads, const Haplotype& haplotype, HaplotypeLikelihoodModel model,
+        boost::optional<ThreadPool&> workers = boost::none);
 std::vector<AlignedRead>
-realign(const std::vector<AlignedRead>& reads, const Haplotype& haplotype);
+realign(const std::vector<AlignedRead>& reads, const Haplotype& haplotype, boost::optional<ThreadPool&> workers = boost::none);
 
 std::vector<AlignedRead>
 realign(const std::vector<AlignedRead>& reads, const Haplotype& haplotype,
         HaplotypeLikelihoodModel model,
-        std::vector<HaplotypeLikelihoodModel::LogProbability>& log_likelihoods);
+        std::vector<HaplotypeLikelihoodModel::LogProbability>& log_likelihoods,
+        boost::optional<ThreadPool&> workers = boost::none);
 
-void safe_realign(std::vector<AlignedRead>& reads, const Haplotype& haplotype, HaplotypeLikelihoodModel model);
-void safe_realign(std::vector<AlignedRead>& reads, const Haplotype& haplotype);
+void safe_realign(std::vector<AlignedRead>& reads, const Haplotype& haplotype,
+                  HaplotypeLikelihoodModel model, 
+                  boost::optional<ThreadPool&> workers = boost::none);
+void safe_realign(std::vector<AlignedRead>& reads, const Haplotype& haplotype, boost::optional<ThreadPool&> workers = boost::none);
 void safe_realign(std::vector<AlignedRead>& reads, const Haplotype& haplotype, HaplotypeLikelihoodModel model,
-                  std::vector<HaplotypeLikelihoodModel::LogProbability>& log_likelihoods);
+                  std::vector<HaplotypeLikelihoodModel::LogProbability>& log_likelihoods,
+                  boost::optional<ThreadPool&> workers = boost::none);
 
 std::vector<AlignedRead>
-safe_realign(const std::vector<AlignedRead>& reads, const Haplotype& haplotype, HaplotypeLikelihoodModel model);
+safe_realign(const std::vector<AlignedRead>& reads, const Haplotype& haplotype, HaplotypeLikelihoodModel model,
+             boost::optional<ThreadPool&> workers = boost::none);
 std::vector<AlignedRead>
-safe_realign(const std::vector<AlignedRead>& reads, const Haplotype& haplotype);
+safe_realign(const std::vector<AlignedRead>& reads, const Haplotype& haplotype, boost::optional<ThreadPool&> workers = boost::none);
 
 CigarString rebase(const CigarString& read_to_haplotype, const CigarString& haplotype_to_reference);
-void rebase(std::vector<AlignedRead>& reads, const Haplotype& haplotype);
+void rebase(std::vector<AlignedRead>& reads, const Haplotype& haplotype, boost::optional<ThreadPool&> workers = boost::none);
 
 void realign_to_reference(std::vector<AlignedRead>& reads, const Haplotype& haplotype, HaplotypeLikelihoodModel model);
 void realign_to_reference(std::vector<AlignedRead>& reads, const Haplotype& haplotype);

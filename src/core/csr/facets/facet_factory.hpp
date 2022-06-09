@@ -65,6 +65,8 @@ private:
         boost::optional<ReadMap> reads;
         boost::optional<GenotypeMap> genotypes;
     };
+
+    using OptionalThreadPool = boost::optional<ThreadPool&>;
     
     VcfHeader input_header_;
     std::vector<std::string> samples_;
@@ -74,14 +76,13 @@ private:
     boost::optional<octopus::Pedigree> pedigree_;
     boost::optional<HaplotypeLikelihoodModel> likelihood_model_;
     
-    std::unordered_map<std::string, std::function<FacetWrapper(const BlockData& data)>> facet_makers_;
+    std::unordered_map<std::string, std::function<FacetWrapper(const BlockData&, OptionalThreadPool)>> facet_makers_;
     
     void setup_facet_makers();
     void check_requirements(const std::string& name) const;
     void check_requirements(const std::vector<std::string>& names) const;
-    FacetWrapper make(const std::string& name, const BlockData& block) const;
-    FacetBlock make(const std::vector<std::string>& names, const BlockData& block) const;
-    FacetBlock make(const std::vector<std::string>& names, const BlockData& block, ThreadPool& workers) const;
+    FacetWrapper make(const std::string& name, const BlockData& block, OptionalThreadPool workers = boost::none) const;
+    FacetBlock make(const std::vector<std::string>& names, const BlockData& block, OptionalThreadPool workers = boost::none) const;
     BlockData make_block_data(const std::vector<std::string>& names, const CallBlock& block) const;
 };
 

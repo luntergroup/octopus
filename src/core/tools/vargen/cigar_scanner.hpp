@@ -96,7 +96,7 @@ private:
     void do_add_reads(const SampleName& sample, ReadFlatSetIterator first, ReadFlatSetIterator last) override;
     void do_add_reads(const SampleName& sample, TemplateVectorIterator first, TemplateVectorIterator last) override;
     void do_add_reads(const SampleName& sample, TemplateFlatSetIterator first, TemplateFlatSetIterator last) override;
-    std::vector<Variant> do_generate(const RegionSet& regions) const override;
+    std::vector<Variant> do_generate(const RegionSet& regions, OptionalThreadPool workers) const override;
     void do_clear() noexcept override;
     std::string name() const override;
     

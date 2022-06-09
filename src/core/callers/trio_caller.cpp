@@ -369,7 +369,8 @@ void TrioCaller::Latents::set_haplotype_posteriors_unique_genotypes()
 
 std::unique_ptr<Caller::Latents>
 TrioCaller::infer_latents(const HaplotypeBlock& haplotypes,
-                          const HaplotypeLikelihoodArray& haplotype_likelihoods) const
+                          const HaplotypeLikelihoodArray& haplotype_likelihoods,
+                          OptionalThreadPool workers) const
 {
     const auto indexed_haplotypes = index(haplotypes);
     if (parameters_.child_ploidy == 0) {
@@ -508,7 +509,7 @@ TrioCaller::calculate_model_posterior(const HaplotypeBlock& haplotypes,
 }
 
 std::vector<std::unique_ptr<VariantCall>>
-TrioCaller::call_variants(const std::vector<Variant>& candidates, const Caller::Latents& latents) const
+TrioCaller::call_variants(const std::vector<Variant>& candidates, const Caller::Latents& latents, OptionalThreadPool workers) const
 {
     return call_variants(candidates, dynamic_cast<const Latents&>(latents));
 }

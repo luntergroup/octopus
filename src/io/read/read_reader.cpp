@@ -283,6 +283,25 @@ ReadReader::SampleReadMap ReadReader::fetch_reads(const std::vector<SampleName>&
     return impl_->fetch_reads(samples, region);
 }
 
+ReadReader::SampleReadMap ReadReader::fetch_reads(const std::vector<GenomicRegion>& regions) const
+{
+    std::lock_guard<std::mutex> lock {mutex_};
+    return impl_->fetch_reads(regions);
+}
+
+ReadReader::ReadContainer ReadReader::fetch_reads(const SampleName& sample, const std::vector<GenomicRegion>& regions) const
+{
+    std::lock_guard<std::mutex> lock {mutex_};
+    return impl_->fetch_reads(sample, regions);
+}
+
+ReadReader::SampleReadMap ReadReader::fetch_reads(const std::vector<SampleName>& samples,
+                                                  const std::vector<GenomicRegion>& regions) const
+{
+    std::lock_guard<std::mutex> lock {mutex_};
+    return impl_->fetch_reads(samples, regions);
+}
+
 bool operator==(const ReadReader& lhs, const ReadReader& rhs)
 {
     return lhs.path() == rhs.path();

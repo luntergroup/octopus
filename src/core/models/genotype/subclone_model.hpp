@@ -18,6 +18,7 @@
 #include "core/models/haplotype_likelihood_array.hpp"
 #include "containers/mappable_block.hpp"
 #include "exceptions/unimplemented_feature_error.hpp"
+#include "utils/thread_pool.hpp"
 #include "variational_bayes_mixture_model.hpp"
 #include "genotype_prior_model.hpp"
 #include "cancer_genotype_prior_model.hpp"
@@ -29,14 +30,12 @@ class SubcloneModelBase
 {
 public:
     constexpr static unsigned max_ploidy = 100;
-    
     struct AlgorithmParameters
     {
         unsigned max_iterations = 1000;
         double epsilon          = 0.05;
         unsigned max_seeds      = 12;
         boost::optional<MemoryFootprint> target_max_memory = boost::none;
-        ExecutionPolicy execution_policy = ExecutionPolicy::seq;
     };
     
     struct Priors
@@ -67,6 +66,8 @@ public:
         typename Latents::ProbabilityVector weighted_genotype_posteriors;
         double approx_log_evidence;
     };
+
+    using OptionalThreadPool = boost::optional<ThreadPool&>;
     
     SubcloneModelBase() = delete;
     
@@ -89,7 +90,8 @@ public:
     InferredLatents
     evaluate(const std::vector<GenotypeType>& genotypes,
              const HaplotypeLikelihoodArray& haplotype_likelihoods,
-             std::vector<typename Latents::LogProbabilityVector> hints = {}) const;
+             std::vector<typename Latents::LogProbabilityVector> hints = {},
+             OptionalThreadPool = boost::none) const;
     
 private:
     std::vector<SampleName> samples_;
@@ -286,7 +288,8 @@ run_variational_bayes_helper(const std::vector<SampleName>& samples,
                              const LogProbabilityVector& genotype_log_priors,
                              const HaplotypeLikelihoodArray& haplotype_log_likelihoods,
                              const typename SubcloneModelBase<G, GPM>::AlgorithmParameters& params,
-                             std::vector<LogProbabilityVector>&& seeds)
+                             std::vector<LogProbabilityVector>&& seeds,
+                             typename SubcloneModelBase<G, GPM>::OptionalThreadPool workers)
 {
     VariationalBayesParameters vb_params {params.epsilon, params.max_iterations};
     if (params.target_max_memory) {
@@ -295,12 +298,9 @@ run_variational_bayes_helper(const std::vector<SampleName>& samples,
             vb_params.save_memory = true;
         }
     }
-    if (params.execution_policy == ExecutionPolicy::par) {
-        vb_params.parallel_execution = true;
-    }
     const auto vb_prior_alphas = flatten<K, G, GPM>(prior_alphas, samples);
     const auto log_likelihoods = flatten<K>(genotypes, samples, haplotype_log_likelihoods);
-    auto vb_results = octopus::model::run_variational_bayes(vb_prior_alphas, genotype_log_priors, log_likelihoods, vb_params, std::move(seeds));
+    auto vb_results = octopus::model::run_variational_bayes(vb_prior_alphas, genotype_log_priors, log_likelihoods, vb_params, std::move(seeds), workers);
     return expand<K, G, GPM>(vb_results, samples, std::move(genotype_log_priors));
 }
 
@@ -314,6 +314,7 @@ run_variational_bayes_helper(const std::vector<SampleName>& samples,
                              const HaplotypeLikelihoodArray& haplotype_log_likelihoods,
                              const typename SubcloneModelBase<G, GPM>::AlgorithmParameters& params,
                              std::vector<LogProbabilityVector>&& seeds,
+                             typename SubcloneModelBase<G, GPM>::OptionalThreadPool workers,
                              std::index_sequence<Is...>)
 {
     constexpr auto max_ploidy = std::index_sequence<Is...>::size();
@@ -324,7 +325,7 @@ run_variational_bayes_helper(const std::vector<SampleName>& samples,
     typename SubcloneModelBase<G, GPM>::InferredLatents result;
     int unused[] = {(ploidy == Is ?
                     (result = run_variational_bayes_helper<Is, G, GPM>(samples, genotypes, prior_alphas, std::move(genotype_log_priors),
-                                                                       haplotype_log_likelihoods, params, std::move(seeds))
+                                                                       haplotype_log_likelihoods, params, std::move(seeds), workers)
                                                                        , 0) : 0)...};
     (void) unused;
     return result;
@@ -345,14 +346,15 @@ run_variational_bayes(const std::vector<SampleName>& samples,
                       const HaplotypeLikelihoodArray& haplotype_log_likelihoods,
                       const typename SubcloneModelBase<G, GPM>::AlgorithmParameters& params,
                       std::vector<typename SubcloneModelBase<G, GPM>::Latents::LogProbabilityVector> hints,
-                      const MappableBlock<Haplotype>* haplotypes)
+                      const MappableBlock<Haplotype>* haplotypes,
+                      typename SubcloneModelBase<G, GPM>::OptionalThreadPool workers)
 {
     constexpr auto max_ploidy = SubcloneModelBase<G, GPM>::max_ploidy;
     auto genotype_log_priors = evaluate(genotypes, priors.genotype_prior_model);
     auto seeds = generate_seeds(samples, genotypes, genotype_log_priors, haplotype_log_likelihoods, priors, params.max_seeds, std::move(hints), haplotypes);
     return run_variational_bayes_helper<G, GPM>(samples, genotypes, priors.alphas, std::move(genotype_log_priors),
-                                                    haplotype_log_likelihoods, params, std::move(seeds),
-                                                    make_index_range<1, max_ploidy + 1> {});
+                                                haplotype_log_likelihoods, params, std::move(seeds), workers,
+                                                make_index_range<1, max_ploidy + 1> {});
 }
 
 } // namespace detail
@@ -361,10 +363,11 @@ template <typename G, typename GPM>
 typename SubcloneModelBase<G, GPM>::InferredLatents
 SubcloneModelBase<G, GPM>::evaluate(const std::vector<G>& genotypes,
                                     const HaplotypeLikelihoodArray& haplotype_likelihoods,
-                                    std::vector<typename Latents::LogProbabilityVector> hints) const
+                                    std::vector<typename Latents::LogProbabilityVector> hints,
+                                    OptionalThreadPool workers) const
 {
     assert(!genotypes.empty());
-    return detail::run_variational_bayes<G, GPM>(samples_, genotypes, priors_, haplotype_likelihoods, parameters_, std::move(hints), haplotypes_);
+    return detail::run_variational_bayes<G, GPM>(samples_, genotypes, priors_, haplotype_likelihoods, parameters_, std::move(hints), haplotypes_, workers);
 }
 
 } // namespace model

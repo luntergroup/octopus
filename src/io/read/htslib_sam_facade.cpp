@@ -696,6 +696,109 @@ HtslibSamFacade::SampleReadMap HtslibSamFacade::fetch_reads(const std::vector<Sa
     return result;
 }
 
+auto to_hts_regions(const std::vector<GenomicRegion>& regions)
+{
+    std::vector<hts_pair_pos_t> result(regions.size());
+    std::transform(std::cbegin(regions), std::cend(regions), std::begin(result),
+                   [] (const auto& region) -> hts_pair_pos_t { return {
+                           static_cast<hts_pos_t>(region.begin()), 
+                           static_cast<hts_pos_t>(region.end())}; });
+    return result;
+}
+
+HtslibSamFacade::SampleReadMap HtslibSamFacade::fetch_reads(const std::vector<GenomicRegion>& regions) const
+{
+    if (regions.size() == 1) {
+        return fetch_reads(regions.front());
+    }
+    SampleReadMap result {samples_.size()};
+    if (samples_.size() == 1) {
+        return {{samples_.front(), fetch_reads(samples_.front(), regions)}};
+    }
+    auto hts_regions = to_hts_regions(regions);
+    std::vector<hts_reglist_t> hts_region_list {make_hts_region_list(regions.front().contig_name(), hts_regions)};
+    HtslibIterator it {*this, hts_region_list};
+    for (const auto& sample : samples_) {
+        auto p = result.emplace(std::piecewise_construct, std::forward_as_tuple(sample), std::forward_as_tuple());
+        try_reserve(p.first->second, defaultReserve_, defaultReserve_ / 10);
+    }
+    while (++it) {
+        try {
+            result.at(sample_names_.at(it.read_group())).emplace_back(*it);
+        } catch (InvalidBamRecord& e) {
+            // TODO: Just ignore? Could log or something.
+            //std::clog << "Warning: " << e.what() << std::endl;
+        } catch (...) {
+            throw;
+        }
+    }
+    return result;
+}
+
+HtslibSamFacade::ReadContainer HtslibSamFacade::fetch_reads(const SampleName& sample, const std::vector<GenomicRegion>& regions) const
+{
+    if (regions.size() == 1) {
+        return fetch_reads(sample, regions.front());
+    }
+    if (!contains(samples_, sample)) return {};
+    if (samples_.size() == 1) return fetch_all_reads(regions);
+    auto hts_regions = to_hts_regions(regions);
+    std::vector<hts_reglist_t> hts_region_list {make_hts_region_list(regions.front().contig_name(), hts_regions)};
+    HtslibIterator it {*this, hts_region_list};
+    ReadContainer result {};
+    try_reserve(result, defaultReserve_, defaultReserve_ / 10);
+    while (++it) {
+        if (sample_names_.at(it.read_group()) == sample) {
+            try {
+                result.emplace_back(*it);
+            } catch (InvalidBamRecord& e) {
+                // TODO
+            } catch (...) {
+                throw;
+            }
+        }
+    }
+    return result;
+}
+
+HtslibSamFacade::SampleReadMap HtslibSamFacade::fetch_reads(const std::vector<SampleName>& samples,
+                                                            const std::vector<GenomicRegion>& regions) const
+{
+    if (regions.size() == 1) {
+        return fetch_reads(samples, regions.front());
+    }
+    if (samples.size() == 1) {
+        return {{samples.front(), fetch_reads(samples.front(), regions)}};
+    }
+    if (set_equal(samples_, samples)) return fetch_reads(regions);
+    auto hts_regions = to_hts_regions(regions);
+    std::vector<hts_reglist_t> hts_region_list {make_hts_region_list(regions.front().contig_name(), hts_regions)};
+    HtslibIterator it {*this, hts_region_list};
+    SampleReadMap result {samples.size()};
+    for (const auto& sample : samples) {
+        if (contains(samples_, sample)) {
+            auto p = result.emplace(std::piecewise_construct,
+                                    std::forward_as_tuple(sample),
+                                    std::forward_as_tuple());
+            try_reserve(p.first->second, defaultReserve_, defaultReserve_ / 10);
+        }
+    }
+    if (result.empty()) return result; // no matching samples
+    while (++it) {
+        const auto& sample = sample_names_.at(it.read_group());
+        if (result.count(sample) == 1) {
+            try {
+                result.at(sample_names_.at(it.read_group())).emplace_back(*it);
+            } catch (InvalidBamRecord& e) {
+                // TODO
+            } catch (...) {
+                throw;
+            }
+        }
+    }
+    return result;
+}
+
 std::vector<GenomicRegion::ContigName> HtslibSamFacade::reference_contigs() const
 {
     std::vector<GenomicRegion::ContigName> result {};
@@ -752,6 +855,37 @@ HtslibSamFacade::ReadContainer HtslibSamFacade::fetch_all_reads(const GenomicReg
             throw;
         }
     }
+    return result;
+}
+
+HtslibSamFacade::ReadContainer HtslibSamFacade::fetch_all_reads(const std::vector<GenomicRegion>& regions) const
+{
+    auto hts_regions = to_hts_regions(regions);
+    std::vector<hts_reglist_t> hts_region_list {make_hts_region_list(regions.front().contig_name(), hts_regions)};
+    HtslibIterator it {*this, hts_region_list};
+    ReadContainer result {};
+    try_reserve(result, defaultReserve_, defaultReserve_ / 10);
+    while (++it) {
+        try {
+            result.emplace_back(*it);
+        } catch (InvalidBamRecord& e) {
+            // TODO
+        } catch (...) {
+            throw;
+        }
+    }
+    return result;
+}
+
+hts_reglist_t HtslibSamFacade::make_hts_region_list(const GenomicRegion::ContigName& contig, std::vector<hts_pair_pos_t>& regions) const
+{
+    hts_reglist_t result {};
+    result.reg = contig.c_str();
+    result.tid = hts_targets_.at(contig);
+    result.count = regions.size();
+    result.intervals = regions.data();
+    result.min_beg = regions.front().beg;
+    result.max_end = regions.back().end;
     return result;
 }
 
@@ -853,6 +987,20 @@ HtslibSamFacade::HtslibIterator::HtslibIterator(const HtslibSamFacade& hts_facad
 : hts_facade_ {hts_facade}
 , hts_iterator_ {hts_facade.is_open() ? sam_itr_querys(hts_facade_.hts_index_.get(), hts_facade_.hts_header_.get(),
                                                      contig.c_str()) : nullptr, HtsIteratorDeleter {}}
+, hts_bam1_ {bam_init1(), HtsBam1Deleter {}}
+{
+    if (hts_iterator_ == nullptr) {
+        throw std::runtime_error {"HtslibIterator: could not load iterator for " + hts_facade.file_path_.string()};
+    }
+    if (hts_bam1_ == nullptr) {
+        throw std::runtime_error {"HtslibIterator: error creating bam1 for " + hts_facade.file_path_.string()};
+    }
+}
+
+HtslibSamFacade::HtslibIterator::HtslibIterator(const HtslibSamFacade& hts_facade, std::vector<hts_reglist_t>& regions)
+: hts_facade_ {hts_facade}
+, hts_iterator_ {hts_facade.is_open() ? sam_itr_regions(hts_facade_.hts_index_.get(), hts_facade_.hts_header_.get(),
+                                                        regions.data(), regions.size()) : nullptr, HtsIteratorDeleter {}}
 , hts_bam1_ {bam_init1(), HtsBam1Deleter {}}
 {
     if (hts_iterator_ == nullptr) {

@@ -137,7 +137,8 @@ std::size_t CancerCaller::do_remove_duplicates(HaplotypeBlock& haplotypes) const
 
 std::unique_ptr<CancerCaller::Caller::Latents>
 CancerCaller::infer_latents(const HaplotypeBlock& haplotypes,
-                            const HaplotypeLikelihoodArray& haplotype_likelihoods) const
+                            const HaplotypeLikelihoodArray& haplotype_likelihoods,
+                            OptionalThreadPool workers) const
 {
     // Store any intermediate results in Latents for reuse, so the order of model evaluation matters!
     auto result = std::make_unique<Latents>(haplotypes, samples_, parameters_);
@@ -145,9 +146,9 @@ CancerCaller::infer_latents(const HaplotypeBlock& haplotypes,
     generate_germline_genotypes(*result, result->indexed_haplotypes_);
     if (debug_log_) stream(*debug_log_) << "There are " << result->germline_genotypes_.size() << " candidate germline genotypes";
     evaluate_germline_model(*result, haplotype_likelihoods);
-    evaluate_cnv_model(*result, haplotype_likelihoods);
+    evaluate_cnv_model(*result, haplotype_likelihoods, workers);
     if (haplotypes.size() > 1) {
-        fit_somatic_model(*result, haplotype_likelihoods);
+        fit_somatic_model(*result, haplotype_likelihoods, workers);
         evaluate_noise_model(*result, haplotype_likelihoods);
         set_model_posteriors(*result);
     }
@@ -169,7 +170,7 @@ void CancerCaller::set_cancer_genotype_prior_model(Latents& latents) const
     latents.cancer_genotype_prior_model_ = CancerGenotypePriorModel {*latents.germline_prior_model_, std::move(mutation_model)};
 }
 
-void CancerCaller::fit_somatic_model(Latents& latents, const HaplotypeLikelihoodArray& haplotype_likelihoods) const
+void CancerCaller::fit_somatic_model(Latents& latents, const HaplotypeLikelihoodArray& haplotype_likelihoods, OptionalThreadPool workers) const
 {
     set_cancer_genotype_prior_model(latents);
     latents.max_evidence_somatic_model_index_ = 0;
@@ -181,11 +182,10 @@ void CancerCaller::fit_somatic_model(Latents& latents, const HaplotypeLikelihood
         latents.inferred_somatic_ploidy_ = somatic_ploidy;
         generate_cancer_genotypes(latents, haplotype_likelihoods);
         if (debug_log_) stream(*debug_log_) << "There are " << latents.cancer_genotypes_.back().size() << " candidate cancer genotypes";
-        evaluate_somatic_model(latents, haplotype_likelihoods);
+        evaluate_somatic_model(latents, haplotype_likelihoods, workers);
         latents.somatic_model_posteriors_.push_back(latents.somatic_model_inferences_.back().approx_log_evidence);
         if (debug_log_) stream(*debug_log_) << "Evidence for somatic model with somatic ploidy "
                              << somatic_ploidy << " is " << latents.somatic_model_posteriors_.back();
-        
         if (somatic_ploidy > 1) {
             if (latents.somatic_model_inferences_.back().approx_log_evidence
               < latents.somatic_model_inferences_[somatic_ploidy - 2].approx_log_evidence) {
@@ -534,20 +534,19 @@ void CancerCaller::evaluate_germline_model(Latents& latents, const HaplotypeLike
     latents.germline_model_inferences_ = latents.germline_model_->evaluate(latents.germline_genotypes_, pooled_likelihoods);
 }
 
-void CancerCaller::evaluate_cnv_model(Latents& latents, const HaplotypeLikelihoodArray& haplotype_likelihoods) const
+void CancerCaller::evaluate_cnv_model(Latents& latents, const HaplotypeLikelihoodArray& haplotype_likelihoods, OptionalThreadPool workers) const
 {
     assert(!latents.germline_genotypes_.empty() && latents.germline_prior_model_);
     auto cnv_model_priors = get_cnv_model_priors(*latents.germline_prior_model_);
     CNVModel::AlgorithmParameters params {};
     if (parameters_.max_vb_seeds) params.max_seeds = *parameters_.max_vb_seeds;
     params.target_max_memory = this->target_max_memory();
-    params.execution_policy = this->exucution_policy();
     CNVModel cnv_model {samples_, cnv_model_priors, params};
     cnv_model.prime(latents.haplotypes_);
-    latents.cnv_model_inferences_ = cnv_model.evaluate(latents.germline_genotypes_,  haplotype_likelihoods);
+    latents.cnv_model_inferences_ = cnv_model.evaluate(latents.germline_genotypes_, haplotype_likelihoods, {}, workers);
 }
 
-void CancerCaller::evaluate_somatic_model(Latents& latents, const HaplotypeLikelihoodArray& haplotype_likelihoods) const
+void CancerCaller::evaluate_somatic_model(Latents& latents, const HaplotypeLikelihoodArray& haplotype_likelihoods, OptionalThreadPool workers) const
 {
     assert(latents.germline_prior_model_ && !latents.cancer_genotypes_.empty() && !latents.cancer_genotypes_.back().empty());
     assert(latents.cancer_genotype_prior_model_);
@@ -555,14 +554,13 @@ void CancerCaller::evaluate_somatic_model(Latents& latents, const HaplotypeLikel
     SomaticModel::AlgorithmParameters params {};
     if (parameters_.max_vb_seeds) params.max_seeds = *parameters_.max_vb_seeds;
     params.target_max_memory = this->target_max_memory();
-    params.execution_policy = this->exucution_policy();
     SomaticModel model {samples_, somatic_model_priors, params};
     assert(latents.cancer_genotype_prior_model_->germline_model().is_primed());
     if (!latents.cancer_genotype_prior_model_->mutation_model().is_primed()) {
         latents.cancer_genotype_prior_model_->mutation_model().prime(latents.haplotypes_);
     }
     model.prime(latents.haplotypes_);
-    latents.somatic_model_inferences_.push_back(model.evaluate(latents.cancer_genotypes_.back(), haplotype_likelihoods));
+    latents.somatic_model_inferences_.push_back(model.evaluate(latents.cancer_genotypes_.back(), haplotype_likelihoods, {}, workers));
 }
 
 auto get_high_posterior_genotypes(const MappableBlock<CancerGenotype<IndexedHaplotype<>>>& genotypes,
@@ -698,7 +696,8 @@ CancerCaller::get_normal_noise_model_priors(const GenotypePriorModel& prior_mode
 
 std::vector<std::unique_ptr<VariantCall>>
 CancerCaller::call_variants(const std::vector<Variant>& candidates,
-                                   const Caller::Latents& latents) const
+                            const Caller::Latents& latents,
+                            OptionalThreadPool workers) const
 {
     return call_variants(candidates, dynamic_cast<const Latents&>(latents));
 }
