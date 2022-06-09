@@ -173,7 +173,6 @@ namespace boost {
 
 template <typename IndexType, typename EqualityPolicy, typename IsSortedIndex>
 struct hash<octopus::IndexedHaplotype<IndexType, EqualityPolicy, IsSortedIndex>>
-        : std::unary_function<octopus::IndexedHaplotype<IndexType, EqualityPolicy, IsSortedIndex>, std::size_t>
 {
     std::size_t operator()(const octopus::IndexedHaplotype<IndexType, EqualityPolicy, IsSortedIndex>& h) const noexcept
     {
