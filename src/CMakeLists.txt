@@ -198,6 +198,7 @@ set(UTILS_SOURCES
     utils/reorder.hpp
     utils/free_memory.hpp
     utils/erase_if.hpp
+    utils/set_partition.hpp
 )
 
 set(CORE_SOURCES

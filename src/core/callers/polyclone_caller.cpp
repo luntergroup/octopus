@@ -22,10 +22,12 @@
 #include "core/types/calls/reference_call.hpp"
 #include "core/models/genotype/uniform_genotype_prior_model.hpp"
 #include "core/models/genotype/coalescent_genotype_prior_model.hpp"
+#include "core/models/mutation/somatic_mutation_model.hpp"
 #include "utils/mappable_algorithms.hpp"
 #include "utils/read_stats.hpp"
 #include "utils/concat.hpp"
 #include "utils/select_top_k.hpp"
+#include "utils/set_partition.hpp"
 #include "logging/logging.hpp"
 
 namespace octopus {
@@ -158,6 +160,18 @@ PolycloneCaller::Latents::genotype_posteriors() const noexcept
 
 // PolycloneCaller::Latents private methods
 
+namespace {
+
+auto make_sublone_model_mixture_prior_map(const SampleName& sample, const unsigned num_clones, const double alpha = 1.0)
+{
+    model::SubcloneModel::Priors::GenotypeMixturesDirichletAlphaMap result {};
+    model::SubcloneModel::Priors::GenotypeMixturesDirichletAlphas alphas(num_clones, alpha);
+    result.emplace(sample, std::move(alphas));
+    return result;
+}
+
+}
+
 std::unique_ptr<PolycloneCaller::Caller::Latents>
 PolycloneCaller::infer_latents(const HaplotypeBlock& haplotypes, 
                                const HaplotypeLikelihoodArray& haplotype_likelihoods,
@@ -177,6 +191,9 @@ PolycloneCaller::infer_latents(const HaplotypeBlock& haplotypes,
     fit_sublone_model(haplotypes, indexed_haplotypes, haplotype_likelihoods, *genotype_prior_model, haploid_inferences,
                       polyploid_genotypes, sublonal_inferences, workers);
     if (debug_log_) stream(*debug_log_) << "There are " << polyploid_genotypes.size() << " candidate polyploid genotypes";
+    if (parameters_.haplogroup_prior && sublonal_inferences.approx_log_evidence > haploid_inferences.log_evidence) {
+        fit_haplogroup_model(haplotypes, indexed_haplotypes, haplotype_likelihoods, polyploid_genotypes, *genotype_prior_model, sublonal_inferences);
+    }
     using std::move;
     return std::make_unique<Latents>(move(haploid_genotypes), move(polyploid_genotypes),
                                      move(haploid_inferences), move(sublonal_inferences),
@@ -442,14 +459,6 @@ const SampleName& PolycloneCaller::sample() const noexcept
 
 namespace {
 
-auto make_sublone_model_mixture_prior_map(const SampleName& sample, const unsigned num_clones, const double alpha = 1.0)
-{
-    model::SubcloneModel::Priors::GenotypeMixturesDirichletAlphaMap result {};
-    model::SubcloneModel::Priors::GenotypeMixturesDirichletAlphas alphas(num_clones, alpha);
-    result.emplace(sample, std::move(alphas));
-    return result;
-}
-
 template <typename T>
 T nth_greatest_value(std::vector<T> values, const std::size_t n)
 {
@@ -551,10 +560,17 @@ propose_subclone_model_hints(const GenotypeBlock& curr_genotypes,
                 }
             }
             if (i < top_prev_genotype_indices.size() - 1 && j < top_haploid_indices.size() - 1) {
-                const auto haploid_ratio = haploid_latents.posteriors.genotype_probabilities[j] / haploid_latents.posteriors.genotype_probabilities[j + 1];
-                const auto polyploid_ratio = sublonal_inferences.weighted_genotype_posteriors[i] / sublonal_inferences.weighted_genotype_posteriors[i + 1];
-                if (haploid_ratio < polyploid_ratio) {
-                    break;
+                // Do we prefer to add a new haplotype to the current base or introduce a new base?
+                const auto this_polyploid_prob = sublonal_inferences.weighted_genotype_posteriors[top_prev_genotype_indices[i]];
+                const auto next_polyploid_prob = sublonal_inferences.weighted_genotype_posteriors[top_prev_genotype_indices[i + 1]];
+                if (next_polyploid_prob > 0) {
+                    const auto polyploid_ratio = this_polyploid_prob / next_polyploid_prob;
+                    const auto this_haploid_prob = haploid_latents.posteriors.genotype_probabilities[top_haploid_indices[j]];
+                    const auto next_haploid_prob = haploid_latents.posteriors.genotype_probabilities[top_haploid_indices[j + 1]];
+                    const auto haploid_ratio = this_haploid_prob / next_haploid_prob;
+                    if (next_haploid_prob == 0 || haploid_ratio < polyploid_ratio) {
+                        break;
+                    }
                 }
             }
         }
@@ -632,6 +648,62 @@ PolycloneCaller::fit_sublone_model(const HaplotypeBlock& haplotypes,
                 <= (std::log(parameters_.clonality_prior(clonality - 1)) + sublonal_inferences.approx_log_evidence))  break;
             prev_genotypes = std::move(curr_genotypes);
             sublonal_inferences = std::move(inferences);
+        }
+    }
+}
+
+void 
+PolycloneCaller::fit_haplogroup_model(const HaplotypeBlock& haplotypes,
+                                      const IndexedHaplotypeBlock& indexed_haplotypes,
+                                      const HaplotypeLikelihoodArray& haplotype_likelihoods,
+                                      const GenotypeBlock& polyploid_genotypes,
+                                      const GenotypePriorModel& genotype_prior_model,
+                                      const model::SubcloneModel::InferredLatents& sublonal_inferences) const
+{
+    const auto called_clonality = polyploid_genotypes.front().ploidy();
+    auto max_evidence = sublonal_inferences.approx_log_evidence;
+    const std::size_t max_haplogrouped_genotype_candidates {10};
+    const auto best_polyploid_genotype_indices = select_top_k_indices(sublonal_inferences.weighted_genotype_posteriors, max_haplogrouped_genotype_candidates);
+    boost::optional<model::HaplogroupSubcloneModel::InferredLatents> called_haplogroup_latents {};
+    std::vector<PartitionedGenotype<IndexedHaplotype<>>> best_haplogrouped_genotypes {};
+    for (unsigned num_haplogroups {2}; num_haplogroups <= called_clonality; ++num_haplogroups) {
+        std::vector<PartitionedGenotype<IndexedHaplotype<>>> haplogrouped_genotypes {};
+        for (const auto& genotype_idx : best_polyploid_genotype_indices) {
+            const auto& genotype = polyploid_genotypes[genotype_idx];
+            set_partitions(called_clonality, num_haplogroups, [&genotype, &haplogrouped_genotypes] (const auto& partitions) {
+                PartitionedGenotype<IndexedHaplotype<>> g {partitions.size()};
+                for (std::size_t p {0}; p < partitions.size(); ++p) {
+                    for (const auto haplotype_idx : partitions[p]) {
+                        g.partition(p).emplace(genotype[haplotype_idx]);
+                    }
+                }
+                haplogrouped_genotypes.push_back(std::move(g));
+            });
+        }
+        if (debug_log_) stream(*debug_log_) << "Generated " << haplogrouped_genotypes.size() << " haplogrouped genotypes";
+        SomaticMutationModel mutation_model {SomaticMutationModel::Parameters {1e-6, 1e-7}};
+        mutation_model.prime(haplotypes);
+        HaplogroupGenotypePriorModel haplogroup_prior_model {genotype_prior_model, mutation_model};
+        model::HaplogroupSubcloneModel::Priors priors {haplogroup_prior_model, make_sublone_model_mixture_prior_map(sample(), called_clonality, parameters_.clone_mixture_prior_concentration)};
+        model::HaplogroupSubcloneModel model {{sample()}, priors};
+        auto haplogroup_latents = model.evaluate(haplogrouped_genotypes, haplotype_likelihoods, {});
+        if (haplogroup_latents.approx_log_evidence <= max_evidence) break;
+        called_haplogroup_latents = std::move(haplogroup_latents);
+        best_haplogrouped_genotypes = std::move(haplogrouped_genotypes);
+        max_evidence = haplogroup_latents.approx_log_evidence;
+    }
+    if (debug_log_) {
+        if (called_haplogroup_latents) {
+            const auto num_haplogroups = best_haplogrouped_genotypes.front().num_partitions();
+            stream(*debug_log_) << num_haplogroups << " haplogroups called";
+            auto top_haplogroup_indices = select_top_k_indices(called_haplogroup_latents->weighted_genotype_posteriors, 3);
+            auto ss = stream(*debug_log_);
+            ss << "Best haplogroups:\n";
+            for (const auto& idx : top_haplogroup_indices) {
+                ss << "\t"; debug::print_variant_alleles(ss, best_haplogrouped_genotypes[idx]); ss << '\n';
+            }
+        } else {
+            *debug_log_ << "One haplogroup called";
         }
     }
 }

@@ -364,6 +364,19 @@ generate_seeds(const std::vector<SampleName>& samples,
     return result;
 }
 
+std::vector<LogProbabilityVector>
+generate_seeds(const std::vector<SampleName>& samples,
+               const std::vector<PartitionedGenotype<IndexedHaplotype<>>>& genotypes,
+               const LogProbabilityVector& genotype_log_priors,
+               const HaplotypeLikelihoodArray& haplotype_log_likelihoods,
+               const HaplogroupSubcloneModel::Priors& priors,
+               std::size_t max_seeds,
+               std::vector<LogProbabilityVector> hints,
+               const MappableBlock<Haplotype>* haplotypes)
+{
+    return generate_exhaustive_seeds(genotypes.size());
+}
+
 } // namespace
 
 } // namespace model

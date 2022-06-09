@@ -45,6 +45,7 @@ public:
         boost::optional<unsigned> max_vb_seeds = boost::none; // Use default if none
         std::function<double(unsigned)> clonality_prior = [] (unsigned clonality) { return maths::geometric_pdf(clonality, 0.99); };
         double clone_mixture_prior_concentration = 1;
+        bool haplogroup_prior = true;
     };
     
     PolycloneCaller() = delete;
@@ -109,6 +110,12 @@ private:
                            GenotypeBlock& prev_genotypes,
                            model::SubcloneModel::InferredLatents& sublonal_inferences,
                            OptionalThreadPool workers) const;
+    void fit_haplogroup_model(const HaplotypeBlock& haplotypes,
+                              const IndexedHaplotypeBlock& indexed_haplotypes,
+                              const HaplotypeLikelihoodArray& haplotype_likelihoods,
+                              const GenotypeBlock& polyploid_genotypes,
+                              const GenotypePriorModel& genotype_prior_model,
+                              const model::SubcloneModel::InferredLatents& sublonal_inferences) const;
     
     std::unique_ptr<GenotypePriorModel> make_prior_model(const HaplotypeBlock& haplotypes) const;
     

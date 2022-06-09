@@ -104,8 +104,7 @@ private:
 
 using SubcloneModel = SubcloneModelBase<Genotype<IndexedHaplotype<>>, GenotypePriorModel>;
 using SomaticSubcloneModel = SubcloneModelBase<CancerGenotype<IndexedHaplotype<>>, CancerGenotypePriorModel>;
-template <std::size_t K>
-using HaplogroupSubcloneModel = SubcloneModelBase<PartitionedGenotype<IndexedHaplotype<>, K>, HaplogroupGenotypePriorModel>;
+using HaplogroupSubcloneModel = SubcloneModelBase<PartitionedGenotype<IndexedHaplotype<>>, HaplogroupGenotypePriorModel>;
 
 template <typename G, typename GPM>
 constexpr unsigned SubcloneModelBase<G, GPM>::max_ploidy;
@@ -168,6 +167,16 @@ generate_seeds(const std::vector<SampleName>& samples,
                std::vector<LogProbabilityVector> hints = {},
                const MappableBlock<Haplotype>* haplotypes = nullptr);
 
+std::vector<LogProbabilityVector>
+generate_seeds(const std::vector<SampleName>& samples,
+               const std::vector<PartitionedGenotype<IndexedHaplotype<>>>& genotypes,
+               const LogProbabilityVector& genotype_log_priors,
+               const HaplotypeLikelihoodArray& haplotype_log_likelihoods,
+               const HaplogroupSubcloneModel::Priors& priors,
+               std::size_t max_seeds,
+               std::vector<LogProbabilityVector> hints = {},
+               const MappableBlock<Haplotype>* haplotypes = nullptr);
+
 template <std::size_t K, typename G, typename GPM>
 VBAlpha<K> flatten(const typename SubcloneModelBase<G, GPM>::Priors::GenotypeMixturesDirichletAlphas& alpha)
 {
@@ -220,6 +229,21 @@ flatten(const CancerGenotype<IndexedHaplotype<>>& genotype,
     assert(genotype.ploidy() == K);
     auto itr = copy_cref<K>(genotype.germline(), sample, haplotype_likelihoods, std::begin(result));
     copy_cref<K>(genotype.somatic(), sample, haplotype_likelihoods, itr);
+    return result;
+}
+
+template <std::size_t K>
+VBGenotype<K>
+flatten(const PartitionedGenotype<IndexedHaplotype<>>& genotype,
+        const SampleName& sample,
+        const HaplotypeLikelihoodArray& haplotype_likelihoods)
+{
+    VBGenotype<K> result {};
+    assert(genotype.ploidy() == K);
+    auto itr = std::begin(result);
+    for (std::size_t n {0}; n < genotype.num_partitions(); ++n) {
+        itr = copy_cref<K>(genotype.partition(n), sample, haplotype_likelihoods, itr);
+    }
     return result;
 }
 

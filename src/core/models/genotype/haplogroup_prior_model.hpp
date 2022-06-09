@@ -51,8 +51,7 @@ public:
     SomaticMutationModel& mutation_model() noexcept;
     const SomaticMutationModel& mutation_model() const noexcept;
     
-    template <std::size_t K>
-    LogProbability evaluate(const PartitionedGenotype<IndexedHaplotype<>, K>& genotype) const;
+    LogProbability evaluate(const PartitionedGenotype<IndexedHaplotype<>>& genotype) const;
 
 private:
     std::reference_wrapper<const GenotypePriorModel> germline_model_;
@@ -63,26 +62,31 @@ private:
     HaplogroupPhylogeny find_map_phylogeny(const Genotype<IndexedHaplotype<>>& genotype) const;
 };
 
-template <std::size_t K>
-HaplogroupGenotypePriorModel::LogProbability 
-HaplogroupGenotypePriorModel::evaluate(const PartitionedGenotype<IndexedHaplotype<>, K>& genotype) const
+// non-member methods
+
+template <typename Container1, typename Container2>
+Container2&
+evaluate(const Container1& genotypes, const HaplogroupGenotypePriorModel& model, Container2& result,
+         const bool normalise = false, const bool add = false)
 {
-    LogProbability result {};
-    Genotype<IndexedHaplotype<>> roots {K};
-    for (std::size_t k {0}; k < K; ++k) {
-        // Approximate full probability with most probable - a priori - phylogeny.
-        // This works because we're assuming that the likelihood is independent of the
-        // sub-phylogeny.
-        const auto phylogeny = find_map_phylogeny(genotype[k]);
-        for (const auto& haplotype : genotype.partition(k)) {
-            if (haplotype == phylogeny.founder().id) {
-                roots.emplace(haplotype);
-            } else {
-                result += mutation_model().evaluate(phylogeny.ancestor(haplotype).id, haplotype);
-            }
-        }
+    if (add) {
+        assert(result.size() == genotypes.size());
+        std::transform(std::cbegin(genotypes), std::cend(genotypes), std::cbegin(result), std::begin(result),
+                       [&] (const auto& genotype, auto curr) { return curr + model.evaluate(genotype); });
+    } else {
+        result.resize(genotypes.size());
+        std::transform(std::cbegin(genotypes), std::cend(genotypes), std::begin(result),
+                       [&] (const auto& genotype) { return model.evaluate(genotype); });
     }
-    result += germline_model().evaluate(roots);
+    if (normalise) maths::normalise_logs(result);
+    return result;
+}
+
+template <typename Container>
+auto evaluate(const Container& genotypes, const HaplogroupGenotypePriorModel& model, const bool normalise = false)
+{
+    std::vector<HaplogroupGenotypePriorModel::LogProbability> result(genotypes.size());
+    evaluate(genotypes, model, result, normalise, false);
     return result;
 }
 
