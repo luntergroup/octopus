@@ -434,7 +434,7 @@ template <> struct hash<reference_wrapper<const octopus::Haplotype>>
 
 namespace boost {
 
-template <> struct hash<octopus::Haplotype> : std::unary_function<octopus::Haplotype, std::size_t>
+template <> struct hash<octopus::Haplotype>
 {
     std::size_t operator()(const octopus::Haplotype& h) const
     {

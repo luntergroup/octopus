@@ -378,7 +378,7 @@ template <> struct hash<reference_wrapper<const octopus::AlignedRead>>
 
 namespace boost {
 
-template <> struct hash<octopus::AlignedRead> : std::unary_function<octopus::AlignedRead, std::size_t>
+template <> struct hash<octopus::AlignedRead>
 {
     std::size_t operator()(const octopus::AlignedRead& read) const
     {
