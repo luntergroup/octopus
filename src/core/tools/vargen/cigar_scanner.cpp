@@ -640,7 +640,7 @@ bool is_good_somatic(const Variant& variant, const unsigned depth, const unsigne
     const auto raw_vaf = static_cast<double>(support) / depth;
     if (support > 10 && strand_bias > 0.99) {
         if (only_observed_on_one_strand(strand_depths)) return false;
-        if (strand_bias > 0.99999999 && raw_vaf < 0.9) return false;
+        if (strand_bias > 0.99999999 && raw_vaf < 0.5) return false;
     }
     if (is_snv(variant)) {
         if (is_likely_runthrough_artifact(strand_depths, observed_qualities)) return false;
