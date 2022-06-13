@@ -557,7 +557,7 @@ OptionMap parse_options(const int argc, const char** argv)
      "Use independent genotype priors for joint calling")
     
     ("model-posterior",
-     po::value<ModelPosteriorPolicy>()->default_value(ModelPosteriorPolicy::special),
+     po::value<ModelPosteriorPolicy>()->default_value(ModelPosteriorPolicy::all),
      "Policy for calculating model posteriors for variant calls [ALL, OFF, SPECIAL]")
     
     ("disable-inactive-flank-scoring",

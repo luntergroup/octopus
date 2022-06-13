@@ -102,7 +102,7 @@ struct hash<octopus::SharedHaplotype>
 namespace boost {
 
 template <>
-struct hash<octopus::SharedHaplotype> : std::unary_function<octopus::SharedHaplotype, std::size_t>
+struct hash<octopus::SharedHaplotype>
 {
     std::size_t operator()(const octopus::SharedHaplotype& h) const
     {

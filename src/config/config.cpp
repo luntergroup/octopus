@@ -54,9 +54,9 @@ const VersionNumber Version {VERSION_MAJOR,
 
 static auto get_simd_extension()
 {
-    #if defined(__AVX2__)
+    #if defined(__AVX512F__) && defined(__AVX512BW__)
         return SystemInfo::SIMDExtension::avx512;
-    #elif defined(__AVX512F__) && defined(__AVX512BW__)
+    #elif defined(__AVX2__)
         return SystemInfo::SIMDExtension::avx2;
     #elif defined(__SSE2__)
         return SystemInfo::SIMDExtension::sse2;
