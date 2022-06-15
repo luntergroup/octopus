@@ -1073,10 +1073,11 @@ auto get_default_somatic_inclusion_predicate(const OptionMap& options, boost::op
 {
     const auto min_credible_vaf = options.at("min-credible-somatic-frequency").as<float>();
     const auto min_credible_vaf_probability = get_min_credible_vaf_probability(options);
+    const auto min_bq = static_cast<AlignedRead::BaseQuality>(as_unsigned("min-pileup-base-quality", options));
     if (normal) {
-        return coretools::UnknownCopyNumberInclusionPredicate {*normal, min_credible_vaf, min_credible_vaf_probability};
+        return coretools::UnknownCopyNumberInclusionPredicate {*normal, min_credible_vaf, min_credible_vaf_probability, min_bq};
     } else {
-        return coretools::UnknownCopyNumberInclusionPredicate {min_credible_vaf, min_credible_vaf_probability};
+        return coretools::UnknownCopyNumberInclusionPredicate {min_credible_vaf, min_credible_vaf_probability, min_bq};
     }
 }
 
@@ -1089,7 +1090,8 @@ auto get_default_polyclone_inclusion_predicate(const OptionMap& options)
 {
     const auto min_vaf = get_min_clone_vaf(options) / 2;
     const auto min_vaf_probability = get_min_credible_vaf_probability(options);
-    return coretools::UnknownCopyNumberInclusionPredicate {min_vaf, min_vaf_probability};
+    const auto min_bq = static_cast<AlignedRead::BaseQuality>(as_unsigned("min-pileup-base-quality", options));
+    return coretools::UnknownCopyNumberInclusionPredicate {min_vaf, min_vaf_probability, min_bq};
 }
 
 auto get_default_single_cell_inclusion_predicate(const OptionMap& options)

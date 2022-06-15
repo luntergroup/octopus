@@ -799,21 +799,23 @@ bool PacBioInclusionPredicate::operator()(const CigarScanner::VariantObservation
     return any_good_pacbio_samples(candidate) || (candidate.sample_observations.size() > 1 && is_good_pacbio_pooled(candidate));
 }
 
-UnknownCopyNumberInclusionPredicate::UnknownCopyNumberInclusionPredicate(double min_vaf, double min_probability)
+UnknownCopyNumberInclusionPredicate::UnknownCopyNumberInclusionPredicate(double min_vaf, double min_probability, AlignedRead::BaseQuality min_bq)
 : normal_ {}
 , min_vaf_ {min_vaf}
 , min_probability_ {min_probability}
+, min_bq_ {min_bq}
 {}
 
-UnknownCopyNumberInclusionPredicate::UnknownCopyNumberInclusionPredicate(SampleName normal, double min_vaf, double min_probability)
+UnknownCopyNumberInclusionPredicate::UnknownCopyNumberInclusionPredicate(SampleName normal, double min_vaf, double min_probability, AlignedRead::BaseQuality min_bq)
 : normal_ {std::move(normal)}
 , min_vaf_ {min_vaf}
 , min_probability_ {min_probability}
+, min_bq_ {min_bq}
 {}
 
 bool UnknownCopyNumberInclusionPredicate::operator()(const CigarScanner::VariantObservation& candidate)
 {
-    const UnknownExpectedVAFStats vaf_def {min_vaf_, min_probability_};
+    const UnknownExpectedVAFStats vaf_def {min_vaf_, min_probability_, min_bq_};
     return std::any_of(std::cbegin(candidate.sample_observations), std::cend(candidate.sample_observations),
                        [&] (const auto& observation) {
                            if (normal_ && observation.sample.get() == *normal_) {
