@@ -187,13 +187,14 @@ struct UnknownCopyNumberInclusionPredicate
 {
     UnknownCopyNumberInclusionPredicate() = default;
     
-    UnknownCopyNumberInclusionPredicate(double min_vaf, double min_probability = 0.5);
-    UnknownCopyNumberInclusionPredicate(SampleName normal, double min_vaf, double min_probability = 0.5);
+    UnknownCopyNumberInclusionPredicate(double min_vaf, double min_probability = 0.5, AlignedRead::BaseQuality min_bq = 20);
+    UnknownCopyNumberInclusionPredicate(SampleName normal, double min_vaf, double min_probability = 0.5, AlignedRead::BaseQuality min_bq = 20);
     
     bool operator()(const CigarScanner::VariantObservation& candidate);
 private:
     boost::optional<SampleName> normal_;
     double min_vaf_ = 0.01, min_probability_ = 0.5;
+    AlignedRead::BaseQuality min_bq_ = 20;
 };
 
 struct CellInclusionPredicate
