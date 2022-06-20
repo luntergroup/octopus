@@ -29,26 +29,28 @@ https://www.nature.com/articles/s41587-021-00861-3.pdf},
 }
 ```
 
-## [Benchmarking small-variant genotyping in polyploids](https://www.biorxiv.org/content/10.1101/2021.03.29.436766v1)
+## [Benchmarking small-variant genotyping in polyploids](https://genome.cshlp.org/content/32/2/403)
 
 In this paper, we benchmark Octopus on polyploid samples.
 
 #### Abstract
 
-Genotyping from sequencing is the basis of emerging strategies in the molecular breeding of polyploid plants. However, compared with the situation for diploids, where genotyping accuracies are confidently determined with comprehensive benchmarks, polyploids have been neglected; there are no benchmarks measuring genotyping error rates for small variants using real sequencing reads. We previously introduced a variant calling method – Octopus – that accurately calls germline variants in diploids and somatic mutations in tumors. Here, we evaluate Octopus and other popular tools on whole-genome tetraploid and hexaploid datasets created using in silico mixtures of diploid Genome In a Bottle samples. We find that genotyping errors are abundant for typical sequencing depths, but that Octopus makes 25% fewer errors than other methods on average. We supplement our benchmarks with concordance analysis in real autotriploid banana datasets.
+Genotyping from sequencing is the basis of emerging strategies in the molecular breeding of polyploid plants. However, compared with the situation for diploids, in which genotyping accuracies are confidently determined with comprehensive benchmarks, polyploids have been neglected; there are no benchmarks measuring genotyping error rates for small variants using real sequencing reads. We previously introduced a variant calling method, Octopus, that accurately calls germline variants in diploids and somatic mutations in tumors. Here, we evaluate Octopus and other popular tools on whole-genome tetraploid and hexaploid data sets created using in silico mixtures of diploid Genome in a Bottle (GIAB) samples. We find that genotyping errors are abundant for typical sequencing depths but that Octopus makes 25% fewer errors than other methods on average. We supplement our benchmarks with concordance analysis in real autotriploid banana data sets.
 
 #### Bibtex
 
 ```tex
-@article{octopus_polyploid,
-   author = {Cooke, Daniel P. and Wedge, David C. and Lunter, Gerton},
-   title = {Benchmarking small-variant genotyping in polyploids},
-   journal = {bioRxiv},
-   pages = {2021.03.29.436766},
-   DOI = {10.1101/2021.03.29.436766},
-   url = {https://www.biorxiv.org/content/biorxiv/early/2021/03/29/2021.03.29.436766.full.pdf},
-   year = {2021},
-   type = {Journal Article}
+@article{Cooke01022022,
+author = {Cooke, Daniel P. and Wedge, David C. and Lunter, Gerton}, 
+title = {Benchmarking small-variant genotyping in polyploids},
+volume = {32}, 
+number = {2}, 
+pages = {403-408}, 
+year = {2022}, 
+doi = {10.1101/gr.275579.121}, 
+URL = {http://genome.cshlp.org/content/32/2/403.abstract}, 
+eprint = {http://genome.cshlp.org/content/32/2/403.full.pdf+html}, 
+journal = {Genome Research} 
 }
 ```
 
