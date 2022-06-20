@@ -25,6 +25,7 @@ module.exports = {
       label: 'Guides',
       collapsed: true,
       items: [
+        'guides/overview',
         'guides/preprocessing',
         'guides/discovery',
         'guides/haplotypes',

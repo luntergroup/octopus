@@ -5,7 +5,7 @@ title: Individual
 
 The `individual` calling model is used to call germline variants in a single sample with known ploidy. It is the simplest model Octopus offers.
 
-## Usage
+## Basic usage
 
 If the file `NA12878.bam` contains a single sample, to call germline variants in all regions use:
 
@@ -39,6 +39,8 @@ You can also set contig specific policies with the `--contig-ploidies` (`-p`) op
 $ octopus -R hs37d5.fa -I NA12878.bam -p Y=1
 ```
 
-Octopus automatically sets contigs `Y` and `chrY` to ploidy 1.
+:::important
 
-_Performance note_: Larger ploidies require greater computational resources. In general, ploidies above 4 are currently intractable. If you wish to call tetraploid sample, you may find that you need to tweak other performance related parameters to get reasonable run times.
+There are `binom(|haplotypes| + ploidy - 1, ploidy)` genotypes for a given set of `haplotypes`, a number that rapidly becomes intractable for `ploidy > 2`. For polyploid samples, the number of genotypes considered is therefore limited to `--max-genotypes` using heuristics. The calling and runtime performance of the method, particularly phasing accuracy, can therefore be strongly dependent on `--max-genotypes` for polyploids.
+
+:::
