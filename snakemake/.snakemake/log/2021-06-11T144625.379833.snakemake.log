@@ -1,4 +1,0 @@
-Building DAG of jobs...
-WorkflowError:
-The singularity command has to be available in order to use singularity integration.
-  File "/usr/local/Cellar/snakemake/6.4.1/libexec/lib/python3.9/site-packages/snakemake/deployment/singularity.py", line 31, in __init__

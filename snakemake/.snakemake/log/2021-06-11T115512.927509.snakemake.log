@@ -1,4 +1,0 @@
-Building DAG of jobs...
-WildcardError in line 150 of /Users/dcooke/Development/octopus/website/static/snakemake/germline.smk:
-Wildcards in input files cannot be determined from output files:
-'sample'

@@ -1,2 +1,0 @@
-SyntaxError in line 9 of /Users/dcooke/Development/octopus/website/static/snakemake/germline.smk:
-Unexpected keyword docker in rule definition (germline.smk, line 9)

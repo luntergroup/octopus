@@ -1,4 +1,0 @@
-Building DAG of jobs...
-MissingInputException in line 150 of /Users/dcooke/Development/octopus/website/static/snakemake/germline.smk:
-Missing input files for rule vcfeval:
-data/truth/CHM1-CHM13.hs38DH.bed

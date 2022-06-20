@@ -1,4 +1,0 @@
-Building DAG of jobs...
-MissingInputException in line 120 of /Users/dcooke/Development/octopus/website/static/snakemake/germline.smk:
-Missing input files for rule octopus:
-data/reads/mapped/CHM1-CHM13.hs38DH.bwa-mem.bam.bai

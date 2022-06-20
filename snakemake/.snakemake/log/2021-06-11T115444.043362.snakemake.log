@@ -1,3 +1,0 @@
-SyntaxError:
-Not all output, log and benchmark files of rule vcfeval contain the same wildcards. This is crucial though, in order to avoid that two or more jobs write to the same file.
-  File "/Users/dcooke/Development/octopus/website/static/snakemake/germline.smk", line 173, in <module>
