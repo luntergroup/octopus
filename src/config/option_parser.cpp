@@ -441,7 +441,7 @@ OptionMap parse_options(const int argc, const char** argv)
      "Do not account for strand bias when evaluating whether to include a candidate variant")
     
     ("min-candidate-credible-vaf-probability",
-     po::value<float>()->default_value(0.5),
+     po::value<float>()->default_value(0.75),
      "Minimum probability that pileup candidate variant has frequency above '--min-credible-somatic-frequency'")
     ;
     
