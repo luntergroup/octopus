@@ -1870,17 +1870,30 @@ double Assembler::bubble_score(const Path& path, const EdgeSet& exclude) const
                 context_reverse_weight += (graph_[e].weight - forward_weight);
             });
         };
-        add_strand_weights(boost::in_edges(path.front(), graph_));
+        if (boost::in_degree(path.front(), graph_) > 0) {
+            add_strand_weights(boost::in_edges(path.front(), graph_));
+        } else {
+            add_strand_weights(boost::out_edges(path.front(), graph_));
+        }
         // path.front() is reference, path.back() is not
         const auto p = boost::adjacent_vertices(path.back(), graph_);
         std::for_each(p.first, p.second, [&] (Vertex v) {
-            add_strand_weights(boost::out_edges(v, graph_));
+            if (is_reference(v)) {
+                if (boost::out_degree(v, graph_) > 0) {
+                    add_strand_weights(boost::out_edges(v, graph_));
+                } else {
+                    add_strand_weights(boost::in_edges(v, graph_));
+                }
+            }
         });
-        const auto total_weight = weight_stats.total_forward + weight_stats.total_reverse + context_forward_weight + context_reverse_weight;
-        const auto vaf = static_cast<double>(weight_stats.total_forward + weight_stats.total_reverse) / total_weight;
-        if (vaf < 0.5) {
+        const auto context_total_weight = context_forward_weight + context_reverse_weight;
+        const auto context_avg_weight = std::max(context_total_weight / 2, 1u);
+        const auto approx_vaf = std::min(static_cast<double>(weight_stats.mean) / context_avg_weight, 1.0);
+        if (approx_vaf < 0.9) {
+            // don't apply to putative homozygous variants, otherwise we could exclude
+            // due to misalligned non-variant reads.
             auto pval = maths::fisher_exact_test(weight_stats.total_forward, context_forward_weight,
-                                            weight_stats.total_reverse, context_reverse_weight);
+                                                 weight_stats.total_reverse, context_reverse_weight);
             if (pval < 0.001) result *= pval;
         }
     }
