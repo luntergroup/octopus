@@ -76,7 +76,7 @@ Next, we map the raw reads to the reference genome with `bwa mem`:
 
 ```shell
 $ bwa mem -t 16 \
-     -R "@RG\tID:0\tSM:NA128CHM1-CHM1378\tLB:Broad\tPU:Illumina" \
+     -R "@RG\tID:0\tSM:CHM1-CHM1378\tLB:Broad\tPU:Illumina" \
      data/reference/hs38DH.fa \
      data/reads/raw/CHM1-CHM13_1.fastq.gz data/reads/raw/CHM1-CHM13_2.fastq.gz | \
      samtools view -bh | \
@@ -96,7 +96,7 @@ $ octopus \
      -I data/reads/mapped/CHM1-CHM13.hs38DH.bwa-mem.bam \
      -T chr1 to chrM \
      --sequence-error-model PCRF.X10 \
-     --forest resources/forests/germline.v0.7.4.forest \
+     --forest resources/forests/germline.v0.8.0.forest \
      -o results/calls/CHM1-CHM13.hs38DH.bwa-mem.octopus.vcf.gz \
      --threads 16
 ```
@@ -108,7 +108,7 @@ This should complete in a few hours.
 Finally, we will evaluate our calls with RTG Tools `vcfeval`. This tool requires the reference sequence to be preprocessed:
 
 ```shell
-$ rtg format -o ~/reference/hs37d5_sdf ~/reference/hs37d5.fa
+$ rtg format -o ~/reference/hs37d5.sdf ~/reference/hs37d5.fa
 ```
 
 Then evaluate the calls with `vcfeval`:

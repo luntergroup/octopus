@@ -3,17 +3,19 @@ id: polyclone
 title: Polyclone
 ---
 
-The `polyclone` calling model is for calling variation in a pooled sample of haploid clones where the number and mixture composition of clones is unknown, as is sometimes the case in bacteria or virus sequencing studies. 
+The `polyclone` calling model is designed for calling variation in a pooled sample of haploid genomes where the number and mixture composition of genomes is unknown. The model will attempt to deconvolute haplotypes and call the number of local haplotypes, in addition to variants on called haplotypes. Use cases include bacterial or viral metagenomics, mixed infection analysis, and mitochondria sequencing.
 
 ## Usage
 
-If your sample contains an unknown mix of haploid clones (e.g. some bacteria or viral samples), use the `polyclone` calling model:
+The polyclone calling model is invoked by speciying the `polyclone` [`--caller`](cli.md#--caller).
 
 ```shell
-$ octopus -R H37Rv.fa -I mycobacterium_tuberculosis.bam -C polyclone
+$ octopus -R reference.fa -I reads.bam -C polyclone
 ```
 
-This model will automatically detect the number of subclones in your sample (up to the maximum given by `--max-clones`).
+## VCF output
+
+
 
 ## Performance considerations
 
