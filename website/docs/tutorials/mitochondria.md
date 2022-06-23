@@ -90,7 +90,7 @@ This should complete in a few seconds.
 
 ## Call variants
 
-Now we can call variants with `octopus`. Since we're aiming to call homoplasmic and heteroplasmic mitochondria variants, we'll be using the [polyclone](../guides/models/polyclone.md) calling model. We'll use the provided mitochondria [config](../guides/advanced/config.md) which sets several options. We'll also set the [sequence error model](../guides/errorModels.md) to reflect the PCR amplified library design of this sample. Finally, we [restrict calling](../guides/advanced/targeted.md) to the mitochondria reference genome and use built-in [multithreading](../guides/advanced/threading.md):
+Now we can call variants with `octopus`. Since we're aiming to call homoplasmic and heteroplasmic mitochondria variants, we'll be using the [polyclone](../guides/models/polyclone.md) calling model. We'll use the provided mitochondria [config](../guides/advanced/configs.md) which sets several options. We'll also set the [sequence error model](../guides/errorModels.md) to reflect the PCR amplified library design of this sample. Finally, we [restrict calling](../guides/advanced/targeted.md) to the mitochondria reference genome and use built-in [multithreading](../guides/advanced/threading.md):
 
 ```shell
 $ octopus \
