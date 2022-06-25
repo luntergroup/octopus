@@ -491,10 +491,32 @@ void reduce(GenotypeBlock& genotypes,
     reduce(genotypes, approx_posteriors, n);
 }
 
-auto make_hint(const std::size_t num_genotypes, const std::size_t idx, const double p = 0.9999)
+auto make_hint(const std::size_t num_genotypes, const std::size_t idx, const double mass = 0.9999)
 {
-    model::SubcloneModel::Latents::LogProbabilityVector result(num_genotypes, num_genotypes > 1 ? std::log((1 - p) / (num_genotypes - 1)) : 0);
-    if (num_genotypes > 1) result[idx] = std::log(p);
+    model::SubcloneModel::Latents::LogProbabilityVector result(num_genotypes, num_genotypes > 1 ? std::log((1 - mass) / (num_genotypes - 1)) : 0);
+    if (num_genotypes > 1) result[idx] = std::log(mass);
+    return result;
+}
+
+auto make_hint(const std::size_t num_genotypes, const std::vector<std::size_t>& indices, const double mass = 0.9999)
+{
+    model::SubcloneModel::Latents::LogProbabilityVector result(num_genotypes, num_genotypes > 1 ? std::log((1 - mass) / (num_genotypes - 1)) : 0);
+    const auto p_uniform = std::log(mass / indices.size());
+    for (auto idx : indices) {
+        result[idx] = p_uniform;
+    }
+    return result;
+}
+
+auto make_hint(const std::size_t num_genotypes, const std::vector<std::pair<std::size_t, double>>& weighted_indices, const double mass = 0.9999)
+{
+    const auto lower_bound = (1 - mass) / (num_genotypes - 1);
+    model::SubcloneModel::Latents::LogProbabilityVector result(num_genotypes, num_genotypes > 1 ? std::log(lower_bound) : 0);
+    const static auto add_abs_second = [] (auto total, const auto& p) { return total + std::abs(p.second); };
+    const auto norm = std::accumulate(std::cbegin(weighted_indices), std::cend(weighted_indices), 0.0, add_abs_second);
+    for (const auto& p : weighted_indices) {
+        result[p.first] = std::log(std::max(mass * std::abs(p.second) / norm, lower_bound));
+    }
     return result;
 }
 
@@ -535,29 +557,29 @@ propose_subclone_model_hints(const GenotypeBlock& curr_genotypes,
                              const std::size_t max)
 {
     const auto top_prev_genotype_indices = select_top_k_indices(sublonal_inferences.weighted_genotype_posteriors, max);
-    const auto top_haploid_indices = select_top_k_indices(haploid_latents.posteriors.genotype_log_probabilities, max);
     std::vector<model::SubcloneModel::Latents::LogProbabilityVector> result {};
     result.reserve(max);
     for (std::size_t i {0}; i < top_prev_genotype_indices.size() && result.size() < max; ++i) {
         const auto& base = prev_genotypes[top_prev_genotype_indices[i]];
-        for (std::size_t j {0}; j < top_haploid_indices.size() && result.size() < max; ++j) {
-            const auto& haplotype = haplotypes[top_haploid_indices[j]];
+        std::vector<std::size_t> indices {};
+        indices.reserve(haplotypes.size());
+        std::vector<std::pair<std::size_t, double>> weighed_indices {};
+        weighed_indices.reserve(haplotypes.size());
+        for (std::size_t haplotype_idx {0}; haplotype_idx < haplotypes.size(); ++haplotype_idx) {
+            const auto& haplotype = haplotypes[haplotype_idx];
             if (!contains(base, haplotype)) {
                 auto hint = base; hint.emplace(haplotype);
                 const auto hint_itr = std::find(std::cbegin(curr_genotypes), std::cend(curr_genotypes), hint);
                 if (hint_itr != std::cend(curr_genotypes)) {
                     const auto hint_idx = static_cast<std::size_t>(std::distance(std::cbegin(curr_genotypes), hint_itr));
-                    result.push_back(make_hint(curr_genotypes.size(), hint_idx));
-                }
-            }
-            if (i < top_prev_genotype_indices.size() - 1 && j < top_haploid_indices.size() - 1) {
-                const auto haploid_ratio = haploid_latents.posteriors.genotype_probabilities[j] / haploid_latents.posteriors.genotype_probabilities[j + 1];
-                const auto polyploid_ratio = sublonal_inferences.weighted_genotype_posteriors[i] / sublonal_inferences.weighted_genotype_posteriors[i + 1];
-                if (haploid_ratio < polyploid_ratio) {
-                    break;
+                    indices.push_back(hint_idx);
+                    weighed_indices.emplace_back(hint_idx, haploid_latents.posteriors.genotype_log_probabilities[haplotype_idx]);
                 }
             }
         }
+        const auto hint_mass = 1 - std::pow(10, -std::min(static_cast<int>(haplotypes.size()), 10));
+        result.push_back(make_hint(curr_genotypes.size(), indices, hint_mass));
+        result.push_back(make_hint(curr_genotypes.size(), weighed_indices, hint_mass));
     }
     return result;
 }
@@ -610,7 +632,7 @@ PolycloneCaller::fit_sublone_model(const HaplotypeBlock& haplotypes,
         if (clonality == 2) {
             hints = propose_subclone_model_hints(curr_genotypes, indexed_haplotypes, haploid_latents, model_params.max_seeds / 2);
         } else {
-            hints = propose_subclone_model_hints(curr_genotypes, prev_genotypes, sublonal_inferences, indexed_haplotypes, haploid_latents, model_params.max_seeds / 2);
+            hints = propose_subclone_model_hints(curr_genotypes, prev_genotypes, sublonal_inferences, indexed_haplotypes, haploid_latents, model_params.max_seeds / 4);
         }
         auto inferences = model.evaluate(curr_genotypes, haplotype_likelihoods, std::move(hints), workers);
         if (debug_log_) {
