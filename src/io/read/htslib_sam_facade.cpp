@@ -11,11 +11,13 @@
 #include <sstream>
 #include <limits>
 #include <cassert>
+#include <array>
 
 #include <boost/filesystem/operations.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/numeric/conversion/cast.hpp>
 #include <htslib/sam.h>
+#include <htslib/hts_endian.h>
 
 #include "basics/cigar_string.hpp"
 #include "basics/genomic_region.hpp"
@@ -25,7 +27,6 @@
 #include "exceptions/malformed_file_error.hpp"
 #include "exceptions/unwritable_file_error.hpp"
 #include "utils/string_utils.hpp"
-#include "annotated_aligned_read.hpp"
 
 #include <iostream>
 
@@ -34,8 +35,6 @@ namespace octopus { namespace io {
 static const std::string readGroupTag       {"RG"};
 static const std::string readGroupIdTag     {"ID"};
 static const std::string sampleIdTag        {"SM"};
-static const std::string barcodeSequenceTag {"BX"};
-static const std::string SupplementaryAlignmentTag {"SA"};
 
 class MissingBAM : public MissingFileError
 {
@@ -697,6 +696,109 @@ HtslibSamFacade::SampleReadMap HtslibSamFacade::fetch_reads(const std::vector<Sa
     return result;
 }
 
+auto to_hts_regions(const std::vector<GenomicRegion>& regions)
+{
+    std::vector<hts_pair_pos_t> result(regions.size());
+    std::transform(std::cbegin(regions), std::cend(regions), std::begin(result),
+                   [] (const auto& region) -> hts_pair_pos_t { return {
+                           static_cast<hts_pos_t>(region.begin()), 
+                           static_cast<hts_pos_t>(region.end())}; });
+    return result;
+}
+
+HtslibSamFacade::SampleReadMap HtslibSamFacade::fetch_reads(const std::vector<GenomicRegion>& regions) const
+{
+    if (regions.size() == 1) {
+        return fetch_reads(regions.front());
+    }
+    SampleReadMap result {samples_.size()};
+    if (samples_.size() == 1) {
+        return {{samples_.front(), fetch_reads(samples_.front(), regions)}};
+    }
+    auto hts_regions = to_hts_regions(regions);
+    std::vector<hts_reglist_t> hts_region_list {make_hts_region_list(regions.front().contig_name(), hts_regions)};
+    HtslibIterator it {*this, hts_region_list};
+    for (const auto& sample : samples_) {
+        auto p = result.emplace(std::piecewise_construct, std::forward_as_tuple(sample), std::forward_as_tuple());
+        try_reserve(p.first->second, defaultReserve_, defaultReserve_ / 10);
+    }
+    while (++it) {
+        try {
+            result.at(sample_names_.at(it.read_group())).emplace_back(*it);
+        } catch (InvalidBamRecord& e) {
+            // TODO: Just ignore? Could log or something.
+            //std::clog << "Warning: " << e.what() << std::endl;
+        } catch (...) {
+            throw;
+        }
+    }
+    return result;
+}
+
+HtslibSamFacade::ReadContainer HtslibSamFacade::fetch_reads(const SampleName& sample, const std::vector<GenomicRegion>& regions) const
+{
+    if (regions.size() == 1) {
+        return fetch_reads(sample, regions.front());
+    }
+    if (!contains(samples_, sample)) return {};
+    if (samples_.size() == 1) return fetch_all_reads(regions);
+    auto hts_regions = to_hts_regions(regions);
+    std::vector<hts_reglist_t> hts_region_list {make_hts_region_list(regions.front().contig_name(), hts_regions)};
+    HtslibIterator it {*this, hts_region_list};
+    ReadContainer result {};
+    try_reserve(result, defaultReserve_, defaultReserve_ / 10);
+    while (++it) {
+        if (sample_names_.at(it.read_group()) == sample) {
+            try {
+                result.emplace_back(*it);
+            } catch (InvalidBamRecord& e) {
+                // TODO
+            } catch (...) {
+                throw;
+            }
+        }
+    }
+    return result;
+}
+
+HtslibSamFacade::SampleReadMap HtslibSamFacade::fetch_reads(const std::vector<SampleName>& samples,
+                                                            const std::vector<GenomicRegion>& regions) const
+{
+    if (regions.size() == 1) {
+        return fetch_reads(samples, regions.front());
+    }
+    if (samples.size() == 1) {
+        return {{samples.front(), fetch_reads(samples.front(), regions)}};
+    }
+    if (set_equal(samples_, samples)) return fetch_reads(regions);
+    auto hts_regions = to_hts_regions(regions);
+    std::vector<hts_reglist_t> hts_region_list {make_hts_region_list(regions.front().contig_name(), hts_regions)};
+    HtslibIterator it {*this, hts_region_list};
+    SampleReadMap result {samples.size()};
+    for (const auto& sample : samples) {
+        if (contains(samples_, sample)) {
+            auto p = result.emplace(std::piecewise_construct,
+                                    std::forward_as_tuple(sample),
+                                    std::forward_as_tuple());
+            try_reserve(p.first->second, defaultReserve_, defaultReserve_ / 10);
+        }
+    }
+    if (result.empty()) return result; // no matching samples
+    while (++it) {
+        const auto& sample = sample_names_.at(it.read_group());
+        if (result.count(sample) == 1) {
+            try {
+                result.at(sample_names_.at(it.read_group())).emplace_back(*it);
+            } catch (InvalidBamRecord& e) {
+                // TODO
+            } catch (...) {
+                throw;
+            }
+        }
+    }
+    return result;
+}
+
 std::vector<GenomicRegion::ContigName> HtslibSamFacade::reference_contigs() const
 {
     std::vector<GenomicRegion::ContigName> result {};
@@ -737,21 +839,6 @@ void HtslibSamFacade::write(const AlignedRead& read)
     }
 }
 
-void HtslibSamFacade::write(const AnnotatedAlignedRead& read)
-{
-    if (!hts_file_ || !hts_header_) {
-        throw UnwritableBAM {file_path_};
-    }
-    std::unique_ptr<bam1_t, HtsBam1Deleter> record {bam_init1(), HtsBam1Deleter {}};
-    if (!record) {
-        throw UnwritableBAM {file_path_};
-    }
-    write(read, record.get());
-    if (sam_write1(hts_file_.get(), hts_header_.get(), record.get()) < 0) {
-        throw UnwritableBAM {file_path_};
-    }
-}
-
 // private methods
 
 HtslibSamFacade::ReadContainer HtslibSamFacade::fetch_all_reads(const GenomicRegion& region) const
@@ -768,6 +855,37 @@ HtslibSamFacade::ReadContainer HtslibSamFacade::fetch_all_reads(const GenomicReg
             throw;
         }
     }
+    return result;
+}
+
+HtslibSamFacade::ReadContainer HtslibSamFacade::fetch_all_reads(const std::vector<GenomicRegion>& regions) const
+{
+    auto hts_regions = to_hts_regions(regions);
+    std::vector<hts_reglist_t> hts_region_list {make_hts_region_list(regions.front().contig_name(), hts_regions)};
+    HtslibIterator it {*this, hts_region_list};
+    ReadContainer result {};
+    try_reserve(result, defaultReserve_, defaultReserve_ / 10);
+    while (++it) {
+        try {
+            result.emplace_back(*it);
+        } catch (InvalidBamRecord& e) {
+            // TODO
+        } catch (...) {
+            throw;
+        }
+    }
+    return result;
+}
+
+hts_reglist_t HtslibSamFacade::make_hts_region_list(const GenomicRegion::ContigName& contig, std::vector<hts_pair_pos_t>& regions) const
+{
+    hts_reglist_t result {};
+    result.reg = contig.c_str();
+    result.tid = hts_targets_.at(contig);
+    result.count = regions.size();
+    result.intervals = regions.data();
+    result.min_beg = regions.front().beg;
+    result.max_end = regions.back().end;
     return result;
 }
 
@@ -869,6 +987,20 @@ HtslibSamFacade::HtslibIterator::HtslibIterator(const HtslibSamFacade& hts_facad
 : hts_facade_ {hts_facade}
 , hts_iterator_ {hts_facade.is_open() ? sam_itr_querys(hts_facade_.hts_index_.get(), hts_facade_.hts_header_.get(),
                                                      contig.c_str()) : nullptr, HtsIteratorDeleter {}}
+, hts_bam1_ {bam_init1(), HtsBam1Deleter {}}
+{
+    if (hts_iterator_ == nullptr) {
+        throw std::runtime_error {"HtslibIterator: could not load iterator for " + hts_facade.file_path_.string()};
+    }
+    if (hts_bam1_ == nullptr) {
+        throw std::runtime_error {"HtslibIterator: error creating bam1 for " + hts_facade.file_path_.string()};
+    }
+}
+
+HtslibSamFacade::HtslibIterator::HtslibIterator(const HtslibSamFacade& hts_facade, std::vector<hts_reglist_t>& regions)
+: hts_facade_ {hts_facade}
+, hts_iterator_ {hts_facade.is_open() ? sam_itr_regions(hts_facade_.hts_index_.get(), hts_facade_.hts_header_.get(),
+                                                        regions.data(), regions.size()) : nullptr, HtsIteratorDeleter {}}
 , hts_bam1_ {bam_init1(), HtsBam1Deleter {}}
 {
     if (hts_iterator_ == nullptr) {
@@ -986,27 +1118,100 @@ auto extract_next_segment_flags(const bam1_core_t& c) noexcept
     return result;
 }
 
-AlignedRead::NucleotideSequence extract_barcode(const bam1_t* record) noexcept
+auto get_annotations(const bam1_t* record, const std::vector<AlignedRead::Tag>& tags)
 {
-    const auto ptr = bam_aux_get(record, barcodeSequenceTag.c_str());
-    return ptr ? bam_aux2Z(ptr) : "";
+    std::vector<std::pair<AlignedRead::Tag, AlignedRead::Annotation>> result {};
+    result.reserve(tags.size());
+    for (const auto& tag : tags) {
+        const auto ptr = bam_aux_get(record, tag.data());
+        if (ptr) result.emplace_back(tag, bam_aux2Z(ptr));
+    }
+    return result;
 }
 
-void add_supplementary_alignments(const bam1_t* record, AlignedRead& read)
+static inline int aux_type2size(const std::uint8_t type)
 {
-    const auto ptr = bam_aux_get(record, SupplementaryAlignmentTag.c_str());
-    if (ptr) {
-        for (auto tuple : utils::split(bam_aux2Z(ptr), ';')) {
-            auto fields = utils::split(tuple, ',');
-            auto cigar = parse_cigar(fields[3]);
-            auto begin_pos = boost::lexical_cast<GenomicRegion::Position>(fields[1]);
-            if (begin_pos > 0) --begin_pos;
-            GenomicRegion region {std::move(fields[0]), begin_pos, begin_pos + reference_size(cigar)};
-            auto strand = fields[2] == "+" ? AlignedRead::Direction::forward : AlignedRead::Direction::reverse;
-            auto mapping_quality = boost::numeric_cast<AlignedRead::MappingQuality>(boost::lexical_cast<int>(fields[4]));
-            read.add_supplementary_alignment({std::move(region), std::move(cigar), strand, mapping_quality});
-        }
+    switch (type) {
+    case 'A': case 'c': case 'C':
+        return 1;
+    case 's': case 'S':
+        return 2;
+    case 'i': case 'I': case 'f':
+        return 4;
+    case 'd':
+        return 8;
+    case 'Z': case 'H': case 'B':
+        return type;
+    default:
+        return 0;
     }
+}
+
+auto get_annotations(const bam1_t* record)
+{
+    auto s = bam_get_aux(record);
+    const auto end = record->data + record->l_data;
+    std::vector<std::pair<AlignedRead::Tag, AlignedRead::Annotation>> result {};
+    AlignedRead::Tag tag {};
+    AlignedRead::Annotation annotation {};
+    while (s != nullptr && end - s >= 3) {
+        std::copy_n(s, tag.size(), std::begin(tag));
+        s += tag.size();
+        const auto tagtype = static_cast<char>(*s);
+        switch (tagtype) {
+            case 'c':
+                // fall through
+            case 'C':
+                annotation = std::to_string(static_cast<int>(bam_aux2i(s)));
+                s += 1;
+                break;
+            case 's':
+                // fall through
+            case 'S':
+                annotation = std::to_string(static_cast<int>(bam_aux2i(s)));
+                s += 2;
+                break;
+            case 'i':
+                // fall through
+            case 'I':
+                annotation = std::to_string(static_cast<int>(bam_aux2i(s)));
+                s += 4;
+                break;
+            case 'f':
+                annotation = std::to_string(static_cast<float>(bam_aux2f(s)));
+                s += 4;
+                break;
+            case 'd':
+                annotation = std::to_string(static_cast<double>(bam_aux2f(s)));
+                s += 8;
+                break;
+            case 'a':
+                // fall through
+            case 'A':
+                annotation = std::to_string(static_cast<char>(bam_aux2A(s)));
+                s += 1;
+                break;
+            case 'Z':
+                // fall through
+            case 'H':
+                annotation = std::string {bam_aux2Z(s)};
+                s += (annotation.length() + 1);
+                break;
+            case 'B': {
+                const auto size = aux_type2size(*s);
+                ++s;
+                const auto n = le_to_u32(s);
+                s += 4;
+                s += (n * size);
+                break;
+            }
+            default:
+                throw std::runtime_error {"Unknown BAM tag type"};
+        }
+        result.emplace_back(tag, annotation);
+        s += 1;
+    }
+    return result;
 }
 
 AlignedRead HtslibSamFacade::HtslibIterator::operator*() const
@@ -1049,11 +1254,11 @@ AlignedRead HtslibSamFacade::HtslibIterator::operator*() const
             mapping_quality(info),
             extract_flags(info),
             read_group(),
-            extract_barcode(hts_bam1_.get()),
             hts_facade_.get_contig_name(info.mtid),
             next_segment_position(info),
             template_length(info),
-            extract_next_segment_flags(info)
+            extract_next_segment_flags(info),
+            get_annotations(hts_bam1_.get())
         };
     } else {
         result = {
@@ -1065,10 +1270,9 @@ AlignedRead HtslibSamFacade::HtslibIterator::operator*() const
             mapping_quality(info),
             extract_flags(info),
             read_group(),
-            extract_barcode(hts_bam1_.get()),
+            get_annotations(hts_bam1_.get())
         };
     }
-    add_supplementary_alignments(hts_bam1_.get(), result);
     return result;
 }
 
@@ -1196,12 +1400,8 @@ auto calculate_required_field_bytes(const AlignedRead& read) noexcept
     return result;
 }
 
-auto calculate_required_field_bytes(const AnnotatedAlignedRead& read) noexcept
-{
-    return calculate_required_field_bytes(read.read());
-}
 
-auto calculate_annotation_bytes(const std::string& tag, const std::string& annotation)
+auto calculate_annotation_bytes(const AlignedRead::Tag& tag, const AlignedRead::Annotation& annotation)
 {
     return tag.size() + annotation.size() + 2;// 1 for tag, 1 for '\0'
 }
@@ -1209,16 +1409,8 @@ auto calculate_annotation_bytes(const std::string& tag, const std::string& annot
 auto calculate_aux_bytes(const AlignedRead& read)
 {
     std::size_t result {0};
-    if (!read.read_group().empty()) result += calculate_annotation_bytes(readGroupTag, read.read_group());
-    if (!read.barcode().empty()) result += calculate_annotation_bytes(barcodeSequenceTag, read.barcode());
-    return result;
-}
-
-std::size_t calculate_aux_bytes(const AnnotatedAlignedRead& read)
-{
-    auto result = calculate_aux_bytes(read.read());
     for (auto tag : read.tags()) {
-        result += calculate_annotation_bytes(tag, read.annotation(tag));
+        result += calculate_annotation_bytes(tag, *read.annotation(tag));
     }
     return result;
 }
@@ -1310,27 +1502,16 @@ void set_required_data(const AlignedRead& read, bam1_t* result) noexcept
     set_base_qualities(read, result);
 }
 
-void set_required_data(const AnnotatedAlignedRead& read, bam1_t* result) noexcept
+void set_annotation(const AlignedRead::Tag& tag, const AlignedRead::Annotation& annotation, bam1_t* result) noexcept
 {
-    set_required_data(read.read(), result);
-}
-
-void set_annotation(const std::string& tag, const std::string& annotation, bam1_t* result) noexcept
-{
+    // TODO - detect other data types from annotation string
     bam_aux_update_str(result, tag.data(), annotation.size() + 1, annotation.c_str());
 }
 
 void set_aux_data(const AlignedRead& read, bam1_t* result) noexcept
 {
-    if (!read.read_group().empty()) set_annotation(readGroupTag, read.read_group(), result);
-    if (!read.barcode().empty()) set_annotation(barcodeSequenceTag, read.barcode(), result);
-}
-
-void set_aux_data(const AnnotatedAlignedRead& read, bam1_t* result) noexcept
-{
-    set_aux_data(read.read(), result);
     for (auto tag : read.tags()) {
-        set_annotation(tag, read.annotation(tag), result);
+        set_annotation(tag, *read.annotation(tag), result);
     }
 }
 
@@ -1362,12 +1543,6 @@ void HtslibSamFacade::set_fixed_length_data(const AlignedRead& read, bam1_t* res
 void HtslibSamFacade::write(const AlignedRead& read, bam1_t* result) const
 {
     set_fixed_length_data(read, result);
-    set_variable_length_data(read, result);
-}
-
-void HtslibSamFacade::write(const AnnotatedAlignedRead& read, bam1_t* result) const
-{
-    set_fixed_length_data(read.read(), result);
     set_variable_length_data(read, result);
 }
 

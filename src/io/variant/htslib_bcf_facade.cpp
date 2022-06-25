@@ -98,6 +98,16 @@ HtslibBcfFacade::HtslibBcfFacade()
     }
 }
 
+std::error_code error_code_from_errno(const int errno_code)
+{
+  return std::make_error_code(static_cast<std::errc>(errno_code));
+}
+
+std::error_code get_error_code()
+{
+    return error_code_from_errno(errno);
+}
+
 HtslibBcfFacade::HtslibBcfFacade(Path file_path, Mode mode)
 : file_path_ {std::move(file_path)}
 , file_ {nullptr, HtsFileDeleter {}}
@@ -110,7 +120,7 @@ HtslibBcfFacade::HtslibBcfFacade(Path file_path, Mode mode)
         if (boost::filesystem::exists(file_path_)) {
             file_.reset(bcf_open(file_path_.c_str(), hts_mode.c_str()));
             if (!file_) {
-                throw FileOpenError {file_path_};
+                throw FileOpenError {file_path_, get_error_code()};
             }
             header_.reset(bcf_hdr_read(file_.get()));
             if (!header_) {
@@ -123,20 +133,20 @@ HtslibBcfFacade::HtslibBcfFacade(Path file_path, Mode mode)
     } else if (mode == Mode::write) {
         file_.reset(bcf_open(file_path_.c_str(), hts_mode.c_str()));
         if (!file_) {
-            throw FileOpenError {file_path_};
+            throw FileOpenError {file_path_, get_error_code()};
         }
         header_.reset(bcf_hdr_init(hts_mode.c_str()));
     } else {
         const auto hts_read_mode = get_hts_mode(file_path_, Mode::read);
         file_.reset(bcf_open(file_path_.c_str(), hts_read_mode.c_str()));
         if (!file_) {
-            throw FileOpenError {file_path_};
+            throw FileOpenError {file_path_, get_error_code()};
         }
         header_.reset(bcf_hdr_read(file_.get()));
         file_.reset();
         file_.reset(bcf_open(file_path_.c_str(), hts_mode.c_str()));
         if (!file_) {
-            throw FileOpenError {file_path_};
+            throw FileOpenError {file_path_, get_error_code()};
         }
         if (header_) {
             samples_ = extract_samples(header_.get());

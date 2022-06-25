@@ -33,6 +33,7 @@
 #include "utils/mappable_algorithms.hpp"
 #include "utils/maths.hpp"
 #include "utils/concat.hpp"
+#include "utils/select_top_k.hpp"
 #include "exceptions/unimplemented_feature_error.hpp"
 
 namespace octopus {
@@ -368,7 +369,8 @@ void TrioCaller::Latents::set_haplotype_posteriors_unique_genotypes()
 
 std::unique_ptr<Caller::Latents>
 TrioCaller::infer_latents(const HaplotypeBlock& haplotypes,
-                          const HaplotypeLikelihoodArray& haplotype_likelihoods) const
+                          const HaplotypeLikelihoodArray& haplotype_likelihoods,
+                          OptionalThreadPool workers) const
 {
     const auto indexed_haplotypes = index(haplotypes);
     if (parameters_.child_ploidy == 0) {
@@ -429,7 +431,7 @@ TrioCaller::infer_latents(const HaplotypeBlock& haplotypes,
     }
 }
 
-boost::optional<double>
+boost::optional<Caller::ModelPosterior>
 TrioCaller::calculate_model_posterior(const HaplotypeBlock& haplotypes,
                                       const HaplotypeLikelihoodArray& haplotype_likelihoods,
                                       const Caller::Latents& latents) const
@@ -452,32 +454,62 @@ static auto calculate_model_posterior(const double normal_model_log_evidence,
 
 } // namespace
 
-boost::optional<double>
+boost::optional<Caller::ModelPosterior>
 TrioCaller::calculate_model_posterior(const HaplotypeBlock& haplotypes,
                                       const HaplotypeLikelihoodArray& haplotype_likelihoods,
                                       const Latents& latents) const
 {
     const auto indexed_haplotypes = index(haplotypes);
-    const auto max_ploidy = std::max({parameters_.maternal_ploidy, parameters_.paternal_ploidy, parameters_.child_ploidy});
-    if (max_ploidy + 1 <= model::TrioModel::max_ploidy()) {
-        const auto genotypes = generate_all_genotypes(indexed_haplotypes, max_ploidy + 1);
-        const auto germline_prior_model = make_prior_model(haplotypes);
-        DeNovoModel denovo_model {parameters_.denovo_model_params};
-        germline_prior_model->prime(haplotypes);
-        denovo_model.prime(haplotypes);
-        if (debug_log_) *debug_log_ << "Calculating model posterior";
-        const model::TrioModel model {parameters_.trio, *germline_prior_model, denovo_model,
-                                      TrioModel::Options {parameters_.max_genotype_combinations},
-                                      debug_log_};
-        const auto inferences = model.evaluate(genotypes, haplotype_likelihoods);
-        return octopus::calculate_model_posterior(latents.model_latents.log_evidence, inferences.log_evidence);
-    } else {
-        return boost::none;
+    const auto prior_model = make_single_sample_prior_model(haplotypes);
+    prior_model->prime(haplotypes);
+    const model::IndividualModel model {*prior_model, debug_log_};
+    ModelPosterior result {};
+    result.samples.resize(3);
+    const auto propose_model_check_genotypes_helper = [&] (const std::size_t sample_idx) {
+        if (samples_[sample_idx] == parameters_.trio.mother()) {
+            return propose_model_check_genotypes(haplotypes, indexed_haplotypes, latents.maternal_genotypes, latents.marginal_maternal_posteriors);
+        } else if (samples_[sample_idx] == parameters_.trio.father()) {
+            if (latents.paternal_genotypes) {
+                return propose_model_check_genotypes(haplotypes, indexed_haplotypes, *latents.paternal_genotypes, latents.marginal_paternal_posteriors);
+            } else {
+                return propose_model_check_genotypes(haplotypes, indexed_haplotypes, latents.maternal_genotypes, latents.marginal_paternal_posteriors);
+            }
+        } else {
+            if (parameters_.maternal_ploidy == parameters_.child_ploidy) {
+                return propose_model_check_genotypes(haplotypes, indexed_haplotypes, latents.maternal_genotypes, latents.marginal_child_posteriors);
+            } else {
+                return propose_model_check_genotypes(haplotypes, indexed_haplotypes, *latents.paternal_genotypes, latents.marginal_child_posteriors);
+            }
+        }
+    };
+    for (std::size_t sample_idx {0}; sample_idx < samples_.size(); ++sample_idx) {
+        haplotype_likelihoods.prime(samples_[sample_idx]);
+        const auto genotypes = propose_model_check_genotypes_helper(sample_idx);
+        const auto inferences1 = model.evaluate(genotypes.first, haplotype_likelihoods);
+        const auto inferences2 = model.evaluate(genotypes.second, haplotype_likelihoods);
+        result.samples[sample_idx] = octopus::calculate_model_posterior(inferences1.log_evidence, inferences2.log_evidence); 
     }
+    // const auto max_ploidy = std::max({parameters_.maternal_ploidy, parameters_.paternal_ploidy, parameters_.child_ploidy});
+    // if (max_ploidy + 1 <= model::TrioModel::max_ploidy()) {
+    //     const auto genotypes = generate_all_genotypes(indexed_haplotypes, max_ploidy + 1);
+    //     const auto germline_prior_model = make_prior_model(haplotypes);
+    //     DeNovoModel denovo_model {parameters_.denovo_model_params};
+    //     germline_prior_model->prime(haplotypes);
+    //     denovo_model.prime(haplotypes);
+    //     if (debug_log_) *debug_log_ << "Calculating model posterior";
+    //     const model::TrioModel model {parameters_.trio, *germline_prior_model, denovo_model,
+    //                                   TrioModel::Options {parameters_.max_genotype_combinations},
+    //                                   debug_log_};
+    //     const auto inferences = model.evaluate(genotypes, haplotype_likelihoods);
+    //     ModelPosterior result {};
+    //     result.joint = octopus::calculate_model_posterior(latents.model_latents.log_evidence, inferences.log_evidence);
+    //     return result;
+    // }
+    return result;
 }
 
 std::vector<std::unique_ptr<VariantCall>>
-TrioCaller::call_variants(const std::vector<Variant>& candidates, const Caller::Latents& latents) const
+TrioCaller::call_variants(const std::vector<Variant>& candidates, const Caller::Latents& latents, OptionalThreadPool workers) const
 {
     return call_variants(candidates, dynamic_cast<const Latents&>(latents));
 }
@@ -1113,6 +1145,36 @@ std::unique_ptr<GenotypePriorModel> TrioCaller::make_single_sample_prior_model(c
     } else {
         return std::make_unique<UniformGenotypePriorModel>();
     }
+}
+
+namespace {
+
+template <typename IndexType>
+void erase_duplicates(MappableBlock<Genotype<IndexedHaplotype<IndexType>>>& genotypes)
+{
+    using std::begin; using std::end;
+    std::sort(begin(genotypes), end(genotypes), GenotypeLess {});
+    genotypes.erase(std::unique(begin(genotypes), end(genotypes)), end(genotypes));
+}
+
+} // namespace
+
+std::pair<TrioCaller::GenotypeBlock, TrioCaller::GenotypeBlock>
+TrioCaller::propose_model_check_genotypes(const HaplotypeBlock& haplotypes,
+                                          const IndexedHaplotypeBlock& indexed_haplotypes,
+                                          const GenotypeBlock& genotypes,
+                                          const std::vector<double>& genotype_posteriors) const
+{
+    constexpr std::size_t max_model_check_genotypes {5};
+    const auto num_model_check_genotypes = std::min(max_model_check_genotypes, genotypes.size());
+    const auto best_indices = select_top_k_indices(genotype_posteriors, num_model_check_genotypes, false);
+    GenotypeBlock assumed {mapped_region(haplotypes)};
+    for (const auto genotype_idx : best_indices) {
+        assumed.push_back(genotypes[genotype_idx]);
+    }
+    auto augmented = extend(assumed, indexed_haplotypes);
+    erase_duplicates(augmented);
+    return {std::move(assumed), std::move(augmented)};
 }
 
 namespace debug {

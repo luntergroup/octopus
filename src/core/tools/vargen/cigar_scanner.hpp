@@ -96,7 +96,7 @@ private:
     void do_add_reads(const SampleName& sample, ReadFlatSetIterator first, ReadFlatSetIterator last) override;
     void do_add_reads(const SampleName& sample, TemplateVectorIterator first, TemplateVectorIterator last) override;
     void do_add_reads(const SampleName& sample, TemplateFlatSetIterator first, TemplateFlatSetIterator last) override;
-    std::vector<Variant> do_generate(const RegionSet& regions) const override;
+    std::vector<Variant> do_generate(const RegionSet& regions, OptionalThreadPool workers) const override;
     void do_clear() noexcept override;
     std::string name() const override;
     
@@ -187,13 +187,14 @@ struct UnknownCopyNumberInclusionPredicate
 {
     UnknownCopyNumberInclusionPredicate() = default;
     
-    UnknownCopyNumberInclusionPredicate(double min_vaf, double min_probability = 0.5);
-    UnknownCopyNumberInclusionPredicate(SampleName normal, double min_vaf, double min_probability = 0.5);
+    UnknownCopyNumberInclusionPredicate(double min_vaf, double min_probability = 0.5, AlignedRead::BaseQuality min_bq = 20);
+    UnknownCopyNumberInclusionPredicate(SampleName normal, double min_vaf, double min_probability = 0.5, AlignedRead::BaseQuality min_bq = 20);
     
     bool operator()(const CigarScanner::VariantObservation& candidate);
 private:
     boost::optional<SampleName> normal_;
     double min_vaf_ = 0.01, min_probability_ = 0.5;
+    AlignedRead::BaseQuality min_bq_ = 20;
 };
 
 struct CellInclusionPredicate

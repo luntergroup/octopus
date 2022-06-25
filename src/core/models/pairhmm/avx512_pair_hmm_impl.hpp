@@ -13,14 +13,15 @@
 #include <tuple>
 #include <type_traits>
 #include <cassert>
+#if defined(__AVX512F__)
 #include <immintrin.h>
-
+#endif // defined(__AVX512F__)
 #include "utils/array_tricks.hpp"
 #include "system.hpp"
 
 namespace octopus { namespace hmm { namespace simd {
 
-#if defined(__AVX512F__) && defined(__AVX512BW__) && AVX512_AVAILABLE
+#if defined(__AVX512F__) && defined(__AVX512BW__)
 
 #define AVX512_PHMM
 
@@ -435,7 +436,7 @@ protected:
     }
 };
 
-#endif // defined(__AVX512F__) && defined(__AVX512BW__) && AVX512_AVAILABLE
+#endif // defined(__AVX512F__) && defined(__AVX512BW__)
 
 } // namespace simd
 } // namespace hmm

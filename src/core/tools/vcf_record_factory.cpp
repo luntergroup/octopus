@@ -391,11 +391,11 @@ std::vector<VcfRecord> VcfRecordFactory::make(std::vector<CallWrapper>&& calls) 
             prev_represented.emplace_back(ploidy, nullptr);
             for (auto itr = block_begin_itr; itr != block_head_end_itr; ++itr) {
                 const auto& gt = itr->call->get_genotype_call(sample).genotype;
+                if (gt.ploidy() != ploidy) {
+                    throw InconsistentPloidyError {sample, genotype, gt};
+                }
                 for (unsigned i {0}; i < gt.ploidy(); ++i) {
                     if (itr->call->is_represented(gt[i])) {
-                        if (prev_represented.back().size() < i) {
-                            throw InconsistentPloidyError {sample, genotype, gt};
-                        }
                         prev_represented.back()[i] = std::addressof(*itr->call);
                     }
                 }
@@ -642,11 +642,14 @@ VcfRecord VcfRecordFactory::make(std::unique_ptr<Call> call) const
         result.set_info("MP",  phred_round(call->model_posterior()->score()));
     }
     if (!sites_only_) {
+        std::vector<std::string> format {"GT", "GQ", "DP", "MQ"};
         if (call->all_phased()) {
-            result.set_format({"GT", "GQ", "DP", "MQ", "PS", "PQ"});
-        } else {
-            result.set_format({"GT", "GQ", "DP", "MQ"});
+            utils::append(std::vector<std::string> {"PS", "PQ"}, format);
         }
+        const bool add_mp {std::any_of(std::cbegin(samples_), std::cend(samples_), 
+                                       [&] (const auto& sample) { return static_cast<bool>(call->model_posterior(sample)); })};
+        if (add_mp) format.push_back("MP");
+        result.set_format(std::move(format));
         for (const auto& sample : samples_) {
             const auto& genotype_call = call->get_genotype_call(sample);
             static const Phred<double> max_genotype_quality {10'000};
@@ -660,6 +663,14 @@ VcfRecord VcfRecordFactory::make(std::unique_ptr<Call> call) const
                 auto pq = std::min(100, static_cast<int>(std::round(phase.score().score())));
                 result.set_format(sample, "PS", mapped_begin(phase.region()) + 1);
                 result.set_format(sample, "PQ", std::to_string(pq));
+            }
+            if (add_mp) {
+                const auto mp = call->model_posterior(sample);
+                if (mp) {
+                    result.set_format(sample, "MP", phred_round(mp->score()));
+                } else {
+                    result.set_format_missing(sample, "MP");
+                }
             }
         }
     }
@@ -778,19 +789,22 @@ VcfRecord VcfRecordFactory::make_segment(std::vector<std::unique_ptr<Call>>&& ca
     auto q = std::min_element(std::cbegin(calls), std::cend(calls),
                               [] (const auto& lhs, const auto& rhs) { return lhs->quality() < rhs->quality(); });
     result.set_qual(std::min(max_qual, phred_round(q->get()->quality().score())));
-    result.set_info("NS",  count_samples_with_coverage(reads_, region));
-    result.set_info("DP",  sum_max_coverages(reads_, region));
-    result.set_info("MQ",  static_cast<unsigned>(rmq_mapping_quality(reads_, region)));
-    const auto mp = get_model_posterior(calls);
-    if (mp) {
-        result.set_info("MP", phred_round(*mp));
+    result.set_info("NS", count_samples_with_coverage(reads_, region));
+    result.set_info("DP", sum_max_coverages(reads_, region));
+    result.set_info("MQ", static_cast<unsigned>(rmq_mapping_quality(reads_, region)));
+    const auto site_mp = get_model_posterior(calls);
+    if (site_mp) {
+        result.set_info("MP", phred_round(*site_mp));
     }
     if (!sites_only_) {
+        std::vector<std::string> format {"GT", "GQ", "DP", "MQ"};
         if (calls.front()->all_phased()) {
-            result.set_format({"GT", "GQ", "DP", "MQ", "PS", "PQ"});
-        } else {
-            result.set_format({"GT", "GQ", "DP", "MQ"});
+            utils::append(std::vector<std::string> {"PS", "PQ"}, format);
         }
+        const bool add_mp {std::any_of(std::cbegin(samples_), std::cend(samples_), 
+                                       [&] (const auto& sample) { return static_cast<bool>(calls.front()->model_posterior(sample)); })};
+        if (add_mp) format.push_back("MP");
+        result.set_format(std::move(format));
         auto sample_itr = std::begin(resolved_genotypes);
         for (const auto& sample : samples_) {
             const auto posterior = calls.front()->get_genotype_call(sample).posterior;
@@ -810,6 +824,14 @@ VcfRecord VcfRecordFactory::make_segment(std::vector<std::unique_ptr<Call>>&& ca
                 auto pq = std::min(100, static_cast<int>(std::round(phase.score().score())));
                 result.set_format(sample, "PS", mapped_begin(phase.region()) + 1);
                 result.set_format(sample, "PQ", std::to_string(pq));
+            }
+            if (add_mp) {
+                const auto mp = calls.front()->model_posterior(sample);
+                if (mp) {
+                    result.set_format(sample, "MP", phred_round(mp->score()));
+                } else {
+                    result.set_format_missing(sample, "MP");
+                }
             }
         }
     }

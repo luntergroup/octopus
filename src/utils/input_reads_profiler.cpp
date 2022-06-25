@@ -11,6 +11,9 @@
 #include <cassert>
 #include <iostream>
 #include <future>
+#include <atomic>
+
+#include <boost/random/uniform_int_distribution.hpp>
 
 #include "mappable_algorithms.hpp"
 #include "maths.hpp"
@@ -33,7 +36,7 @@ auto draw_sample(const InputRegionMap& regions, std::discrete_distribution<>& co
 auto choose_sample_window(const GenomicRegion& target)
 {
     thread_local std::mt19937 generator {42};
-    std::uniform_int_distribution<GenomicRegion::Position> dist {target.begin(), target.end()};
+    boost::random::uniform_int_distribution<GenomicRegion::Position> dist {target.begin(), target.end()};
     return GenomicRegion {target.contig_name(), dist(generator), target.end()};
 }
 
@@ -197,12 +200,14 @@ profile_reads(const SampleName& sample,
               InputRegionMap regions,
               const ReadManager& source,
               const ReadSetProfileConfig& config,
-              std::discrete_distribution<> contig_sampling_distribution)
+              std::discrete_distribution<> contig_sampling_distribution,
+              boost::optional<std::atomic_bool&> kill = boost::none)
 {
     SampleReadSetProfileHelper<DepthType> result {};
     std::vector<DepthType> sample_depths {};
     SamplingSummary sampling_summary {};
     while (true) {
+        if (kill && *kill) return result;
         const auto target_sampling_region = choose_next_sample_region(sample, regions, config, contig_sampling_distribution, sampling_summary);
         if (!target_sampling_region) break;
         CoverageTracker<GenomicRegion, DepthType> depth_tracker {true};
@@ -288,12 +293,24 @@ profile_reads_helper(const std::vector<SampleName>& samples,
     if (samples.size() > 1 && workers) {
         std::vector<std::future<SampleReadSetProfileHelper<DepthType>>> sample_read_set_profiles_futures {};
         sample_read_set_profiles_futures.reserve(samples.size());
+        std::atomic_bool kill {false};
         for (const auto& sample : samples) {
             sample_read_set_profiles_futures.push_back(workers->push([&] () { 
-                return profile_reads<DepthType>(sample, reference, regions, source, config, contig_sampling_distribution); }));
+                return profile_reads<DepthType>(sample, reference, regions, source, config, contig_sampling_distribution, kill); }));
         }
-        for (auto& future : sample_read_set_profiles_futures) {
-            sample_read_set_profiles.push_back(future.get());
+        std::size_t future_idx {};
+        try {
+            for (; future_idx < sample_read_set_profiles_futures.size(); ++future_idx) {
+                sample_read_set_profiles.push_back(sample_read_set_profiles_futures[future_idx].get());
+            }
+        } catch (...) {
+            kill = true;
+            for (; future_idx < sample_read_set_profiles_futures.size(); ++future_idx) {
+                try {
+                    sample_read_set_profiles.push_back(sample_read_set_profiles_futures[future_idx].get());
+                } catch (...) {}
+            }
+            throw;
         }
     } else {
         for (const auto& sample : samples) {

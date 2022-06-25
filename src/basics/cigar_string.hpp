@@ -217,7 +217,7 @@ template <> struct hash<octopus::CigarString>
 namespace boost {
 
 template <>
-struct hash<octopus::CigarOperation> : std::unary_function<octopus::CigarOperation, std::size_t>
+struct hash<octopus::CigarOperation>
 {
     std::size_t operator()(const octopus::CigarOperation& op) const noexcept
     {
@@ -226,7 +226,7 @@ struct hash<octopus::CigarOperation> : std::unary_function<octopus::CigarOperati
 };
 
 template <>
-struct hash<octopus::CigarString> : std::unary_function<octopus::CigarString, std::size_t>
+struct hash<octopus::CigarString>
 {
     std::size_t operator()(const octopus::CigarString& cigar) const noexcept
     {

@@ -25,7 +25,6 @@ namespace octopus {
 
 class GenomicRegion;
 class ContigRegion;
-class AnnotatedAlignedRead;
 
 namespace io {
 
@@ -108,13 +107,17 @@ public:
                               const GenomicRegion& region) const override;
     SampleReadMap fetch_reads(const std::vector<SampleName>& samples,
                               const GenomicRegion& region) const override;
+    SampleReadMap fetch_reads(const std::vector<GenomicRegion>& regions) const override;
+    ReadContainer fetch_reads(const SampleName& sample,
+                              const std::vector<GenomicRegion>& regions) const override;
+    SampleReadMap fetch_reads(const std::vector<SampleName>& samples,
+                              const std::vector<GenomicRegion>& regions) const override;
     
     GenomicRegion::Size reference_size(const GenomicRegion::ContigName& contig) const override;
     std::vector<GenomicRegion::ContigName> reference_contigs() const override;
     boost::optional<std::vector<GenomicRegion::ContigName>> mapped_contigs() const override;
     
     void write(const AlignedRead& read);
-    void write(const AnnotatedAlignedRead& read);
     
 private:
     using HtsTid = std::int32_t;
@@ -145,6 +148,7 @@ private:
         
         HtslibIterator(const HtslibSamFacade& hts_facade, const GenomicRegion& region);
         HtslibIterator(const HtslibSamFacade& hts_facade, const GenomicRegion::ContigName& contig);
+        HtslibIterator(const HtslibSamFacade& hts_facade, std::vector<hts_reglist_t>& regions);
         
         HtslibIterator(const HtslibIterator&) = delete;
         HtslibIterator& operator=(const HtslibIterator&) = delete;
@@ -163,7 +167,13 @@ private:
     private:
         struct HtsIteratorDeleter
         {
-            void operator()(hts_itr_t* iterator) const { sam_itr_destroy(iterator); }
+            void operator()(hts_itr_t* iterator) const { 
+                if (iterator->reg_list) {
+                    // We will handle freeing the reglist
+                    iterator->reg_list = nullptr;
+                }
+                sam_itr_destroy(iterator); 
+            }
         };
         struct HtsBam1Deleter
         {
@@ -193,9 +203,10 @@ private:
     const GenomicRegion::ContigName& get_contig_name(HtsTid target) const;
     std::uint64_t get_num_mapped_reads(const GenomicRegion::ContigName& contig) const;
     ReadContainer fetch_all_reads(const GenomicRegion& region) const;
+    ReadContainer fetch_all_reads(const std::vector<GenomicRegion>& regions) const;
+    hts_reglist_t make_hts_region_list(const GenomicRegion::ContigName& contig, std::vector<hts_pair_pos_t>& regions) const;
     void set_fixed_length_data(const AlignedRead& read, bam1_t* result) const;
     void write(const AlignedRead& read, bam1_t* result) const;
-    void write(const AnnotatedAlignedRead& read, bam1_t* result) const;
 };
 
 } // namespace io

@@ -59,6 +59,7 @@
 #include "readpipe/buffered_read_pipe.hpp"
 #include "core/tools/bam_realigner.hpp"
 #include "core/tools/indel_profiler.hpp"
+#include "utils/thread_pool.hpp"
 
 #include "timers.hpp" // BENCHMARK
 
@@ -366,6 +367,9 @@ auto propose_call_subregion(const ContigCallingComponents& components,
     if (is_empty(remaining_call_region)) {
         return remaining_call_region;
     }
+    if (config.min_size && size(remaining_call_region) <= *config.min_size) {
+        return remaining_call_region;
+    }
     auto target = remaining_call_region;
     if (config.max_size && size(target) > *config.max_size) {
         target = head_region(target, *config.max_size);
@@ -375,9 +379,6 @@ auto propose_call_subregion(const ContigCallingComponents& components,
         return remaining_call_region;
     }
     if (config.min_size && size(max_window) < *config.min_size) {
-        if (size(remaining_call_region) < *config.min_size) {
-            return remaining_call_region;
-        }
         return expand_rhs(head_region(max_window), *config.min_size);
     }
     return max_window;
@@ -862,15 +863,15 @@ bool is_ready(const std::future<R>& f)
     return f.valid() && f.wait_for(std::chrono::seconds(0)) == std::future_status::ready;
 }
 
-auto run(Task task, ContigCallingComponents components, CallerSyncPacket& sync)
+auto run(Task task, ContigCallingComponents components, CallerSyncPacket& sync, ThreadPool& workers)
 {
     static auto debug_log = get_debug_log();
     if (debug_log) stream(*debug_log) << "Spawning task " << task;
-    return std::async(std::launch::async, [task = std::move(task), components = std::move(components), &sync] () {
+    return workers.push([task = std::move(task), components = std::move(components), &sync, &workers] () {
         try {
             CompletedTask result {task};
             result.runtime.start = std::chrono::system_clock::now();
-            result.calls = components.caller->call(task.region, components.progress_meter);
+            result.calls = components.caller->call(task.region, components.progress_meter, workers);
             result.runtime.end = std::chrono::system_clock::now();
             std::unique_lock<std::mutex> lock {sync.mutex};
             ++sync.num_finished;
@@ -950,8 +951,10 @@ void resolve_connecting_calls(CompletedTask& lhs, CompletedTask& rhs,
 {
     static auto debug_log = get_debug_log();
     if (lhs.calls.empty() || rhs.calls.empty()) return;
-    const auto first_lhs_connecting = find_first_lhs_connecting(lhs.calls, encompassing_region(rhs.calls));
-    const auto last_rhs_connecting  = find_last_rhs_connecting(encompassing_region(lhs.calls), rhs.calls);
+    const auto lhs_region = encompassing_region(lhs.calls);
+    const auto rhs_region = encompassing_region(rhs.calls);
+    const auto first_lhs_connecting = find_first_lhs_connecting(lhs.calls, rhs_region);
+    const auto last_rhs_connecting  = find_last_rhs_connecting(lhs_region, rhs.calls);
     if (debug_log) {
         const auto num_lhs_conflicting = std::distance(first_lhs_connecting, std::cend(lhs.calls));
         const auto num_rhs_conflicting = std::distance(std::cbegin(rhs.calls), last_rhs_connecting);
@@ -961,8 +964,35 @@ void resolve_connecting_calls(CompletedTask& lhs, CompletedTask& rhs,
                            << " & " << rhs << "(" << num_rhs_conflicting << " conflicting)";
         }
     }
-    // Keep RHS calls otherwise we might mess up phase sets of downstream calls
-    lhs.calls.erase(first_lhs_connecting, std::cend(lhs.calls));
+    // The general stratergy is to keep RHS variant calls otherwise we might mess up phase sets of downstream calls.
+    // However, we don't need to keep RHS reference call before the first variant call, so
+    // we should prefer to keep LHS variant calls in this region.
+    const static auto is_refcall = [] (const VcfRecord& call) { return call.is_refcall(); };
+    const auto first_rhs_variant = std::find_if_not(std::cbegin(rhs.calls), last_rhs_connecting, is_refcall);
+    auto first_lhs_remove = first_lhs_connecting;
+    if (first_rhs_variant != std::cbegin(rhs.calls)) {
+        const auto rhs_ref_region = first_rhs_variant != std::cend(rhs.calls) ?
+             closed_region(rhs.calls.front(), *first_rhs_variant) : rhs_region;
+        const auto rhs_keep_region = right_overhang_region(rhs_region, rhs_ref_region);
+        first_lhs_remove = std::find_if(first_lhs_connecting, std::cend(lhs.calls),
+                 [&] (const auto& call) { return overlaps(call, rhs_keep_region); });
+        if (first_lhs_remove != std::cbegin(lhs.calls)) {
+            const auto lhs_keep_region = encompassing_region(std::cbegin(lhs.calls), first_lhs_remove);
+            const auto last_rhs_remove = std::find_if_not(std::cbegin(rhs.calls), first_rhs_variant,
+                    [&] (const auto& call) { return overlaps(call, lhs_keep_region); });
+            if (last_rhs_remove != std::cbegin(rhs.calls)) {
+                const auto last_overlapping_rhs_ref = *std::prev(last_rhs_remove);
+                rhs.calls.erase(std::cbegin(rhs.calls), last_rhs_remove);
+                if (!contains(lhs_keep_region, last_overlapping_rhs_ref)) {
+                    // If the last RHS refcall overlapping with a LHS call we'll keep is a partial
+                    // overlap then we should still keep the non-overlapping positions.
+                    auto squashed_refcall = VcfRecord::Builder(last_overlapping_rhs_ref).set_pos(mapped_end(lhs_keep_region)).build_once();
+                    rhs.calls.push_front(std::move(squashed_refcall));
+                }
+            }
+        }
+    }
+    lhs.calls.erase(first_lhs_remove, std::cend(lhs.calls));
 }
 
 void resolve_connecting_calls(std::deque<CompletedTask>& adjacent_tasks,
@@ -1190,6 +1220,7 @@ void run_octopus_multi_threaded(GenomeCallingComponents& components)
     static auto debug_log = get_debug_log();
     
     const auto num_task_threads = calculate_num_task_threads(components);
+    ThreadPool workers {num_task_threads};
     
     TaskMap pending_tasks {components.contigs()};
     TaskMakerSyncPacket task_maker_sync {};
@@ -1271,7 +1302,7 @@ void run_octopus_multi_threaded(GenomeCallingComponents& components)
                 if (task_maker_sync.num_tasks > 0) {
                     pending_task_lock.unlock(); // As pop will need to lock the mutex too == deadlock
                     auto task = pop(pending_tasks, task_maker_sync);
-                    future = run(task, calling_components.at(contig_name(task))(), caller_sync);
+                    future = run(task, calling_components.at(contig_name(task))(), caller_sync, workers);
                     running_tasks.at(contig_name(task)).push(std::move(task));
                 } else {
                     pending_task_lock.unlock();

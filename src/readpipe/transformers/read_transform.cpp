@@ -390,6 +390,11 @@ void Mask3PrimeShiftedSoftClippedHeads::operator()(AlignedRead& read) const
     }
 }
 
+void ClearAnnotations::operator()(AlignedRead& read) const noexcept
+{
+    read.clear_annotations();
+}
+
 // template transforms
 
 void mask_adapter_contamination(AlignedRead& forward, AlignedRead& reverse) noexcept

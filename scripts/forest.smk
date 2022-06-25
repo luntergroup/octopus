@@ -411,7 +411,7 @@ def classify_vcfeval_ignored_calls(vcfeval_dir, octopus_vcf, sample, regions=Non
     baseline_vcf = ps.VariantFile(vcfeval_dir / "baseline.vcf.gz")
     new_calls_vcf = ps.VariantFile(vcfeval_dir / "calls.homref.vcf.gz", 'wz', header=calls_vcf.header)
     for call in calls_vcf:
-        if call.info["CALL"] == "IGN":
+        if call.info["CALL"] == "IGN" and call.contig in baseline_vcf.header.contigs:
             if any(baseline.info["BASE"] == "FN" for baseline in baseline_vcf.fetch(call.contig, call.start, call.stop)):
                 call.info["CALL"] = "FP"
             else:
@@ -513,17 +513,6 @@ rule cat_annotations:
         "cat {input} > {output}"
 localrules: cat_annotations
 
-def make_ranger_master_data_file(in_filenames, out_filename, header, sample=None):
-    lines = []
-    for file in in_filenames:
-        lines += file.open().readlines()
-    random.shuffle(lines)
-    if sample is not None:
-        lines = lines[:int(sample * len(lines))]
-    with out_filename.open(mode='w') as file:
-        file.write(header + '\n')
-        file.writelines(lines)
-
 def get_sample_kind(example, sample):
     if example.kind == "somatic" and "--normal-samples" in example.options:
         normal_sample_idx = example.options.index("--normal-samples")
@@ -531,18 +520,35 @@ def get_sample_kind(example, sample):
             return "germline"
     return example.kind
 
-rule make_ranger_data:
+rule cat_data:
     input:
         ["dat/" + example.name + ".octopus.ann." + sample + "." + get_sample_kind(example, sample) + ".dat" \
          for _, example in examples.items() \
          for sample, _ in example.truth.items()]
     output:
-        "dat/" + prefix + ".dat"
+        "dat/" + prefix + ".full.dat"
+    shell:
+        "cat {input} > {output}"
+localrules: cat_data
+
+def make_ranger_master_data_file(in_filename, out_filename, header, sample=None):
+    with in_filename.open() as in_file, out_filename.open(mode='w') as out_file:
+        out_file.write(header + '\n')
+        for line in in_file:
+            if sample is None or random.random() <= sample:
+                out_file.write(line)
+
+rule make_ranger_data:
+    input:
+        rules.cat_data.output
+    output:
+        "dat/" + prefix + ".training.dat"
     params:
         header = " ".join(measures + ['TP']),
         training_fraction = options.training_fraction
     run:
-        make_ranger_master_data_file([Path(i) for i in input], Path(output[0]), params.header, sample=params.training_fraction)
+        make_ranger_master_data_file(Path(input[0]), Path(output[0]), params.header, sample=params.training_fraction)
+localrules: make_ranger_data
 
 rule install_ranger:
     output:
@@ -570,17 +576,19 @@ rule ranger_train:
         max_depth = options.hyperparameters.max_depth,
         prefix = prefix
     threads: 100
+    log:
+        "logs/" + prefix + ".ranger.log"
     shell:
-        "{input.ranger} \
-        --file {input.data} \
-        --depvarname TP \
-        --probability \
-        --nthreads {threads} \
-        --outprefix {params.prefix} \
-        --write \
-        --impmeasure 1 \
-        --ntree {params.trees} \
-        --targetpartitionsize {params.target_partition_size} \
-        --maxdepth {params.max_depth} \
-        --verbose \
-        "
+        "({input.ranger} \
+         --file {input.data} \
+         --depvarname TP \
+         --probability \
+         --nthreads {threads} \
+         --outprefix {params.prefix} \
+         --write \
+         --impmeasure 1 \
+         --ntree {params.trees} \
+         --targetpartitionsize {params.target_partition_size} \
+         --maxdepth {params.max_depth} \
+         --verbose \
+        )2> {log}"

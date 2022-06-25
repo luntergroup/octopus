@@ -109,8 +109,6 @@ set(IO_SOURCES
     io/read/read_writer.hpp
     io/read/read_writer.cpp
     io/read/buffered_read_writer.hpp
-    io/read/annotated_aligned_read.hpp
-    io/read/annotated_aligned_read.cpp
     
     io/variant/htslib_bcf_facade.hpp
     io/variant/htslib_bcf_facade.cpp
@@ -332,6 +330,8 @@ set(CORE_SOURCES
     core/csr/measures/mean_mapping_quality.cpp
     core/csr/measures/model_posterior.hpp
     core/csr/measures/model_posterior.cpp
+    core/csr/measures/model_posterior_by_depth.hpp
+    core/csr/measures/model_posterior_by_depth.cpp
     core/csr/measures/allele_depth.hpp
     core/csr/measures/allele_depth.cpp
     core/csr/measures/allele_frequency.hpp
@@ -636,20 +636,20 @@ if(CMAKE_COMPILER_IS_GNUCXX)
     add_compile_options(${GCCWarningIgnores})
 endif()
 
-find_package(SSE)
-set(AVX512_FOUND false)
-if (AVX512F_FOUND AND AVX512BW_FOUND)
-    add_compile_options(-mavx512f -mavx512bw)
-	set(AVX512_FOUND true)
-elseif (AVX2_FOUND)
-    add_compile_options(-mavx2)
-elseif (SSE4_1_FOUND)
-    add_compile_options(-msse4.1)
-elseif (SSSE3_FOUND)
-    add_compile_options(-msse3)
-else ()
-    add_compile_options(-msse2)
-endif()
+# find_package(SSE)
+# set(AVX512_FOUND false)
+# if (AVX512F_FOUND AND AVX512BW_FOUND)
+#     add_compile_options(-mavx512f -mavx512bw)
+# 	set(AVX512_FOUND true)
+# elseif (AVX2_FOUND)
+#     add_compile_options(-mavx2)
+# elseif (SSE4_1_FOUND)
+#     add_compile_options(-msse4.1)
+# elseif (SSSE3_FOUND)
+#     add_compile_options(-msse3)
+# else ()
+#     add_compile_options(-msse2)
+# endif()
 
 set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
 set(THREADS_PREFER_PTHREAD_FLAG TRUE)
@@ -659,7 +659,11 @@ if (NOT BUILD_SHARED_LIBS)
     set(HTSlib_USE_STATIC_LIBS ON)
 endif()
 
+if (CMAKE_SYSTEM_PROCESSOR STREQUAL "arm64")
+set(CXX_OPTIMIZATION_FLAGS -ffast-math -mcpu=${COMPILER_ARCHITECTURE})
+else()
 set(CXX_OPTIMIZATION_FLAGS -ffast-math -march=${COMPILER_ARCHITECTURE})
+endif()
 if (CMAKE_COMPILER_IS_GNUCXX)
     set(CXX_OPTIMIZATION_FLAGS ${CXX_OPTIMIZATION_FLAGS} -mfpmath=both)
 endif()

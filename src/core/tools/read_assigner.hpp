@@ -21,6 +21,7 @@
 #include "core/types/haplotype.hpp"
 #include "core/types/genotype.hpp"
 #include "core/types/allele.hpp"
+#include "utils/thread_pool.hpp"
 
 namespace octopus {
 
@@ -65,52 +66,61 @@ struct AssignmentConfig
     enum class AmbiguousRecord { read_only, haplotypes, haplotypes_if_three_or_more_options } ambiguous_record = AmbiguousRecord::haplotypes;
 };
 
+using OptionalThreadPool = boost::optional<ThreadPool&>;
+
 // AlignedRead
 
 HaplotypeSupportMap
 compute_haplotype_support(const Genotype<Haplotype>& genotype,
                           const std::vector<AlignedRead>& reads,
                           const HaplotypeProbabilityMap& log_priors,
-                          AssignmentConfig config = AssignmentConfig {});
+                          AssignmentConfig config = AssignmentConfig {},
+                          OptionalThreadPool workers = boost::none);
 
 HaplotypeSupportMap
 compute_haplotype_support(const Genotype<Haplotype>& genotype,
                           const std::vector<AlignedRead>& reads,
-                          AssignmentConfig config = AssignmentConfig {});
-
-HaplotypeSupportMap
-compute_haplotype_support(const Genotype<Haplotype>& genotype,
-                          const std::vector<AlignedRead>& reads,
-                          AmbiguousReadList& ambiguous,
-                          const HaplotypeProbabilityMap& log_priors,
-                          AssignmentConfig config = AssignmentConfig {});
-
-HaplotypeSupportMap
-compute_haplotype_support(const Genotype<Haplotype>& genotype,
-                          const std::vector<AlignedRead>& reads,
-                          AmbiguousReadList& ambiguous,
-                          AssignmentConfig config = AssignmentConfig {});
-
-HaplotypeSupportMap
-compute_haplotype_support(const Genotype<Haplotype>& genotype,
-                          const std::vector<AlignedRead>& reads,
-                          HaplotypeLikelihoodModel model,
-                          AssignmentConfig config = AssignmentConfig {});
+                          AssignmentConfig config = AssignmentConfig {},
+                          OptionalThreadPool workers = boost::none);
 
 HaplotypeSupportMap
 compute_haplotype_support(const Genotype<Haplotype>& genotype,
                           const std::vector<AlignedRead>& reads,
                           AmbiguousReadList& ambiguous,
                           const HaplotypeProbabilityMap& log_priors,
+                          AssignmentConfig config = AssignmentConfig {},
+                          OptionalThreadPool workers = boost::none);
+
+HaplotypeSupportMap
+compute_haplotype_support(const Genotype<Haplotype>& genotype,
+                          const std::vector<AlignedRead>& reads,
+                          AmbiguousReadList& ambiguous,
+                          AssignmentConfig config = AssignmentConfig {},
+                          OptionalThreadPool workers = boost::none);
+
+HaplotypeSupportMap
+compute_haplotype_support(const Genotype<Haplotype>& genotype,
+                          const std::vector<AlignedRead>& reads,
                           HaplotypeLikelihoodModel model,
-                          AssignmentConfig config = AssignmentConfig {});
+                          AssignmentConfig config = AssignmentConfig {},
+                          OptionalThreadPool workers = boost::none);
+
+HaplotypeSupportMap
+compute_haplotype_support(const Genotype<Haplotype>& genotype,
+                          const std::vector<AlignedRead>& reads,
+                          AmbiguousReadList& ambiguous,
+                          const HaplotypeProbabilityMap& log_priors,
+                          HaplotypeLikelihoodModel model,
+                          AssignmentConfig config = AssignmentConfig {},
+                          OptionalThreadPool workers = boost::none);
 
 HaplotypeSupportMap
 compute_haplotype_support(const Genotype<Haplotype>& genotype,
                           const std::vector<AlignedRead>& reads,
                           AmbiguousReadList& ambiguous,
                           HaplotypeLikelihoodModel model,
-                          AssignmentConfig config = AssignmentConfig {});
+                          AssignmentConfig config = AssignmentConfig {},
+                          OptionalThreadPool workers = boost::none);
 
 // AlignedTemplate
 
@@ -118,46 +128,53 @@ HaplotypeTemplateSupportMap
 compute_haplotype_support(const Genotype<Haplotype>& genotype,
                           const std::vector<AlignedTemplate>& reads,
                           const HaplotypeProbabilityMap& log_priors,
-                          AssignmentConfig config = AssignmentConfig {});
+                          AssignmentConfig config = AssignmentConfig {},
+                          OptionalThreadPool workers = boost::none);
 
 HaplotypeTemplateSupportMap
 compute_haplotype_support(const Genotype<Haplotype>& genotype,
                           const std::vector<AlignedTemplate>& reads,
-                          AssignmentConfig config = AssignmentConfig {});
-
-HaplotypeTemplateSupportMap
-compute_haplotype_support(const Genotype<Haplotype>& genotype,
-                          const std::vector<AlignedTemplate>& reads,
-                          AmbiguousTemplateList& ambiguous,
-                          const HaplotypeProbabilityMap& log_priors,
-                          AssignmentConfig config = AssignmentConfig {});
-
-HaplotypeTemplateSupportMap
-compute_haplotype_support(const Genotype<Haplotype>& genotype,
-                          const std::vector<AlignedTemplate>& reads,
-                          AmbiguousTemplateList& ambiguous,
-                          AssignmentConfig config = AssignmentConfig {});
-
-HaplotypeTemplateSupportMap
-compute_haplotype_support(const Genotype<Haplotype>& genotype,
-                          const std::vector<AlignedTemplate>& reads,
-                          HaplotypeLikelihoodModel model,
-                          AssignmentConfig config = AssignmentConfig {});
+                          AssignmentConfig config = AssignmentConfig {},
+                          OptionalThreadPool workers = boost::none);
 
 HaplotypeTemplateSupportMap
 compute_haplotype_support(const Genotype<Haplotype>& genotype,
                           const std::vector<AlignedTemplate>& reads,
                           AmbiguousTemplateList& ambiguous,
                           const HaplotypeProbabilityMap& log_priors,
+                          AssignmentConfig config = AssignmentConfig {},
+                          OptionalThreadPool workers = boost::none);
+
+HaplotypeTemplateSupportMap
+compute_haplotype_support(const Genotype<Haplotype>& genotype,
+                          const std::vector<AlignedTemplate>& reads,
+                          AmbiguousTemplateList& ambiguous,
+                          AssignmentConfig config = AssignmentConfig {},
+                          OptionalThreadPool workers = boost::none);
+
+HaplotypeTemplateSupportMap
+compute_haplotype_support(const Genotype<Haplotype>& genotype,
+                          const std::vector<AlignedTemplate>& reads,
                           HaplotypeLikelihoodModel model,
-                          AssignmentConfig config = AssignmentConfig {});
+                          AssignmentConfig config = AssignmentConfig {},
+                          OptionalThreadPool workers = boost::none);
+
+HaplotypeTemplateSupportMap
+compute_haplotype_support(const Genotype<Haplotype>& genotype,
+                          const std::vector<AlignedTemplate>& reads,
+                          AmbiguousTemplateList& ambiguous,
+                          const HaplotypeProbabilityMap& log_priors,
+                          HaplotypeLikelihoodModel model,
+                          AssignmentConfig config = AssignmentConfig {},
+                          OptionalThreadPool workers = boost::none);
 
 HaplotypeTemplateSupportMap
 compute_haplotype_support(const Genotype<Haplotype>& genotype,
                           const std::vector<AlignedTemplate>& reads,
                           AmbiguousTemplateList& ambiguous,
                           HaplotypeLikelihoodModel model,
-                          AssignmentConfig config = AssignmentConfig {});
+                          AssignmentConfig config = AssignmentConfig {},
+                          OptionalThreadPool workers = boost::none);
 
 const static auto default_inclusion_pred = [] (const Haplotype& haplotype, const Allele& allele) { return haplotype.includes(allele); };
 

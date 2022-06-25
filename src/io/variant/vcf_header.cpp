@@ -372,7 +372,7 @@ VcfHeader::Builder get_default_header_builder()
     result.add_info("END", "1", "Integer", "End position of the variant described in this record");
     result.add_info("H2", "0", "Flag", "Membership in hapmap2");
     result.add_info("H3", "0", "Flag", "Membership in hapmap3");
-    result.add_info("MQ", "1", "Integer", "RMS mapping quality");
+    result.add_info("MQ", "1", "Float", "RMS mapping quality");
     result.add_info("MQ0", "1", "Integer", "Number of MAPQ == 0 reads covering this record");
     result.add_info("NS", "1", "Integer", "Number of samples with data");
     result.add_info("SB", "1", "Float", "Strand bias at this position");

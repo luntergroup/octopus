@@ -328,7 +328,7 @@ void choose_push_back(Variant candidate, std::vector<Variant>& final_candidates,
     }
 }
 
-std::vector<Variant> CigarScanner::do_generate(const RegionSet& regions) const
+std::vector<Variant> CigarScanner::do_generate(const RegionSet& regions, OptionalThreadPool workers) const
 {
     std::sort(std::begin(candidates_), std::end(candidates_));
     std::sort(std::begin(likely_misaligned_candidates_), std::end(likely_misaligned_candidates_));
@@ -543,7 +543,7 @@ double compute_strand_bias(const StrandSupportStats& strand_depths)
 bool only_observed_on_one_strand(const StrandSupportStats& strand_depths) noexcept
 {
     const auto support = strand_depths.forward_support + strand_depths.reverse_support;
-    return support > 0 && (strand_depths.forward_support == 0 || strand_depths.reverse_support == support);
+    return support > 0 && (strand_depths.forward_support == 0 || strand_depths.reverse_support == 0);
 }
 
 bool is_likely_runthrough_artifact(const StrandSupportStats& strand_depths, std::vector<unsigned>& observed_qualities)
@@ -617,6 +617,7 @@ bool is_good_germline(const Variant& variant, const unsigned depth, const unsign
 struct UnknownExpectedVAFStats
 {
     double min_vaf, min_probability;
+    AlignedRead::BaseQuality min_bq = 15;
 };
 
 auto beta_sf(unsigned a, unsigned b, double x)
@@ -636,10 +637,14 @@ bool is_good_somatic(const Variant& variant, const unsigned depth, const unsigne
                                             static_cast<unsigned>(support) - forward_strand_support,
                                             depth - forward_strand_depth};
     const auto strand_bias = compute_strand_bias(strand_depths);
-    if (support > 10 && strand_bias > 0.99 && only_observed_on_one_strand(strand_depths)) return false;
+    const auto raw_vaf = static_cast<double>(support) / depth;
+    if (support > 10 && strand_bias > 0.99) {
+        if (only_observed_on_one_strand(strand_depths)) return false;
+        if (strand_bias > 0.99999999 && raw_vaf < 0.9) return false;
+    }
     if (is_snv(variant)) {
         if (is_likely_runthrough_artifact(strand_depths, observed_qualities)) return false;
-        erase_below(observed_qualities, 20);
+        erase_below(observed_qualities, vaf_def.min_bq);
         if (observed_qualities.size() <= num_edge_observations) return false;
         const auto good_support = observed_qualities.size() - num_edge_observations;
         const auto probability_vaf_greater_than_min_vaf = beta_sf(good_support, depth - good_support, vaf_def.min_vaf);
@@ -648,7 +653,7 @@ bool is_good_somatic(const Variant& variant, const unsigned depth, const unsigne
             && num_edge_observations < support;
     } else if (is_insertion(variant)) {
         if (support == 1 && alt_sequence_size(variant) > 8) return false;
-        erase_below(observed_qualities, 20);
+        erase_below(observed_qualities, vaf_def.min_bq);
         const auto good_support = observed_qualities.size();
         if (good_support > 1 && alt_sequence_size(variant) > 10) return true;
         const auto probability_vaf_greater_than_min_vaf = beta_sf(good_support, depth - good_support, vaf_def.min_vaf);
@@ -794,21 +799,23 @@ bool PacBioInclusionPredicate::operator()(const CigarScanner::VariantObservation
     return any_good_pacbio_samples(candidate) || (candidate.sample_observations.size() > 1 && is_good_pacbio_pooled(candidate));
 }
 
-UnknownCopyNumberInclusionPredicate::UnknownCopyNumberInclusionPredicate(double min_vaf, double min_probability)
+UnknownCopyNumberInclusionPredicate::UnknownCopyNumberInclusionPredicate(double min_vaf, double min_probability, AlignedRead::BaseQuality min_bq)
 : normal_ {}
 , min_vaf_ {min_vaf}
 , min_probability_ {min_probability}
+, min_bq_ {min_bq}
 {}
 
-UnknownCopyNumberInclusionPredicate::UnknownCopyNumberInclusionPredicate(SampleName normal, double min_vaf, double min_probability)
+UnknownCopyNumberInclusionPredicate::UnknownCopyNumberInclusionPredicate(SampleName normal, double min_vaf, double min_probability, AlignedRead::BaseQuality min_bq)
 : normal_ {std::move(normal)}
 , min_vaf_ {min_vaf}
 , min_probability_ {min_probability}
+, min_bq_ {min_bq}
 {}
 
 bool UnknownCopyNumberInclusionPredicate::operator()(const CigarScanner::VariantObservation& candidate)
 {
-    const UnknownExpectedVAFStats vaf_def {min_vaf_, min_probability_};
+    const UnknownExpectedVAFStats vaf_def {min_vaf_, min_probability_, min_bq_};
     return std::any_of(std::cbegin(candidate.sample_observations), std::cend(candidate.sample_observations),
                        [&] (const auto& observation) {
                            if (normal_ && observation.sample.get() == *normal_) {

@@ -109,6 +109,7 @@ void DoublePassVariantCallFilter::record(const std::vector<CallBlock>& blocks, s
         record(block, tup.get<1>(), record_idx, dest_header, samples, annotated_vcf);
         record_idx += block.size();
     }
+    log_progress(closed_region(blocks.front().front(), blocks.back().back()));
 }
 
 void DoublePassVariantCallFilter::record(const VcfRecord& call, const MeasureVector& measures, const std::size_t record_idx,
@@ -134,7 +135,9 @@ void DoublePassVariantCallFilter::record(const CallBlock& block, const MeasureBl
     for (auto tup : boost::combine(block, measures)) {
         record(tup.get<0>(), tup.get<1>(), record_idx++, dest_header, samples, annotated_vcf);
     }
-    log_progress(closed_region(block.front(), block.back()));
+    if (!can_measure_multiple_blocks()) {
+        log_progress(closed_region(block.front(), block.back()));
+    }
 }
 
 void DoublePassVariantCallFilter::log_filter_pass_start(Log& log) const
@@ -148,6 +151,7 @@ void DoublePassVariantCallFilter::make_filter_pass(const VcfReader& source, cons
     if (progress_) {
         progress_->reset();
         progress_->set_max_tick_size(10);
+        progress_->set_buffer_size(3);
         progress_->start();
     }
     auto p = source.iterate();
@@ -184,14 +188,16 @@ void DoublePassVariantCallFilter::log_progress(const GenomicRegion& region) cons
 {
     if (progress_) {
         if (current_contig_) {
-            if (*current_contig_ != region.contig_name()) {
+            if (*current_contig_ == region.contig_name()) {
+                progress_->log_completed(region);
+            } else {
                 progress_->log_completed(*current_contig_);
                 current_contig_ = region.contig_name();
             }
         } else {
+            progress_->log_completed(expand_lhs_to_zero(region));
             current_contig_ = region.contig_name();
         }
-        progress_->log_completed(expand_lhs_to_zero(region));
     }
 }
 

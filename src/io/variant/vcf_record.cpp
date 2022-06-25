@@ -769,7 +769,13 @@ VcfRecord::Builder& VcfRecord::Builder::set_filter(const SampleName& sample, std
 
 VcfRecord::Builder& VcfRecord::Builder::add_filter(const SampleName& sample, KeyType filter)
 {
-    samples_[sample].other[vcfspec::format::filter].push_back(std::move(filter));
+    auto& filters = samples_[sample].other[vcfspec::format::filter];
+    // FORMAT/FT has Number=1 in the spec, as FILTER
+    if (filters.empty()) {
+        filters.push_back(std::move(filter));
+    } else {
+        filters.back() += vcfspec::filter::seperator + filter;
+    }
     return *this;
 }
 

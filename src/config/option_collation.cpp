@@ -854,6 +854,7 @@ auto make_read_transformers(const ReferenceGenome& reference, const OptionMap& o
         if (options.at("mask-3prime-shifted-soft-clipped-heads").as<bool>()) {
             prefilter_transformer.add(Mask3PrimeShiftedSoftClippedHeads {reference, 10, 500});
         }
+        postfilter_transformer.add(ClearAnnotations {});
         prefilter_transformer.shrink_to_fit();
         postfilter_transformer.shrink_to_fit();
     }
@@ -878,6 +879,26 @@ bool use_same_read_profile_for_all_samples(const OptionMap& options)
 {
     return options.at("use-same-read-profile-for-all-samples").as<bool>();
 }
+
+class BadSamTag : public UserError
+{
+    std::string name_;
+    
+    std::string do_where() const override
+    {
+        return "make_read_filterer";
+    }
+    std::string do_why() const override
+    {
+        return "The tag specified in no-reads-with-tag " + name_ + " is invalid";
+    }
+    std::string do_help() const override
+    {
+        return "Check the SAM specification (https://samtools.github.io/hts-specs/SAMv1.pdf)";
+    }
+public:
+    BadSamTag(std::string name) : name_ {std::move(name)} {}
+};
 
 auto make_read_filterer(const OptionMap& options)
 {
@@ -939,6 +960,16 @@ auto make_read_filterer(const OptionMap& options)
     }
     if (!options.at("allow-qc-fails").as<bool>()) {
         result.add(make_unique<IsNotMarkedQcFail>());
+    }
+    if (is_set("no-reads-with-tag", options)) {
+        const auto filter_tags = options.at("no-reads-with-tag").as<std::vector<SamTag>>();
+        for (const auto& filter_tag : filter_tags) {
+            const auto tag = check_read_tag(filter_tag.tag);
+            if (!tag) throw BadSamTag {filter_tag.tag};
+            boost::optional<AlignedRead::Annotation> annotation {};
+            if (filter_tag.value) annotation = *filter_tag.value;
+            result.add(make_unique<NotHasTag>(*tag, std::move(annotation)));
+        }
     }
     if (!options.at("allow-secondary-alignments").as<bool>()) {
         result.add(make_unique<IsNotSecondaryAlignment>());
@@ -1042,10 +1073,11 @@ auto get_default_somatic_inclusion_predicate(const OptionMap& options, boost::op
 {
     const auto min_credible_vaf = options.at("min-credible-somatic-frequency").as<float>();
     const auto min_credible_vaf_probability = get_min_credible_vaf_probability(options);
+    const auto min_bq = static_cast<AlignedRead::BaseQuality>(as_unsigned("min-pileup-base-quality", options));
     if (normal) {
-        return coretools::UnknownCopyNumberInclusionPredicate {*normal, min_credible_vaf, min_credible_vaf_probability};
+        return coretools::UnknownCopyNumberInclusionPredicate {*normal, min_credible_vaf, min_credible_vaf_probability, min_bq};
     } else {
-        return coretools::UnknownCopyNumberInclusionPredicate {min_credible_vaf, min_credible_vaf_probability};
+        return coretools::UnknownCopyNumberInclusionPredicate {min_credible_vaf, min_credible_vaf_probability, min_bq};
     }
 }
 
@@ -1058,7 +1090,8 @@ auto get_default_polyclone_inclusion_predicate(const OptionMap& options)
 {
     const auto min_vaf = get_min_clone_vaf(options) / 2;
     const auto min_vaf_probability = get_min_credible_vaf_probability(options);
-    return coretools::UnknownCopyNumberInclusionPredicate {min_vaf, min_vaf_probability};
+    const auto min_bq = static_cast<AlignedRead::BaseQuality>(as_unsigned("min-pileup-base-quality", options));
+    return coretools::UnknownCopyNumberInclusionPredicate {min_vaf, min_vaf_probability, min_bq};
 }
 
 auto get_default_single_cell_inclusion_predicate(const OptionMap& options)
@@ -1141,9 +1174,9 @@ boost::optional<double> get_repeat_scanner_min_vaf(const OptionMap& options)
 {
     using namespace octopus::coretools;
     if (is_cancer_calling(options)) {
-        return options.at("min-credible-somatic-frequency").as<float>() / 4;
+        return options.at("min-credible-somatic-frequency").as<float>() / 2;
     } else if (is_polyclone_calling(options)) {
-        return options.at("min-clone-frequency").as<float>() / 4;
+        return options.at("min-clone-frequency").as<float>() / 2;
     } else if (is_single_cell_calling(options)) {
         return 0.005;
     } else {
@@ -1267,7 +1300,7 @@ auto make_variant_generator_builder(const OptionMap& options, const boost::optio
     if (repeat_candidate_variant_generator_enabled(options)) {
         RepeatScanner::Options repeat_scanner_options {};
         repeat_scanner_options.min_snvs = 1;
-        repeat_scanner_options.min_base_quality = 10;
+        repeat_scanner_options.min_base_quality = 15;
         repeat_scanner_options.min_vaf = get_repeat_scanner_min_vaf(options);
         result.set_repeat_scanner(repeat_scanner_options);
     }
@@ -2060,7 +2093,7 @@ boost::optional<std::size_t> get_max_genotypes(const OptionMap& options, const s
     } else if (caller == "cancer") {
         return 5'000;
     } else if (caller == "polyclone") {
-        return 100'000;
+        return 10'000;
     } else if (as_unsigned("organism-ploidy", options) > 2) {
         return 20'000;
     } else if (is_fast_mode(options)) {
@@ -2398,7 +2431,7 @@ bool keep_unfiltered_calls(const OptionMap& options) noexcept
     return options.at("keep-unfiltered-calls").as<bool>();
 }
 
-ReadPipe make_default_filter_read_pipe(ReadManager& read_manager, std::vector<SampleName> samples)
+ReadPipe make_default_filter_read_pipe(ReadManager& read_manager, std::vector<SampleName> samples, const OptionMap& options)
 {
     using std::make_unique;
     using namespace readpipe;
@@ -2409,6 +2442,19 @@ ReadPipe make_default_filter_read_pipe(ReadManager& read_manager, std::vector<Sa
     filterer.add(make_unique<HasWellFormedCigar>());
     filterer.add(make_unique<IsMapped>());
     filterer.add(make_unique<IsLong>(1));
+    if (!options.at("allow-qc-fails").as<bool>()) {
+        filterer.add(make_unique<IsNotMarkedQcFail>());
+    }
+    if (is_set("no-reads-with-tag", options)) {
+        const auto filter_tags = options.at("no-reads-with-tag").as<std::vector<SamTag>>();
+        for (const auto& filter_tag : filter_tags) {
+            const auto tag = check_read_tag(filter_tag.tag);
+            if (!tag) throw BadSamTag {filter_tag.tag};
+            boost::optional<AlignedRead::Annotation> annotation {};
+            if (filter_tag.value) annotation = *filter_tag.value;
+            filterer.add(make_unique<NotHasTag>(*tag, std::move(annotation)));
+        }
+    }
     return ReadPipe {read_manager, std::move(transformer), std::move(filterer), boost::none, std::move(samples)};
 }
 
@@ -2417,7 +2463,7 @@ ReadPipe make_call_filter_read_pipe(ReadManager& read_manager, const ReferenceGe
     if (use_calling_read_pipe_for_call_filtering(options)) {
         return make_read_pipe(read_manager, reference, std::move(samples), options);
     } else {
-        return make_default_filter_read_pipe(read_manager, std::move(samples));
+        return make_default_filter_read_pipe(read_manager, std::move(samples), options);
     }
 }
 

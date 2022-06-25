@@ -18,6 +18,7 @@
 #include "core/tools/read_assigner.hpp"
 #include "io/reference/reference_genome.hpp"
 #include "io/variant/vcf_record.hpp"
+#include "utils/thread_pool.hpp"
 
 namespace octopus { namespace csr {
 
@@ -25,18 +26,22 @@ class ReadAssignments : public Facet
 {
 public:
     using ResultType = std::reference_wrapper<const SupportMaps>;
+
+    using OptionalThreadPool = boost::optional<ThreadPool&>;
     
     ReadAssignments() = default;
     
     ReadAssignments(const ReferenceGenome& reference,
                     const GenotypeMap& genotypes,
                     const ReadMap& reads,
-                    const std::vector<VcfRecord>& calls);
+                    const std::vector<VcfRecord>& calls,
+                    OptionalThreadPool workers = boost::none);
     ReadAssignments(const ReferenceGenome& reference,
                     const GenotypeMap& genotypes,
                     const ReadMap& reads,
                     const std::vector<VcfRecord>& calls,
-                    HaplotypeLikelihoodModel model);
+                    HaplotypeLikelihoodModel model,
+                    OptionalThreadPool workers = boost::none);
     
 private:
     static const std::string name_;

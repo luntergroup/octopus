@@ -80,20 +80,11 @@ private:
     
     std::unique_ptr<Caller::Latents>
     infer_latents(const HaplotypeBlock& haplotypes,
-                  const HaplotypeLikelihoodArray& haplotype_likelihoods) const override;
-    
-    boost::optional<double>
-    calculate_model_posterior(const HaplotypeBlock& haplotypes,
-                              const HaplotypeLikelihoodArray& haplotype_likelihoods,
-                              const Caller::Latents& latents) const override;
-    
-    boost::optional<double>
-    calculate_model_posterior(const HaplotypeBlock& haplotypes,
-                              const HaplotypeLikelihoodArray& haplotype_likelihoods,
-                              const Latents& latents) const;
+                  const HaplotypeLikelihoodArray& haplotype_likelihoods,
+                  OptionalThreadPool workers) const override;
     
     std::vector<std::unique_ptr<VariantCall>>
-    call_variants(const std::vector<Variant>& candidates, const Caller::Latents& latents) const override;
+    call_variants(const std::vector<Variant>& candidates, const Caller::Latents& latents, OptionalThreadPool workers) const override;
     
     std::vector<std::unique_ptr<VariantCall>>
     call_variants(const std::vector<Variant>& candidates, const Latents& latents) const;

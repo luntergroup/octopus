@@ -57,7 +57,7 @@ void RepeatScanner::do_add_reads(const SampleName& sample, ReadFlatSetIterator f
     std::for_each(first, last, [&] (const AlignedRead& read) { add_read(read, sample_index); });
 }
 
-std::vector<Variant> RepeatScanner::do_generate(const RegionSet& regions) const
+std::vector<Variant> RepeatScanner::do_generate(const RegionSet& regions, OptionalThreadPool workers) const
 {
     std::sort(std::begin(candidates_), std::end(candidates_));
     std::vector<Variant> result {};
@@ -313,8 +313,7 @@ bool can_try_splitting(const Variant& candidate, const AdjacentRepeatPair& repea
         if (repeats.lhs.period() > 1) {
             return repeats.rhs.motif() == candidate.alt_allele().sequence()
                 && search(repeats.lhs.motif(), candidate.ref_allele().sequence())
-                && search(repeats.lhs.motif(), candidate.alt_allele().sequence())
-                ;
+                && search(repeats.lhs.motif(), candidate.alt_allele().sequence());
         } else if (repeats.rhs.period() > 1) {
             return repeats.lhs.motif() == candidate.alt_allele().sequence()
                 && search(repeats.rhs.motif(), candidate.ref_allele().sequence())
@@ -404,6 +403,7 @@ void RepeatScanner::generate(const GenomicRegion& region, std::vector<Variant>& 
 std::vector<Variant> RepeatScanner::get_candidate_mnvs(const GenomicRegion& region) const
 {
     std::vector<Variant> result {};
+    assert(std::is_sorted(std::cbegin(candidates_), std::cend(candidates_)));
     auto viable_candidates = overlap_range(candidates_, region);
     if (empty(viable_candidates)) return result;
     result.reserve(size(viable_candidates, BidirectionallySortedTag {})); // maximum possible

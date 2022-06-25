@@ -371,7 +371,6 @@ template <typename RegionTp> struct hash<octopus::BasicAllele<RegionTp>>
 namespace boost {
 
 template <typename RegionTp> struct hash<octopus::BasicAllele<RegionTp>>
-: std::unary_function<octopus::BasicAllele<RegionTp>, std::size_t>
 {
     std::size_t operator()(const octopus::BasicAllele<RegionTp>& a) const
     {

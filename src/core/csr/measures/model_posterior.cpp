@@ -3,8 +3,12 @@
 
 #include "model_posterior.hpp"
 
+#include <boost/lexical_cast.hpp>
+
 #include "io/variant/vcf_record.hpp"
+#include "io/variant/vcf_spec.hpp"
 #include "config/octopus_vcf.hpp"
+#include "../facets/samples.hpp"
 
 namespace octopus { namespace csr {
 
@@ -23,16 +27,26 @@ Measure::ValueType ModelPosterior::get_value_type() const
 Measure::ResultType ModelPosterior::do_evaluate(const VcfRecord& call, const FacetMap& facets) const
 {
     namespace ovcf = octopus::vcf::spec;
-    Optional<ValueType> result {};
-    if (!is_info_missing(ovcf::info::modelPosterior, call)) {
-        result = std::stod(call.info_value(ovcf::info::modelPosterior).front());
+    const auto& samples = get_value<Samples>(facets.at("Samples"));
+    Array<Optional<ValueType>> result(samples.size());
+    if (call.has_format(ovcf::format::modelPosterior)) {
+        for (std::size_t s {0}; s < samples.size(); ++s) {
+            const auto mp = call.get_sample_value(samples[s], ovcf::format::modelPosterior);
+            assert(mp.size() == 1);
+            if (mp[0] != vcfspec::missingValue) {
+                result[s] = boost::lexical_cast<double>(mp[0]);
+            }
+        }
+    } else if (!is_info_missing(ovcf::info::modelPosterior, call)) {
+        auto mp = std::stod(call.info_value(ovcf::info::modelPosterior).front());
+        std::fill(std::begin(result), std::end(result), mp);
     }
     return result;
 }
 
 Measure::ResultCardinality ModelPosterior::do_cardinality() const noexcept
 {
-    return ResultCardinality::one;
+    return ResultCardinality::samples;
 }
 
 const std::string& ModelPosterior::do_name() const
@@ -43,6 +57,11 @@ const std::string& ModelPosterior::do_name() const
 std::string ModelPosterior::do_describe() const
 {
     return "Model posterior for this haplotype block";
+}
+
+std::vector<std::string> ModelPosterior::do_requirements() const
+{
+    return {"Samples"};
 }
 
 } // namespace csr

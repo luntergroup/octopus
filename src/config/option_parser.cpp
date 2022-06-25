@@ -313,6 +313,10 @@ OptionMap parse_options(const int argc, const char** argv)
     ("max-unlocalized-supplementary-alignment-mapping-quality",
      po::value<int>()->default_value(5),
      "Filter reads with supplementary alignments mapped to unlocalized contigs with mapping quality greater than this")
+
+    ("no-reads-with-tag",
+     po::value<std::vector<SamTag>>()->multitoken(),
+     "Filter reads with tag, use TAG=VALUE to filter specific tag values")
     
     ("disable-downsampling",
      po::bool_switch()->default_value(false),
@@ -553,7 +557,7 @@ OptionMap parse_options(const int argc, const char** argv)
      "Use independent genotype priors for joint calling")
     
     ("model-posterior",
-     po::value<ModelPosteriorPolicy>()->default_value(ModelPosteriorPolicy::special),
+     po::value<ModelPosteriorPolicy>()->default_value(ModelPosteriorPolicy::all),
      "Policy for calculating model posteriors for variant calls [ALL, OFF, SPECIAL]")
     
     ("disable-inactive-flank-scoring",
@@ -674,7 +678,7 @@ OptionMap parse_options(const int argc, const char** argv)
     po::options_description polyclone("Polyclone calling model");
     polyclone.add_options()
     ("max-clones",
-     po::value<int>()->default_value(4),
+     po::value<int>()->default_value(5),
      "Maximum number of unique clones to consider")
     
     ("min-clone-frequency",
@@ -682,7 +686,7 @@ OptionMap parse_options(const int argc, const char** argv)
      "Minimum expected clone frequency in the sample")
     
     ("clone-prior",
-     po::value<float>()->default_value(0.01, "0.01"),
+     po::value<float>()->default_value(0.1, "0.1"),
      "Prior probability of each clone in the sample")
     
     ("clone-concentration",
@@ -1631,6 +1635,26 @@ std::ostream& operator<<(std::ostream& out, const PhasingPolicy& policy)
     return out;
 }
 
+std::istream& operator>>(std::istream& in, SamTag& result)
+{
+    std::string token;
+    in >> token;
+    const auto eq_n = token.find_last_of('=');
+    if (eq_n != std::string::npos) {
+        result.value = token.substr(eq_n + 1);
+        token.erase(eq_n);
+    }
+    result.tag = token;
+    return in;
+}
+
+std::ostream& operator<<(std::ostream& out, const SamTag& tag)
+{
+    out << tag.tag;
+    if (tag.value) out << '=' << *tag.value;
+    return out;
+}
+
 namespace {
 
 template <typename T>
@@ -1757,6 +1781,10 @@ std::ostream& operator<<(std::ostream& os, const OptionMap& options)
             os << options[label].as<ModelPosteriorPolicy>();
         } else if (is_type<PhasingPolicy>(value)) {
             os << options[label].as<PhasingPolicy>();
+        } else if (is_type<SamTag>(value)) {
+            os << options[label].as<SamTag>();
+        } else if (is_vector_type<SamTag>(value)) {
+            write_vector<SamTag>(options, label, os, bullet);
         } else {
             os << "UnknownType(" << ((boost::any)value.value()).type().name() << ")";
         }

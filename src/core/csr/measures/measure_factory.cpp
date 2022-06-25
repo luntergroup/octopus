@@ -28,6 +28,7 @@ void init(MeasureMakerMap& measure_makers)
     measure_makers[name<MappingQualityZeroCount>()]     = [] () { return make_wrapped_measure<MappingQualityZeroCount>(); };
     measure_makers[name<MeanMappingQuality>()]          = [] () { return make_wrapped_measure<MeanMappingQuality>(); };
     measure_makers[name<ModelPosterior>()]              = [] () { return make_wrapped_measure<ModelPosterior>(); };
+    measure_makers[name<ModelPosteriorByDepth>()]       = [] () { return make_wrapped_measure<ModelPosteriorByDepth>(); };
     measure_makers[name<Quality>()]                     = [] () { return make_wrapped_measure<Quality>(); };
     measure_makers[name<QualityByDepth>()]              = [] () { return make_wrapped_measure<QualityByDepth>(); };
     measure_makers[name<GenotypeQuality>()]             = [] () { return make_wrapped_measure<GenotypeQuality>(); };

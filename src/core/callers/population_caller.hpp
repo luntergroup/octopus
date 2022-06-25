@@ -58,6 +58,9 @@ public:
     
 private:
     class Latents;
+
+    using IndexedHaplotypeBlock = MappableBlock<IndexedHaplotype<>>;
+    using GenotypeBlock = MappableBlock<Genotype<IndexedHaplotype<>>>;
     
     Parameters parameters_;
     std::vector<unsigned> unique_ploidies_;
@@ -71,10 +74,21 @@ private:
     
     std::unique_ptr<Caller::Latents>
     infer_latents(const HaplotypeBlock& haplotypes,
-                  const HaplotypeLikelihoodArray& haplotype_likelihoods) const override;
+                  const HaplotypeLikelihoodArray& haplotype_likelihoods,
+                  OptionalThreadPool workers) const override;
+    
+    boost::optional<ModelPosterior>
+    calculate_model_posterior(const HaplotypeBlock& haplotypes,
+                              const HaplotypeLikelihoodArray& haplotype_likelihoods,
+                              const Caller::Latents& latents) const override;
+    
+    boost::optional<ModelPosterior>
+    calculate_model_posterior(const HaplotypeBlock& haplotypes,
+                              const HaplotypeLikelihoodArray& haplotype_likelihoods,
+                              const Latents& latents) const;
     
     std::vector<std::unique_ptr<VariantCall>>
-    call_variants(const std::vector<Variant>& candidates, const Caller::Latents& latents) const override;
+    call_variants(const std::vector<Variant>& candidates, const Caller::Latents& latents, OptionalThreadPool workers) const override;
     
     std::vector<std::unique_ptr<VariantCall>>
     call_variants(const std::vector<Variant>& candidates, const Latents& latents) const;
@@ -92,6 +106,12 @@ private:
                                           const HaplotypeLikelihoodArray& haplotype_likelihoods) const;
     std::unique_ptr<PopulationPriorModel> make_joint_prior_model(const HaplotypeBlock& haplotypes) const;
     std::unique_ptr<GenotypePriorModel> make_independent_prior_model(const HaplotypeBlock& haplotypes) const;
+
+    std::pair<GenotypeBlock, GenotypeBlock>
+    propose_model_check_genotypes(std::size_t sample_idx,
+                                  const HaplotypeBlock& haplotypes,
+                                  const IndexedHaplotypeBlock& indexed_haplotypes,
+                                  const Latents& latents) const;
 };
 
 class PopulationCaller::Latents : public Caller::Latents
@@ -114,22 +134,14 @@ public:
             IndependenceModelInferences&&);
     Latents(const std::vector<SampleName>& samples,
             const IndexedHaplotypeBlock&,
-            std::map<unsigned, GenotypeBlock> genotypes,
-            IndependenceModelInferences&&);
-    Latents(const std::vector<SampleName>& samples,
-            const IndexedHaplotypeBlock&,
             GenotypeBlock,
-            ModelInferences&&);
-    Latents(const std::vector<SampleName>& samples,
-            const IndexedHaplotypeBlock&,
-            std::map<unsigned, GenotypeBlock>,
             ModelInferences&&);
     
     std::shared_ptr<HaplotypeProbabilityMap> haplotype_posteriors() const noexcept override;
     std::shared_ptr<GenotypeProbabilityMap> genotype_posteriors() const noexcept override;
 
 private:
-    std::map<unsigned, GenotypeBlock> genotypes_;
+    GenotypeBlock genotypes_;
     ModelInferences model_latents_;
     std::shared_ptr<GenotypeProbabilityMap> genotype_posteriors_;
     std::shared_ptr<HaplotypeProbabilityMap> haplotype_posteriors_;

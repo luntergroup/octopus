@@ -54,6 +54,7 @@ public:
 private:
     class Latents;
     
+    using IndexedHaplotypeBlock = MappableBlock<IndexedHaplotype<>>;
     using GenotypeBlock = MappableBlock<Genotype<IndexedHaplotype<>>>;
     
     Parameters parameters_;
@@ -67,20 +68,21 @@ private:
     
     std::unique_ptr<Caller::Latents>
     infer_latents(const HaplotypeBlock& haplotypes,
-                  const HaplotypeLikelihoodArray& haplotype_likelihoods) const override;
+                  const HaplotypeLikelihoodArray& haplotype_likelihoods,
+                  OptionalThreadPool workers) const override;
     
-    boost::optional<double>
+    boost::optional<ModelPosterior>
     calculate_model_posterior(const HaplotypeBlock& haplotypes,
                               const HaplotypeLikelihoodArray& haplotype_likelihoods,
                               const Caller::Latents& latents) const override;
     
-    boost::optional<double>
+    boost::optional<ModelPosterior>
     calculate_model_posterior(const HaplotypeBlock& haplotypes,
                               const HaplotypeLikelihoodArray& haplotype_likelihoods,
                               const Latents& latents) const;
     
     std::vector<std::unique_ptr<VariantCall>>
-    call_variants(const std::vector<Variant>& candidates, const Caller::Latents& latents) const override;
+    call_variants(const std::vector<Variant>& candidates, const Caller::Latents& latents, OptionalThreadPool workers) const override;
     
     std::vector<std::unique_ptr<VariantCall>>
     call_variants(const std::vector<Variant>& candidates, const Latents& latents) const;
@@ -95,6 +97,12 @@ private:
     
     std::unique_ptr<PopulationPriorModel> make_prior_model(const HaplotypeBlock& haplotypes) const;
     std::unique_ptr<GenotypePriorModel> make_single_sample_prior_model(const HaplotypeBlock& haplotypes) const;
+    
+    std::pair<GenotypeBlock, GenotypeBlock>
+    propose_model_check_genotypes(const HaplotypeBlock& haplotypes,
+                                  const IndexedHaplotypeBlock& indexed_haplotypes,
+                                  const GenotypeBlock& genotypes,
+                                  const std::vector<double>& genotype_posteriors) const;
 };
 
 class TrioCaller::Latents : public Caller::Latents

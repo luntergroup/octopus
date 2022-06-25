@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <cstddef>
 #include <vector>
+#include <array>
 #include <bitset>
 #include <algorithm>
 #include <iterator>
@@ -16,6 +17,7 @@
 #include <numeric>
 #include <iosfwd>
 
+#include <boost/container/flat_map.hpp>
 #include <boost/optional.hpp>
 
 #include "concepts/comparable.hpp"
@@ -80,24 +82,30 @@ public:
         
         FlagBits compress(const Flags& data);
     };
-    
+
     struct Flags;
     class SupplementaryAlignment;
+
+    using Tag        = std::array<char, 2>;
+    using Annotation = std::string;
     
     AlignedRead() = default;
     
-    template <typename String1_, typename GenomicRegion_, typename Seq1_, typename Seq2_,
-              typename Qualities_, typename CigarString_, typename String2_>
-    AlignedRead(String1_&& name, GenomicRegion_&& reference_region, Seq1_&& sequence, Qualities_&& qualities,
+    template <typename String1_, typename GenomicRegion_, typename Seq_, 
+              typename Qualities_, typename CigarString_, typename String2_,
+              typename Range_>
+    AlignedRead(String1_&& name, GenomicRegion_&& reference_region, Seq_&& sequence, Qualities_&& qualities,
                 CigarString_&& cigar, MappingQuality mapping_quality, const Flags& flags,
-                String2_&& read_group, Seq2_&& barcode);
-    template <typename String1_, typename GenomicRegion_, typename Seq1_, typename Seq2_,
-              typename Qualities_, typename CigarString_, typename String2_, typename String3_>
-    AlignedRead(String1_&& name, GenomicRegion_&& reference_region, Seq1_&& sequence, Qualities_&& qualities,
-                CigarString_&& cigar, MappingQuality mapping_quality, Flags flags, String2_&& read_group, Seq2_&& barcode,
+                String2_&& read_group, Range_ annotations);
+    template <typename String1_, typename GenomicRegion_, typename Seq_,
+              typename Qualities_, typename CigarString_, typename String2_, typename String3_,
+              typename Range_>
+    AlignedRead(String1_&& name, GenomicRegion_&& reference_region, Seq_&& sequence, Qualities_&& qualities,
+                CigarString_&& cigar, MappingQuality mapping_quality, Flags flags, String2_&& read_group,
                 String3_&& next_segment_contig_name, MappingDomain::Position next_segment_begin,
                 MappingDomain::Size inferred_template_length,
-                const Segment::Flags& next_segment_flags);
+                const Segment::Flags& next_segment_flags,
+                Range_ annotations);
     
     AlignedRead(const AlignedRead& other)            = default;
     AlignedRead& operator=(const AlignedRead& other) = default;
@@ -120,10 +128,14 @@ public:
     bool has_other_segment() const noexcept;
     const Segment& next_segment() const;
     Flags flags() const noexcept;
+    void add_annotation(Tag name, Annotation value);
+    void remove_annotation(const Tag& tag);
+    void clear_annotations(bool force = false);
+    boost::optional<const Annotation&> annotation(const Tag& tag) const noexcept;
+    std::vector<Tag> tags() const;
     const NucleotideSequence& barcode() const noexcept;
-    void set_barcode(NucleotideSequence barcode) noexcept;
-    const std::vector<SupplementaryAlignment>& supplementary_alignments() const noexcept;
-    void add_supplementary_alignment(SupplementaryAlignment alignment);
+    void set_barcode(NucleotideSequence barcode);
+    std::vector<SupplementaryAlignment> supplementary_alignments() const;
     
     void realign(GenomicRegion new_region, CigarString new_cigar) noexcept;
     
@@ -146,16 +158,18 @@ public:
 private:
     static constexpr std::size_t numFlags_ = 10;
     using FlagBits = std::bitset<numFlags_>;
+
+    static constexpr Tag read_group_tag_ {'R','G'};
+    static constexpr Tag barcode_tag_ {'B','X'};
     
     // should be ordered by sizeof
     GenomicRegion region_;
     std::string name_;
-    NucleotideSequence sequence_, barcode_sequence_;
+    NucleotideSequence sequence_;
     BaseQualityVector base_qualities_;
     CigarString cigar_;
-    std::string read_group_;
     boost::optional<Segment> next_segment_;
-    std::vector<SupplementaryAlignment> supplementary_alignments_;
+    boost::container::flat_map<Tag, Annotation> annotations_;
     FlagBits flags_;
     MappingQuality mapping_quality_;
     
@@ -209,46 +223,53 @@ private:
     AlignedRead::MappingQuality mapping_quality_;
 };
 
-template <typename String_, typename GenomicRegion_, typename Seq1, typename Seq2,
-          typename Qualities_, typename CigarString_, typename String2_>
-AlignedRead::AlignedRead(String_&& name, GenomicRegion_&& reference_region, Seq1&& sequence, Qualities_&& qualities,
+template <typename String_, typename GenomicRegion_, typename Seq,
+          typename Qualities_, typename CigarString_, typename String2_,
+          typename Range_>
+AlignedRead::AlignedRead(String_&& name, GenomicRegion_&& reference_region, Seq&& sequence, Qualities_&& qualities,
                          CigarString_&& cigar, MappingQuality mapping_quality, const Flags& flags,
-                         String2_&& read_group, Seq2&& barcode)
+                         String2_&& read_group, Range_ annotations)
 : region_ {std::forward<GenomicRegion_>(reference_region)}
 , name_ {std::forward<String_>(name)}
-, sequence_ {std::forward<Seq1>(sequence)}
-, barcode_sequence_ {std::forward<Seq2>(barcode)}
+, sequence_ {std::forward<Seq>(sequence)}
 , base_qualities_ {std::forward<Qualities_>(qualities)}
 , cigar_ {std::forward<CigarString_>(cigar)}
-, read_group_ {std::forward<String2_>(read_group)}
 , next_segment_ {}
-, supplementary_alignments_ {}
+, annotations_ {}
 , flags_ {compress(flags)}
 , mapping_quality_ {mapping_quality}
-{}
+{
+    annotations_.emplace(read_group_tag_, std::forward<String2_>(read_group));
+    for (auto&& annotation : annotations) {
+        annotations_.emplace(annotation.first, std::move(annotation.second));
+    }
+}
 
-template <typename String1_, typename GenomicRegion_, typename Seq1, typename Seq2, typename Qualities_,
-          typename CigarString_, typename String2_, typename String3_>
-AlignedRead::AlignedRead(String1_&& name, GenomicRegion_&& reference_region, Seq1&& sequence, Qualities_&& qualities,
+template <typename String1_, typename GenomicRegion_, typename Seq, typename Qualities_,
+          typename CigarString_, typename String2_, typename String3_, typename Range_>
+AlignedRead::AlignedRead(String1_&& name, GenomicRegion_&& reference_region, Seq&& sequence, Qualities_&& qualities,
                          CigarString_&& cigar, MappingQuality mapping_quality, Flags flags, String2_&& read_group,
-                         Seq2&& barcode,
                          String3_&& next_segment_contig_name, MappingDomain::Position next_segment_begin,
-                         MappingDomain::Size inferred_template_length, const Segment::Flags& next_segment_flags)
+                         MappingDomain::Size inferred_template_length, const Segment::Flags& next_segment_flags,
+                         Range_ annotations)
 : region_ {std::forward<GenomicRegion_>(reference_region)}
 , name_ {std::forward<String1_>(name)}
-, sequence_ {std::forward<Seq1>(sequence)}
-, barcode_sequence_ {std::forward<Seq2>(barcode)}
+, sequence_ {std::forward<Seq>(sequence)}
 , base_qualities_ {std::forward<Qualities_>(qualities)}
 , cigar_ {std::forward<CigarString_>(cigar)}
-, read_group_ {std::forward<String2_>(read_group)}
 , next_segment_ {
     Segment {std::forward<String3_>(next_segment_contig_name), next_segment_begin,
     inferred_template_length, next_segment_flags}
   }
-, supplementary_alignments_ {}
+, annotations_ {}
 , flags_ {compress(flags)}
 , mapping_quality_ {mapping_quality}
-{}
+{
+    annotations_.emplace(read_group_tag_, std::forward<String2_>(read_group));
+    for (auto&& annotation : annotations) {
+        annotations_.emplace(annotation.first, std::move(annotation.second));
+    }
+}
 
 template <typename String_>
 AlignedRead::Segment::Segment(String_&& contig_name, GenomicRegion::Position begin,
@@ -309,6 +330,7 @@ bool is_decoy(const AlignedRead::SupplementaryAlignment& alignment) noexcept;
 std::vector<AlignedRead> split(const AlignedRead& read, GenomicRegion::Size chunk_length, bool append_index_to_read_name = true);
 
 MemoryFootprint footprint(const AlignedRead& read) noexcept;
+boost::optional<AlignedRead::Tag> check_read_tag(const std::string& tag);
 
 template <typename Range>
 MemoryFootprint footprint(const Range& reads) noexcept
@@ -356,7 +378,7 @@ template <> struct hash<reference_wrapper<const octopus::AlignedRead>>
 
 namespace boost {
 
-template <> struct hash<octopus::AlignedRead> : std::unary_function<octopus::AlignedRead, std::size_t>
+template <> struct hash<octopus::AlignedRead>
 {
     std::size_t operator()(const octopus::AlignedRead& read) const
     {

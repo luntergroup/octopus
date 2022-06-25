@@ -282,10 +282,12 @@ auto compute_base_states(const MappableFlatSet<Variant>& variants, const ReadMap
     return result;
 }
 
-auto find_dense_regions(const MappableFlatSet<Variant>& variants, const ReadMap& reads,
-                        const double dense_zone_log_count_threshold,
-                        const double max_shared_dense_zones)
+std::vector<GenomicRegion>
+find_dense_regions(const MappableFlatSet<Variant>& variants, const ReadMap& reads,
+                   const double dense_zone_log_count_threshold,
+                   const double max_shared_dense_zones)
 {
+    if (variants.empty()) return {};
     const auto initial_blocks = extract_covered_regions(variants);
     MappableFlatSet<AlleleBlock> blocks {};
     for (const auto& region : initial_blocks) {
@@ -335,6 +337,7 @@ std::vector<GenomicRegion>
 BadRegionDetector::get_candidate_dense_regions(const MappableFlatSet<Variant>& candidates, const ReadMap& reads,
                                                OptionalReadsReport reads_report) const
 {
+    if (candidates.empty()) return {};
     const auto average_read_length = mean_read_length(reads);
     auto expected_log_count = get_max_expected_log_allele_count_per_base();
     const auto dense_zone_log_count_threshold = expected_log_count * average_read_length;

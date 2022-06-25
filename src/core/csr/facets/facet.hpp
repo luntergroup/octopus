@@ -90,7 +90,7 @@ bool operator==(const Facet& lhs, const Facet& rhs) noexcept;
 class FacetWrapper : public Equitable<FacetWrapper>
 {
 public:
-    FacetWrapper() = delete;
+    FacetWrapper() = default;
     
     FacetWrapper(std::unique_ptr<Facet> facet) : facet_ {std::move(facet)} {}
     

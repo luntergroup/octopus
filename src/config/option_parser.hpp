@@ -49,6 +49,12 @@ struct SampleDropoutConcentrationPair
     float concentration;
 };
 
+struct SamTag
+{
+    std::string tag;
+    boost::optional<std::string> value;
+};
+
 std::istream& operator>>(std::istream& in, ContigOutputOrder& order);
 std::ostream& operator<<(std::ostream& os, const ContigOutputOrder& order);
 std::istream& operator>>(std::istream& in, ContigPloidy& plodies);
@@ -77,6 +83,8 @@ std::istream& operator>>(std::istream& in, SampleDropoutConcentrationPair& conce
 std::ostream& operator<<(std::ostream& os, const SampleDropoutConcentrationPair& concentration);
 std::istream& operator>>(std::istream& in, PhasingPolicy& policy);
 std::ostream& operator<<(std::ostream& os, const PhasingPolicy& policy);
+std::istream& operator>>(std::istream& in, SamTag& policy);
+std::ostream& operator<<(std::ostream& os, const SamTag& policy);
 
 std::ostream& operator<<(std::ostream& os, const OptionMap& options);
 std::string to_string(const OptionMap& options, bool one_line = false, bool mark_modified = true);

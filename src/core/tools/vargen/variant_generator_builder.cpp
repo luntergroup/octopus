@@ -63,23 +63,23 @@ VariantGenerator VariantGeneratorBuilder::build(const ReferenceGenome& reference
 {
     
     VariantGenerator result {ActiveRegionGenerator {reference, active_region_generator_}};
-    if (cigar_scanner_) {
-        result.add(std::make_unique<CigarScanner>(reference, *cigar_scanner_));
-    }
-    if (local_reassembler_) {
-        result.add(std::make_unique<LocalReassembler>(reference, *local_reassembler_));
-    }
     for (auto packet : vcf_extractors_) {
         result.add(std::make_unique<VcfExtractor>(std::make_unique<VcfReader>(packet.file), packet.options));
-    }
-    if (repeat_scanner_) {
-        result.add(std::make_unique<RepeatScanner>(reference, *repeat_scanner_));
     }
     for (auto options : downloaders_) {
         result.add(std::make_unique<Downloader>(reference, options));
     }
     for (auto options : randomisers_) {
         result.add(std::make_unique<Randomiser>(reference, options));
+    }
+    if (cigar_scanner_) {
+        result.add(std::make_unique<CigarScanner>(reference, *cigar_scanner_));
+    }
+    if (repeat_scanner_) {
+        result.add(std::make_unique<RepeatScanner>(reference, *repeat_scanner_));
+    }
+    if (local_reassembler_) {
+        result.add(std::make_unique<LocalReassembler>(reference, *local_reassembler_));
     }
     return result;
 }

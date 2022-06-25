@@ -1,8 +1,8 @@
 // Copyright (c) 2015-2021 Daniel Cooke and Gerton Lunter
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
-#ifndef sse2_pair_hmm_impl_hpp
-#define sse2_pair_hmm_impl_hpp
+#ifndef neon_pair_hmm_impl_hpp
+#define neon_pair_hmm_impl_hpp
 
 #if __GNUC__ >= 6
     #pragma GCC diagnostic ignored "-Wignored-attributes"
@@ -13,23 +13,23 @@
 #include <tuple>
 #include <type_traits>
 #include <cassert>
-#if defined(__SSE2__)
-#include <emmintrin.h>
-#endif // defined(__SSE2__)
+#if defined(__ARM_NEON__)
+#include "sse2neon.h"
+#endif // defined(__ARM_NEON__)
 #include "utils/array_tricks.hpp"
 
 namespace octopus { namespace hmm { namespace simd {
 
-#if defined(__SSE2__)
+#if defined(__ARM_NEON__)
 
-#define SSE2_PHMM
+#define NEON_PHMM
 
 template <typename T>
 constexpr bool is_short_or_int = std::is_same<T, short>::value || std::is_same<T, int>::value;
 
 template <unsigned BandSize = 8,
           typename ScoreTp = short>
-class SSE2PairHMMInstructionSet
+class NEONPairHMMInstructionSet
 {
     using BlockType = __m128i;
     
@@ -40,7 +40,7 @@ protected:
     
     constexpr static int word_size = sizeof(ScoreType);
     
-    constexpr static const char* name = "SSE2";
+    constexpr static const char* name = "NEON";
 
 private:
     constexpr static auto block_bytes_       = sizeof(BlockType);
@@ -322,7 +322,7 @@ protected:
     }
 };
 
-#endif // defined(__SSE2__)
+#endif // defined(__ARM_NEON__)
 
 } // namespace simd
 } // namespace hmm

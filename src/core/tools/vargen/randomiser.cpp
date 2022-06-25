@@ -34,7 +34,7 @@ void Randomiser::do_add_reads(const SampleName& sample, ReadFlatSetIterator firs
     max_read_size_ = region_size(*largest_mappable(first, last));
 }
 
-std::vector<Variant> Randomiser::do_generate(const RegionSet& regions) const
+std::vector<Variant> Randomiser::do_generate(const RegionSet& regions, OptionalThreadPool workers) const
 {
     std::vector<Variant> result {};
     for (const auto& region : regions) {

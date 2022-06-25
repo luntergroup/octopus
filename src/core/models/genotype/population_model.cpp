@@ -81,7 +81,7 @@ double calculate_frequency_update_norm(const std::size_t num_samples, const unsi
 
 double calculate_frequency_update_norm(const std::vector<unsigned>& sample_ploidies) noexcept
 {
-    return std::accumulate(std::cbegin(sample_ploidies), std::cend(sample_ploidies), 0.0, std::multiplies<> {});
+    return std::accumulate(std::cbegin(sample_ploidies), std::cend(sample_ploidies), 1.0, std::multiplies<> {});
 }
 
 struct EMOptions
@@ -163,7 +163,7 @@ compute_genotype_log_likelihoods(const std::vector<SampleName>& samples,
         haplotype_likelihoods.prime(sample);
         std::transform(std::cbegin(genotypes), std::cend(genotypes), std::cbegin(mask), std::begin(likelihoods),
                        [&] (const auto& genotype, bool ok) {
-                           return ok ? likelihood_model.evaluate(genotype) : -std::numeric_limits<LogProbability>::infinity();
+                           return ok ? likelihood_model.evaluate(genotype) : std::numeric_limits<LogProbability>::lowest();
                        });
         return likelihoods;
     });
@@ -282,7 +282,7 @@ void run_em(GenotypeMarginalPosteriorMatrix& genotype_posteriors,
             boost::optional<logging::TraceLogger> trace_log = boost::none)
 {
     for (unsigned n {1}; n <= options.max_iterations; ++n) {
-        const auto max_change = do_em_iteration(genotype_posteriors, hw_model, genotype_log_marginals,constants);
+        const auto max_change = do_em_iteration(genotype_posteriors, hw_model, genotype_log_marginals, constants);
         if (max_change <= options.epsilon) break;
     }
 }

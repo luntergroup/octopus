@@ -1,31 +1,33 @@
-FROM ubuntu:latest
+FROM ubuntu:impish
 
 ARG DEBIAN_FRONTEND=noninteractive
 ENV TZ=Europe/London
 
-# Get all apt dependencies
-RUN apt-get -y update
-RUN apt-get -y install software-properties-common
-RUN apt-get install -y --no-install-recommends apt-utils
-RUN add-apt-repository -y ppa:ubuntu-toolchain-r/test
-RUN apt-get -y install \
-    gcc g++ \
-    build-essential \
-    git \
-    curl \
-    python3-pip
-
-RUN pip3 install distro
+# Get dependencies
+RUN apt-get -y update \
+    && apt-get -y install \
+        build-essential \
+        libboost-all-dev \
+        libgmp-dev \
+        cmake \
+        libhts-dev \
+        python3-pip \
+        git \
+    && pip3 install distro
 
 # Install Octopus
 ARG threads=4
 ARG architecture=haswell
 COPY . /opt/octopus
 RUN /opt/octopus/scripts/install.py \
-    --dependencies \
-    --forests \
     --threads $threads \
     --architecture $architecture
+
+# Cleanup git - only needed during install for commit info
+RUN apt-get purge -y git \
+    && rm -r /opt/octopus/.git \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 ENV PATH="/opt/octopus/bin:${PATH}"
 

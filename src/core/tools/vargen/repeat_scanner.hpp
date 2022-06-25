@@ -60,7 +60,7 @@ private:
     void do_add_read(const SampleName& sample, const AlignedRead& read) override;
     void do_add_reads(const SampleName& sample, ReadVectorIterator first, ReadVectorIterator last) override;
     void do_add_reads(const SampleName& sample, ReadFlatSetIterator first, ReadFlatSetIterator last) override;
-    std::vector<Variant> do_generate(const RegionSet& regions) const override;
+    std::vector<Variant> do_generate(const RegionSet& regions, OptionalThreadPool workers) const override;
     void do_clear() noexcept override;
     std::string name() const override;
     
@@ -78,6 +78,7 @@ private:
         Variant variant;
         unsigned sample_index;
         const GenomicRegion& mapped_region() const noexcept { return variant.mapped_region(); }
+        friend bool operator<(const Candidate& lhs, const Candidate& rhs) { return lhs.variant < rhs.variant; }
     };
     
     std::reference_wrapper<const ReferenceGenome> reference_;
