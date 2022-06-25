@@ -68,7 +68,8 @@ module.exports = {
       label: 'Case studies',
       collapsed: true,
       items: [
-        'tutorials/germline'
+        'tutorials/germline',
+        'tutorials/mitochondria'
       ],
     }
   ],

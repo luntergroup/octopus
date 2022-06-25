@@ -77,16 +77,16 @@ $ bwa index data/references/hs38DH.fa
 Next, we map the raw reads to the reference genome with `bwa mem`:
 
 ```shell
-$ bwa mem -t 16 \
+$ bwa mem \
      -R "@RG\tID:S41\tSM:H1_U5\tLB:M4\tPU:Illumina" \
      data/reference/hs38DH.fa \
      data/reads/raw/H1_U5.M4-Herk_S41.R1.fastq.gz data/reads/raw/H1_U5.M4-Herk_S41.R2.fastq.gz | \
      samtools view -bh | \
-     samtools sort -@ 4 -o data/reads/mapped/H1_U5.M4-Herk_S41.hs38DH.bam -
+     samtools sort -o data/reads/mapped/H1_U5.M4-Herk_S41.hs38DH.bam -
 $ samtools index data/reads/mapped/H1_U5.M4-Herk_S41.hs38DH.bam
 ```
 
-This should complete in a few seconds.
+This should complete in less than a minute.
 
 ## Call variants
 
@@ -94,13 +94,13 @@ Now we can call variants with `octopus`. Since we're aiming to call homoplasmic 
 
 ```shell
 $ octopus \
-     -R data/reference/hs37d5.fa \
+     -R data/reference/hs38DH.fa \
      -I data/reads/mapped/H1_U5.M4-Herk_S41.hs38DH.bam \
-     -T MT \
+     -T chrM \
      --config /opt/octopus/resources/configs/mitochondria.config \
      --sequence-error-model PCR \
      -o results/calls/H1_U5.M4-PCR-Herk_S14.hs38DH.octopus.vcf.gz \
-     --threads 16
+     --threads 8
 ```
 
 This should complete in ~30 minutes.
@@ -132,4 +132,5 @@ We should see the following results:
 ```shell
 Threshold  True-pos-baseline  True-pos-call  False-pos  False-neg  Precision  Sensitivity  F-measure
 ----------------------------------------------------------------------------------------------------
+     None                 38             38          1          4     0.9744       0.9048     0.9383
 ```
