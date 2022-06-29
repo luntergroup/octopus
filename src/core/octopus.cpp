@@ -986,7 +986,15 @@ void resolve_connecting_calls(CompletedTask& lhs, CompletedTask& rhs,
                 if (!contains(lhs_keep_region, last_overlapping_rhs_ref)) {
                     // If the last RHS refcall overlapping with a LHS call we'll keep is a partial
                     // overlap then we should still keep the non-overlapping positions.
-                    auto squashed_refcall = VcfRecord::Builder(last_overlapping_rhs_ref).set_pos(mapped_end(lhs_keep_region)).build_once();
+                    const auto keep_region = right_overhang_region(last_overlapping_rhs_ref, lhs_keep_region);
+                    assert(!is_empty(keep_region));
+                    auto keep_ref = calling_components().reference.get().fetch_sequence(keep_region);
+                    auto squashed_refcall = VcfRecord::Builder(last_overlapping_rhs_ref)
+                        .set_pos(mapped_begin(keep_region) + 1)
+                        .set_ref(std::move(keep_ref))
+                        .clear_info("END")
+                        .squash_reference_if_blocked()
+                        .build_once();
                     rhs.calls.push_front(std::move(squashed_refcall));
                 }
             }

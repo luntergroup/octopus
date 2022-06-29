@@ -869,7 +869,7 @@ VcfRecord VcfRecord::Builder::build_once() noexcept
 {
     if (format_.empty()) {
         if (end_) {
-            GenomicRegion region {std::move(chrom_), pos_ - 1, *end_ - 1};
+            GenomicRegion region {std::move(chrom_), pos_ - 1, *end_};
             if (reference_) {
                 ref_ = reference_->fetch_sequence(region);
             }
@@ -881,7 +881,7 @@ VcfRecord VcfRecord::Builder::build_once() noexcept
         }
     } else {
         if (end_) {
-            GenomicRegion region {std::move(chrom_), pos_ - 1, *end_ - 1};
+            GenomicRegion region {std::move(chrom_), pos_ - 1, *end_};
             if (reference_) {
                 ref_ = reference_->fetch_sequence(region);
             }
