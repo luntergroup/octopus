@@ -1,4 +1,5 @@
-FROM ubuntu:impish
+ARG ARCH="amd64"
+FROM ${ARCH}/ubuntu:impish
 
 ARG DEBIAN_FRONTEND=noninteractive
 ENV TZ=Europe/London
@@ -16,12 +17,12 @@ RUN apt-get -y update \
     && pip3 install distro
 
 # Install Octopus
-ARG threads=4
-ARG architecture=haswell
+ARG THREADS=4
+ARG CPU=haswell
 COPY . /opt/octopus
 RUN /opt/octopus/scripts/install.py \
-    --threads $threads \
-    --architecture $architecture
+    --threads $THREADS \
+    --architecture $CPU
 
 # Cleanup git - only needed during install for commit info
 RUN apt-get purge -y git \
