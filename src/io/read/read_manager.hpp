@@ -152,7 +152,10 @@ private:
     void add_possible_regions_to_reader_map(const Path& reader_path, const std::vector<GenomicRegion>& regions);
     void add_reader_to_sample_map(const Path& reader_path, const std::vector<SampleName>& samples_in_reader);
     bool could_reader_contain_region(const Path& reader_path, const GenomicRegion& region) const;
-    
+    bool can_use_reader(const Path& reader_path, 
+                        const std::vector<SampleName>& samples,
+                        const GenomicRegion& region) const;
+
     std::vector<Path> get_reader_paths_containing_samples(const std::vector<SampleName>& sample) const;
     std::vector<Path> get_possible_reader_paths(const GenomicRegion& region) const;
     std::vector<Path> get_possible_reader_paths(const std::vector<SampleName>& samples,
@@ -169,7 +172,9 @@ void ReadManager::iterate_helper(const std::vector<SampleName>& samples,
 {
     if (all_readers_are_open()) {
         for (const auto& p : open_readers_) {
-            if (!p.second.iterate(samples, region, visitor)) return;
+            if (can_use_reader(p.first, samples, region)) {
+                if (!p.second.iterate(samples, region, visitor)) return;
+            }
         }
     } else {
         std::lock_guard<std::mutex> lock {mutex_};

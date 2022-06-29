@@ -392,10 +392,12 @@ GenomicRegion ReadManager::find_covered_subregion(const std::vector<SampleName>&
     CoverageTracker<ContigRegion> position_tracker {};
     if (all_readers_are_open()) {
         for (const auto& p : open_readers_) {
-            // Request one more than the max so we can determine if the entire request region can be included
-            const auto positions = p.second.extract_read_positions(samples, region, max_reads + 1);
-            for (auto position : positions) {
-                add(position, position_tracker);
+            if (can_use_reader(p.first, samples, region)) {
+                // Request one more than the max so we can determine if the entire request region can be included
+                const auto positions = p.second.extract_read_positions(samples, region, max_reads + 1);
+                for (auto position : positions) {
+                    add(position, position_tracker);
+                }
             }
         }
     } else {
@@ -438,7 +440,9 @@ ReadManager::ReadContainer ReadManager::fetch_reads(const SampleName& sample, co
     ReadContainer result {};
     if (all_readers_are_open()) {
         for (const auto& p : open_readers_) {
-            merge_insert(p.second.fetch_reads(sample, region), result);
+            if (can_use_reader(p.first, {sample}, region)) {
+                merge_insert(p.second.fetch_reads(sample, region), result);
+            }
         }
     } else {
         std::lock_guard<std::mutex> lock {mutex_};
@@ -465,11 +469,13 @@ ReadManager::SampleReadMap ReadManager::fetch_reads(const std::vector<SampleName
     }
     if (all_readers_are_open()) {
         for (const auto& p : open_readers_) {
-            auto reads = p.second.fetch_reads(samples, region);
-            for (auto&& r : reads) {
-                merge_insert(std::move(r.second), result.at(r.first));
-                r.second.clear();
-                r.second.shrink_to_fit();
+            if (can_use_reader(p.first, samples, region)) {
+                auto reads = p.second.fetch_reads(samples, region);
+                for (auto&& r : reads) {
+                    merge_insert(std::move(r.second), result.at(r.first));
+                    r.second.clear();
+                    r.second.shrink_to_fit();
+            }
             }
         }
     } else {
@@ -716,6 +722,16 @@ bool ReadManager::could_reader_contain_region(const Path& reader_path, const Gen
     
     return has_overlapped(possible_regions_in_readers_.at(reader_path).at(region.contig_name()),
                           region.contig_region());
+}
+
+bool ReadManager::can_use_reader(const Path& reader_path, 
+                                 const std::vector<SampleName>& samples,
+                                 const GenomicRegion& region) const
+{
+    return std::any_of(std::cbegin(samples), std::cend(samples), [&] (const auto& sample) {
+        const auto& paths = reader_paths_containing_sample_.at(sample);
+        return std::find(std::cbegin(paths), std::cend(paths), reader_path) != std::cend(paths);
+    }) && could_reader_contain_region(reader_path, region);
 }
 
 std::vector<ReadManager::Path>

@@ -38,6 +38,7 @@ private:
     std::vector<SampleName> samples_;
     bool sites_only_;
     double max_qual = 100'000;
+    bool skip_inconsistent_ploidy = true;
     
     VcfRecord make(std::unique_ptr<Call> call) const;
     VcfRecord make_segment(std::vector<std::unique_ptr<Call>>&& calls) const;

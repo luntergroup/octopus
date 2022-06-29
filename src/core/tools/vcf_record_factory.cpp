@@ -31,6 +31,7 @@
 #include "exceptions/program_error.hpp"
 #include "io/variant/vcf_spec.hpp"
 #include "config/octopus_vcf.hpp"
+#include "logging/logging.hpp"
 
 #define _unused(x) ((void)(x))
 
@@ -385,6 +386,7 @@ std::vector<VcfRecord> VcfRecordFactory::make(std::vector<CallWrapper>&& calls) 
         }
         std::vector<std::vector<const Call*>> prev_represented {};
         prev_represented.reserve(samples_.size());
+        bool skip_block {false};
         for (const auto& sample : samples_) {
             const auto& genotype = block_begin_itr->call->get_genotype_call(sample).genotype;
             const auto ploidy = genotype.ploidy();
@@ -392,7 +394,16 @@ std::vector<VcfRecord> VcfRecordFactory::make(std::vector<CallWrapper>&& calls) 
             for (auto itr = block_begin_itr; itr != block_head_end_itr; ++itr) {
                 const auto& gt = itr->call->get_genotype_call(sample).genotype;
                 if (gt.ploidy() != ploidy) {
-                    throw InconsistentPloidyError {sample, genotype, gt};
+                    if (skip_inconsistent_ploidy) {
+                        skip_block = true;
+                        const auto block_region = encompassing_region(block_begin_itr, block_head_end_itr);
+                        logging::WarningLogger log {};
+                        stream(log) << "Dropping " << block_size << " calls from " << block_region
+                                    << " due to overlapping calls with inconsistent ploidy in sample " << sample;
+                        break;
+                    } else {
+                        throw InconsistentPloidyError {sample, genotype, gt};
+                    }
                 }
                 for (unsigned i {0}; i < gt.ploidy(); ++i) {
                     if (itr->call->is_represented(gt[i])) {
@@ -400,6 +411,11 @@ std::vector<VcfRecord> VcfRecordFactory::make(std::vector<CallWrapper>&& calls) 
                     }
                 }
             }
+            if (skip_block) break;
+        }
+        if (skip_block) {
+            call_itr = block_end_itr;
+            continue;
         }
         assert(block_begin_itr < block_head_end_itr);
         for (; block_head_end_itr != block_end_itr; ++block_head_end_itr) {
