@@ -22,6 +22,7 @@
 #include <chrono>
 #include <sstream>
 #include <iostream>
+#include <fstream>
 #include <cassert>
 
 #include <boost/optional.hpp>
