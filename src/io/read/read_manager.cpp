@@ -57,15 +57,14 @@ ReadManager::ReadManager(std::initializer_list<Path> read_file_paths)
 ReadManager::ReadManager(ReadManager&& other)
 {
     std::lock_guard<std::mutex> lock {other.mutex_};
-    using std::move;
-    max_open_files_                 = move(other.max_open_files_);
-    num_files_                      = move(other.num_files_);
-    all_readers_single_sample_      = move(other.all_readers_single_sample_);
-    closed_readers_                 = move(other.closed_readers_);
-    open_readers_                   = move(other.open_readers_);
-    reader_paths_containing_sample_ = move(other.reader_paths_containing_sample_);
-    possible_regions_in_readers_    = move(other.possible_regions_in_readers_);
-    samples_                        = move(other.samples_);
+    max_open_files_                 = std::move(other.max_open_files_);
+    num_files_                      = std::move(other.num_files_);
+    all_readers_single_sample_      = std::move(other.all_readers_single_sample_);
+    closed_readers_                 = std::move(other.closed_readers_);
+    open_readers_                   = std::move(other.open_readers_);
+    reader_paths_containing_sample_ = std::move(other.reader_paths_containing_sample_);
+    possible_regions_in_readers_    = std::move(other.possible_regions_in_readers_);
+    samples_                        = std::move(other.samples_);
 }
 
 ReadManager& ReadManager::operator=(ReadManager&& other)
@@ -73,15 +72,14 @@ ReadManager& ReadManager::operator=(ReadManager&& other)
     if (this != &other) {
         std::unique_lock<std::mutex> lock_lhs {mutex_, std::defer_lock}, lock_rhs {other.mutex_, std::defer_lock};
         std::lock(lock_lhs, lock_rhs);
-        using std::move;
-        max_open_files_                 = move(other.max_open_files_);
-        num_files_                      = move(other.num_files_);
-        all_readers_single_sample_      = move(other.all_readers_single_sample_);
-        closed_readers_                 = move(other.closed_readers_);
-        open_readers_                   = move(other.open_readers_);
-        reader_paths_containing_sample_ = move(other.reader_paths_containing_sample_);
-        possible_regions_in_readers_    = move(other.possible_regions_in_readers_);
-        samples_                        = move(other.samples_);
+        max_open_files_                 = std::move(other.max_open_files_);
+        num_files_                      = std::move(other.num_files_);
+        all_readers_single_sample_      = std::move(other.all_readers_single_sample_);
+        closed_readers_                 = std::move(other.closed_readers_);
+        open_readers_                   = std::move(other.open_readers_);
+        reader_paths_containing_sample_ = std::move(other.reader_paths_containing_sample_);
+        possible_regions_in_readers_    = std::move(other.possible_regions_in_readers_);
+        samples_                        = std::move(other.samples_);
     }
     return *this;
 }

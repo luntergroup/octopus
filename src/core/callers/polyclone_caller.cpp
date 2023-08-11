@@ -177,9 +177,8 @@ PolycloneCaller::infer_latents(const HaplotypeBlock& haplotypes,
     fit_sublone_model(haplotypes, indexed_haplotypes, haplotype_likelihoods, *genotype_prior_model, haploid_inferences,
                       polyploid_genotypes, sublonal_inferences, workers);
     if (debug_log_) stream(*debug_log_) << "There are " << polyploid_genotypes.size() << " candidate polyploid genotypes";
-    using std::move;
-    return std::make_unique<Latents>(move(haploid_genotypes), move(polyploid_genotypes),
-                                     move(haploid_inferences), move(sublonal_inferences),
+    return std::make_unique<Latents>(std::move(haploid_genotypes), std::move(polyploid_genotypes),
+                                     std::move(haploid_inferences), std::move(sublonal_inferences),
                                      sample(), parameters_.clonality_prior);
 }
 

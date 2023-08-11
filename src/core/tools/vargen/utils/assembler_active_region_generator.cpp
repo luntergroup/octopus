@@ -325,7 +325,7 @@ bool is_good_clip(const NucleotideSequenceIterator first_base, const NucleotideS
 
 bool AssemblerActiveRegionGenerator::is_interesting(const AlignedRead& read) const
 {
-    using std::cbegin; using std::next; using std::move;
+    using std::cbegin; using std::next;
     using Flag = CigarOperation::Flag;
     const auto& read_sequence = read.sequence();
     auto sequence_itr = cbegin(read_sequence);

@@ -1216,7 +1216,7 @@ auto get_annotations(const bam1_t* record)
 
 AlignedRead HtslibSamFacade::HtslibIterator::operator*() const
 {
-    using std::begin; using std::end; using std::next; using std::move;
+    using std::begin; using std::end; using std::next;
     auto qualities = extract_qualities(hts_bam1_.get());
     auto cigar = extract_cigar_string(hts_bam1_.get());
     const auto& info = hts_bam1_->core;
@@ -1248,9 +1248,9 @@ AlignedRead HtslibSamFacade::HtslibIterator::operator*() const
         result = {
             extract_read_name(hts_bam1_.get()),
             GenomicRegion {contig_name, read_begin, read_begin + octopus::reference_size<AlignedRead::MappingDomain::Position>(cigar)},
-            move(sequence),
-            move(qualities),
-            move(cigar),
+            std::move(sequence),
+            std::move(qualities),
+            std::move(cigar),
             mapping_quality(info),
             extract_flags(info),
             read_group(),
@@ -1264,9 +1264,9 @@ AlignedRead HtslibSamFacade::HtslibIterator::operator*() const
         result = {
             extract_read_name(hts_bam1_.get()),
             GenomicRegion {contig_name, read_begin, read_begin + octopus::reference_size<AlignedRead::MappingDomain::Size>(cigar)},
-            move(sequence),
-            move(qualities),
-            move(cigar),
+            std::move(sequence),
+            std::move(qualities),
+            std::move(cigar),
             mapping_quality(info),
             extract_flags(info),
             read_group(),

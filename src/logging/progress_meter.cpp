@@ -98,24 +98,23 @@ ProgressMeter::ProgressMeter(GenomicRegion region)
 ProgressMeter::ProgressMeter(ProgressMeter&& other)
 {
     std::lock_guard<std::mutex> lock {other.mutex_};
-    using std::move;
-    target_regions_       = move(other.target_regions_);
-    completed_regions_    = move(other.completed_regions_);
-    num_bp_to_search_     = move(other.num_bp_to_search_);
-    num_bp_completed_     = move(other.num_bp_completed_);
-    max_tick_size_        = move(other.max_tick_size_);
-    curr_tick_size_       = move(other.curr_tick_size_);
-    percent_until_tick_   = move(other.percent_until_tick_);
-    percent_at_last_tick_ = move(other.percent_at_last_tick_);
-    start_                = move(other.start_);
-    last_tick_            = move(other.last_tick_);
-    tick_durations_       = move(other.tick_durations_);
-    done_                 = move(other.done_);
-    position_tab_length_  = move(other.position_tab_length_);
-    block_compute_times_  = move(other.block_compute_times_);
-    log_                  = move(other.log_);
-    buffer_size_          = move(other.buffer_size_);
-    buffer_               = move(other.buffer_);
+    target_regions_       = std::move(other.target_regions_);
+    completed_regions_    = std::move(other.completed_regions_);
+    num_bp_to_search_     = std::move(other.num_bp_to_search_);
+    num_bp_completed_     = std::move(other.num_bp_completed_);
+    max_tick_size_        = std::move(other.max_tick_size_);
+    curr_tick_size_       = std::move(other.curr_tick_size_);
+    percent_until_tick_   = std::move(other.percent_until_tick_);
+    percent_at_last_tick_ = std::move(other.percent_at_last_tick_);
+    start_                = std::move(other.start_);
+    last_tick_            = std::move(other.last_tick_);
+    tick_durations_       = std::move(other.tick_durations_);
+    done_                 = std::move(other.done_);
+    position_tab_length_  = std::move(other.position_tab_length_);
+    block_compute_times_  = std::move(other.block_compute_times_);
+    log_                  = std::move(other.log_);
+    buffer_size_          = std::move(other.buffer_size_);
+    buffer_               = std::move(other.buffer_);
 }
 
 ProgressMeter& ProgressMeter::operator=(ProgressMeter&& other)
@@ -123,24 +122,23 @@ ProgressMeter& ProgressMeter::operator=(ProgressMeter&& other)
     if (this != &other) {
         std::unique_lock<std::mutex> lock_lhs {mutex_, std::defer_lock}, lock_rhs {other.mutex_, std::defer_lock};
         std::lock(lock_lhs, lock_rhs);
-        using std::move;
-        target_regions_       = move(other.target_regions_);
-        completed_regions_    = move(other.completed_regions_);
-        num_bp_to_search_     = move(other.num_bp_to_search_);
-        num_bp_completed_     = move(other.num_bp_completed_);
-        max_tick_size_        = move(other.max_tick_size_);
-        curr_tick_size_       = move(other.curr_tick_size_);
-        percent_until_tick_   = move(other.percent_until_tick_);
-        percent_at_last_tick_ = move(other.percent_at_last_tick_);
-        start_                = move(other.start_);
-        last_tick_            = move(other.last_tick_);
-        tick_durations_       = move(other.tick_durations_);
-        done_                 = move(other.done_);
-        position_tab_length_  = move(other.position_tab_length_);
-        block_compute_times_  = move(other.block_compute_times_);
-        log_                  = move(other.log_);
-        buffer_size_          = move(other.buffer_size_);
-        buffer_               = move(other.buffer_);
+        target_regions_       = std::move(other.target_regions_);
+        completed_regions_    = std::move(other.completed_regions_);
+        num_bp_to_search_     = std::move(other.num_bp_to_search_);
+        num_bp_completed_     = std::move(other.num_bp_completed_);
+        max_tick_size_        = std::move(other.max_tick_size_);
+        curr_tick_size_       = std::move(other.curr_tick_size_);
+        percent_until_tick_   = std::move(other.percent_until_tick_);
+        percent_at_last_tick_ = std::move(other.percent_at_last_tick_);
+        start_                = std::move(other.start_);
+        last_tick_            = std::move(other.last_tick_);
+        tick_durations_       = std::move(other.tick_durations_);
+        done_                 = std::move(other.done_);
+        position_tab_length_  = std::move(other.position_tab_length_);
+        block_compute_times_  = std::move(other.block_compute_times_);
+        log_                  = std::move(other.log_);
+        buffer_size_          = std::move(other.buffer_size_);
+        buffer_               = std::move(other.buffer_);
     }
     return *this;
 }

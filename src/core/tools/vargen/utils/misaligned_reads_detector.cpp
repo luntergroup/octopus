@@ -99,7 +99,7 @@ double ln_probability_read_correctly_aligned(const double misalign_penalty, cons
 
 bool MisalignedReadsDetector::is_likely_misaligned(const AlignedRead& read) const
 {
-    using std::cbegin; using std::next; using std::move;
+    using std::cbegin; using std::next;
     using Flag = CigarOperation::Flag;
     const auto& read_sequence = read.sequence();
     auto sequence_itr = cbegin(read_sequence);

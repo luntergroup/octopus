@@ -83,14 +83,13 @@ CachingFasta& CachingFasta::operator=(CachingFasta other)
 CachingFasta::CachingFasta(CachingFasta&& other)
 {
     std::lock_guard<std::mutex> lock {other.mutex_};
-    using std::move;
-    fasta_              = move(other.fasta_);
-    contig_sizes_       = move(other.contig_sizes_);
-    genome_size_        = move(other.genome_size_);
-    max_cache_size_     = move(other.max_cache_size_);
-    current_cache_size_ = move(other.current_cache_size_);
-    locality_bias_      = move(other.locality_bias_);
-    forward_bias_       = move(other.forward_bias_);
+    fasta_              = std::move(other.fasta_);
+    contig_sizes_       = std::move(other.contig_sizes_);
+    genome_size_        = std::move(other.genome_size_);
+    max_cache_size_     = std::move(other.max_cache_size_);
+    current_cache_size_ = std::move(other.current_cache_size_);
+    locality_bias_      = std::move(other.locality_bias_);
+    forward_bias_       = std::move(other.forward_bias_);
 }
 
 CachingFasta& CachingFasta::operator=(CachingFasta&& other)
@@ -98,14 +97,13 @@ CachingFasta& CachingFasta::operator=(CachingFasta&& other)
     if (this != &other) {
         std::unique_lock<std::mutex> lock_lhs {mutex_, std::defer_lock}, lock_rhs {other.mutex_, std::defer_lock};
         std::lock(lock_lhs, lock_rhs);
-        using std::move;
-        fasta_              = move(other.fasta_);
-        contig_sizes_       = move(other.contig_sizes_);
-        genome_size_        = move(other.genome_size_);
-        max_cache_size_     = move(other.max_cache_size_);
-        current_cache_size_ = move(other.current_cache_size_);
-        locality_bias_      = move(other.locality_bias_);
-        forward_bias_       = move(other.forward_bias_);
+        fasta_              = std::move(other.fasta_);
+        contig_sizes_       = std::move(other.contig_sizes_);
+        genome_size_        = std::move(other.genome_size_);
+        max_cache_size_     = std::move(other.max_cache_size_);
+        current_cache_size_ = std::move(other.current_cache_size_);
+        locality_bias_      = std::move(other.locality_bias_);
+        forward_bias_       = std::move(other.forward_bias_);
     }
     return *this;
 }

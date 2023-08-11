@@ -254,7 +254,7 @@ GenomicRegion extend_alleles(NucleotideList& big_allele, NucleotideList& small_a
 Variant left_align(const Variant& variant, const ReferenceGenome& reference,
                    const GenomicRegion::Size extension_size)
 {
-    using std::move; using std::cbegin; using std::cend; using std::crbegin; using std::crend;
+    using std::cbegin; using std::cend; using std::crbegin; using std::crend;
     using std::tie; using std::next; using std::mismatch;
     
     if (!is_left_alignable(variant)) return variant;
@@ -304,9 +304,9 @@ Variant left_align(const Variant& variant, const ReferenceGenome& reference,
     GenomicRegion new_ref_region {current_region.contig_name(), new_ref_region_begin, new_ref_region_end};
     
     if (ref_allele_sequence.size() > alt_allele_sequence.size()) {
-        return Variant {move(new_ref_region), move(new_big_allele), move(new_small_allele)};
+        return Variant {std::move(new_ref_region), std::move(new_big_allele), std::move(new_small_allele)};
     } else {
-        return Variant {move(new_ref_region), move(new_small_allele), move(new_big_allele)};
+        return Variant {std::move(new_ref_region), std::move(new_small_allele), std::move(new_big_allele)};
     }
 }
 

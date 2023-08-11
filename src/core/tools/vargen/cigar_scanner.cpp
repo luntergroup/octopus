@@ -90,7 +90,7 @@ void CigarScanner::add_read(const SampleName& sample, const AlignedRead& read,
                             CoverageTracker<GenomicRegion>& coverage_tracker,
                             CoverageTracker<GenomicRegion>& forward_strand_coverage_tracker)
 {
-    using std::cbegin; using std::next; using std::move;
+    using std::cbegin; using std::next;
     using Flag = CigarOperation::Flag;
     const auto& read_contig   = contig_name(read);
     const auto& read_sequence = read.sequence();
@@ -147,7 +147,7 @@ void CigarScanner::add_read(const SampleName& sample, const AlignedRead& read,
             case Flag::deletion:
             {
                 region = GenomicRegion {read_contig, ref_index, ref_index + op_size};
-                add_candidate(move(region),
+                add_candidate(std::move(region),
                               reference_.get().fetch_sequence(region),
                               "",
                               read, read_index, sample);

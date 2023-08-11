@@ -350,13 +350,13 @@ void merge_pair(VcfReader& first, VcfReader& second, VcfWriter& dst,
             auto p1 = first.iterate(contig);
             if (reader_contig_counts[second].count(contig) == 1) {
                 auto p2 = second.iterate(contig);
-                std::merge(move(p1.first), move(p1.second), move(p2.first), move(p2.second), out);
+                std::merge(std::move(p1.first), std::move(p1.second), std::move(p2.first), std::move(p2.second), out);
             } else {
-                std::copy(move(p1.first), move(p1.second), out);
+                std::copy(std::move(p1.first), std::move(p1.second), out);
             }
         } else if (reader_contig_counts[second].count(contig) == 1) {
             auto p2 = second.iterate(contig);
-            std::copy(move(p2.first), move(p2.second), out);
+            std::copy(std::move(p2.first), std::move(p2.second), out);
         }
     }
 }

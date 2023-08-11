@@ -131,7 +131,7 @@ bool is_parsimonious(const Variant& variant) noexcept;
 template <typename G>
 Variant make_parsimonious(const Variant& variant, G generator)
 {
-    using std::move; using std::cbegin; using std::cend; using std::crbegin; using std::crend;
+    using std::cbegin; using std::cend; using std::crbegin; using std::crend;
     
     using NucleotideSequence = Variant::NucleotideSequence;
     
@@ -153,7 +153,7 @@ Variant make_parsimonious(const Variant& variant, G generator)
             std::copy(cbegin(old_alt_sequence), cend(old_alt_sequence),
                       std::next(begin(new_alt_allele)));
             
-            return Variant {move(new_ref_region), move(new_ref_allele), move(new_alt_allele)};
+            return Variant {std::move(new_ref_region), std::move(new_ref_allele), std::move(new_alt_allele)};
         } else {
             // In this rare case the only option is to pad to the right.
             auto new_ref_region = expand_rhs(old_ref_region, 1);
@@ -166,7 +166,7 @@ Variant make_parsimonious(const Variant& variant, G generator)
             NucleotideSequence new_alt_allele(old_alt_sequence.size() + 1, new_base);
             std::copy(cbegin(old_alt_sequence), cend(old_alt_sequence), begin(new_alt_allele));
             
-            return Variant {move(new_ref_region), move(new_ref_allele), move(new_alt_allele)};
+            return Variant {std::move(new_ref_region), std::move(new_ref_allele), std::move(new_alt_allele)};
         }
     }
     
@@ -206,9 +206,9 @@ Variant make_parsimonious(const Variant& variant, G generator)
     };
     
     if (old_ref_sequence.size() > old_alt_sequence.size()) {
-        return Variant {move(new_ref_region), move(new_big_allele), move(new_small_allele)};
+        return Variant {std::move(new_ref_region), std::move(new_big_allele), std::move(new_small_allele)};
     } else {
-        return Variant {move(new_ref_region), move(new_small_allele), move(new_big_allele)};
+        return Variant {std::move(new_ref_region), std::move(new_small_allele), std::move(new_big_allele)};
     }
 }
 
